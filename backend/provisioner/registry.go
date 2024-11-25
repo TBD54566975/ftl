@@ -11,6 +11,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/common/plugin"
@@ -191,6 +192,8 @@ func resourceEqual(desired, existing *provisioner.Resource) bool {
 			&provisioner.PostgresResource_PostgresResourceOutput{},
 			&provisioner.ModuleResource_ModuleResourceOutput{},
 			&provisioner.SqlMigrationResource_SqlMigrationResourceOutput{},
+			&provisioner.TopicResource_TopicResourceOutput{},
+			&provisioner.SubscriptionResource_SubscriptionResourceOutput{},
 		),
 	)
 }
@@ -204,10 +207,10 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 		return nil, fmt.Errorf("invalid module schema for module %s: %w", msg.Schema.Name, err)
 	}
 	edges := make([]*ResourceEdge, 0)
-
 	for _, decl := range module.Decls {
-		if db, ok := decl.(*schema.Database); ok {
-			switch db.Type {
+		switch decl := decl.(type) {
+		case *schema.Database:
+			switch decl.Type {
 			case "postgres":
 				deps = append(deps, &provisioner.Resource{
 					ResourceId: decl.GetName(),
@@ -219,10 +222,10 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 					Resource:   &provisioner.Resource_Mysql{},
 				})
 			default:
-				return nil, fmt.Errorf("unknown db type: %s", db.Type)
+				return nil, fmt.Errorf("unknown db type: %s", decl.Type)
 			}
 
-			if migration, ok := slices.FindVariant[*schema.MetadataSQLMigration](db.Metadata); ok {
+			if migration, ok := slices.FindVariant[*schema.MetadataSQLMigration](decl.Metadata); ok {
 				id := decl.GetName() + "-migration-" + migration.Digest
 				deps = append(deps, &provisioner.Resource{
 					ResourceId: id,
@@ -233,6 +236,24 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 					to:   decl.GetName(),
 				})
 			}
+		case *schema.Topic:
+			deps = append(deps, &provisioner.Resource{
+				ResourceId: decl.GetName(),
+				Resource:   &provisioner.Resource_Topic{},
+			})
+		case *schema.Subscription:
+			deps = append(deps, &provisioner.Resource{
+				ResourceId: decl.GetName(),
+				Resource: &provisioner.Resource_Subscription{
+					Subscription: &provisioner.SubscriptionResource{
+						Topic: &schemapb.Ref{
+							Module: decl.Topic.Module,
+							Name:   decl.Topic.Name,
+						},
+					},
+				},
+			})
+		case *schema.Config, *schema.Data, *schema.Enum, *schema.Secret, *schema.TypeAlias, *schema.Verb:
 		}
 	}
 

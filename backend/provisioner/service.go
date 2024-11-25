@@ -136,6 +136,20 @@ func replaceOutputs(to []*provproto.Resource, from []*provproto.Resource) error 
 			if moduleFrom, ok := existing.Resource.(*provproto.Resource_Module); ok {
 				r.Module.Output = moduleFrom.Module.Output
 			}
+		case *provproto.Resource_Topic:
+			if topicFrom, ok := existing.Resource.(*provproto.Resource_Topic); ok && topicFrom.Topic != nil {
+				if r.Topic == nil {
+					r.Topic = &provproto.TopicResource{}
+				}
+				r.Topic.Output = topicFrom.Topic.Output
+			}
+		case *provproto.Resource_Subscription:
+			if subscriptionFrom, ok := existing.Resource.(*provproto.Resource_Subscription); ok && subscriptionFrom.Subscription != nil {
+				if r.Subscription == nil {
+					r.Subscription = &provproto.SubscriptionResource{}
+				}
+				r.Subscription.Output = subscriptionFrom.Subscription.Output
+			}
 		default:
 			return fmt.Errorf("can not replace outputs for an unknown resource type %T", r)
 		}

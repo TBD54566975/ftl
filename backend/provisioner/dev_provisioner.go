@@ -2,9 +2,12 @@ package provisioner
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"time"
 
+	"github.com/IBM/sarama"
 	"github.com/XSAM/otelsql"
 	_ "github.com/go-sql-driver/mysql"
 
@@ -15,11 +18,16 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
 
+var redPandaBrokers = []string{"127.0.0.1:19092"}
+var pubSubNameLimit = 249 // 255 (filename limit) - 6 (partition id)
+
 // NewDevProvisioner creates a new provisioner that provisions resources locally when running FTL in dev mode
 func NewDevProvisioner(postgresPort int, mysqlPort int) *InMemProvisioner {
 	return NewEmbeddedProvisioner(map[ResourceType]InMemResourceProvisionerFn{
-		ResourceTypePostgres: provisionPostgres(postgresPort),
-		ResourceTypeMysql:    provisionMysql(mysqlPort),
+		ResourceTypePostgres:     provisionPostgres(postgresPort),
+		ResourceTypeMysql:        provisionMysql(mysqlPort),
+		ResourceTypeTopic:        provisionTopic(),
+		ResourceTypeSubscription: provisionSubscription(),
 	})
 }
 
@@ -57,7 +65,6 @@ func provisionMysql(mysqlPort int) InMemResourceProvisionerFn {
 			}
 
 		}
-
 	}
 }
 
@@ -179,4 +186,102 @@ func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provision
 		return rc.Resource, nil
 	}
 
+}
+
+func provisionTopic() func(ctx context.Context, rc *provisioner.ResourceContext, module, id string) (*provisioner.Resource, error) {
+	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string) (*provisioner.Resource, error) {
+		logger := log.FromContext(ctx)
+		if err := dev.SetUpRedPanda(ctx); err != nil {
+			return nil, fmt.Errorf("could not set up redpanda: %w", err)
+		}
+		topic, ok := rc.Resource.Resource.(*provisioner.Resource_Topic)
+		if !ok {
+			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
+		}
+
+		topicID := kafkaTopicID(module, id)
+		logger.Infof("Provisioning topic: %s", topicID)
+
+		config := sarama.NewConfig()
+		admin, err := sarama.NewClusterAdmin(redPandaBrokers, config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create cluster admin: %w", err)
+		}
+		defer admin.Close()
+
+		topicMetas, err := admin.DescribeTopics([]string{topicID})
+		if err != nil {
+			return nil, fmt.Errorf("failed to describe topic: %w", err)
+		}
+		if len(topicMetas) != 1 {
+			return nil, fmt.Errorf("expected topic metadata from kafka but received none")
+		}
+		if topicMetas[0].Err == sarama.ErrUnknownTopicOrPartition {
+			// No topic exists yet. Create it
+			err = admin.CreateTopic(topicID, &sarama.TopicDetail{
+				NumPartitions:     8,
+				ReplicationFactor: 1,
+				ReplicaAssignment: nil,
+			}, false)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create topic: %w", err)
+			}
+		} else if topicMetas[0].Err != sarama.ErrNoError {
+			return nil, fmt.Errorf("failed to describe topic %q: %w", topicID, topicMetas[0].Err)
+		}
+
+		if topic.Topic == nil {
+			topic.Topic = &provisioner.TopicResource{}
+		}
+		topic.Topic.Output = &provisioner.TopicResource_TopicResourceOutput{
+			KafkaBrokers: redPandaBrokers,
+			TopicId:      topicID,
+		}
+		return rc.Resource, nil
+	}
+}
+
+func provisionSubscription() func(ctx context.Context, rc *provisioner.ResourceContext, module, id string) (*provisioner.Resource, error) {
+	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string) (*provisioner.Resource, error) {
+		logger := log.FromContext(ctx)
+		if err := dev.SetUpRedPanda(ctx); err != nil {
+			return nil, fmt.Errorf("could not set up redpanda: %w", err)
+		}
+		subscription, ok := rc.Resource.Resource.(*provisioner.Resource_Subscription)
+		if !ok {
+			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
+		}
+
+		topicID := kafkaTopicID(subscription.Subscription.Topic.Module, subscription.Subscription.Topic.Name)
+		consumerGroupID := consumerGroupID(module, id)
+		subscription.Subscription.Output = &provisioner.SubscriptionResource_SubscriptionResourceOutput{
+			KafkaBrokers:    redPandaBrokers,
+			TopicId:         topicID,
+			ConsumerGroupId: consumerGroupID,
+		}
+		logger.Infof("Provisioning subscription: %v", subscription)
+		return rc.Resource, nil
+	}
+}
+
+func kafkaTopicID(module, id string) string {
+	return shortenString(fmt.Sprintf("%s-%s", module, id), pubSubNameLimit)
+}
+
+func consumerGroupID(module, id string) string {
+	return shortenString(fmt.Sprintf("%s-%s", module, id), pubSubNameLimit)
+}
+
+// shortenString truncates the input string to maxLength and appends a hash of the original string for uniqueness
+func shortenString(input string, maxLength int) string {
+	if len(input) <= maxLength {
+		return input
+	}
+	hash := sha256.Sum256([]byte(input))
+	hashStr := hex.EncodeToString(hash[:])
+	truncateLength := maxLength - len(hashStr) - 1
+	if truncateLength <= 0 {
+		return hashStr[:maxLength]
+	}
+	return input[:truncateLength] + "-" + hashStr
 }

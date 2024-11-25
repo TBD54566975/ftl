@@ -13,6 +13,8 @@ const (
 	ResourceTypeMysql        ResourceType = "mysql"
 	ResourceTypeModule       ResourceType = "module"
 	ResourceTypeSQLMigration ResourceType = "sql-migration"
+	ResourceTypeTopic        ResourceType = "topic"
+	ResourceTypeSubscription ResourceType = "subscription"
 )
 
 // TypeOf returns the resource type of the given resource
@@ -26,6 +28,10 @@ func TypeOf(r *provisioner.Resource) ResourceType {
 		return ResourceTypePostgres
 	case *provisioner.Resource_SqlMigration:
 		return ResourceTypeSQLMigration
+	case *provisioner.Resource_Topic:
+		return ResourceTypeTopic
+	case *provisioner.Resource_Subscription:
+		return ResourceTypeSubscription
 	default:
 		return ResourceTypeUnknown
 	}

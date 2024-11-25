@@ -2,22 +2,22 @@
 package verbtypes
 
 import (
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"context"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 )
 
-type CalleeVerbClient = ftl.Verb[Request, Response]
+type CalleeVerbClient func(context.Context, Request) (Response, error)
 
-type CallerVerbClient = ftl.Verb[Request, Response]
+type CallerVerbClient func(context.Context, Request) (Response, error)
 
-type EmptyClient = ftl.Empty
+type EmptyClient func(context.Context) error
 
-type SinkClient = ftl.Sink[Request]
+type SinkClient func(context.Context, Request) error
 
-type SourceClient = ftl.Source[Response]
+type SourceClient func(context.Context) (Response, error)
 
-type VerbClient = ftl.Verb[Request, Response]
+type VerbClient func(context.Context, Request) (Response, error)
 
 func init() {
 	reflection.Register(

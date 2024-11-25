@@ -2195,6 +2195,11 @@ export class Subscription extends Message<Subscription> {
   pos?: Position;
 
   /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.SubscriptionRuntime runtime = 31634;
+   */
+  runtime?: SubscriptionRuntime;
+
+  /**
    * @generated from field: repeated string comments = 2;
    */
   comments: string[] = [];
@@ -2218,6 +2223,7 @@ export class Subscription extends Message<Subscription> {
   static readonly typeName = "xyz.block.ftl.v1.schema.Subscription";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 31634, name: "runtime", kind: "message", T: SubscriptionRuntime, opt: true },
     { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "topic", kind: "message", T: Ref },
@@ -2237,6 +2243,55 @@ export class Subscription extends Message<Subscription> {
 
   static equals(a: Subscription | PlainMessage<Subscription> | undefined, b: Subscription | PlainMessage<Subscription> | undefined): boolean {
     return proto3.util.equals(Subscription, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.SubscriptionRuntime
+ */
+export class SubscriptionRuntime extends Message<SubscriptionRuntime> {
+  /**
+   * @generated from field: repeated string kafka_brokers = 1;
+   */
+  kafkaBrokers: string[] = [];
+
+  /**
+   * @generated from field: string topic_id = 2;
+   */
+  topicId = "";
+
+  /**
+   * @generated from field: string consumer_group_id = 3;
+   */
+  consumerGroupId = "";
+
+  constructor(data?: PartialMessage<SubscriptionRuntime>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.SubscriptionRuntime";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "kafka_brokers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "topic_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "consumer_group_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubscriptionRuntime {
+    return new SubscriptionRuntime().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SubscriptionRuntime {
+    return new SubscriptionRuntime().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SubscriptionRuntime {
+    return new SubscriptionRuntime().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SubscriptionRuntime | PlainMessage<SubscriptionRuntime> | undefined, b: SubscriptionRuntime | PlainMessage<SubscriptionRuntime> | undefined): boolean {
+    return proto3.util.equals(SubscriptionRuntime, a, b);
   }
 }
 
@@ -2287,6 +2342,11 @@ export class Topic extends Message<Topic> {
   pos?: Position;
 
   /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.TopicRuntime runtime = 31634;
+   */
+  runtime?: TopicRuntime;
+
+  /**
    * @generated from field: repeated string comments = 2;
    */
   comments: string[] = [];
@@ -2315,6 +2375,7 @@ export class Topic extends Message<Topic> {
   static readonly typeName = "xyz.block.ftl.v1.schema.Topic";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 31634, name: "runtime", kind: "message", T: TopicRuntime, opt: true },
     { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "export", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 4, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -2335,6 +2396,49 @@ export class Topic extends Message<Topic> {
 
   static equals(a: Topic | PlainMessage<Topic> | undefined, b: Topic | PlainMessage<Topic> | undefined): boolean {
     return proto3.util.equals(Topic, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.TopicRuntime
+ */
+export class TopicRuntime extends Message<TopicRuntime> {
+  /**
+   * @generated from field: repeated string kafka_brokers = 1;
+   */
+  kafkaBrokers: string[] = [];
+
+  /**
+   * @generated from field: string topic_id = 2;
+   */
+  topicId = "";
+
+  constructor(data?: PartialMessage<TopicRuntime>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.TopicRuntime";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "kafka_brokers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "topic_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TopicRuntime {
+    return new TopicRuntime().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TopicRuntime {
+    return new TopicRuntime().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TopicRuntime {
+    return new TopicRuntime().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TopicRuntime | PlainMessage<TopicRuntime> | undefined, b: TopicRuntime | PlainMessage<TopicRuntime> | undefined): boolean {
+    return proto3.util.equals(TopicRuntime, a, b);
   }
 }
 

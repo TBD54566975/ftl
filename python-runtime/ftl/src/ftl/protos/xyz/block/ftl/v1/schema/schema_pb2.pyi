@@ -455,16 +455,28 @@ class StringValue(_message.Message):
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., value: _Optional[str] = ...) -> None: ...
 
 class Subscription(_message.Message):
-    __slots__ = ("pos", "comments", "name", "topic")
+    __slots__ = ("pos", "runtime", "comments", "name", "topic")
     POS_FIELD_NUMBER: _ClassVar[int]
+    RUNTIME_FIELD_NUMBER: _ClassVar[int]
     COMMENTS_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     TOPIC_FIELD_NUMBER: _ClassVar[int]
     pos: Position
+    runtime: SubscriptionRuntime
     comments: _containers.RepeatedScalarFieldContainer[str]
     name: str
     topic: Ref
-    def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., name: _Optional[str] = ..., topic: _Optional[_Union[Ref, _Mapping]] = ...) -> None: ...
+    def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., runtime: _Optional[_Union[SubscriptionRuntime, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., name: _Optional[str] = ..., topic: _Optional[_Union[Ref, _Mapping]] = ...) -> None: ...
+
+class SubscriptionRuntime(_message.Message):
+    __slots__ = ("kafka_brokers", "topic_id", "consumer_group_id")
+    KAFKA_BROKERS_FIELD_NUMBER: _ClassVar[int]
+    TOPIC_ID_FIELD_NUMBER: _ClassVar[int]
+    CONSUMER_GROUP_ID_FIELD_NUMBER: _ClassVar[int]
+    kafka_brokers: _containers.RepeatedScalarFieldContainer[str]
+    topic_id: str
+    consumer_group_id: str
+    def __init__(self, kafka_brokers: _Optional[_Iterable[str]] = ..., topic_id: _Optional[str] = ..., consumer_group_id: _Optional[str] = ...) -> None: ...
 
 class Time(_message.Message):
     __slots__ = ("pos",)
@@ -473,18 +485,28 @@ class Time(_message.Message):
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ...) -> None: ...
 
 class Topic(_message.Message):
-    __slots__ = ("pos", "comments", "export", "name", "event")
+    __slots__ = ("pos", "runtime", "comments", "export", "name", "event")
     POS_FIELD_NUMBER: _ClassVar[int]
+    RUNTIME_FIELD_NUMBER: _ClassVar[int]
     COMMENTS_FIELD_NUMBER: _ClassVar[int]
     EXPORT_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
     EVENT_FIELD_NUMBER: _ClassVar[int]
     pos: Position
+    runtime: TopicRuntime
     comments: _containers.RepeatedScalarFieldContainer[str]
     export: bool
     name: str
     event: Type
-    def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., export: bool = ..., name: _Optional[str] = ..., event: _Optional[_Union[Type, _Mapping]] = ...) -> None: ...
+    def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., runtime: _Optional[_Union[TopicRuntime, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., export: bool = ..., name: _Optional[str] = ..., event: _Optional[_Union[Type, _Mapping]] = ...) -> None: ...
+
+class TopicRuntime(_message.Message):
+    __slots__ = ("kafka_brokers", "topic_id")
+    KAFKA_BROKERS_FIELD_NUMBER: _ClassVar[int]
+    TOPIC_ID_FIELD_NUMBER: _ClassVar[int]
+    kafka_brokers: _containers.RepeatedScalarFieldContainer[str]
+    topic_id: str
+    def __init__(self, kafka_brokers: _Optional[_Iterable[str]] = ..., topic_id: _Optional[str] = ...) -> None: ...
 
 class Type(_message.Message):
     __slots__ = ("any", "array", "bool", "bytes", "float", "int", "map", "optional", "ref", "string", "time", "unit")
