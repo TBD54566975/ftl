@@ -135,6 +135,19 @@ func (v *Verb) AddDatabase(db *Ref) {
 	v.Metadata = append(v.Metadata, &MetadataDatabases{Calls: []*Ref{db}})
 }
 
+func (v *Verb) AddSubscription(sub *MetadataSubscriber) {
+	v.Metadata = append(v.Metadata, sub)
+}
+
+// AddTopicPublish adds a topic that this Verb publishes to.
+func (v *Verb) AddTopicPublish(topic *Ref) {
+	if c, ok := slices.FindVariant[*MetadataPublisher](v.Metadata); ok {
+		c.Topics = append(c.Topics, topic)
+		return
+	}
+	v.Metadata = append(v.Metadata, &MetadataPublisher{Topics: []*Ref{topic}})
+}
+
 func (v *Verb) SortMetadata() {
 	sortMetadata(v.Metadata)
 }

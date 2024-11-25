@@ -70,6 +70,9 @@ func init() {
                 {{- with getDatabaseHandle . }}
 			server.DatabaseHandle[{{ trimModuleQualifier $moduleName .TypeName }}]("{{.Type}}"),
                 {{- end }}
+                {{- with getTopicHandle . }}
+			server.TopicHandle[{{ trimModuleQualifier $moduleName .EventType.TypeName }}]("{{.Module}}", "{{.Name}}"),
+                {{- end }}
 			{{- end}}
 		),
 {{- end}}

@@ -24,6 +24,12 @@ var (
 	FtlUnitTypePath = "github.com/TBD54566975/ftl/go-runtime/ftl.Unit"
 	// FtlOptionTypePath is the path to the FTL option type.
 	FtlOptionTypePath = "github.com/TBD54566975/ftl/go-runtime/ftl.Option"
+	// FtlDatabaseHandlePath is the path to the FTL database handle type.
+	FtlDatabaseHandlePath = "github.com/TBD54566975/ftl/go-runtime/ftl.DatabaseHandle"
+	// FtlTopicHandlePath is the path to the FTL topic handle type.
+	FtlTopicHandlePath = "github.com/TBD54566975/ftl/go-runtime/ftl.TopicHandle"
+	// FtlSubscriptionHandlePath is the path to the FTL subscription handle type.
+	FtlSubscriptionHandlePath = "github.com/TBD54566975/ftl/go-runtime/ftl.SubscriptionHandle"
 
 	extractorRegistery = xsync.NewMapOf[reflect.Type, ExtractDeclFunc[schema.Decl, ast.Node]]()
 )
@@ -78,7 +84,7 @@ func NewResourceDeclExtractor[T schema.Decl](name string, extractFunc ExtractRes
 	return NewExtractor(name, (*DefaultFact[Tag])(nil), runExtractResourceDeclsFunc[T](extractFunc, matchFn))
 }
 
-type matchFunc func(pass *analysis.Pass, node ast.Node) bool
+type matchFunc func(pass *analysis.Pass, node ast.Node, obj types.Object) bool
 
 // ExtractResourceDeclFunc extracts a schema resource declaration from the given node.
 type ExtractResourceDeclFunc[T schema.Decl] func(pass *analysis.Pass, object types.Object, node *ast.TypeSpec) optional.Option[T]
@@ -157,7 +163,7 @@ func runExtractResourceDeclsFunc[T schema.Decl](extractFunc ExtractResourceDeclF
 				return
 			}
 
-			if !matchFunc(pass, node) {
+			if !matchFunc(pass, node, obj) {
 				return
 			}
 			decl := extractFunc(pass, obj, node)
@@ -262,6 +268,27 @@ func IsPathInModule(pkg *types.Package, path string) bool {
 		return false
 	}
 	return pkg.Path() == path || strings.HasPrefix(path, "ftl/"+moduleName+"/")
+}
+
+// ExtractSimpleRefWithCasing extracts a ref with only a name and module from the given node.
+// The name is transformed using the provided `applyCasing` function.
+func ExtractSimpleRefWithCasing(pass *analysis.Pass, node ast.Expr, applyCasing func(s string) string) optional.Option[*schema.Ref] {
+	obj, ok := GetObjectForNode(pass.TypesInfo, node).Get()
+	if !ok {
+		return optional.None[*schema.Ref]()
+	}
+	module, err := FtlModuleFromGoPackage(obj.Pkg().Path())
+	if err != nil {
+		Wrapf(pass, node, err, "could not determine module for type")
+		return optional.None[*schema.Ref]()
+	}
+	ref := &schema.Ref{
+		Pos:    GoPosToSchemaPos(pass.Fset, node.Pos()),
+		Module: module,
+		Name:   applyCasing(obj.Name()),
+	}
+	MarkIncludeNativeName(pass, obj, ref)
+	return optional.Some(ref)
 }
 
 // ExtractType extracts the schema type for the given node.
@@ -422,6 +449,17 @@ func extractSelectorType(pass *analysis.Pass, node ast.Node, typ *ast.SelectorEx
 				return optional.Some[schema.Type](&schema.Optional{
 					Pos: GoPosToSchemaPos(pass.Fset, node.Pos()),
 				})
+			case FtlTopicHandlePath, FtlSubscriptionHandlePath:
+				t, ok := extractRef(pass, node).Get()
+				if !ok {
+					return optional.None[schema.Type]()
+				}
+				ref, ok := t.(*schema.Ref)
+				if !ok {
+					return optional.None[schema.Type]()
+				}
+				ref.Name = strcase.ToLowerCamel(ref.Name)
+				return optional.Some[schema.Type](ref)
 
 			default: // Data ref
 				if IsPathInModule(pass.Pkg, path) {
@@ -792,13 +830,83 @@ func IsMysqlDatabaseConfigType(pass *analysis.Pass, typ types.Type) bool {
 	return implementsType(pass, typ, "github.com/TBD54566975/ftl/go-runtime/ftl", "MySQLDatabaseConfig")
 }
 
+type VerbResourceType int
+
+const (
+	VerbResourceTypeNone VerbResourceType = iota
+	VerbResourceTypeVerbClient
+	VerbResourceTypeDatabaseHandle
+	VerbResourceTypeTopicHandle
+	VerbResourceTypeSubscriptionHandle
+)
+
+func GetVerbResourceType(pass *analysis.Pass, obj types.Object) VerbResourceType {
+	if obj == nil {
+		return VerbResourceTypeNone
+	}
+	if obj.Pkg() == nil {
+		return VerbResourceTypeNone
+	}
+
+	switch t := obj.Type().(type) {
+	case *types.Named:
+		switch {
+		case isDatabaseHandleType(pass, t):
+			return VerbResourceTypeDatabaseHandle
+		case IsTopicHandleType(t):
+			return VerbResourceTypeTopicHandle
+		case t.Obj().Pkg().Path()+"."+t.Obj().Name() == FtlSubscriptionHandlePath:
+			return VerbResourceTypeSubscriptionHandle
+		}
+
+		if _, ok := t.Underlying().(*types.Signature); !ok {
+			return VerbResourceTypeNone
+		}
+
+		return VerbResourceTypeVerbClient
+	case *types.Alias:
+		named, ok := t.Rhs().(*types.Named)
+		if !ok {
+			return VerbResourceTypeNone
+		}
+		return GetVerbResourceType(pass, named.Obj())
+
+	default:
+		return VerbResourceTypeNone
+	}
+}
+
+func IsTopicHandleType(named *types.Named) bool {
+	return named.Obj().Pkg().Path()+"."+named.Obj().Name() == FtlTopicHandlePath
+}
+
+func isDatabaseHandleType(pass *analysis.Pass, named *types.Named) bool {
+	if named.Obj().Pkg().Path()+"."+named.Obj().Name() != FtlDatabaseHandlePath {
+		return false
+	}
+
+	if named.TypeParams().Len() != 1 {
+		return false
+	}
+	typeArg := named.TypeParams().At(0)
+
+	// type argument implements `DatabaseConfig`, e.g. DatabaseHandle[MyConfig] where MyConfig implements DatabaseConfig
+	return IsDatabaseConfigType(pass, typeArg)
+}
+
 func implementsType(pass *analysis.Pass, typ types.Type, pkg string, name string) bool {
+	if basic, ok := typ.(*types.Basic); ok && basic.Kind() == types.Invalid {
+		return false
+
+	}
+	if alias, ok := typ.(*types.Alias); ok {
+		return implementsType(pass, alias.Rhs(), pkg, name)
+	}
 	ityp, ok := loadRefFromImports(pass, pkg, name).Get()
 	if !ok {
 		return false
 	}
-	res := types.Implements(typ, ityp) || types.Implements(types.NewPointer(typ), ityp)
-	return res
+	return types.Implements(typ, ityp) || types.Implements(types.NewPointer(typ), ityp)
 }
 
 // Lazy load the compile-time reference from a package if it is imported by the package in this pass.

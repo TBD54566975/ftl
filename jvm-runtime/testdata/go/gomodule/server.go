@@ -13,12 +13,12 @@ import (
 // Comment on topic
 //
 //ftl:export
-var TestTopic = ftl.Topic[TestObject]("testTopic")
+type TestTopic = ftl.TopicHandle[string]
 
 // Comment on subscription
 //
 //ftl:export
-var testSubscription = ftl.Subscription(TestTopic, "testSubscription")
+type TestSubscription = ftl.SubscriptionHandle[TestTopic, SinkVerbClient, string]
 
 // Comment on data
 type TestObject struct {

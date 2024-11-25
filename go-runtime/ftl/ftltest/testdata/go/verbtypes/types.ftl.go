@@ -2,44 +2,43 @@
 package verbtypes
 
 import (
-    "context"
-
-    "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
-    "github.com/TBD54566975/ftl/go-runtime/server"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/go-runtime/server"
 )
 
-type CalleeVerbClient func(context.Context, Request) (Response, error)
+type CalleeVerbClient = ftl.Verb[Request, Response]
 
-type CallerVerbClient func(context.Context, Request) (Response, error)
+type CallerVerbClient = ftl.Verb[Request, Response]
 
-type EmptyClient func(context.Context) error
+type EmptyClient = ftl.Empty
 
-type SinkClient func(context.Context, Request) error
+type SinkClient = ftl.Sink[Request]
 
-type SourceClient func(context.Context) (Response, error)
+type SourceClient = ftl.Source[Response]
 
-type VerbClient func(context.Context, Request) (Response, error)
+type VerbClient = ftl.Verb[Request, Response]
 
 func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
-            CalleeVerb,
+			CalleeVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            CallerVerb,
-            server.VerbClient[CalleeVerbClient, Request, Response](),
+			CallerVerb,
+			server.VerbClient[CalleeVerbClient, Request, Response](),
 		),
 		reflection.ProvideResourcesForVerb(
-            Empty,
+			Empty,
 		),
 		reflection.ProvideResourcesForVerb(
-            Sink,
+			Sink,
 		),
 		reflection.ProvideResourcesForVerb(
-            Source,
+			Source,
 		),
 		reflection.ProvideResourcesForVerb(
-            Verb,
+			Verb,
 		),
 	)
 }

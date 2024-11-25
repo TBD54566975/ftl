@@ -3,6 +3,7 @@ package subscription
 import (
 	"go/ast"
 	"go/types"
+	"strings"
 
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/alecthomas/types/optional"
@@ -12,80 +13,80 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
 
-const (
-	ftlSubscriptionFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Subscription"
-)
-
 // Extractor extracts subscriptions.
-var Extractor = common.NewCallDeclExtractor[*schema.Subscription]("subscription", Extract, ftlSubscriptionFuncPath)
+var Extractor = common.NewResourceDeclExtractor[*schema.Subscription]("subscription", Extract, matchFunc)
 
-// expects: var _ = ftl.Subscription(topicHandle, "name_literal")
-func Extract(pass *analysis.Pass, obj types.Object, node *ast.GenDecl, callExpr *ast.CallExpr,
-	callPath string) optional.Option[*schema.Subscription] {
-	var topicRef *schema.Ref
-	if len(callExpr.Args) != 2 {
-		common.Errorf(pass, callExpr, "subscription registration must have exactly two arguments")
-		return optional.None[*schema.Subscription]()
-	}
-	if topicIdent, ok := callExpr.Args[0].(*ast.Ident); ok {
-		// Topic is within module
-		// we will find the subscription name from the string literal parameter
-		object := pass.TypesInfo.ObjectOf(topicIdent)
-		fact, ok := common.GetFactForObject[*common.ExtractedDecl](pass, object).Get()
-		if !ok || fact.Decl == nil {
-			common.Errorf(pass, callExpr, "could not find topic declaration for topic variable")
-			return optional.None[*schema.Subscription]()
-		}
-		topic, ok := fact.Decl.(*schema.Topic)
-		if !ok {
-			common.Errorf(pass, callExpr, "could not find topic declaration for topic variable")
-			return optional.None[*schema.Subscription]()
-		}
-
-		moduleName, err := common.FtlModuleFromGoPackage(pass.Pkg.Path())
-		if err != nil {
-			return optional.None[*schema.Subscription]()
-		}
-		topicRef = &schema.Ref{
-			Module: moduleName,
-			Name:   topic.Name,
-		}
-	} else if topicSelExp, ok := callExpr.Args[0].(*ast.SelectorExpr); ok {
-		// External topic
-		// we will derive subscription name from generated variable name
-		moduleIdent, moduleOk := topicSelExp.X.(*ast.Ident)
-		if !moduleOk {
-			common.Errorf(pass, callExpr, "subscription registration must have a topic")
-			return optional.None[*schema.Subscription]()
-		}
-		varName := topicSelExp.Sel.Name
-		if varName == "" {
-			common.Errorf(pass, callExpr, "subscription registration must have a topic")
-			return optional.None[*schema.Subscription]()
-		}
-		name := strcase.ToLowerCamel(varName)
-		topicRef = &schema.Ref{
-			Module: moduleIdent.Name,
-			Name:   name,
-		}
-	} else {
-		common.Errorf(pass, callExpr, "subscription registration must have a topic")
+func Extract(pass *analysis.Pass, obj types.Object, node *ast.TypeSpec) optional.Option[*schema.Subscription] {
+	idxListExpr, ok := node.Type.(*ast.IndexListExpr)
+	if !ok {
+		common.Errorf(pass, node, "unsupported subscription type")
 		return optional.None[*schema.Subscription]()
 	}
 
-	subName := common.ExtractStringLiteralArg(pass, callExpr, 1)
-	expSubName := strcase.ToLowerCamel(subName)
-	if subName != expSubName {
-		common.Errorf(pass, node, "unsupported subscription name %q, did you mean to use %q?", subName, expSubName)
+	if len(idxListExpr.Indices) != 3 {
+		common.Errorf(pass, node, "subscription type must have exactly three type parameters")
 		return optional.None[*schema.Subscription]()
 	}
+
+	topicRef, ok := common.ExtractSimpleRefWithCasing(pass, idxListExpr.Indices[0], strcase.ToLowerCamel).Get()
+	if !ok {
+		common.Errorf(pass, node, "unsupported topic type; please declare topics on a separate line: `MyTopic = ftl.TopicHandle[MyEvent]`, then use `MyTopic` in the subscription")
+		return optional.None[*schema.Subscription]()
+	}
+
 	subscription := &schema.Subscription{
-		Pos:   common.GoPosToSchemaPos(pass.Fset, callExpr.Pos()),
-		Name:  subName,
+		Pos:   common.GoPosToSchemaPos(pass.Fset, node.Pos()),
+		Name:  strcase.ToLowerCamel(node.Name.Name),
 		Topic: topicRef,
 	}
 	common.ApplyMetadata[*schema.Subscription](pass, obj, func(md *common.ExtractedMetadata) {
 		subscription.Comments = md.Comments
 	})
+	sinkName := getSubscribingVerbName(pass, idxListExpr.Indices[1])
+	if sinkName == "" || !schema.ValidateName(sinkName) {
+		common.Errorf(pass, node, "unsupported sink for subscription; please provide the generated "+
+			"client corresponding to the verb sink")
+		return optional.None[*schema.Subscription]()
+	}
+	common.MarkSubscriptionSink(pass, obj, sinkName, subscription)
 	return optional.Some(subscription)
+}
+
+func getSubscribingVerbName(pass *analysis.Pass, subscriber ast.Expr) string {
+	obj, ok := common.GetObjectForNode(pass.TypesInfo, subscriber).Get()
+	if !ok {
+		return ""
+	}
+	tn, ok := obj.(*types.TypeName)
+	if !ok {
+		return ""
+	}
+	named, ok := tn.Type().(*types.Named)
+	if !ok {
+		return ""
+	}
+	if _, ok := named.Underlying().(*types.Signature); !ok {
+		return ""
+	}
+	module, err := common.FtlModuleFromGoPackage(obj.Pkg().Path())
+	if err != nil {
+		return ""
+	}
+	passModule, err := common.FtlModuleFromGoPackage(pass.Pkg.Path())
+	if err != nil {
+		return ""
+	}
+	if module != passModule {
+		common.Errorf(pass, subscriber, "sink must be in the same module as the subscription")
+		return ""
+	}
+	ident, ok := subscriber.(*ast.Ident)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSuffix(strcase.ToLowerCamel(ident.Name), "Client")
+}
+
+func matchFunc(pass *analysis.Pass, node ast.Node, obj types.Object) bool {
+	return common.GetVerbResourceType(pass, obj) == common.VerbResourceTypeSubscriptionHandle
 }

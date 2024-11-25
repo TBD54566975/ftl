@@ -4,6 +4,7 @@ package pubsub
 import (
 	"context"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/go-runtime/server"
 )
 
 type BroadcastClient func(context.Context) error
@@ -18,9 +19,11 @@ func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
 			Broadcast,
+			server.TopicHandle[PayinEvent]("pubsub", "publicBroadcast"),
 		),
 		reflection.ProvideResourcesForVerb(
 			Payin,
+			server.TopicHandle[PayinEvent]("pubsub", "payins"),
 		),
 		reflection.ProvideResourcesForVerb(
 			ProcessBroadcast,

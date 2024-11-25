@@ -33,17 +33,16 @@ type Event struct {
 //
 // Used to test encryption of topic_events and async_calls tables
 
-var Topic = ftl.Topic[Event]("topic")
-var _ = ftl.Subscription(Topic, "subscription")
+type Topic = ftl.TopicHandle[Event]
+type Subscription = ftl.SubscriptionHandle[Topic, ConsumeClient, Event]
 
 //ftl:verb
-func Publish(ctx context.Context, e Event) error {
+func Publish(ctx context.Context, e Event, topic Topic) error {
 	fmt.Printf("Publishing event: %s\n", e.Name)
-	return Topic.Publish(ctx, e)
+	return topic.Publish(ctx, e)
 }
 
 //ftl:verb
-//ftl:subscribe subscription
 func Consume(ctx context.Context, e Event) error {
 	fmt.Printf("Received event: %s\n", e.Name)
 	if e.Name != "AliceInWonderland" {

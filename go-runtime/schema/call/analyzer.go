@@ -11,11 +11,6 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 )
 
-const (
-	ftlPkgPath             = "github.com/TBD54566975/ftl/go-runtime/ftl"
-	ftlTopicHandleTypeName = "TopicHandle"
-)
-
 // Extractor extracts all function calls.
 var Extractor = common.NewExtractor("validate", (*Fact)(nil), Extract)
 
@@ -73,26 +68,49 @@ func validateCallExpr(pass *analysis.Pass, node *ast.CallExpr) {
 	if lhsObject == nil {
 		return
 	}
-	var lhsPkgPath string
-	if pkgName, ok := lhsObject.(*types.PkgName); ok {
-		lhsPkgPath = pkgName.Imported().Path()
-	} else {
-		lhsPkgPath = lhsObject.Pkg().Path()
-	}
-
-	var lhsIsExternal bool
-	if !common.IsPathInModule(pass.Pkg, lhsPkgPath) {
-		lhsIsExternal = true
-	}
-
-	if lhsType, ok := pass.TypesInfo.TypeOf(selExpr.X).(*types.Named); ok && lhsType.Obj().Pkg() != nil &&
-		lhsType.Obj().Pkg().Path() == ftlPkgPath {
-		// Calling a function on an FTL type
-		if lhsType.Obj().Name() == ftlTopicHandleTypeName && selExpr.Sel.Name == "Publish" {
-			if lhsIsExternal {
-				common.Errorf(pass, node, "can not publish directly to topics in other modules")
-			}
-		}
+	lhsPkgPath, aliased := pkgPathFromObject(lhsObject)
+	// if the lhsObject isn't aliased (e.g. type MyTopic = TopicHandle[MyEvent]), then it's not one of our generated
+	// types and we can't reliably evaluate which module it belongs to here
+	//
+	// rely on runtime validation in this case
+	if lhsPkgPath == "" || !aliased {
 		return
+	}
+
+	if selExpr.Sel.Name == "Publish" && isTopicHandleType(pass.TypesInfo.TypeOf(selExpr.X)) &&
+		!common.IsPathInModule(pass.Pkg, lhsPkgPath) {
+		common.Errorf(pass, node, "can not publish directly to topics in other modules")
+	}
+}
+
+func isTopicHandleType(typ types.Type) bool {
+	switch t := typ.(type) {
+	case *types.Alias:
+		return isTopicHandleType(t.Rhs())
+	case *types.Named:
+		return common.IsTopicHandleType(t)
+	}
+	return false
+}
+
+func pkgPathFromObject(obj types.Object) (pkgPath string, wasAliased bool) {
+	switch t := obj.(type) {
+	case *types.Var:
+		return pkgPathFromType(t.Type())
+	case *types.PkgName:
+		return t.Imported().Path(), false
+	default:
+		return obj.Pkg().Path(), false
+	}
+}
+
+func pkgPathFromType(typ types.Type) (pkgPath string, wasAliased bool) {
+	switch tt := typ.(type) {
+	case *types.Alias:
+		return tt.Obj().Pkg().Path(), true
+	case *types.Named:
+		return tt.Obj().Pkg().Path(), false
+	default:
+		return "", false
 	}
 }

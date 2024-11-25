@@ -1,14 +1,10 @@
 package com.example;
 
-import java.io.FileWriter;
-import java.io.IOException;
-
 import ftl.origin.GetNonceClient;
 import ftl.origin.GetNonceRequest;
 import ftl.origin.GetNonceResponse;
 import ftl.relay.AppendLogClient;
 import ftl.relay.AppendLogRequest;
-import ftl.relay.AppendLogResponse;
 import io.quarkus.logging.Log;
 import xyz.block.ftl.Cron;
 

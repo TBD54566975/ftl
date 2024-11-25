@@ -23,7 +23,7 @@ var _ = context.Background
 //
 {{- end}}
 {{- if is "Topic" .}}
-var {{.Name|title}} = ftl.Topic[{{type $.Module .Event}}]("{{.Name}}")
+type {{.Name|title}} = ftl.TopicHandle[{{type $.Module .Event}}]
 {{- else if and (is "Enum" .) .IsValueEnum}}
 {{- $enumName := .Name}}
 //ftl:enum

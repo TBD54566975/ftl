@@ -3,39 +3,36 @@ package subscriber
 import (
 	"context"
 	"fmt"
+	"ftl/builtin"
+	"ftl/publisher"
 	"strings"
 	"time"
 
-	"ftl/builtin"
-	"ftl/publisher"
-
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/alecthomas/atomic"
-
-	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
+	//"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
-var _ = ftl.Subscription(publisher.TestTopic, "testTopicSubscription")
-var _ = ftl.Subscription(publisher.Topic2, "doomedSubscription")
-var _ = ftl.Subscription(publisher.Topic2, "doomedSubscription2")
+type TestTopicSubscription = ftl.SubscriptionHandle[publisher.TestTopic, ConsumeClient, publisher.PubSubEvent]
+type DoomedSubscription = ftl.SubscriptionHandle[publisher.Topic2, ConsumeButFailAndRetryClient, publisher.PubSubEvent]
+type DoomedSubscription2 = ftl.SubscriptionHandle[publisher.Topic2, ConsumeButFailAndCatchAnyClient, publisher.PubSubEvent]
 
 var catchCount atomic.Value[int]
 
 //ftl:verb
-//ftl:subscribe testTopicSubscription
 func Consume(ctx context.Context, req publisher.PubSubEvent) error {
 	ftl.LoggerFromContext(ctx).Infof("Subscriber is consuming %v", req.Time)
 	return nil
 }
 
 //ftl:verb
-//ftl:subscribe doomedSubscription
 //ftl:retry 2 1s 1s catch catch
 func ConsumeButFailAndRetry(ctx context.Context, req publisher.PubSubEvent) error {
 	return fmt.Errorf("always error: event %v", req.Time)
 }
 
 //ftl:verb
-//ftl:subscribe doomedSubscription2
 //ftl:retry 1 1s 1s catch catchAny
 func ConsumeButFailAndCatchAny(ctx context.Context, req publisher.PubSubEvent) error {
 	return fmt.Errorf("always error: event %v", req.Time)
@@ -44,8 +41,8 @@ func ConsumeButFailAndCatchAny(ctx context.Context, req publisher.PubSubEvent) e
 //ftl:verb
 func PublishToExternalModule(ctx context.Context) error {
 	// Get around compile-time checks
-	var topic = publisher.TestTopic
-	return topic.Publish(ctx, publisher.PubSubEvent{Time: time.Now()})
+	externalTopic := ftl.TopicHandle[publisher.PubSubEvent]{Ref: reflection.Ref{Module: "publisher", Name: "testTopic"}.ToSchema()}
+	return externalTopic.Publish(ctx, publisher.PubSubEvent{Time: time.Now()})
 }
 
 //ftl:verb

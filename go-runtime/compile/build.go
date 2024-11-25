@@ -112,6 +112,12 @@ func (c *mainModuleContext) generateTypesImports(mainModuleImport string) []stri
 		imports.Add(et.importStatement())
 	}
 	for _, v := range c.Verbs {
+		if slices.ContainsFunc(v.Resources, func(r verbResource) bool {
+			_, ok := r.(goTopicHandle)
+			return ok
+		}) {
+			imports.Add(`"github.com/TBD54566975/ftl/go-runtime/server"`)
+		}
 		imports.Append(verbImports(v)...)
 	}
 
@@ -264,6 +270,20 @@ type goDBHandle struct {
 func (d goDBHandle) resource() {}
 
 func (d goDBHandle) getNativeType() nativeType {
+	return d.nativeType
+}
+
+type goTopicHandle struct {
+	Name      string
+	Module    string
+	EventType goSchemaType
+
+	nativeType
+}
+
+func (d goTopicHandle) resource() {}
+
+func (d goTopicHandle) getNativeType() nativeType {
 	return d.nativeType
 }
 
@@ -856,8 +876,19 @@ func (b *mainModuleContextBuilder) getVerbResource(verb *schema.Verb, param comm
 			return goDBHandle{}, fmt.Errorf("%s.%s uses %s database handle, but %s is not a database",
 				b.mainModule.Name, verb.Name, ref, ref)
 		}
-
 		return b.processDatabase(ref.Module, db)
+	case *schema.MetadataPublisher:
+		resolved, ok := b.sch.Resolve(ref).Get()
+		if !ok {
+			return goTopicHandle{}, fmt.Errorf("failed to resolve %s topic, used by %s.%s", ref,
+				b.mainModule.Name, verb.Name)
+		}
+		topic, ok := resolved.(*schema.Topic)
+		if !ok {
+			return goTopicHandle{}, fmt.Errorf("%s.%s uses %s topic handle, but %s is not a topic",
+				b.mainModule.Name, verb.Name, ref, ref)
+		}
+		return b.processTopic(ref.Module, ref, topic)
 
 	default:
 		// TODO: implement other resources
@@ -879,6 +910,29 @@ func (b *mainModuleContextBuilder) processDatabase(moduleName string, db *schema
 		Name:       db.Name,
 		Module:     moduleName,
 		Type:       db.Type,
+		nativeType: nt,
+	}, nil
+}
+
+func (b *mainModuleContextBuilder) processTopic(moduleName string, ref *schema.Ref, topic *schema.Topic) (goTopicHandle, error) {
+	nn, ok := b.nativeNames[ref]
+	if !ok {
+		return goTopicHandle{}, fmt.Errorf("missing native name for topic %s.%s", moduleName, topic.Name)
+	}
+
+	nt, err := b.getNativeType(nn)
+	if err != nil {
+		return goTopicHandle{}, err
+	}
+
+	et, err := b.getGoSchemaType(topic.Event)
+	if err != nil {
+		return goTopicHandle{}, fmt.Errorf("failed to get event type for topic %s.%s: %w", moduleName, topic.Name, err)
+	}
+	return goTopicHandle{
+		Name:       topic.Name,
+		Module:     moduleName,
+		EventType:  et,
 		nativeType: nt,
 	}, nil
 }
@@ -1070,6 +1124,12 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	},
 	"getDatabaseHandle": func(resource verbResource) *goDBHandle {
 		if c, ok := resource.(goDBHandle); ok {
+			return &c
+		}
+		return nil
+	},
+	"getTopicHandle": func(resource verbResource) *goTopicHandle {
+		if c, ok := resource.(goTopicHandle); ok {
 			return &c
 		}
 		return nil

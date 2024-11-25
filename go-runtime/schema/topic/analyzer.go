@@ -12,53 +12,34 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
 
-const (
-	ftlTopicFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Topic"
-)
-
 // Extractor extracts topics.
-var Extractor = common.NewCallDeclExtractor[*schema.Topic]("topic", Extract, ftlTopicFuncPath)
+var Extractor = common.NewResourceDeclExtractor[*schema.Topic]("topic", Extract, matchFunc)
 
-// Extract expects: var NameLiteral = ftl.Topic[EventType]("nameLiteral")
-func Extract(pass *analysis.Pass, obj types.Object, node *ast.GenDecl, callExpr *ast.CallExpr,
-	callPath string) optional.Option[*schema.Topic] {
-	indexExpr, ok := callExpr.Fun.(*ast.IndexExpr)
+func Extract(pass *analysis.Pass, obj types.Object, node *ast.TypeSpec) optional.Option[*schema.Topic] {
+	idxExpr, ok := node.Type.(*ast.IndexExpr)
 	if !ok {
-		common.Errorf(pass, node, "must have an event type as a type parameter")
+		common.Errorf(pass, node, "unsupported topic type")
 		return optional.None[*schema.Topic]()
 	}
-	typeParamType, ok := common.ExtractType(pass, indexExpr.Index).Get()
+
+	typ, ok := common.ExtractType(pass, idxExpr.Index).Get()
 	if !ok {
-		common.Errorf(pass, node, "unsupported event type")
+		common.Errorf(pass, node, "unsupported topic type")
 		return optional.None[*schema.Topic]()
-	}
-
-	topicName := common.ExtractStringLiteralArg(pass, callExpr, 0)
-	expTopicName := strcase.ToLowerCamel(strcase.ToUpperStrippedCamel(topicName))
-	if topicName != expTopicName {
-		common.Errorf(pass, node, "unsupported topic name %q, did you mean to use %q?", topicName, expTopicName)
-		return optional.None[*schema.Topic]()
-	}
-
-	if len(node.Specs) > 0 {
-		if t, ok := node.Specs[0].(*ast.ValueSpec); ok {
-			varName := t.Names[0].Name
-			expVarName := strcase.ToUpperCamel(topicName)
-			if varName != expVarName {
-				common.Errorf(pass, node, "unexpected topic variable name %q, did you mean %q?", varName, expVarName)
-				return optional.None[*schema.Topic]()
-			}
-		}
 	}
 
 	topic := &schema.Topic{
 		Pos:   common.GoPosToSchemaPos(pass.Fset, node.Pos()),
-		Name:  topicName,
-		Event: typeParamType,
+		Name:  strcase.ToLowerCamel(node.Name.Name),
+		Event: typ,
 	}
-	common.ApplyMetadata[*schema.Subscription](pass, obj, func(md *common.ExtractedMetadata) {
+	if md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get(); ok {
 		topic.Comments = md.Comments
 		topic.Export = md.IsExported
-	})
+	}
 	return optional.Some(topic)
+}
+
+func matchFunc(pass *analysis.Pass, node ast.Node, obj types.Object) bool {
+	return common.GetVerbResourceType(pass, obj) == common.VerbResourceTypeTopicHandle
 }

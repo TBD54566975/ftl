@@ -8,13 +8,15 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/server"
 )
 
+type AppendLogClient func(context.Context, AppendLogRequest) error
+
 type BriefedClient func(context.Context, ftlorigin.Agent) error
 
 type DeployedClient func(context.Context, AgentDeployment) error
 
 type ConsumeAgentBroadcastClient func(context.Context, ftlorigin.Agent) error
 
-type GetLogFileClient func(context.Context, GetLogFileRequest) (GetLogFileResponse, error)
+type FetchLogsClient func(context.Context, FetchLogsRequest) (FetchLogsResponse, error)
 
 type MissionResultClient func(context.Context, MissionResultRequest) (MissionResultResponse, error)
 
@@ -24,6 +26,9 @@ type TerminatedClient func(context.Context, AgentTerminated) error
 
 func init() {
 	reflection.Register(
+		reflection.ProvideResourcesForVerb(
+			AppendLog,
+		),
 		reflection.ProvideResourcesForVerb(
 			Briefed,
 			server.SinkClient[DeployedClient, AgentDeployment](),
@@ -36,7 +41,7 @@ func init() {
 			server.SinkClient[BriefedClient, ftlorigin.Agent](),
 		),
 		reflection.ProvideResourcesForVerb(
-			GetLogFile,
+			FetchLogs,
 		),
 		reflection.ProvideResourcesForVerb(
 			MissionResult,

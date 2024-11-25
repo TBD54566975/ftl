@@ -50,6 +50,9 @@ func init() {
                 {{- with getDatabaseHandle . }}
 			server.DatabaseHandle[{{.TypeName}}]("{{.Type}}"),
                 {{- end }}
+                {{- with getTopicHandle . }}
+			server.TopicHandle[{{.EventType.TypeName}}]("{{.Module}}", "{{.Name}}"),
+                {{- end }}
 			{{- end}}
 		),
 {{- end}}

@@ -10,15 +10,16 @@ import (
 )
 
 //ftl:export
-var Topic1 = ftl.Topic[Event]("topic1")
+type Topic1 = ftl.TopicHandle[Event]
 
 //ftl:export
-var Topic2 = ftl.Topic[Event]("topic2")
+type Topic2 = ftl.TopicHandle[Event]
 
-var subscription1_1 = ftl.Subscription(Topic1, "subscription_1_1")
-var subscription1_2 = ftl.Subscription(Topic1, "subscription_1_2")
-var subscription2_1 = ftl.Subscription(Topic2, "subscription_2_1")
-var subscription2_2 = ftl.Subscription(Topic2, "subscription_2_3")
+type Subscription1_1_ErrorsAfterASecond = ftl.SubscriptionHandle[Topic1, ErrorsAfterASecondClient, Event]
+type Subscription1_1_PropagateToTopic2 = ftl.SubscriptionHandle[Topic1, PropagateToTopic2Client, Event]
+type Subscription1_2_PropagateToTopic2 = ftl.SubscriptionHandle[Topic1, PropagateToTopic2Client, Event]
+type Subscription2_1_ConsumeEvent = ftl.SubscriptionHandle[Topic2, ConsumeEventClient, Event]
+type Subscription2_2_ConsumeEvent = ftl.SubscriptionHandle[Topic2, ConsumeEventClient, Event]
 
 //ftl:data
 type Event struct {
@@ -26,13 +27,13 @@ type Event struct {
 }
 
 //ftl:verb
-func PublishToTopicOne(ctx context.Context, event Event) error {
-	return Topic1.Publish(ctx, event)
+func PublishToTopicOne(ctx context.Context, event Event, topic1 Topic1) error {
+	return topic1.Publish(ctx, event)
 }
 
 //ftl:verb
-func PropagateToTopic2(ctx context.Context, event Event) error {
-	return Topic2.Publish(ctx, event)
+func PropagateToTopic2(ctx context.Context, event Event, topic2 Topic2) error {
+	return topic2.Publish(ctx, event)
 }
 
 //ftl:verb
@@ -40,7 +41,7 @@ func ConsumeEvent(_ context.Context, _ Event) error {
 	return nil
 }
 
-//ftl:subscribe subscription_1_1
+//ftl:verb
 func ErrorsAfterASecond(ctx context.Context, event Event) error {
 	time.Sleep(1 * time.Second)
 	return fmt.Errorf("SubscriberThatFails always fails")

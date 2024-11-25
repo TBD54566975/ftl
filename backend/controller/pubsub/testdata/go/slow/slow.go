@@ -9,8 +9,8 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
-var Topic = ftl.Topic[Event]("topic")
-var _ = ftl.Subscription(Topic, "slowSubscription")
+type Topic = ftl.TopicHandle[Event]
+type SlowSubscription = ftl.SubscriptionHandle[Topic, ConsumeClient, Event]
 
 type Event struct {
 	Duration int
@@ -21,9 +21,9 @@ type PublishRequest struct {
 }
 
 //ftl:verb
-func Publish(ctx context.Context, req PublishRequest) error {
+func Publish(ctx context.Context, req PublishRequest, topic Topic) error {
 	for _, duration := range req.Durations {
-		err := Topic.Publish(ctx, Event{Duration: duration})
+		err := topic.Publish(ctx, Event{Duration: duration})
 		if err != nil {
 			return err
 		}
@@ -32,7 +32,6 @@ func Publish(ctx context.Context, req PublishRequest) error {
 }
 
 //ftl:verb
-//ftl:subscribe slowSubscription
 func Consume(ctx context.Context, event Event) error {
 	for i := range event.Duration {
 		select {

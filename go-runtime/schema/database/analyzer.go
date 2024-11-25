@@ -53,18 +53,22 @@ func extractDatabase(
 				common.Errorf(pass, node, "invalid database name %q", name)
 				return optional.None[*schema.Database]()
 			}
+			if name == "" {
+				common.Errorf(pass, node.Type, "database config must provide a name")
+				return optional.None[*schema.Database]()
+			}
 			db.Name = name
 		}
 	}
+	// not a DB
 	if db.Name == "" {
-		common.Errorf(pass, node.Type, "database config must provide a name")
 		return optional.None[*schema.Database]()
 	}
 
 	return optional.Some(db)
 }
 
-func matchFunc(pass *analysis.Pass, node ast.Node) bool {
+func matchFunc(pass *analysis.Pass, node ast.Node, obj types.Object) bool {
 	return getDBType(pass, node) != none
 }
 

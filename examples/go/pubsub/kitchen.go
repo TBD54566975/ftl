@@ -7,12 +7,12 @@ import (
 )
 
 //ftl:export
-var NewOrderTopic = ftl.Topic[Pizza]("newOrderTopic")
+type NewOrderTopic = ftl.TopicHandle[Pizza]
 
 //ftl:export
-var PizzaReadyTopic = ftl.Topic[Pizza]("pizzaReadyTopic")
+type PizzaReadyTopic = ftl.TopicHandle[Pizza]
 
-var _ = ftl.Subscription(NewOrderTopic, "cookPizzaSub")
+type CookPizzaSub = ftl.SubscriptionHandle[NewOrderTopic, CookPizzaClient, Pizza]
 
 type Pizza struct {
 	ID       int
@@ -20,8 +20,8 @@ type Pizza struct {
 	Customer string
 }
 
-//ftl:subscribe cookPizzaSub
-func CookPizza(ctx context.Context, pizza Pizza) error {
+//ftl:verb
+func CookPizza(ctx context.Context, pizza Pizza, topic PizzaReadyTopic) error {
 	ftl.LoggerFromContext(ctx).Infof("Cooking pizza: %v", pizza)
-	return PizzaReadyTopic.Publish(ctx, pizza)
+	return topic.Publish(ctx, pizza)
 }

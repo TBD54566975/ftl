@@ -157,6 +157,7 @@ type combinedData struct {
 	refResults             map[schema.RefKey]refResult
 	extractedDecls         map[schema.Decl]types.Object
 	externalTypeAliases    sets.Set[*schema.TypeAlias]
+	sinksToSubscriptions   map[string]*schema.Subscription
 	// for detecting duplicates
 	typeUniqueness   map[string]tuple.Pair[types.Object, schema.Position]
 	globalUniqueness map[string]tuple.Pair[types.Object, schema.Position]
@@ -167,6 +168,7 @@ func newCombinedData(diagnostics []analysis.SimpleDiagnostic) *combinedData {
 		errs:                   diagnosticsToSchemaErrors(diagnostics),
 		nativeNames:            make(NativeNames),
 		functionCalls:          make(map[schema.Position]finalize.FunctionCall),
+		sinksToSubscriptions:   make(map[string]*schema.Subscription),
 		verbs:                  make(map[types.Object]*schema.Verb),
 		verbResourceParamOrder: make(map[*schema.Verb][]common.VerbResourceParam),
 		refResults:             make(map[schema.RefKey]refResult),
@@ -190,6 +192,7 @@ func (cd *combinedData) update(fr finalize.Result) {
 	maps.Copy(cd.nativeNames, fr.NativeNames)
 	maps.Copy(cd.functionCalls, fr.FunctionCalls)
 	maps.Copy(cd.verbResourceParamOrder, fr.VerbResourceParamOrder)
+	maps.Copy(cd.sinksToSubscriptions, fr.SinksToSubscriptions)
 }
 
 func (cd *combinedData) toResult() Result {
@@ -352,6 +355,14 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 			}
 		case *schema.Verb:
 			cd.verbs[obj] = d
+			if sub, ok := cd.sinksToSubscriptions[d.Name]; ok {
+				d.AddSubscription(&schema.MetadataSubscriber{
+					Pos:  sub.Position(),
+					Name: sub.Name,
+				})
+			}
+		case *schema.Subscription:
+
 		default:
 		}
 	}

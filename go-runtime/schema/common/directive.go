@@ -252,29 +252,6 @@ func (d *DirectiveRetry) Catch() optional.Option[schema.Ref] {
 	})
 }
 
-// DirectiveSubscriber is used to subscribe a sink to a subscription
-type DirectiveSubscriber struct {
-	Pos token.Pos
-
-	Name string `parser:"'subscribe' @Ident"`
-}
-
-func (*DirectiveSubscriber) directive() {}
-
-func (d *DirectiveSubscriber) String() string {
-	return fmt.Sprintf("subscribe %s", d.Name)
-}
-func (*DirectiveSubscriber) GetTypeName() string { return "subscribe" }
-func (d *DirectiveSubscriber) SetPosition(pos token.Pos) {
-	d.Pos = pos
-}
-func (d *DirectiveSubscriber) GetPosition() token.Pos {
-	return d.Pos
-}
-func (*DirectiveSubscriber) MustAnnotate() []ast.Node {
-	return []ast.Node{&ast.FuncDecl{}}
-}
-
 // DirectiveExport is used on declarations that don't include export in other directives.
 type DirectiveExport struct {
 	Pos token.Pos
@@ -353,7 +330,7 @@ var DirectiveParser = participle.MustBuild[directiveWrapper](
 	participle.Unquote(),
 	participle.UseLookahead(2),
 	participle.Union[Directive](&DirectiveVerb{}, &DirectiveData{}, &DirectiveEnum{}, &DirectiveTypeAlias{},
-		&DirectiveIngress{}, &DirectiveCronJob{}, &DirectiveRetry{}, &DirectiveSubscriber{}, &DirectiveExport{},
+		&DirectiveIngress{}, &DirectiveCronJob{}, &DirectiveRetry{}, &DirectiveExport{},
 		&DirectiveTypeMap{}, &DirectiveEncoding{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )

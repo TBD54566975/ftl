@@ -420,8 +420,10 @@ func testExtractModulePubSub(t *testing.T) {
         }
 
 		export verb broadcast(Unit) Unit
+        	+publish pubsub.publicBroadcast
 
         verb payin(Unit) Unit
+        	+publish pubsub.payins
 
         verb processBroadcast(pubsub.PayinEvent) Unit
         	+subscribe broadcastSubscription
@@ -565,7 +567,7 @@ func testErrorReporting(t *testing.T) {
 		`146:6-45: enum discriminator "TypeEnum3" cannot contain exported methods`,
 		`149:6-35: enum discriminator "NoMethodsTypeEnum" must define at least one method`,
 		`161:3-14: unexpected token "d"`,
-		`168:2-62: can not publish directly to topics in other modules`,
+		`168:2-49: can not publish directly to topics in other modules`,
 		`174:2-12: struct field unexported must be exported by starting with an uppercase letter`,
 		`178:6: unsupported type "ftl/failing/child.BadChildStruct" for field "child"`,
 		`183:6: duplicate data declaration for "failing.Redeclared"; already declared at "27:6"`,

@@ -31,9 +31,9 @@ func Echo(ctx context.Context, req EchoRequest, tc time.TimeClient) (EchoRespons
 	return EchoResponse{Message: fmt.Sprintf("Hello, %s!!! It is %s!", req.Name.Default("world"), tresp.Time)}, nil
 }
 
-var _ = ftl.Subscription(time.Invoices, "emailInvoices")
+type EmailInvoices = ftl.SubscriptionHandle[time.Invoices, SendInvoiceEmailClient, time.Invoice]
 
-//ftl:subscribe emailInvoices
+//ftl:verb
 func SendInvoiceEmail(ctx context.Context, in time.Invoice) error {
 	if in.Amount == 10 {
 		return fmt.Errorf("can't process $10 invoices")

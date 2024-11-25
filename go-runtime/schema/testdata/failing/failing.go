@@ -164,8 +164,8 @@ func DaysNotPossible(ctx context.Context) error {
 }
 
 //ftl:verb
-func BadPublish(ctx context.Context) error {
-	ps.PublicBroadcast.Publish(ctx, ps.PayinEvent{Name: "Test"})
+func BadPublish(ctx context.Context, topic ps.PublicBroadcast) error {
+	topic.Publish(ctx, ps.PayinEvent{Name: "Test"})
 	return ps.Broadcast(ctx)
 }
 
