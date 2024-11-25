@@ -24,7 +24,6 @@ spec:
               name: ftl-controller-ingress
               port:
                 number: 8891
-        {{- if .Values.provisioner.enabled }}
         - path: /xyz.block.ftl.v1beta1.provisioner.ProvisionerService/
           pathType: Prefix
           backend:
@@ -32,7 +31,6 @@ spec:
               name: ftl-provisioner
               port:
                 number: 8893
-        {{- end }}
   {{- range $host := .Values.ingress.hosts }}
   - host: "{{ $host.host }}"
     http:

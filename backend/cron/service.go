@@ -3,6 +3,7 @@ package cron
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sort"
 	"time"
 
@@ -35,6 +36,10 @@ type cronJob struct {
 	cronmd  *schema.MetadataCronJob
 	pattern cron.Pattern
 	next    time.Time
+}
+
+type Config struct {
+	ControllerEndpoint *url.URL `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
 }
 
 func (c cronJob) String() string {

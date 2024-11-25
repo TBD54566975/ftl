@@ -47,3 +47,8 @@ app.kubernetes.io/name: {{ include "ftl.fullname" . }}
 app.kubernetes.io/component: provisioner
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
+{{- define "ftl-cron.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "ftl.fullname" . }}
+app.kubernetes.io/component: cron
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}

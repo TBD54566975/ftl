@@ -29,7 +29,6 @@ runner:
     sidecar.istio.io/logLevel: "debug"
 
 provisioner:
-  enabled: true
   image:
     repository: "ftl:5000/ftl-provisioner"
     tag: "latest"
@@ -38,6 +37,11 @@ provisioner:
     ports:
       - name: "http-8893"
         port: 8893
+cron:
+  image:
+    repository: "ftl:5000/ftl-cron"
+    tag: "latest"
+    pullPolicy: Always
 istio:
   enabled: true
 

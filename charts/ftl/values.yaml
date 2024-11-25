@@ -103,7 +103,6 @@ controller:
 
 provisioner:
   provisionersRoleArn: arn:aws:iam::ftl-provisioners-irsa-role
-  enabled: false
   replicas: 1
   revisionHistoryLimit: 0
   configMap: "ftl-provisioner-default-config"
@@ -131,7 +130,6 @@ provisioner:
       valueFrom:
         fieldRef:
           fieldPath: status.hostIP
-
   ports:
     - name: http
       containerPort: 8893
@@ -210,6 +208,25 @@ runner:
   affinity: null
   topologySpreadConstraints: null
   tolerations: null
+
+
+cron:
+  replicas: 1
+  revisionHistoryLimit: 0
+  image:
+    repository: "ftl0/ftl-cron"
+    pullPolicy: IfNotPresent
+
+  envFrom: null
+  serviceAccountName: ftl-cron
+
+  env:
+    - name: FTL_ENDPOINT
+      value: "http://ftl-controller:8892"
+    - name: LOG_LEVEL
+      value: "debug"
+    - name: LOG_JSON
+      value: "true"
 
 postgresql:
   enabled: true

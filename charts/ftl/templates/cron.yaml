@@ -1,0 +1,53 @@
+{{ $version := printf "v%s" .Chart.Version -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ftl.fullname" . }}-cron
+  labels:
+    {{- include "ftl.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.cron.replicas }}
+  revisionHistoryLimit: {{ .Values.cron.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "ftl-cron.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ftl-cron.selectorLabels" . | nindent 8 }}
+      {{- if .Values.cron.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.cron.podAnnotations | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.cron.serviceAccountName }}
+      containers:
+        - name: app
+          image: "{{ .Values.cron.image.repository }}:{{ .Values.cron.image.tag | default $version }}"
+          imagePullPolicy: {{ .Values.cron.image.pullPolicy }}
+          {{- if .Values.cron.envFrom }}
+          envFrom:
+            {{- if .Values.cron.envFrom }}
+            {{- toYaml .Values.cron.envFrom | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          env:
+            {{- if .Values.cron.env }}
+            {{- toYaml .Values.cron.env | nindent 12 }}
+            {{- end }}
+      {{- if .Values.cron.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.cron.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.cron.affinity }}
+      affinity:
+        {{- toYaml .Values.cron.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.cron.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.cron.topologySpreadConstraints | nindent 8 }}
+      {{- end }}
+      {{- if .Values.cron.tolerations }}
+      tolerations:
+        {{- toYaml .Values.cron.tolerations | nindent 8 }}
+      {{- end }}

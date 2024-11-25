@@ -23,6 +23,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
+	"github.com/TBD54566975/ftl/backend/cron"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
@@ -73,12 +74,13 @@ func (s *serveCmd) Run(
 	controllerClient ftlv1connect.ControllerServiceClient,
 	provisionerClient provisionerconnect.ProvisionerServiceClient,
 	schemaClient ftlv1connect.SchemaServiceClient,
+	verbClient ftlv1connect.VerbServiceClient,
 ) error {
 	bindAllocator, err := bind.NewBindAllocator(s.Bind, 2)
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
-	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, controllerClient, provisionerClient, schemaClient, s.Recreate, nil)
+	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, controllerClient, provisionerClient, schemaClient, verbClient, s.Recreate, nil)
 }
 
 //nolint:maintidx
@@ -93,6 +95,7 @@ func (s *serveCommonConfig) run(
 	controllerClient ftlv1connect.ControllerServiceClient,
 	provisionerClient provisionerconnect.ProvisionerServiceClient,
 	schemaClient ftlv1connect.SchemaServiceClient,
+	vervClient ftlv1connect.VerbServiceClient,
 	recreate bool,
 	devModeEndpoints <-chan scaling.DevModeEndpoints,
 ) error {
@@ -280,6 +283,14 @@ func (s *serveCommonConfig) run(
 		})
 	}
 
+	// Start Cron
+	wg.Go(func() error {
+		err := cron.Start(ctx, schemaClient, vervClient)
+		if err != nil {
+			return fmt.Errorf("cron failed: %w", err)
+		}
+		return nil
+	})
 	// Wait for controller to start, then run startup commands.
 	start := time.Now()
 	if err := waitForControllerOnline(ctx, s.StartupTimeout, controllerClient); err != nil {
