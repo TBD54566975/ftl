@@ -81,8 +81,8 @@ func Start(ctx context.Context, config Config, pullSchemaClient PullSchemaClient
 		rpc.RetryStreamingServerStream(ctx, "pull-schema", backoff.Backoff{}, &ftlv1.PullSchemaRequest{}, pullSchemaClient.PullSchema, func(ctx context.Context, resp *ftlv1.PullSchemaResponse) error {
 			existing := svc.schemaState.Load().protoSchema
 			newState := schemaState{
-				protoSchema: &schemapb.Schema{},
-				httpRoutes:  make(map[string][]ingressRoute),
+				protoSchema:                 &schemapb.Schema{},
+				httpRoutes:                  make(map[string][]ingressRoute),
 			}
 			if resp.ChangeType != ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED {
 				found := false
@@ -100,13 +100,18 @@ func Start(ctx context.Context, config Config, pullSchemaClient PullSchemaClient
 					newState.protoSchema.Modules = append(newState.protoSchema.Modules, resp.Schema)
 				}
 			} else if existing != nil {
+				// We see the new state of the module before we see the removed deployment.
+				// We only want to actually remove if it was not replaced by a new deployment.
+				if !resp.ModuleRemoved {
+					logger.Debugf("Not removing ingress for %s as it is not the current deployment", resp.DeploymentKey)
+					return nil
+				}
 				for i := range existing.Modules {
 					if existing.Modules[i].Name != resp.ModuleName {
 						newState.protoSchema.Modules = append(newState.protoSchema.Modules, existing.Modules[i])
 					}
 				}
 			}
-
 			newState.httpRoutes = extractIngressRoutingEntries(newState.protoSchema)
 			sch, err := schema.FromProto(newState.protoSchema)
 			if err != nil {
@@ -146,9 +151,9 @@ func (s *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type schemaState struct {
-	protoSchema *schemapb.Schema
-	schema      *schema.Schema
-	httpRoutes  map[string][]ingressRoute
+	protoSchema                 *schemapb.Schema
+	schema                      *schema.Schema
+	httpRoutes                  map[string][]ingressRoute
 }
 
 type ingressRoute struct {

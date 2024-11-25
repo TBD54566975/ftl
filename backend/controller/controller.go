@@ -1515,6 +1515,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	}
 	moduleState := map[string]moduleStateEntry{}
 	moduleByDeploymentKey := map[string]string{}
+	mostRecentDeploymentByModule := map[string]string{}
 
 	// Seed the notification channel with the current deployments.
 	seedDeployments, err := s.dal.GetActiveDeployments(ctx)
@@ -1555,13 +1556,18 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 			// Deleted key
 			if deletion, ok := notification.Deleted.Get(); ok {
 				name := moduleByDeploymentKey[deletion.String()]
+				moduleRemoved := mostRecentDeploymentByModule[name] == deletion.String()
 				response = &ftlv1.PullSchemaResponse{
 					ModuleName:    name,
 					DeploymentKey: deletion.String(),
 					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED,
+					ModuleRemoved: moduleRemoved,
 				}
 				delete(moduleState, name)
 				delete(moduleByDeploymentKey, deletion.String())
+				if moduleRemoved {
+					delete(mostRecentDeploymentByModule, name)
+				}
 			} else if message, ok := notification.Message.Get(); ok {
 				moduleSchema := message.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 				if moduleSchema.Runtime == nil {
@@ -1586,17 +1592,21 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 					if !bytes.Equal(current.hash, newState.hash) || current.minReplicas != newState.minReplicas {
 						changeType := ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED
 						// A deployment is considered removed if its minReplicas is set to 0.
+						moduleRemoved := false
 						if current.minReplicas > 0 && message.MinReplicas == 0 {
 							changeType = ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED
+							moduleRemoved = mostRecentDeploymentByModule[message.Schema.Name] == message.Key.String()
 						}
 						response = &ftlv1.PullSchemaResponse{
 							ModuleName:    moduleSchema.Name,
 							DeploymentKey: message.Key.String(),
 							Schema:        moduleSchema,
 							ChangeType:    changeType,
+							ModuleRemoved: moduleRemoved,
 						}
 					}
 				} else {
+					mostRecentDeploymentByModule[message.Schema.Name] = message.Key.String()
 					response = &ftlv1.PullSchemaResponse{
 						ModuleName:    moduleSchema.Name,
 						DeploymentKey: message.Key.String(),

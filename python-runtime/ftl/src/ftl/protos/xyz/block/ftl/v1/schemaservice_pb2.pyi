@@ -31,15 +31,17 @@ class PullSchemaRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class PullSchemaResponse(_message.Message):
-    __slots__ = ("deployment_key", "module_name", "schema", "more", "change_type")
+    __slots__ = ("deployment_key", "module_name", "schema", "more", "change_type", "module_removed")
     DEPLOYMENT_KEY_FIELD_NUMBER: _ClassVar[int]
     MODULE_NAME_FIELD_NUMBER: _ClassVar[int]
     SCHEMA_FIELD_NUMBER: _ClassVar[int]
     MORE_FIELD_NUMBER: _ClassVar[int]
     CHANGE_TYPE_FIELD_NUMBER: _ClassVar[int]
+    MODULE_REMOVED_FIELD_NUMBER: _ClassVar[int]
     deployment_key: str
     module_name: str
     schema: _schema_pb2.Module
     more: bool
     change_type: DeploymentChangeType
-    def __init__(self, deployment_key: _Optional[str] = ..., module_name: _Optional[str] = ..., schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., more: bool = ..., change_type: _Optional[_Union[DeploymentChangeType, str]] = ...) -> None: ...
+    module_removed: bool
+    def __init__(self, deployment_key: _Optional[str] = ..., module_name: _Optional[str] = ..., schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., more: bool = ..., change_type: _Optional[_Union[DeploymentChangeType, str]] = ..., module_removed: bool = ...) -> None: ...

@@ -29,6 +29,8 @@ message PullSchemaResponse {
   // If false this is the last schema change in the initial batch, but others may follow later.
   bool more = 3;
   DeploymentChangeType change_type = 5;
+  // If this is true then the module was removed as well as the deployment. This is only set for DEPLOYMENT_REMOVED.
+  bool module_removed = 6;
 }
 
 service SchemaService {
