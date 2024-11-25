@@ -19,6 +19,7 @@ ZIP_DIRS := "go-runtime/compile/build-template " + \
 CONSOLE_ROOT := "frontend/console"
 FRONTEND_OUT := CONSOLE_ROOT + "/dist/index.html"
 EXTENSION_OUT := "frontend/vscode/dist/extension.js"
+SQLC_GEN_FTL_OUT := "sqlc-gen-ftl/target/wasm32-wasip1/release/sqlc-gen-ftl.wasm"
 PROTOS_IN := "common/protos"
 PROTOS_OUT := "backend/protos/xyz/block/ftl/console/v1/console.pb.go " + \
               "backend/protos/xyz/block/ftl//v1/ftl.pb.go " + \
@@ -73,6 +74,7 @@ clean:
   rm -rf python-runtime/ftl/.venv
   find . -name '*.zip' -exec rm {} \;
   mvn -f jvm-runtime/ftl-runtime clean
+  cd sqlc-gen-ftl && cargo clean
 
 # Live rebuild the ftl binary whenever source changes.
 live-rebuild:
@@ -83,7 +85,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "ftl dev --plain {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-backend build-frontend build-backend-tests build-generate build-zips lsp-generate build-jvm build-language-plugins build-go2proto-testdata
+build-all: build-protos-unconditionally build-backend build-frontend build-backend-tests build-generate build-zips lsp-generate build-jvm build-language-plugins build-go2proto-testdata build-sqlc-gen-ftl
 
 # Run "go generate" on all packages
 build-generate:
@@ -162,6 +164,18 @@ build-frontend: pnpm-install
 build-extension: pnpm-install
   @mk {{EXTENSION_OUT}} : frontend/vscode/src frontend/vscode/package.json -- "cd frontend/vscode && rm -f ftl-*.vsix && pnpm run compile"
 
+# Build the sqlc-ftl-gen plugin, used to generate FTL schema from SQL
+build-sqlc-gen-ftl: build-protos
+    @mk {{SQLC_GEN_FTL_OUT}} : sqlc-gen-ftl/src -- \
+        "cd sqlc-gen-ftl && \
+        cargo build --target wasm32-wasip1 --release"
+
+cargo-install:
+    @mk sqlc-gen-ftl/target : sqlc-gen-ftl/Cargo.toml -- \
+        "cd sqlc-gen-ftl && \
+        cargo install protoc-gen-prost && \
+        cargo build"
+
 # Install development version of VSCode extension
 install-extension: build-extension
   @cd frontend/vscode && vsce package && code --install-extension ftl-*.vsix
@@ -186,6 +200,10 @@ format-frontend:
 pnpm-install:
   @for i in {1..3}; do mk frontend/**/node_modules : frontend/**/package.json -- "pnpm install --frozen-lockfile" && break || sleep 5; done
 
+# Copy plugin protos from the SQLC release
+update-sqlc-plugin-codegen-proto:
+	@bash scripts/sqlc-codegen-proto
+
 # Regenerate protos
 build-protos: go2proto
   @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "@just build-protos-unconditionally"
@@ -200,7 +218,6 @@ go2proto:
 # Unconditionally rebuild protos
 build-protos-unconditionally: go2proto lint-protos pnpm-install
   cd common/protos && buf generate
-  cd backend/protos && buf generate
 
 # Run integration test(s)
 integration-tests *test:

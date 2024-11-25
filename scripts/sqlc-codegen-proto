@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Get sqlc version from hermit
+if [ ! "${HERMIT_ENV:-}" ]; then
+    # shellcheck disable=SC1091
+    . "$(dirname "$(dirname "$0")")/bin/activate-hermit"
+fi
+
+SQLC_VERSION=$(hermit info sqlc | grep "Version:" | cut -d' ' -f2)
+if [[ -z "$SQLC_VERSION" ]]; then
+    echo "Error: Could not determine sqlc version from hermit"
+    exit 1
+fi
+
+# Create temp directory
+TEMP_DIR=$(mktemp -d)
+trap 'rm -rf $TEMP_DIR' EXIT
+
+# Download and extract the release source
+echo "Fetching sqlc version ${SQLC_VERSION}..."
+curl -L --fail --silent \
+    "https://github.com/sqlc-dev/sqlc/archive/refs/tags/v${SQLC_VERSION}.tar.gz" \
+    -o "${TEMP_DIR}/sqlc.tar.gz"
+
+tar xzf "${TEMP_DIR}/sqlc.tar.gz" -C "${TEMP_DIR}"
+
+# Copy the proto file
+PROTO_PATH="${TEMP_DIR}/sqlc-${SQLC_VERSION}/protos/plugin/codegen.proto"
+if [[ ! -f "$PROTO_PATH" ]]; then
+    echo "Error: Proto file not found in release archive"
+    exit 1
+fi
+
+cp "$PROTO_PATH" "sqlc-gen-ftl/proto/codegen.proto"
+echo "Updated proto file to version ${SQLC_VERSION}"

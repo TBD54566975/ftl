@@ -2,3 +2,6 @@
 go.sum linguist-generated=true
 go.work.sum linguist-generated=true
 /python-runtime/ftl/src/ftl/protos/**/* linguist-generated=true
+/sqlc-gen-ftl/src/protos/**/* linguist-generated=true
+/sqlc-gen-ftl/src/protos/mod.rs linguist-generated=false
+/sqlc-gen-ftl/src/protos/plugin.rs linguist-generated=false
