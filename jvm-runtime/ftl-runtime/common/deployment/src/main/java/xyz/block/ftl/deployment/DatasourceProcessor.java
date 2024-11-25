@@ -9,10 +9,14 @@ import org.jboss.logging.Logger;
 import io.quarkus.agroal.spi.JdbcDataSourceBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
+import io.quarkus.deployment.annotations.ExecutionTime;
+import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.GeneratedResourceBuildItem;
 import io.quarkus.deployment.builditem.SystemPropertyBuildItem;
 import xyz.block.ftl.runtime.FTLDatasourceCredentials;
+import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.config.FTLConfigSource;
+import xyz.block.ftl.v1.ModuleContextResponse;
 import xyz.block.ftl.v1.schema.Database;
 import xyz.block.ftl.v1.schema.Decl;
 
@@ -21,10 +25,12 @@ public class DatasourceProcessor {
     private static final Logger log = Logger.getLogger(DatasourceProcessor.class);
 
     @BuildStep
+    @Record(ExecutionTime.STATIC_INIT)
     public SchemaContributorBuildItem registerDatasources(
             List<JdbcDataSourceBuildItem> datasources,
             BuildProducer<SystemPropertyBuildItem> systemPropProducer,
-            BuildProducer<GeneratedResourceBuildItem> generatedResourceBuildItemBuildProducer) {
+            BuildProducer<GeneratedResourceBuildItem> generatedResourceBuildItemBuildProducer,
+            FTLRecorder recorder) {
         log.infof("Processing %d datasource annotations into decls", datasources.size());
         List<Decl> decls = new ArrayList<>();
         List<String> namedDatasources = new ArrayList<>();
@@ -36,6 +42,11 @@ public class DatasourceProcessor {
             if (dbKind.equals("postgresql")) {
                 // FTL and quarkus use slightly different names
                 dbKind = "postgres";
+            }
+            if (dbKind.equals("mysql")) {
+                recorder.registerDatabase(ds.getName(), ModuleContextResponse.DBType.MYSQL);
+            } else {
+                recorder.registerDatabase(ds.getName(), ModuleContextResponse.DBType.POSTGRES);
             }
             //default name is <default> which is not a valid name
             String sanitisedName = ds.getName().replace("<", "").replace(">", "");

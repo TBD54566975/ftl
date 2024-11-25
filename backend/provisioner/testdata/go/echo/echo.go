@@ -19,19 +19,12 @@ func (EchoDBConfig) Name() string { return "echodb" }
 //
 //ftl:verb export
 func Echo(ctx context.Context, req string, db ftl.DatabaseHandle[EchoDBConfig]) (string, error) {
-	_, err := db.Get(ctx).Exec(`CREATE TABLE IF NOT EXISTS messages(
-	    message TEXT
-	);`)
+	_, err := db.Get(ctx).Exec(`INSERT INTO messages (message) VALUES ($1);`, req)
 	if err != nil {
 		return "", err
 	}
 
-	_, err = db.Get(ctx).Exec(`INSERT INTO messages (message) VALUES ($1);`, req)
-	if err != nil {
-		return "", err
-	}
-
-	rows, err := db.Get(ctx).Query(`SELECT message FROM messages;`)
+	rows, err := db.Get(ctx).Query(`SELECT DISTINCT message FROM messages;`)
 	if err != nil {
 		return "", err
 	}

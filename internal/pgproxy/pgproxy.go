@@ -77,9 +77,11 @@ func (p *PgProxy) Start(ctx context.Context, started chan<- Started) error {
 // It will block until the connection is closed.
 func HandleConnection(ctx context.Context, conn net.Conn, connectionFn DSNConstructor) {
 	defer conn.Close()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	logger := log.FromContext(ctx)
-	logger.Infof("new connection established: %s", conn.RemoteAddr())
+	logger.Debugf("new connection established: %s", conn.RemoteAddr())
 
 	backend, startup, err := connectBackend(ctx, conn)
 	if err != nil {
@@ -90,30 +92,33 @@ func HandleConnection(ctx context.Context, conn net.Conn, connectionFn DSNConstr
 		logger.Infof("client disconnected without startup message: %s", conn.RemoteAddr())
 		return
 	}
-	logger.Debugf("startup message: %+v", startup)
-	logger.Debugf("backend connected: %s", conn.RemoteAddr())
+	logger.Tracef("startup message: %+v", startup)
+	logger.Tracef("backend connected: %s", conn.RemoteAddr())
 
-	frontend, err := connectFrontend(ctx, connectionFn, startup)
+	hijacked, err := connectFrontend(ctx, connectionFn, startup)
 	if err != nil {
 		// try again, in case there was a credential rotation
-		logger.Warnf("failed to connect frontend: %s, trying again", err)
+		logger.Debugf("failed to connect frontend: %s, trying again", err)
 
-		frontend, err = connectFrontend(ctx, connectionFn, startup)
+		hijacked, err = connectFrontend(ctx, connectionFn, startup)
 		if err != nil {
 			handleBackendError(ctx, backend, err)
 			return
 		}
 	}
-	logger.Debugf("frontend connected")
-
 	backend.Send(&pgproto3.AuthenticationOk{})
-	backend.Send(&pgproto3.ReadyForQuery{})
+	logger.Debugf("frontend connected")
+	for key, value := range hijacked.ParameterStatuses {
+		backend.Send(&pgproto3.ParameterStatus{Name: key, Value: value})
+	}
+
+	backend.Send(&pgproto3.ReadyForQuery{TxStatus: 'I'})
 	if err := backend.Flush(); err != nil {
 		logger.Errorf(err, "failed to flush backend authentication ok")
 		return
 	}
 
-	if err := proxy(ctx, backend, frontend); err != nil {
+	if err := proxy(ctx, backend, hijacked.Frontend); err != nil {
 		logger.Warnf("disconnecting %s due to: %s", conn.RemoteAddr(), err)
 		return
 	}
@@ -171,7 +176,7 @@ func connectBackend(ctx context.Context, conn net.Conn) (*pgproto3.Backend, *pgp
 	}
 }
 
-func connectFrontend(ctx context.Context, connectionFn DSNConstructor, startup *pgproto3.StartupMessage) (*pgproto3.Frontend, error) {
+func connectFrontend(ctx context.Context, connectionFn DSNConstructor, startup *pgproto3.StartupMessage) (*pgconn.HijackedConn, error) {
 	dsn, err := connectionFn(ctx, startup.Parameters)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct dsn: %w", err)
@@ -181,38 +186,61 @@ func connectFrontend(ctx context.Context, connectionFn DSNConstructor, startup *
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to backend: %w", err)
 	}
-	frontend := pgproto3.NewFrontend(conn.Conn(), conn.Conn())
-
-	return frontend, nil
+	hijacked, err := conn.Hijack()
+	if err != nil {
+		return nil, fmt.Errorf("failed to hijack backend: %w", err)
+	}
+	return hijacked, nil
 }
 
 func proxy(ctx context.Context, backend *pgproto3.Backend, frontend *pgproto3.Frontend) error {
 	logger := log.FromContext(ctx)
-	frontendMessages := make(chan pgproto3.BackendMessage)
-	backendMessages := make(chan pgproto3.FrontendMessage)
 	errors := make(chan error, 2)
 
 	go func() {
 		for {
 			msg, err := backend.Receive()
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 			if err != nil {
 				errors <- fmt.Errorf("failed to receive backend message: %w", err)
 				return
 			}
 			logger.Tracef("backend message: %T", msg)
-			backendMessages <- msg
+			frontend.Send(msg)
+			err = frontend.Flush()
+			if err != nil {
+				errors <- fmt.Errorf("failed to receive backend message: %w", err)
+				return
+			}
+			if _, ok := msg.(*pgproto3.Terminate); ok {
+				return
+			}
 		}
 	}()
 
 	go func() {
 		for {
 			msg, err := frontend.Receive()
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 			if err != nil {
 				errors <- fmt.Errorf("failed to receive frontend message: %w", err)
 				return
 			}
 			logger.Tracef("frontend message: %T", msg)
-			frontendMessages <- msg
+			backend.Send(msg)
+			err = backend.Flush()
+			if err != nil {
+				errors <- fmt.Errorf("failed to receive backend message: %w", err)
+				return
+			}
 		}
 	}()
 
@@ -220,20 +248,6 @@ func proxy(ctx context.Context, backend *pgproto3.Backend, frontend *pgproto3.Fr
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("context done: %w", ctx.Err())
-		case msg := <-backendMessages:
-			frontend.Send(msg)
-			if err := frontend.Flush(); err != nil {
-				return fmt.Errorf("failed to flush frontend message: %w", err)
-			}
-
-			if _, ok := msg.(*pgproto3.Terminate); ok {
-				return nil
-			}
-		case msg := <-frontendMessages:
-			backend.Send(msg)
-			if err := backend.Flush(); err != nil {
-				return fmt.Errorf("failed to flush backend message: %w", err)
-			}
 		case err := <-errors:
 			return err
 		}

@@ -5,11 +5,12 @@ import (
 	"net"
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
+	"github.com/jackc/pgx/v5/pgproto3"
+
 	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/pgproxy"
-	"github.com/alecthomas/assert/v2"
-	"github.com/jackc/pgx/v5/pgproto3"
 )
 
 func TestPgProxy(t *testing.T) {
@@ -48,6 +49,9 @@ func TestPgProxy(t *testing.T) {
 		assert.NoError(t, frontend.Flush())
 
 		assertResponseType[*pgproto3.AuthenticationOk](t, frontend)
+		for range 13 {
+			assertResponseType[*pgproto3.ParameterStatus](t, frontend)
+		}
 		assertResponseType[*pgproto3.ReadyForQuery](t, frontend)
 	})
 
