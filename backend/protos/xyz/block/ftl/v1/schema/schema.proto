@@ -283,9 +283,16 @@ message StringValue {
 
 message Subscription {
   optional Position pos = 1;
+  optional SubscriptionRuntime runtime = 31634;
   repeated string comments = 2;
   string name = 3;
   Ref topic = 4;
+}
+
+message SubscriptionRuntime {
+  repeated string kafka_brokers = 1;
+  string topic_id = 2;
+  string consumer_group_id = 3;
 }
 
 message Time {
@@ -294,10 +301,16 @@ message Time {
 
 message Topic {
   optional Position pos = 1;
+  optional TopicRuntime runtime = 31634;
   repeated string comments = 2;
   bool export = 3;
   string name = 4;
   Type event = 5;
+}
+
+message TopicRuntime {
+  repeated string kafka_brokers = 1;
+  string topic_id = 2;
 }
 
 message Type {

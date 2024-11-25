@@ -2,15 +2,15 @@
 package wrapped
 
 import (
+	"context"
 	ftltime "ftl/time"
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 )
 
-type InnerClient = ftl.Source[WrappedResponse]
+type InnerClient func(context.Context) (WrappedResponse, error)
 
-type OuterClient = ftl.Source[WrappedResponse]
+type OuterClient func(context.Context) (WrappedResponse, error)
 
 func init() {
 	reflection.Register(

@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Struct } from "@bufbuild/protobuf";
-import { Module } from "../../v1/schema/schema_pb.js";
+import { Module, Ref } from "../../v1/schema/schema_pb.js";
 import { DeploymentArtefact } from "../../v1/controller_pb.js";
 
 /**
@@ -48,6 +48,18 @@ export class Resource extends Message<Resource> {
      */
     value: SqlMigrationResource;
     case: "sqlMigration";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1beta1.provisioner.TopicResource topic = 106;
+     */
+    value: TopicResource;
+    case: "topic";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1beta1.provisioner.SubscriptionResource subscription = 107;
+     */
+    value: SubscriptionResource;
+    case: "subscription";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Resource>) {
@@ -63,6 +75,8 @@ export class Resource extends Message<Resource> {
     { no: 103, name: "mysql", kind: "message", T: MysqlResource, oneof: "resource" },
     { no: 104, name: "module", kind: "message", T: ModuleResource, oneof: "resource" },
     { no: 105, name: "sql_migration", kind: "message", T: SqlMigrationResource, oneof: "resource" },
+    { no: 106, name: "topic", kind: "message", T: TopicResource, oneof: "resource" },
+    { no: 107, name: "subscription", kind: "message", T: SubscriptionResource, oneof: "resource" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Resource {
@@ -407,6 +421,178 @@ export class ModuleResource_ModuleResourceOutput extends Message<ModuleResource_
 
   static equals(a: ModuleResource_ModuleResourceOutput | PlainMessage<ModuleResource_ModuleResourceOutput> | undefined, b: ModuleResource_ModuleResourceOutput | PlainMessage<ModuleResource_ModuleResourceOutput> | undefined): boolean {
     return proto3.util.equals(ModuleResource_ModuleResourceOutput, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.TopicResource
+ */
+export class TopicResource extends Message<TopicResource> {
+  /**
+   * @generated from field: xyz.block.ftl.v1beta1.provisioner.TopicResource.TopicResourceOutput output = 1;
+   */
+  output?: TopicResource_TopicResourceOutput;
+
+  constructor(data?: PartialMessage<TopicResource>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.TopicResource";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "output", kind: "message", T: TopicResource_TopicResourceOutput },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TopicResource {
+    return new TopicResource().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TopicResource {
+    return new TopicResource().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TopicResource {
+    return new TopicResource().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TopicResource | PlainMessage<TopicResource> | undefined, b: TopicResource | PlainMessage<TopicResource> | undefined): boolean {
+    return proto3.util.equals(TopicResource, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.TopicResource.TopicResourceOutput
+ */
+export class TopicResource_TopicResourceOutput extends Message<TopicResource_TopicResourceOutput> {
+  /**
+   * @generated from field: repeated string kafka_brokers = 1;
+   */
+  kafkaBrokers: string[] = [];
+
+  /**
+   * @generated from field: string topic_id = 2;
+   */
+  topicId = "";
+
+  constructor(data?: PartialMessage<TopicResource_TopicResourceOutput>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.TopicResource.TopicResourceOutput";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "kafka_brokers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "topic_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TopicResource_TopicResourceOutput {
+    return new TopicResource_TopicResourceOutput().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TopicResource_TopicResourceOutput {
+    return new TopicResource_TopicResourceOutput().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TopicResource_TopicResourceOutput {
+    return new TopicResource_TopicResourceOutput().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TopicResource_TopicResourceOutput | PlainMessage<TopicResource_TopicResourceOutput> | undefined, b: TopicResource_TopicResourceOutput | PlainMessage<TopicResource_TopicResourceOutput> | undefined): boolean {
+    return proto3.util.equals(TopicResource_TopicResourceOutput, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.SubscriptionResource
+ */
+export class SubscriptionResource extends Message<SubscriptionResource> {
+  /**
+   * @generated from field: xyz.block.ftl.v1beta1.provisioner.SubscriptionResource.SubscriptionResourceOutput output = 1;
+   */
+  output?: SubscriptionResource_SubscriptionResourceOutput;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Ref topic = 2;
+   */
+  topic?: Ref;
+
+  constructor(data?: PartialMessage<SubscriptionResource>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.SubscriptionResource";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "output", kind: "message", T: SubscriptionResource_SubscriptionResourceOutput },
+    { no: 2, name: "topic", kind: "message", T: Ref },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubscriptionResource {
+    return new SubscriptionResource().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SubscriptionResource {
+    return new SubscriptionResource().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SubscriptionResource {
+    return new SubscriptionResource().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SubscriptionResource | PlainMessage<SubscriptionResource> | undefined, b: SubscriptionResource | PlainMessage<SubscriptionResource> | undefined): boolean {
+    return proto3.util.equals(SubscriptionResource, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.SubscriptionResource.SubscriptionResourceOutput
+ */
+export class SubscriptionResource_SubscriptionResourceOutput extends Message<SubscriptionResource_SubscriptionResourceOutput> {
+  /**
+   * @generated from field: repeated string kafka_brokers = 1;
+   */
+  kafkaBrokers: string[] = [];
+
+  /**
+   * @generated from field: string topic_id = 2;
+   */
+  topicId = "";
+
+  /**
+   * @generated from field: string consumer_group_id = 3;
+   */
+  consumerGroupId = "";
+
+  constructor(data?: PartialMessage<SubscriptionResource_SubscriptionResourceOutput>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.SubscriptionResource.SubscriptionResourceOutput";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "kafka_brokers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 2, name: "topic_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "consumer_group_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubscriptionResource_SubscriptionResourceOutput {
+    return new SubscriptionResource_SubscriptionResourceOutput().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SubscriptionResource_SubscriptionResourceOutput {
+    return new SubscriptionResource_SubscriptionResourceOutput().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SubscriptionResource_SubscriptionResourceOutput {
+    return new SubscriptionResource_SubscriptionResourceOutput().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SubscriptionResource_SubscriptionResourceOutput | PlainMessage<SubscriptionResource_SubscriptionResourceOutput> | undefined, b: SubscriptionResource_SubscriptionResourceOutput | PlainMessage<SubscriptionResource_SubscriptionResourceOutput> | undefined): boolean {
+    return proto3.util.equals(SubscriptionResource_SubscriptionResourceOutput, a, b);
   }
 }
 

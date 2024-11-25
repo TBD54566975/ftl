@@ -31,11 +31,13 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 						return nil, fmt.Errorf("postgres resource has not been provisioned")
 					}
 
-					decl, err := findDBDecl(dep.ResourceId, mod.Module.Schema)
-					if err != nil {
-						return nil, fmt.Errorf("failed to find database declaration: %w", err)
+					decl, ok := findDecl(mod.Module.Schema, func(d *schemapb.Decl_Database) bool {
+						return d.Database.Name == dep.ResourceId
+					})
+					if !ok {
+						return nil, fmt.Errorf("failed to find database declaration for %s", dep.ResourceId)
 					}
-					decl.Runtime = &schemapb.DatabaseRuntime{
+					decl.Database.Runtime = &schemapb.DatabaseRuntime{
 						Dsn: r.Postgres.Output.WriteDsn,
 					}
 				case *provisioner.Resource_Mysql:
@@ -43,17 +45,47 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 						return nil, fmt.Errorf("mysql resource has not been provisioned")
 					}
 
-					decl, err := findDBDecl(dep.ResourceId, mod.Module.Schema)
-					if err != nil {
-						return nil, fmt.Errorf("failed to find database declaration: %w", err)
+					decl, ok := findDecl(mod.Module.Schema, func(d *schemapb.Decl_Database) bool {
+						return d.Database.Name == dep.ResourceId
+					})
+					if !ok {
+						return nil, fmt.Errorf("failed to find database declaration for %s", dep.ResourceId)
 					}
-					decl.Runtime = &schemapb.DatabaseRuntime{
+					decl.Database.Runtime = &schemapb.DatabaseRuntime{
 						Dsn: r.Mysql.Output.WriteDsn,
+					}
+				case *provisioner.Resource_Topic:
+					if r.Topic == nil || r.Topic.Output == nil {
+						return nil, fmt.Errorf("topic resource has not been provisioned")
+					}
+					decl, ok := findDecl(mod.Module.Schema, func(t *schemapb.Decl_Topic) bool {
+						return t.Topic.Name == dep.ResourceId
+					})
+					if !ok {
+						return nil, fmt.Errorf("failed to find topic declaration: %s", dep.ResourceId)
+					}
+					decl.Topic.Runtime = &schemapb.TopicRuntime{
+						KafkaBrokers: r.Topic.Output.KafkaBrokers,
+						TopicId:      r.Topic.Output.TopicId,
+					}
+				case *provisioner.Resource_Subscription:
+					if r.Subscription == nil || r.Subscription.Output == nil {
+						return nil, fmt.Errorf("subscription resource has not been provisioned")
+					}
+					decl, ok := findDecl(mod.Module.Schema, func(t *schemapb.Decl_Subscription) bool {
+						return t.Subscription.Name == dep.ResourceId
+					})
+					if !ok {
+						return nil, fmt.Errorf("failed to find subscription declaration: %s", dep.ResourceId)
+					}
+					decl.Subscription.Runtime = &schemapb.SubscriptionRuntime{
+						KafkaBrokers:    r.Subscription.Output.KafkaBrokers,
+						TopicId:         r.Subscription.Output.TopicId,
+						ConsumerGroupId: r.Subscription.Output.ConsumerGroupId,
 					}
 				default:
 				}
 			}
-
 			resp, err := client.CreateDeployment(ctx, connect.NewRequest(&ftlv1.CreateDeploymentRequest{
 				Schema:    mod.Module.Schema,
 				Artefacts: mod.Module.Artefacts,
@@ -71,13 +103,11 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 	})
 }
 
-func findDBDecl(id string, schema *schemapb.Module) (*schemapb.Database, error) {
+func findDecl[T any](schema *schemapb.Module, filter func(T) bool) (out T, ok bool) {
 	for _, d := range schema.Decls {
-		if db, ok := d.Value.(*schemapb.Decl_Database); ok {
-			if db.Database.Name == id {
-				return db.Database, nil
-			}
+		if decl, ok := d.Value.(T); ok && filter(decl) {
+			return decl, true
 		}
 	}
-	return nil, fmt.Errorf("database %s not found", id)
+	return out, false
 }

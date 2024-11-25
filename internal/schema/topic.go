@@ -11,7 +11,8 @@ import (
 
 //protobuf:9
 type Topic struct {
-	Pos Position `parser:"" protobuf:"1,optional"`
+	Pos     Position      `parser:"" protobuf:"1,optional"`
+	Runtime *TopicRuntime `parser:"" protobuf:"31634,optional"`
 
 	Comments []string `parser:"@Comment*" protobuf:"2"`
 	Export   bool     `parser:"@'export'?" protobuf:"3"`
@@ -46,7 +47,7 @@ func (t *Topic) String() string {
 }
 
 func (t *Topic) ToProto() proto.Message {
-	return &schemapb.Topic{
+	pb := &schemapb.Topic{
 		Pos: posToProto(t.Pos),
 
 		Name:     t.Name,
@@ -54,15 +55,42 @@ func (t *Topic) ToProto() proto.Message {
 		Event:    TypeToProto(t.Event),
 		Comments: t.Comments,
 	}
+	if t.Runtime != nil {
+		pb.Runtime = t.Runtime.ToProto()
+	}
+	return pb
 }
 
 func TopicFromProto(t *schemapb.Topic) *Topic {
 	return &Topic{
-		Pos: PosFromProto(t.Pos),
+		Pos:     PosFromProto(t.Pos),
+		Runtime: TopicRuntimeFromProto(t.Runtime),
 
 		Name:     t.Name,
 		Export:   t.Export,
 		Event:    TypeFromProto(t.Event),
 		Comments: t.Comments,
+	}
+}
+
+type TopicRuntime struct {
+	KafkaBrokers []string `parser:"" protobuf:"1"`
+	TopicID      string   `parser:"" protobuf:"2"`
+}
+
+func (t *TopicRuntime) ToProto() *schemapb.TopicRuntime {
+	return &schemapb.TopicRuntime{
+		KafkaBrokers: t.KafkaBrokers,
+		TopicId:      t.TopicID,
+	}
+}
+
+func TopicRuntimeFromProto(t *schemapb.TopicRuntime) *TopicRuntime {
+	if t == nil {
+		return nil
+	}
+	return &TopicRuntime{
+		KafkaBrokers: t.KafkaBrokers,
+		TopicID:      t.TopicId,
 	}
 }

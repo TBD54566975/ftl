@@ -11,7 +11,8 @@ import (
 
 //protobuf:10
 type Subscription struct {
-	Pos Position `parser:"" protobuf:"1,optional"`
+	Pos     Position             `parser:"" protobuf:"1,optional"`
+	Runtime *SubscriptionRuntime `parser:"" protobuf:"31634,optional"`
 
 	Comments []string `parser:"@Comment*" protobuf:"2"`
 	Name     string   `parser:"'subscription' @Ident" protobuf:"3"`
@@ -39,21 +40,51 @@ func (s *Subscription) String() string {
 }
 
 func (s *Subscription) ToProto() proto.Message {
-	return &schemapb.Subscription{
+	pb := &schemapb.Subscription{ //nolint: forcetypeassert
 		Pos: posToProto(s.Pos),
 
 		Name:     s.Name,
-		Topic:    s.Topic.ToProto().(*schemapb.Ref), //nolint: forcetypeassert
+		Topic:    s.Topic.ToProto().(*schemapb.Ref),
 		Comments: s.Comments,
 	}
+	if s.Runtime != nil {
+		pb.Runtime = s.Runtime.ToProto()
+	}
+	return pb
 }
 
 func SubscriptionFromProto(s *schemapb.Subscription) *Subscription {
 	return &Subscription{
-		Pos: PosFromProto(s.Pos),
+		Pos:     PosFromProto(s.Pos),
+		Runtime: SubscriptionRuntimeFromProto(s.Runtime),
 
 		Name:     s.Name,
 		Topic:    RefFromProto(s.Topic),
 		Comments: s.Comments,
+	}
+}
+
+type SubscriptionRuntime struct {
+	KafkaBrokers    []string `parser:"" protobuf:"1"`
+	TopicID         string   `parser:"" protobuf:"2"`
+	ConsumerGroupID string   `parser:"" protobuf:"3"`
+}
+
+func (s *SubscriptionRuntime) ToProto() *schemapb.SubscriptionRuntime {
+	return &schemapb.SubscriptionRuntime{
+		KafkaBrokers:    s.KafkaBrokers,
+		TopicId:         s.TopicID,
+		ConsumerGroupId: s.ConsumerGroupID,
+	}
+}
+
+func SubscriptionRuntimeFromProto(s *schemapb.SubscriptionRuntime) *SubscriptionRuntime {
+	if s == nil {
+		return nil
+	}
+	return &SubscriptionRuntime{
+		KafkaBrokers:    s.KafkaBrokers,
+		TopicID:         s.TopicId,
+		ConsumerGroupID: s.ConsumerGroupId,
 	}
 }

@@ -9,18 +9,22 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Resource(_message.Message):
-    __slots__ = ("resource_id", "postgres", "mysql", "module", "sql_migration")
+    __slots__ = ("resource_id", "postgres", "mysql", "module", "sql_migration", "topic", "subscription")
     RESOURCE_ID_FIELD_NUMBER: _ClassVar[int]
     POSTGRES_FIELD_NUMBER: _ClassVar[int]
     MYSQL_FIELD_NUMBER: _ClassVar[int]
     MODULE_FIELD_NUMBER: _ClassVar[int]
     SQL_MIGRATION_FIELD_NUMBER: _ClassVar[int]
+    TOPIC_FIELD_NUMBER: _ClassVar[int]
+    SUBSCRIPTION_FIELD_NUMBER: _ClassVar[int]
     resource_id: str
     postgres: PostgresResource
     mysql: MysqlResource
     module: ModuleResource
     sql_migration: SqlMigrationResource
-    def __init__(self, resource_id: _Optional[str] = ..., postgres: _Optional[_Union[PostgresResource, _Mapping]] = ..., mysql: _Optional[_Union[MysqlResource, _Mapping]] = ..., module: _Optional[_Union[ModuleResource, _Mapping]] = ..., sql_migration: _Optional[_Union[SqlMigrationResource, _Mapping]] = ...) -> None: ...
+    topic: TopicResource
+    subscription: SubscriptionResource
+    def __init__(self, resource_id: _Optional[str] = ..., postgres: _Optional[_Union[PostgresResource, _Mapping]] = ..., mysql: _Optional[_Union[MysqlResource, _Mapping]] = ..., module: _Optional[_Union[ModuleResource, _Mapping]] = ..., sql_migration: _Optional[_Union[SqlMigrationResource, _Mapping]] = ..., topic: _Optional[_Union[TopicResource, _Mapping]] = ..., subscription: _Optional[_Union[SubscriptionResource, _Mapping]] = ...) -> None: ...
 
 class PostgresResource(_message.Message):
     __slots__ = ("output",)
@@ -75,3 +79,33 @@ class ModuleResource(_message.Message):
     artefacts: _containers.RepeatedCompositeFieldContainer[_controller_pb2.DeploymentArtefact]
     labels: _struct_pb2.Struct
     def __init__(self, output: _Optional[_Union[ModuleResource.ModuleResourceOutput, _Mapping]] = ..., schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., artefacts: _Optional[_Iterable[_Union[_controller_pb2.DeploymentArtefact, _Mapping]]] = ..., labels: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+
+class TopicResource(_message.Message):
+    __slots__ = ("output",)
+    class TopicResourceOutput(_message.Message):
+        __slots__ = ("kafka_brokers", "topic_id")
+        KAFKA_BROKERS_FIELD_NUMBER: _ClassVar[int]
+        TOPIC_ID_FIELD_NUMBER: _ClassVar[int]
+        kafka_brokers: _containers.RepeatedScalarFieldContainer[str]
+        topic_id: str
+        def __init__(self, kafka_brokers: _Optional[_Iterable[str]] = ..., topic_id: _Optional[str] = ...) -> None: ...
+    OUTPUT_FIELD_NUMBER: _ClassVar[int]
+    output: TopicResource.TopicResourceOutput
+    def __init__(self, output: _Optional[_Union[TopicResource.TopicResourceOutput, _Mapping]] = ...) -> None: ...
+
+class SubscriptionResource(_message.Message):
+    __slots__ = ("output", "topic")
+    class SubscriptionResourceOutput(_message.Message):
+        __slots__ = ("kafka_brokers", "topic_id", "consumer_group_id")
+        KAFKA_BROKERS_FIELD_NUMBER: _ClassVar[int]
+        TOPIC_ID_FIELD_NUMBER: _ClassVar[int]
+        CONSUMER_GROUP_ID_FIELD_NUMBER: _ClassVar[int]
+        kafka_brokers: _containers.RepeatedScalarFieldContainer[str]
+        topic_id: str
+        consumer_group_id: str
+        def __init__(self, kafka_brokers: _Optional[_Iterable[str]] = ..., topic_id: _Optional[str] = ..., consumer_group_id: _Optional[str] = ...) -> None: ...
+    OUTPUT_FIELD_NUMBER: _ClassVar[int]
+    TOPIC_FIELD_NUMBER: _ClassVar[int]
+    output: SubscriptionResource.SubscriptionResourceOutput
+    topic: _schema_pb2.Ref
+    def __init__(self, output: _Optional[_Union[SubscriptionResource.SubscriptionResourceOutput, _Mapping]] = ..., topic: _Optional[_Union[_schema_pb2.Ref, _Mapping]] = ...) -> None: ...
