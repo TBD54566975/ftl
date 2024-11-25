@@ -7,7 +7,7 @@ import type { Module, Topology } from '../../protos/xyz/block/ftl/v1/console/con
 
 const streamModulesKey = 'streamModules'
 
-type StreamModulesResult = {
+export type StreamModulesResult = {
   modules: Module[]
   topology: Topology
 }
