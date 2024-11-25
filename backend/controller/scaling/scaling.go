@@ -67,6 +67,8 @@ func runGrpcScaling(ctx context.Context, url url.URL, handler func(ctx context.C
 }
 
 type DevModeEndpoints struct {
-	Module   string
-	Endpoint url.URL
+	Module    string
+	Endpoint  url.URL
+	DebugPort int
+	Language  string
 }
