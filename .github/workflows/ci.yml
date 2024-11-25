@@ -257,15 +257,6 @@ jobs:
         run: just build-docker runner
       - name: Build JVM Docker Image
         run: just build-docker runner-jvm
-  docker-build-box:
-    name: Build Box Docker Image
-    # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: cashapp/activate-hermit@v1.1.3
-      - uses: ./.github/actions/build-cache
-      - run: just build-docker box
   console-e2e:
     name: Console e2e
     # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
