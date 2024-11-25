@@ -634,9 +634,13 @@ func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, start
 		if !ok {
 			return "", fmt.Errorf("database %s not found", params["database"])
 		}
-		logger.Debugf("Resolved DSN (%s): %s", params["database"], db.Runtime.DSN)
 
-		return db.Runtime.DSN, nil
+		if dsn, ok := db.Runtime.(*schema.DSNDatabaseRuntime); ok {
+			logger.Debugf("Resolved DSN (%s): %s", params["database"], dsn.DSN)
+			return dsn.DSN, nil
+		}
+
+		return "", fmt.Errorf("unknown database runtime type: %T", db.Runtime)
 	}).Start(ctx, channel); err != nil {
 		return fmt.Errorf("failed to start pgproxy: %w", err)
 	}

@@ -126,7 +126,7 @@ func (d *Data) Monomorphise(ref *Ref) (*Data, error) {
 			*Schema, *String, *Time, Type, *TypeParameter, *Unit, *Verb, *Enum,
 			*EnumVariant, Value, *IntValue, *StringValue, *TypeValue, Symbol,
 			Named, *TypeAlias, *Topic, *Subscription, *MetadataSubscriber, *MetadataTypeMap,
-			*MetadataEncoding, *MetadataPublisher, *MetadataSQLMigration:
+			*MetadataEncoding, *MetadataPublisher, *MetadataSQLMigration, *DSNDatabaseRuntime, DatabaseRuntime:
 		}
 		return next()
 	})

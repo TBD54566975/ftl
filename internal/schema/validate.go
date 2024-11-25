@@ -217,7 +217,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant, *MetadataRetry,
 				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named,
 				*MetadataSubscriber, *Subscription, *Topic, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher,
-				*MetadataSQLMigration:
+				*MetadataSQLMigration, *DSNDatabaseRuntime, DatabaseRuntime:
 			}
 			return next()
 		})
@@ -367,7 +367,7 @@ func ValidateModule(module *Module) error {
 			*MetadataSecrets, IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
 			*Config, *Secret, *MetadataSubscriber, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher,
-			*MetadataSQLMigration:
+			*MetadataSQLMigration, *DSNDatabaseRuntime, DatabaseRuntime:
 
 		case Named, Symbol, Type, Metadata, Value, Decl: // Union types.
 		}

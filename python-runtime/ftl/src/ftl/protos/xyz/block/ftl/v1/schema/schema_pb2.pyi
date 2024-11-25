@@ -50,6 +50,14 @@ class Config(_message.Message):
     type: Type
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., name: _Optional[str] = ..., type: _Optional[_Union[Type, _Mapping]] = ...) -> None: ...
 
+class DSNDatabaseRuntime(_message.Message):
+    __slots__ = ("pos", "dsn")
+    POS_FIELD_NUMBER: _ClassVar[int]
+    DSN_FIELD_NUMBER: _ClassVar[int]
+    pos: Position
+    dsn: str
+    def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., dsn: _Optional[str] = ...) -> None: ...
+
 class Data(_message.Message):
     __slots__ = ("pos", "comments", "export", "name", "type_parameters", "fields", "metadata")
     POS_FIELD_NUMBER: _ClassVar[int]
@@ -85,10 +93,10 @@ class Database(_message.Message):
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., runtime: _Optional[_Union[DatabaseRuntime, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., type: _Optional[str] = ..., name: _Optional[str] = ..., metadata: _Optional[_Iterable[_Union[Metadata, _Mapping]]] = ...) -> None: ...
 
 class DatabaseRuntime(_message.Message):
-    __slots__ = ("dsn",)
-    DSN_FIELD_NUMBER: _ClassVar[int]
-    dsn: str
-    def __init__(self, dsn: _Optional[str] = ...) -> None: ...
+    __slots__ = ("dsn_database_runtime",)
+    DSN_DATABASE_RUNTIME_FIELD_NUMBER: _ClassVar[int]
+    dsn_database_runtime: DSNDatabaseRuntime
+    def __init__(self, dsn_database_runtime: _Optional[_Union[DSNDatabaseRuntime, _Mapping]] = ...) -> None: ...
 
 class Decl(_message.Message):
     __slots__ = ("config", "data", "database", "enum", "secret", "subscription", "topic", "type_alias", "verb")
