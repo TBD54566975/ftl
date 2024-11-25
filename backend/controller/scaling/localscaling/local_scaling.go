@@ -52,6 +52,7 @@ type localScaling struct {
 type devModeRunner struct {
 	uri           url.URL
 	deploymentKey string
+	debugPort     int
 }
 
 func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error {
@@ -63,7 +64,22 @@ func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser lease
 			case devEndpoints := <-l.devModeEndpointsUpdates:
 				l.lock.Lock()
 				l.devModeEndpoints[devEndpoints.Module] = &devModeRunner{
-					uri: devEndpoints.Endpoint,
+					uri:       devEndpoints.Endpoint,
+					debugPort: devEndpoints.DebugPort,
+				}
+				if ide, ok := l.ideSupport.Get(); ok {
+					if devEndpoints.DebugPort != 0 {
+						if debug, ok := l.debugPorts[devEndpoints.Module]; ok {
+							debug.Port = devEndpoints.DebugPort
+						} else {
+							l.debugPorts[devEndpoints.Module] = &localdebug.DebugInfo{
+								Port:     devEndpoints.DebugPort,
+								Language: devEndpoints.Language,
+							}
+						}
+					}
+					ide.SyncIDEDebugIntegrations(ctx, l.debugPorts)
+
 				}
 				l.lock.Unlock()
 			}
@@ -198,6 +214,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 
 	devEndpoint := l.devModeEndpoints[info.module]
 	devURI := optional.None[url.URL]()
+	debugPort := 0
 	if devEndpoint != nil {
 		devURI = optional.Some(devEndpoint.uri)
 		if devEndpoint.deploymentKey == deploymentKey {
@@ -205,17 +222,9 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 			return nil
 		}
 		devEndpoint.deploymentKey = deploymentKey
-	}
-	controllerEndpoint := l.controllerAddresses[len(l.runners)%len(l.controllerAddresses)]
-	logger := log.FromContext(ctx)
-
-	bind, err := l.portAllocator.Next()
-	if err != nil {
-		return fmt.Errorf("failed to start runner: %w", err)
-	}
-	var debug *localdebug.DebugInfo
-	debugPort := 0
-	if ide, ok := l.ideSupport.Get(); ok {
+		debugPort = devEndpoint.debugPort
+	} else if ide, ok := l.ideSupport.Get(); ok {
+		var debug *localdebug.DebugInfo
 		debugBind, err := l.portAllocator.NextPort()
 		if err != nil {
 			return fmt.Errorf("failed to start runner: %w", err)
@@ -227,6 +236,13 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		l.debugPorts[info.module] = debug
 		ide.SyncIDEDebugIntegrations(ctx, l.debugPorts)
 		debugPort = debug.Port
+	}
+	controllerEndpoint := l.controllerAddresses[len(l.runners)%len(l.controllerAddresses)]
+	logger := log.FromContext(ctx)
+
+	bind, err := l.portAllocator.Next()
+	if err != nil {
+		return fmt.Errorf("failed to start runner: %w", err)
 	}
 
 	keySuffix := l.prevRunnerSuffix + 1
@@ -277,10 +293,6 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 			logger.Errorf(fmt.Errorf("too many restarts"), "Runner failed too many times, not restarting")
 		}
 		info.runner = optional.None[runnerInfo]()
-		if l.debugPorts[info.module] == debug {
-			delete(l.debugPorts, info.module)
-			// We don't actively clean up the run configuration, they are used on next start
-		}
 		err = l.reconcileRunners(ctx, info)
 		if err != nil {
 			logger.Errorf(err, "Failed to reconcile runners")

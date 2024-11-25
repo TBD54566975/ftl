@@ -230,6 +230,9 @@ message BuildSuccess {
   // Dev mode endpoint URI. If this is set then rather than trying to deploy the module, FTL will start a runner that
   // connects to this endpoint.
   optional string dev_endpoint = 7;
+
+  // Dev mode debug port
+  optional int32 debug_port = 8;
 }
 
 // BuildFailure should be sent when a build fails.

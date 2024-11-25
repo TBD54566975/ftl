@@ -88,7 +88,7 @@ func handleBuildResult(ctx context.Context, projectConfig projectconfig.Config, 
 		if devModeEndpoints != nil {
 			parsed, err := url.Parse(endpoint)
 			if err == nil {
-				devModeEndpoints <- scaling.DevModeEndpoints{Module: config.Module, Endpoint: *parsed}
+				devModeEndpoints <- scaling.DevModeEndpoints{Module: config.Module, Endpoint: *parsed, DebugPort: result.DebugPort, Language: config.Language}
 			}
 		}
 	}

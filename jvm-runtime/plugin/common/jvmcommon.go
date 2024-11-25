@@ -211,9 +211,15 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 
 	ctx = log.ContextWithLogger(ctx, logger)
 	bind := fmt.Sprintf("http://localhost:%d", address.Port)
+	devModeBuild := buildCtx.Config.DevModeBuild
+	debugPort, err := plugin.AllocatePort()
+	debugPort32 := int32(debugPort.Port)
+	if err == nil {
+		devModeBuild = fmt.Sprintf("%s -Ddebug=%d", devModeBuild, debugPort.Port)
+	}
 	go func() {
-		logger.Infof("Using build command '%s'", buildCtx.Config.DevModeBuild)
-		command := exec.Command(ctx, log.Debug, buildCtx.Config.Dir, "bash", "-c", buildCtx.Config.DevModeBuild)
+		logger.Infof("Using dev mode build command '%s'", devModeBuild)
+		command := exec.Command(ctx, log.Debug, buildCtx.Config.Dir, "bash", "-c", devModeBuild)
 		command.Env = append(command.Env, fmt.Sprintf("FTL_BIND=%s", bind))
 		command.Stdout = os.Stdout
 		command.Stderr = os.Stderr
@@ -292,6 +298,7 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 							IsAutomaticRebuild: !first,
 							Module:             moduleProto,
 							DevEndpoint:        ptr(fmt.Sprintf("http://localhost:%d", address.Port)),
+							DebugPort:          &debugPort32,
 							Deploy:             []string{SchemaFile},
 						},
 					},

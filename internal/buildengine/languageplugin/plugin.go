@@ -40,6 +40,8 @@ type BuildResult struct {
 
 	// Endpoint of an instance started by the plugin to use in dev mode
 	DevEndpoint optional.Option[string]
+
+	DebugPort int
 }
 
 // PluginEvent is used to notify of updates from the plugin.
@@ -566,12 +568,17 @@ func buildResultFromProto(result either.Either[*langpb.BuildEvent_BuildSuccess, 
 
 		errs := langpb.ErrorsFromProto(buildSuccess.Errors)
 		builderrors.SortErrorsByPosition(errs)
+		port := 0
+		if buildSuccess.DebugPort != nil {
+			port = int(*buildSuccess.DebugPort)
+		}
 		return BuildResult{
 			Errors:      errs,
 			Schema:      moduleSch,
 			Deploy:      buildSuccess.Deploy,
 			StartTime:   startTime,
 			DevEndpoint: optional.Ptr(buildSuccess.DevEndpoint),
+			DebugPort:   port,
 		}, nil
 	case either.Right[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure]:
 		buildFailure := result.Get().BuildFailure
