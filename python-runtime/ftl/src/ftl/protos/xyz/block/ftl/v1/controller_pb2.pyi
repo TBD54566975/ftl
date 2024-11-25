@@ -197,7 +197,7 @@ class StatusRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class StatusResponse(_message.Message):
-    __slots__ = ("controllers", "runners", "deployments", "ingress_routes", "routes")
+    __slots__ = ("controllers", "runners", "deployments", "routes")
     class Controller(_message.Message):
         __slots__ = ("key", "endpoint", "version")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -235,17 +235,6 @@ class StatusResponse(_message.Message):
         labels: _struct_pb2.Struct
         schema: _schema_pb2.Module
         def __init__(self, key: _Optional[str] = ..., language: _Optional[str] = ..., name: _Optional[str] = ..., min_replicas: _Optional[int] = ..., replicas: _Optional[int] = ..., labels: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ...) -> None: ...
-    class IngressRoute(_message.Message):
-        __slots__ = ("deployment_key", "verb", "method", "path")
-        DEPLOYMENT_KEY_FIELD_NUMBER: _ClassVar[int]
-        VERB_FIELD_NUMBER: _ClassVar[int]
-        METHOD_FIELD_NUMBER: _ClassVar[int]
-        PATH_FIELD_NUMBER: _ClassVar[int]
-        deployment_key: str
-        verb: _schema_pb2.Ref
-        method: str
-        path: str
-        def __init__(self, deployment_key: _Optional[str] = ..., verb: _Optional[_Union[_schema_pb2.Ref, _Mapping]] = ..., method: _Optional[str] = ..., path: _Optional[str] = ...) -> None: ...
     class Route(_message.Message):
         __slots__ = ("module", "deployment", "endpoint")
         MODULE_FIELD_NUMBER: _ClassVar[int]
@@ -258,14 +247,12 @@ class StatusResponse(_message.Message):
     CONTROLLERS_FIELD_NUMBER: _ClassVar[int]
     RUNNERS_FIELD_NUMBER: _ClassVar[int]
     DEPLOYMENTS_FIELD_NUMBER: _ClassVar[int]
-    INGRESS_ROUTES_FIELD_NUMBER: _ClassVar[int]
     ROUTES_FIELD_NUMBER: _ClassVar[int]
     controllers: _containers.RepeatedCompositeFieldContainer[StatusResponse.Controller]
     runners: _containers.RepeatedCompositeFieldContainer[StatusResponse.Runner]
     deployments: _containers.RepeatedCompositeFieldContainer[StatusResponse.Deployment]
-    ingress_routes: _containers.RepeatedCompositeFieldContainer[StatusResponse.IngressRoute]
     routes: _containers.RepeatedCompositeFieldContainer[StatusResponse.Route]
-    def __init__(self, controllers: _Optional[_Iterable[_Union[StatusResponse.Controller, _Mapping]]] = ..., runners: _Optional[_Iterable[_Union[StatusResponse.Runner, _Mapping]]] = ..., deployments: _Optional[_Iterable[_Union[StatusResponse.Deployment, _Mapping]]] = ..., ingress_routes: _Optional[_Iterable[_Union[StatusResponse.IngressRoute, _Mapping]]] = ..., routes: _Optional[_Iterable[_Union[StatusResponse.Route, _Mapping]]] = ...) -> None: ...
+    def __init__(self, controllers: _Optional[_Iterable[_Union[StatusResponse.Controller, _Mapping]]] = ..., runners: _Optional[_Iterable[_Union[StatusResponse.Runner, _Mapping]]] = ..., deployments: _Optional[_Iterable[_Union[StatusResponse.Deployment, _Mapping]]] = ..., routes: _Optional[_Iterable[_Union[StatusResponse.Route, _Mapping]]] = ...) -> None: ...
 
 class ProcessListRequest(_message.Message):
     __slots__ = ()

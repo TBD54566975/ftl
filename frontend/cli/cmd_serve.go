@@ -24,6 +24,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/cron"
+	"github.com/TBD54566975/ftl/backend/ingress"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
@@ -60,6 +61,7 @@ type serveCommonConfig struct {
 	RegistryImage       string               `help:"The container image to start for the image registry" default:"registry:2" env:"FTL_REGISTRY_IMAGE" hidden:""`
 	GrafanaImage        string               `help:"The container image to start for the automatic Grafana instance" default:"grafana/otel-lgtm" env:"FTL_GRAFANA_IMAGE" hidden:""`
 	DisableGrafana      bool                 `help:"Disable the automatic Grafana that is started if no telemetry collector is specified." default:"false"`
+	Ingress             ingress.Config       `embed:"" prefix:"ingress-"`
 	controller.CommonConfig
 	provisioner.CommonProvisionerConfig
 }
@@ -186,7 +188,7 @@ func (s *serveCommonConfig) run(
 		if addr.Hostname() == "127.0.0.1" {
 			addr.Host = "localhost" + ":" + addr.Port()
 		}
-		s.CommonConfig.AllowOrigins = append(s.CommonConfig.AllowOrigins, addr)
+		s.Ingress.AllowOrigins = append(s.Ingress.AllowOrigins, addr)
 	}
 
 	provisionerAddresses := make([]*url.URL, 0, s.Provisioners)
@@ -207,7 +209,6 @@ func (s *serveCommonConfig) run(
 		config := controller.Config{
 			CommonConfig: s.CommonConfig,
 			Bind:         controllerAddresses[i],
-			IngressBind:  controllerIngressAddresses[i],
 			Key:          model.NewLocalControllerKey(i),
 			DSN:          dsn,
 			Registry:     registry,
@@ -288,6 +289,14 @@ func (s *serveCommonConfig) run(
 		err := cron.Start(ctx, schemaClient, vervClient)
 		if err != nil {
 			return fmt.Errorf("cron failed: %w", err)
+		}
+		return nil
+	})
+	// Start Ingress
+	wg.Go(func() error {
+		err := ingress.Start(ctx, s.Ingress, schemaClient, vervClient)
+		if err != nil {
+			return fmt.Errorf("ingress failed: %w", err)
 		}
 		return nil
 	})

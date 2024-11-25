@@ -115,10 +115,6 @@ func (d *DAL) GetStatus(ctx context.Context) (dalmodel.Status, error) {
 	if err != nil {
 		return dalmodel.Status{}, fmt.Errorf("could not get active deployments: %w", libdal.TranslatePGError(err))
 	}
-	ingressRoutes, err := d.db.GetActiveIngressRoutes(ctx)
-	if err != nil {
-		return dalmodel.Status{}, fmt.Errorf("could not get ingress routes: %w", libdal.TranslatePGError(err))
-	}
 	statusDeployments, err := slices.MapErr(deployments, func(in dalsql.GetActiveDeploymentsRow) (dalmodel.Deployment, error) {
 		labels := model.Labels{}
 		err = json.Unmarshal(in.Deployment.Labels, &labels)
@@ -157,15 +153,6 @@ func (d *DAL) GetStatus(ctx context.Context) (dalmodel.Status, error) {
 		Controllers: controllers,
 		Deployments: statusDeployments,
 		Runners:     domainRunners,
-		IngressRoutes: slices.Map(ingressRoutes, func(in dalsql.GetActiveIngressRoutesRow) dalmodel.IngressRouteEntry {
-			return dalmodel.IngressRouteEntry{
-				Deployment: in.DeploymentKey,
-				Module:     in.Module,
-				Verb:       in.Verb,
-				Method:     in.Method,
-				Path:       in.Path,
-			}
-		}),
 	}, nil
 }
 
@@ -196,17 +183,11 @@ func (d *DAL) UpsertModule(ctx context.Context, language, name string) (err erro
 	return libdal.TranslatePGError(err)
 }
 
-type IngressRoutingEntry struct {
-	Verb   string
-	Method string
-	Path   string
-}
-
 // CreateDeployment (possibly) creates a new deployment and associates
 // previously created artefacts with it.
 //
 // If an existing deployment with identical artefacts exists, it is returned.
-func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchema *schema.Module, artefacts []dalmodel.DeploymentArtefact, ingressRoutes []IngressRoutingEntry) (key model.DeploymentKey, err error) {
+func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchema *schema.Module, artefacts []dalmodel.DeploymentArtefact) (key model.DeploymentKey, err error) {
 	logger := log.FromContext(ctx)
 
 	// Start the parent transaction
@@ -287,19 +268,6 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		})
 		if err != nil {
 			return model.DeploymentKey{}, fmt.Errorf("failed to associate artefact with deployment: %w", libdal.TranslatePGError(err))
-		}
-	}
-
-	for _, ingressRoute := range ingressRoutes {
-		err = tx.db.CreateIngressRoute(ctx, dalsql.CreateIngressRouteParams{
-			Key:    deploymentKey,
-			Method: ingressRoute.Method,
-			Path:   ingressRoute.Path,
-			Module: moduleSchema.Name,
-			Verb:   ingressRoute.Verb,
-		})
-		if err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("failed to create ingress route: %w", libdal.TranslatePGError(err))
 		}
 	}
 
@@ -688,24 +656,6 @@ func (d *DAL) CreateRequest(ctx context.Context, key model.RequestKey, addr stri
 		return libdal.TranslatePGError(err)
 	}
 	return nil
-}
-
-func (d *DAL) GetIngressRoutes(ctx context.Context) (map[string][]dalmodel.IngressRoute, error) {
-	routes, err := d.db.GetIngressRoutes(ctx)
-	if err != nil {
-		return nil, libdal.TranslatePGError(err)
-	}
-	return slices.GroupBy(slices.Map(routes, func(row dalsql.GetIngressRoutesRow) dalmodel.IngressRoute {
-		return dalmodel.IngressRoute{
-			Runner:     row.RunnerKey,
-			Deployment: row.DeploymentKey,
-			Endpoint:   row.Endpoint,
-			Path:       row.Path,
-			Module:     row.Module,
-			Verb:       row.Verb,
-			Method:     row.Method,
-		}
-	}), func(route dalmodel.IngressRoute) string { return route.Method }), nil
 }
 
 func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, addr string) (int64, error) {

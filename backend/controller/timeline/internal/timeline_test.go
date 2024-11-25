@@ -59,7 +59,7 @@ func TestTimeline(t *testing.T) {
 			Digest:     testSha,
 			Executable: true,
 			Path:       "dir/filename",
-		}}, nil)
+		}})
 		assert.NoError(t, err)
 		time.Sleep(200 * time.Millisecond)
 	})
@@ -337,7 +337,7 @@ func TestDeleteOldEvents(t *testing.T) {
 			Digest:     testSha,
 			Executable: true,
 			Path:       "dir/filename",
-		}}, nil)
+		}})
 		assert.NoError(t, err)
 	})
 

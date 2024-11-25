@@ -5,15 +5,14 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
-func GetIngressRoute(routes []model.IngressRoute, method string, path string) (*model.IngressRoute, error) {
-	var matchedRoutes = slices.Filter(routes, func(route model.IngressRoute) bool {
-		return matchSegments(route.Path, path, func(segment, value string) {})
+func getIngressRoute(routes []ingressRoute, path string) (*ingressRoute, error) {
+	var matchedRoutes = slices.Filter(routes, func(route ingressRoute) bool {
+		return matchSegments(route.path, path, func(segment, value string) {})
 	})
 
 	if len(matchedRoutes) == 0 {

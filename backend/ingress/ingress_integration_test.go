@@ -189,8 +189,8 @@ func expectContentType(t testing.TB, resp *in.HTTPResponse, expected string) {
 // Run with CORS enabled via FTL_CONTROLLER_ALLOW_ORIGIN and FTL_CONTROLLER_ALLOW_HEADERS
 // This test is similar to TestHttpIngress above with the addition of CORS enabled in the controller.
 func TestHttpIngressWithCors(t *testing.T) {
-	os.Setenv("FTL_CONTROLLER_ALLOW_ORIGIN", "http://localhost:8892")
-	os.Setenv("FTL_CONTROLLER_ALLOW_HEADERS", "x-forwarded-capabilities")
+	os.Setenv("FTL_INGRESS_ALLOW_ORIGIN", "http://localhost:8892")
+	os.Setenv("FTL_INGRESS_ALLOW_HEADERS", "x-forwarded-capabilities")
 	in.Run(t,
 		in.CopyModule("httpingress"),
 		in.Deploy("httpingress"),

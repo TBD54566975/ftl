@@ -11,7 +11,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
 
-	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/timeline"
 	"github.com/TBD54566975/ftl/backend/libdal"
@@ -22,21 +21,12 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
-// Handle HTTP ingress routes.
-func Handle(
-	startTime time.Time,
-	sch *schema.Schema,
-	requestKey model.RequestKey,
-	routes []dalmodel.IngressRoute,
-	w http.ResponseWriter,
-	r *http.Request,
-	timelineService *timeline.Service,
-	call func(context.Context, *connect.Request[ftlv1.CallRequest], optional.Option[model.RequestKey], optional.Option[model.RequestKey], string) (*connect.Response[ftlv1.CallResponse], error),
-) {
+// handleHTTP HTTP ingress routes.
+func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.RequestKey, routesForMethod []ingressRoute, w http.ResponseWriter, r *http.Request, verbClient CallClient) {
 	logger := log.FromContext(r.Context()).Scope(fmt.Sprintf("ingress:%s:%s", r.Method, r.URL.Path))
 	logger.Debugf("Start ingress request")
 
-	route, err := GetIngressRoute(routes, r.Method, r.URL.Path)
+	route, err := getIngressRoute(routesForMethod, r.URL.Path)
 	if err != nil {
 		if errors.Is(err, libdal.ErrNotFound) {
 			http.NotFound(w, r)
@@ -48,28 +38,27 @@ func Handle(
 		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), startTime, optional.Some("failed to resolve route"))
 		return
 	}
-	logger = logger.Module(route.Module)
+	logger = logger.Module(route.module)
 
-	verbRef := &schemapb.Ref{Module: route.Module, Name: route.Verb}
+	verbRef := &schemapb.Ref{Module: route.module, Name: route.verb}
 
 	ingressEvent := timeline.Ingress{
-		DeploymentKey:   route.Deployment,
 		RequestKey:      requestKey,
 		StartTime:       startTime,
-		Verb:            &schema.Ref{Name: route.Verb, Module: route.Module},
+		Verb:            &schema.Ref{Name: route.verb, Module: route.module},
 		RequestMethod:   r.Method,
 		RequestPath:     r.URL.Path,
 		RequestHeaders:  r.Header.Clone(),
 		ResponseHeaders: make(http.Header),
 	}
 
-	body, err := BuildRequestBody(route, r, sch)
+	body, err := buildRequestBody(route, r, sch)
 	if err != nil {
 		// Only log at debug, as this is a client side error
 		logger.Debugf("bad request: %s", err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("bad request"))
-		recordIngressErrorEvent(r.Context(), timelineService, &ingressEvent, http.StatusBadRequest, err.Error())
+		recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusBadRequest, err.Error())
 		return
 	}
 	ingressEvent.RequestBody = body
@@ -80,30 +69,30 @@ func Handle(
 		Body:     body,
 	})
 
-	resp, err := call(r.Context(), creq, optional.Some(requestKey), optional.None[model.RequestKey](), r.RemoteAddr)
+	resp, err := verbClient.Call(r.Context(), creq)
 	if err != nil {
 		logger.Errorf(err, "failed to call verb")
 		if connectErr := new(connect.Error); errors.As(err, &connectErr) {
 			httpCode := connectCodeToHTTP(connectErr.Code())
 			http.Error(w, http.StatusText(httpCode), httpCode)
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("failed to call verb: connect error"))
-			recordIngressErrorEvent(r.Context(), timelineService, &ingressEvent, http.StatusInternalServerError, connectErr.Error())
+			recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusInternalServerError, connectErr.Error())
 		} else {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("failed to call verb: internal server error"))
-			recordIngressErrorEvent(r.Context(), timelineService, &ingressEvent, http.StatusInternalServerError, err.Error())
+			recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusInternalServerError, err.Error())
 		}
 		return
 	}
 	switch msg := resp.Msg.Response.(type) {
 	case *ftlv1.CallResponse_Body:
 		verb := &schema.Verb{}
-		err = sch.ResolveToType(&schema.Ref{Name: route.Verb, Module: route.Module}, verb)
+		err = sch.ResolveToType(&schema.Ref{Name: route.verb, Module: route.module}, verb)
 		if err != nil {
-			logger.Errorf(err, "could not resolve schema type for verb %s", route.Verb)
+			logger.Errorf(err, "could not resolve schema type for verb %s", route.verb)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("could not resolve schema type for verb"))
-			recordIngressErrorEvent(r.Context(), timelineService, &ingressEvent, http.StatusInternalServerError, err.Error())
+			recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusInternalServerError, err.Error())
 			return
 		}
 		var responseBody []byte
@@ -114,7 +103,7 @@ func Handle(
 				logger.Errorf(err, "could not unmarhal response for verb %s", verb)
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("could not unmarhal response for verb"))
-				recordIngressErrorEvent(r.Context(), timelineService, &ingressEvent, http.StatusInternalServerError, err.Error())
+				recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusInternalServerError, err.Error())
 				return
 			}
 			rawBody = response.Body
@@ -124,7 +113,7 @@ func Handle(
 				logger.Errorf(err, "could not create response for verb %s", verb)
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("could not create response for verb"))
-				recordIngressErrorEvent(r.Context(), timelineService, &ingressEvent, http.StatusInternalServerError, err.Error())
+				recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusInternalServerError, err.Error())
 				return
 			}
 
@@ -150,34 +139,32 @@ func Handle(
 			responseBody = msg.Body
 			rawBody = responseBody
 		}
+		ingressEvent.ResponseBody = rawBody
 		_, err = w.Write(responseBody)
 		if err == nil {
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.None[string]())
-			ingressEvent.ResponseBody = rawBody
-			timelineService.EnqueueEvent(r.Context(), &ingressEvent)
 		} else {
 			logger.Errorf(err, "could not write response body")
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("could not write response body"))
-			recordIngressErrorEvent(r.Context(), timelineService, &ingressEvent, http.StatusInternalServerError, err.Error())
+			recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusInternalServerError, err.Error())
 		}
 
 	case *ftlv1.CallResponse_Error_:
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("call response: internal server error"))
-		recordIngressErrorEvent(r.Context(), timelineService, &ingressEvent, http.StatusInternalServerError, msg.Error.Message)
+		recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusInternalServerError, msg.Error.Message)
 	}
 }
 
 func recordIngressErrorEvent(
 	ctx context.Context,
-	timelineService *timeline.Service,
 	ingressEvent *timeline.Ingress,
 	statusCode int,
 	errorMsg string,
 ) {
 	ingressEvent.ResponseStatus = statusCode
 	ingressEvent.Error = optional.Some(errorMsg)
-	timelineService.EnqueueEvent(ctx, ingressEvent)
+	// TODO: record event in timeline, one it has been split out from the controller
 }
 
 // Copied from the Apache-licensed connect-go source.

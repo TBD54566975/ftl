@@ -1,0 +1,83 @@
+{{- if .Values.ingress.enabled }}
+{{ $version := printf "v%s" .Chart.Version -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ftl.fullname" . }}-http-ingress
+  labels:
+    {{- include "ftl.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.ingress.replicas }}
+  revisionHistoryLimit: {{ .Values.ingress.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "ftl-http-ingress.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ftl-http-ingress.selectorLabels" . | nindent 8 }}
+      {{- if .Values.ingress.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.ingress.podAnnotations | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.ingress.serviceAccountName }}
+      containers:
+        - name: app
+          image: "{{ .Values.ingress.image.repository }}:{{ .Values.ingress.image.tag | default $version }}"
+          imagePullPolicy: {{ .Values.ingress.image.pullPolicy }}
+          resources:
+            limits:
+              cpu: "{{ .Values.ingress.resources.limits.cpu }}"
+              memory: "{{ .Values.ingress.resources.limits.memory }}"
+            requests:
+              cpu: "{{ .Values.ingress.resources.requests.cpu }}"
+              memory: "{{ .Values.ingress.resources.requests.memory }}"
+          {{- if .Values.ingress.envFrom }}
+          envFrom:
+            {{- if .Values.ingress.envFrom }}
+            {{- toYaml .Values.ingress.envFrom | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          env:
+            {{- if .Values.ingress.env }}
+            {{- toYaml .Values.ingress.env | nindent 12 }}
+            {{- end }}
+
+          ports:
+            {{- range .Values.ingress.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .containerPort }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+          readinessProbe:
+            {{- if .Values.ingress.readinessProbe }}
+            {{- toYaml .Values.ingress.readinessProbe | nindent 12 }}
+            {{- else }}
+            httpGet:
+              path: /healthz
+              port: 8891
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 15
+            {{- end }}
+      {{- if .Values.ingress.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.ingress.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.ingress.affinity }}
+      affinity:
+        {{- toYaml .Values.ingress.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.ingress.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.ingress.topologySpreadConstraints | nindent 8 }}
+      {{- end }}
+      {{- if .Values.ingress.tolerations }}
+      tolerations:
+        {{- toYaml .Values.ingress.tolerations | nindent 8 }}
+      {{- end }}
+
+      {{- end }}

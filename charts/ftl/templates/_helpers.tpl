@@ -52,3 +52,8 @@ app.kubernetes.io/name: {{ include "ftl.fullname" . }}
 app.kubernetes.io/component: cron
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
+{{- define "ftl-http-ingress.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "ftl.fullname" . }}
+app.kubernetes.io/component: http-ingress
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}

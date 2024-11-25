@@ -1,7 +1,11 @@
 fullnameOverride: "ftl"
 ingress:
   enabled: true
-  annotations:
+  image:
+    repository: "ftl:5000/ftl-http-ingress"
+    tag: "latest"
+    pullPolicy: Always
+  ingressAnnotations:
     ingress.kubernetes.io/ssl-redirect: "false"
     kubernetes.io/ingress.class: traefik
 controller:

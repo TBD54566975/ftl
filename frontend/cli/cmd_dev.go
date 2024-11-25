@@ -87,8 +87,8 @@ func (d *devCmd) Run(
 	}
 
 	// Default to allowing all origins and headers for console requests in local dev mode.
-	d.ServeCmd.AllowOrigins = []*url.URL{{Scheme: "*", Host: "*"}}
-	d.ServeCmd.AllowHeaders = []string{"*"}
+	d.ServeCmd.Ingress.AllowOrigins = []*url.URL{{Scheme: "*", Host: "*"}}
+	d.ServeCmd.Ingress.AllowHeaders = []string{"*"}
 
 	devModeEndpointUpdates := make(chan scaling.DevModeEndpoints, 1)
 	// cmdServe will notify this channel when startup commands are complete and the controller is ready

@@ -188,8 +188,11 @@ func cleanup(logger *log.Logger, pidFile string) error {
 	} else if err != nil {
 		return err
 	}
+	if len(pidb) == 0 {
+		return nil
+	}
 	pid, err := strconv.Atoi(string(pidb))
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
 		return err
 	}
 	err = syscall.Kill(pid, syscall.SIGKILL)

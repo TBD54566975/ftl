@@ -3,9 +3,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "ftl.fullname" . }}-controller
+  name: {{ include "ftl.fullname" . }}-ingress
   annotations:
-    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+    {{- toYaml .Values.ingress.ingressAnnotations | nindent 4 }}
 spec:
   rules:
   - http:
@@ -21,7 +21,7 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: ftl-controller-ingress
+              name: ftl-http-ingress
               port:
                 number: 8891
         - path: /xyz.block.ftl.v1beta1.provisioner.ProvisionerService/
