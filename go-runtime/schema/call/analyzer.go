@@ -69,7 +69,7 @@ func validateCallExpr(pass *analysis.Pass, node *ast.CallExpr) {
 		return
 	}
 	lhsPkgPath, aliased := pkgPathFromObject(lhsObject)
-	// if the lhsObject isn't aliased (e.g. type MyTopic = TopicHandle[MyEvent]), then it's not one of our generated 
+	// if the lhsObject isn't aliased (e.g. type MyTopic = TopicHandle[MyEvent]), then it's not one of our generated
 	// types and we can't reliably evaluate which module it belongs to here
 	//
 	// rely on runtime validation in this case
