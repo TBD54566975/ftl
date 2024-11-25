@@ -81,7 +81,7 @@ func HandleConnection(ctx context.Context, conn net.Conn, connectionFn DSNConstr
 	defer cancel()
 
 	logger := log.FromContext(ctx)
-	logger.Infof("new connection established: %s", conn.RemoteAddr())
+	logger.Debugf("new connection established: %s", conn.RemoteAddr())
 
 	backend, startup, err := connectBackend(ctx, conn)
 	if err != nil {
@@ -92,30 +92,33 @@ func HandleConnection(ctx context.Context, conn net.Conn, connectionFn DSNConstr
 		logger.Infof("client disconnected without startup message: %s", conn.RemoteAddr())
 		return
 	}
-	logger.Debugf("startup message: %+v", startup)
-	logger.Debugf("backend connected: %s", conn.RemoteAddr())
+	logger.Tracef("startup message: %+v", startup)
+	logger.Tracef("backend connected: %s", conn.RemoteAddr())
 
-	frontend, err := connectFrontend(ctx, connectionFn, startup)
+	hijacked, err := connectFrontend(ctx, connectionFn, startup)
 	if err != nil {
 		// try again, in case there was a credential rotation
-		logger.Warnf("failed to connect frontend: %s, trying again", err)
+		logger.Debugf("failed to connect frontend: %s, trying again", err)
 
-		frontend, err = connectFrontend(ctx, connectionFn, startup)
+		hijacked, err = connectFrontend(ctx, connectionFn, startup)
 		if err != nil {
 			handleBackendError(ctx, backend, err)
 			return
 		}
 	}
-	logger.Debugf("frontend connected")
-
 	backend.Send(&pgproto3.AuthenticationOk{})
-	backend.Send(&pgproto3.ReadyForQuery{})
+	logger.Debugf("frontend connected")
+	for key, value := range hijacked.ParameterStatuses {
+		backend.Send(&pgproto3.ParameterStatus{Name: key, Value: value})
+	}
+
+	backend.Send(&pgproto3.ReadyForQuery{TxStatus: 'I'})
 	if err := backend.Flush(); err != nil {
 		logger.Errorf(err, "failed to flush backend authentication ok")
 		return
 	}
 
-	if err := proxy(ctx, backend, frontend); err != nil {
+	if err := proxy(ctx, backend, hijacked.Frontend); err != nil {
 		logger.Warnf("disconnecting %s due to: %s", conn.RemoteAddr(), err)
 		return
 	}
@@ -173,7 +176,7 @@ func connectBackend(ctx context.Context, conn net.Conn) (*pgproto3.Backend, *pgp
 	}
 }
 
-func connectFrontend(ctx context.Context, connectionFn DSNConstructor, startup *pgproto3.StartupMessage) (*pgproto3.Frontend, error) {
+func connectFrontend(ctx context.Context, connectionFn DSNConstructor, startup *pgproto3.StartupMessage) (*pgconn.HijackedConn, error) {
 	dsn, err := connectionFn(ctx, startup.Parameters)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct dsn: %w", err)
@@ -183,9 +186,11 @@ func connectFrontend(ctx context.Context, connectionFn DSNConstructor, startup *
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to backend: %w", err)
 	}
-	frontend := pgproto3.NewFrontend(conn.Conn(), conn.Conn())
-
-	return frontend, nil
+	hijacked, err := conn.Hijack()
+	if err != nil {
+		return nil, fmt.Errorf("failed to hijack backend: %w", err)
+	}
+	return hijacked, nil
 }
 
 func proxy(ctx context.Context, backend *pgproto3.Backend, frontend *pgproto3.Frontend) error {

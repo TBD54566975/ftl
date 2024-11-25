@@ -5,7 +5,9 @@ import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
@@ -35,6 +37,8 @@ public class FTLController implements LeaseClient {
     final StreamObserver<ModuleContextResponse> moduleObserver = new ModuleObserver();
 
     private static volatile FTLController controller;
+
+    private final Map<String, ModuleContextResponse.DBType> databases = new ConcurrentHashMap<>();
 
     /**
      * TODO: look at how init should work, this is terrible and will break dev mode
@@ -71,6 +75,10 @@ public class FTLController implements LeaseClient {
         verbService = VerbServiceGrpc.newStub(channel);
     }
 
+    public void registerDatabase(String name, ModuleContextResponse.DBType type) {
+        databases.put(name, type);
+    }
+
     public byte[] getSecret(String secretName) {
         var context = getModuleContext();
         if (context.containsSecrets(secretName)) {
@@ -88,6 +96,10 @@ public class FTLController implements LeaseClient {
     }
 
     public Datasource getDatasource(String name) {
+        if (databases.get(name) == ModuleContextResponse.DBType.POSTGRES) {
+            var proxyAddress = System.getenv("FTL_PROXY_POSTGRES_ADDRESS");
+            return new Datasource("jdbc:postgresql://" + proxyAddress + "/" + name, "ftl", "ftl");
+        }
         List<ModuleContextResponse.DSN> databasesList = getModuleContext().getDatabasesList();
         for (var i : databasesList) {
             if (i.getName().equals(name)) {

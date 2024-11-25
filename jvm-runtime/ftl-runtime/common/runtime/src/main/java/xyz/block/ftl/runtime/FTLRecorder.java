@@ -18,6 +18,7 @@ import io.quarkus.runtime.annotations.Recorder;
 import xyz.block.ftl.runtime.http.FTLHttpHandler;
 import xyz.block.ftl.runtime.http.HTTPVerbInvoker;
 import xyz.block.ftl.v1.CallRequest;
+import xyz.block.ftl.v1.ModuleContextResponse;
 
 @Recorder
 public class FTLRecorder {
@@ -170,5 +171,9 @@ public class FTLRecorder {
                 t.cancel();
             }
         });
+    }
+
+    public void registerDatabase(String dbKind, ModuleContextResponse.DBType name) {
+        FTLController.instance().registerDatabase(dbKind, name);
     }
 }
