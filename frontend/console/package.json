@@ -37,7 +37,7 @@
     "@codemirror/lint": "^6.8.1",
     "@codemirror/state": "^6.4.1",
     "@codemirror/view": "^6.26.3",
-    "@connectrpc/connect": "^1.5.0",
+    "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-web": "^1.5.0",
     "@headlessui/react": "2.2.0",
     "@tailwindcss/forms": "^0.5.6",

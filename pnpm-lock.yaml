@@ -33,11 +33,11 @@ importers:
         specifier: ^6.26.3
         version: 6.35.0
       '@connectrpc/connect':
-        specifier: ^1.5.0
-        version: 1.6.1(@bufbuild/protobuf@1.10.0)
+        specifier: ^2.0.0
+        version: 2.0.0(@bufbuild/protobuf@1.10.0)
       '@connectrpc/connect-web':
         specifier: ^1.5.0
-        version: 1.6.1(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.6.1(@bufbuild/protobuf@1.10.0))
+        version: 1.6.1(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@2.0.0(@bufbuild/protobuf@1.10.0))
       '@headlessui/react':
         specifier: 2.2.0
         version: 2.2.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -113,7 +113,7 @@ importers:
         version: 3.2.2(react@18.3.1)(storybook@8.4.5(prettier@2.8.8))
       '@connectrpc/protoc-gen-connect-es':
         specifier: ^1.5.0
-        version: 1.6.1(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))(@connectrpc/connect@1.6.1(@bufbuild/protobuf@1.10.0))
+        version: 1.6.1(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))(@connectrpc/connect@2.0.0(@bufbuild/protobuf@1.10.0))
       '@playwright/test':
         specifier: ^1.46.1
         version: 1.49.0
@@ -463,10 +463,10 @@ packages:
       '@bufbuild/protobuf': ^1.10.0
       '@connectrpc/connect': 1.6.1
 
-  '@connectrpc/connect@1.6.1':
-    resolution: {integrity: sha512-KchMDNtU4CDTdkyf0qG7ugJ6qHTOR/aI7XebYn3OTCNagaDYWiZUVKgRgwH79yeMkpNgvEUaXSK7wKjaBK9b/Q==}
+  '@connectrpc/connect@2.0.0':
+    resolution: {integrity: sha512-Usm8jgaaULANJU8vVnhWssSA6nrZ4DJEAbkNtXSoZay2YD5fDyMukCxu8NEhCvFzfHvrhxhcjttvgpyhOM7xAQ==}
     peerDependencies:
-      '@bufbuild/protobuf': ^1.10.0
+      '@bufbuild/protobuf': ^2.2.0
 
   '@connectrpc/protoc-gen-connect-es@1.6.1':
     resolution: {integrity: sha512-0fHcaADd+GKM0I/koIQpmKg7b+QL18bXlggTUYEAlMFzsd4zN/ApG3235hdUcRyhrAOAItTXxh8ZAV/nNd43Gg==}
@@ -5838,22 +5838,22 @@ snapshots:
       style-mod: 4.1.2
       w3c-keyname: 2.2.8
 
-  '@connectrpc/connect-web@1.6.1(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.6.1(@bufbuild/protobuf@1.10.0))':
+  '@connectrpc/connect-web@1.6.1(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@2.0.0(@bufbuild/protobuf@1.10.0))':
     dependencies:
       '@bufbuild/protobuf': 1.10.0
-      '@connectrpc/connect': 1.6.1(@bufbuild/protobuf@1.10.0)
+      '@connectrpc/connect': 2.0.0(@bufbuild/protobuf@1.10.0)
 
-  '@connectrpc/connect@1.6.1(@bufbuild/protobuf@1.10.0)':
+  '@connectrpc/connect@2.0.0(@bufbuild/protobuf@1.10.0)':
     dependencies:
       '@bufbuild/protobuf': 1.10.0
 
-  '@connectrpc/protoc-gen-connect-es@1.6.1(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))(@connectrpc/connect@1.6.1(@bufbuild/protobuf@1.10.0))':
+  '@connectrpc/protoc-gen-connect-es@1.6.1(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))(@connectrpc/connect@2.0.0(@bufbuild/protobuf@1.10.0))':
     dependencies:
       '@bufbuild/protobuf': 1.10.0
       '@bufbuild/protoplugin': 1.10.0
     optionalDependencies:
       '@bufbuild/protoc-gen-es': 1.10.0(@bufbuild/protobuf@1.10.0)
-      '@connectrpc/connect': 1.6.1(@bufbuild/protobuf@1.10.0)
+      '@connectrpc/connect': 2.0.0(@bufbuild/protobuf@1.10.0)
     transitivePeerDependencies:
       - supports-color
 
