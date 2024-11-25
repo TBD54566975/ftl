@@ -53,6 +53,8 @@
       matchPackageNames: [
         "@bufbuild/protobuf",      // We can't update this until we update buf
         "@bufbuild/protoc-gen-es", // We can't update this until we update buf
+        "@connectrpc/connect",     // We can't update this until we update buf
+        "@connectrpc/connect-web", // We can't update this until we update buf
         "codemirror",
         "codemirror-json-schema",
       ],
