@@ -9,18 +9,9 @@ disable-ide-integration = true
     key = "inline://InZhbHVlIg"
 
 [modules]
-  [modules.database]
-    [modules.database.secrets]
-      FTL_DSN_DATABASE_TESTDB = "inline://InBvc3RncmVzOi8vMTI3LjAuMC4xOjE1NDMyL2RhdGFiYXNlX3Rlc3RkYj9zc2xtb2RlPWRpc2FibGVcdTAwMjZ1c2VyPXBvc3RncmVzXHUwMDI2cGFzc3dvcmQ9c2VjcmV0Ig"
   [modules.echo]
     [modules.echo.configuration]
       default = "inline://ImFub255bW91cyI"
-  [modules.mysql]
-    [modules.mysql.secrets]
-      FTL_DSN_MYSQL_TESTDB = "inline://InJvb3Q6c2VjcmV0QHRjcCgxMjcuMC4wLjE6MTMzMDYpL215c3FsX3Rlc3RkYj9hbGxvd05hdGl2ZVBhc3N3b3Jkcz1UcnVlIg"
-  [modules.test]
-    [modules.test.configuration]
-    [modules.test.secrets]
 
 [commands]
   startup = ["echo 'FTL startup command ⚡️'"]

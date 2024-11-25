@@ -1063,18 +1063,8 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		return nil, fmt.Errorf("invalid module schema: %w", err)
 	}
 
-	for _, d := range module.Decls {
-		if db, ok := d.(*schema.Database); ok && db.Runtime != nil {
-			key := dsnSecretKey(module.Name, db.Name)
-
-			if err := s.sm.Set(ctx, configuration.NewRef(module.Name, key), db.Runtime.DSN); err != nil {
-				return nil, fmt.Errorf("could not set database secret %s: %w", key, err)
-			}
-			logger.Infof("Database declaration: %s -> %s type %s", db.Name, db.Runtime.DSN, db.Type)
-		}
-	}
-
 	dkey, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts)
+
 	if err != nil {
 		logger.Errorf(err, "Could not create deployment")
 		return nil, fmt.Errorf("could not create deployment: %w", err)

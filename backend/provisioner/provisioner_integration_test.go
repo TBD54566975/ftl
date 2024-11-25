@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"testing"
 
-	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/alecthomas/assert/v2"
+
+	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
-func TestDeploymentThrougDevProvisionerCreatePostgresDB(t *testing.T) {
+func TestDeploymentThroughDevProvisionerCreatePostgresDB(t *testing.T) {
 	in.Run(t,
 		in.WithFTLConfig("./ftl-project.toml"),
 		in.CopyModule("echo"),

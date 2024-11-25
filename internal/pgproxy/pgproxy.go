@@ -77,6 +77,8 @@ func (p *PgProxy) Start(ctx context.Context, started chan<- Started) error {
 // It will block until the connection is closed.
 func HandleConnection(ctx context.Context, conn net.Conn, connectionFn DSNConstructor) {
 	defer conn.Close()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	logger := log.FromContext(ctx)
 	logger.Infof("new connection established: %s", conn.RemoteAddr())
@@ -188,31 +190,52 @@ func connectFrontend(ctx context.Context, connectionFn DSNConstructor, startup *
 
 func proxy(ctx context.Context, backend *pgproto3.Backend, frontend *pgproto3.Frontend) error {
 	logger := log.FromContext(ctx)
-	frontendMessages := make(chan pgproto3.BackendMessage)
-	backendMessages := make(chan pgproto3.FrontendMessage)
 	errors := make(chan error, 2)
 
 	go func() {
 		for {
 			msg, err := backend.Receive()
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 			if err != nil {
 				errors <- fmt.Errorf("failed to receive backend message: %w", err)
 				return
 			}
 			logger.Tracef("backend message: %T", msg)
-			backendMessages <- msg
+			frontend.Send(msg)
+			err = frontend.Flush()
+			if err != nil {
+				errors <- fmt.Errorf("failed to receive backend message: %w", err)
+				return
+			}
+			if _, ok := msg.(*pgproto3.Terminate); ok {
+				return
+			}
 		}
 	}()
 
 	go func() {
 		for {
 			msg, err := frontend.Receive()
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 			if err != nil {
 				errors <- fmt.Errorf("failed to receive frontend message: %w", err)
 				return
 			}
 			logger.Tracef("frontend message: %T", msg)
-			frontendMessages <- msg
+			backend.Send(msg)
+			err = backend.Flush()
+			if err != nil {
+				errors <- fmt.Errorf("failed to receive backend message: %w", err)
+				return
+			}
 		}
 	}()
 
@@ -220,20 +243,6 @@ func proxy(ctx context.Context, backend *pgproto3.Backend, frontend *pgproto3.Fr
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("context done: %w", ctx.Err())
-		case msg := <-backendMessages:
-			frontend.Send(msg)
-			if err := frontend.Flush(); err != nil {
-				return fmt.Errorf("failed to flush frontend message: %w", err)
-			}
-
-			if _, ok := msg.(*pgproto3.Terminate); ok {
-				return nil
-			}
-		case msg := <-frontendMessages:
-			backend.Send(msg)
-			if err := backend.Flush(); err != nil {
-				return fmt.Errorf("failed to flush backend message: %w", err)
-			}
 		case err := <-errors:
 			return err
 		}
