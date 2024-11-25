@@ -112,10 +112,7 @@ func (c *mainModuleContext) generateTypesImports(mainModuleImport string) []stri
 		imports.Add(et.importStatement())
 	}
 	for _, v := range c.Verbs {
-		if slices.ContainsFunc(v.Resources, func(r verbResource) bool {
-			_, ok := r.(goTopicHandle)
-			return ok
-		}) {
+		if len(v.Resources) > 0 {
 			imports.Add(`"github.com/TBD54566975/ftl/go-runtime/server"`)
 		}
 		imports.Append(verbImports(v)...)
@@ -285,6 +282,34 @@ func (d goTopicHandle) resource() {}
 
 func (d goTopicHandle) getNativeType() nativeType {
 	return d.nativeType
+}
+
+type goConfigHandle struct {
+	Name   string
+	Module string
+	Type   goSchemaType
+
+	nativeType
+}
+
+func (c goConfigHandle) resource() {}
+
+func (c goConfigHandle) getNativeType() nativeType {
+	return c.nativeType
+}
+
+type goSecretHandle struct {
+	Module string
+	Name   string
+	Type   goSchemaType
+
+	nativeType
+}
+
+func (s goSecretHandle) resource() {}
+
+func (s goSecretHandle) getNativeType() nativeType {
+	return s.nativeType
 }
 
 const buildDirName = ".ftl"
@@ -842,13 +867,14 @@ func (b *mainModuleContextBuilder) processVerb(verb *schema.Verb) (goVerb, error
 
 func (b *mainModuleContextBuilder) getVerbResource(verb *schema.Verb, param common.VerbResourceParam) (verbResource, error) {
 	ref := param.Ref
+	resolved, ok := b.sch.Resolve(ref).Get()
+	if !ok {
+		return nil, fmt.Errorf("failed to resolve %s resource, used by %s.%s", ref,
+			b.mainModule.Name, verb.Name)
+	}
+
 	switch param.Type.(type) {
 	case *schema.MetadataCalls:
-		resolved, ok := b.sch.Resolve(ref).Get()
-		if !ok {
-			return verbClient{}, fmt.Errorf("failed to resolve %s client, used by %s.%s", ref,
-				b.mainModule.Name, verb.Name)
-		}
 		callee, ok := resolved.(*schema.Verb)
 		if !ok {
 			return verbClient{}, fmt.Errorf("%s.%s uses %s client, but %s is not a verb",
@@ -866,11 +892,6 @@ func (b *mainModuleContextBuilder) getVerbResource(verb *schema.Verb, param comm
 			calleeverb,
 		}, nil
 	case *schema.MetadataDatabases:
-		resolved, ok := b.sch.Resolve(ref).Get()
-		if !ok {
-			return goDBHandle{}, fmt.Errorf("failed to resolve %s database, used by %s.%s", ref,
-				b.mainModule.Name, verb.Name)
-		}
 		db, ok := resolved.(*schema.Database)
 		if !ok {
 			return goDBHandle{}, fmt.Errorf("%s.%s uses %s database handle, but %s is not a database",
@@ -878,22 +899,76 @@ func (b *mainModuleContextBuilder) getVerbResource(verb *schema.Verb, param comm
 		}
 		return b.processDatabase(ref.Module, db)
 	case *schema.MetadataPublisher:
-		resolved, ok := b.sch.Resolve(ref).Get()
-		if !ok {
-			return goTopicHandle{}, fmt.Errorf("failed to resolve %s topic, used by %s.%s", ref,
-				b.mainModule.Name, verb.Name)
-		}
 		topic, ok := resolved.(*schema.Topic)
 		if !ok {
 			return goTopicHandle{}, fmt.Errorf("%s.%s uses %s topic handle, but %s is not a topic",
 				b.mainModule.Name, verb.Name, ref, ref)
 		}
 		return b.processTopic(ref.Module, ref, topic)
+	case *schema.MetadataConfig:
+		cfg, ok := resolved.(*schema.Config)
+		if !ok {
+			return goConfigHandle{}, fmt.Errorf("%s.%s uses %s config handle, but %s is not a config",
+				b.mainModule.Name, verb.Name, ref, ref)
+		}
+		return b.processConfig(ref.Module, ref, cfg)
+	case *schema.MetadataSecrets:
+		secret, ok := resolved.(*schema.Secret)
+		if !ok {
+			return goSecretHandle{}, fmt.Errorf("%s.%s uses %s secret handle, but %s is not a secret",
+				b.mainModule.Name, verb.Name, ref, ref)
+		}
+		return b.processSecret(ref.Module, ref, secret)
 
 	default:
-		// TODO: implement other resources
 		return nil, fmt.Errorf("unsupported resource type for verb %q", verb.Name)
 	}
+}
+
+func (b *mainModuleContextBuilder) processConfig(moduleName string, ref *schema.Ref, config *schema.Config) (goConfigHandle, error) {
+	nn, ok := b.nativeNames[ref]
+	if !ok {
+		return goConfigHandle{}, fmt.Errorf("missing native name for config %s.%s", moduleName, config.Name)
+	}
+
+	nt, err := b.getNativeType(nn)
+	if err != nil {
+		return goConfigHandle{}, err
+	}
+
+	ct, err := b.getGoSchemaType(config.Type)
+	if err != nil {
+		return goConfigHandle{}, fmt.Errorf("failed to get config type for %s.%s: %w", moduleName, config.Name, err)
+	}
+	return goConfigHandle{
+		Name:       config.Name,
+		Module:     moduleName,
+		Type:       ct,
+		nativeType: nt,
+	}, nil
+}
+
+func (b *mainModuleContextBuilder) processSecret(moduleName string, ref *schema.Ref, secret *schema.Secret) (goSecretHandle, error) {
+	nn, ok := b.nativeNames[ref]
+	if !ok {
+		return goSecretHandle{}, fmt.Errorf("missing native name for secret %s.%s", moduleName, secret.Name)
+	}
+
+	nt, err := b.getNativeType(nn)
+	if err != nil {
+		return goSecretHandle{}, err
+	}
+
+	st, err := b.getGoSchemaType(secret.Type)
+	if err != nil {
+		return goSecretHandle{}, fmt.Errorf("failed to get secret type for %s.%s: %w", moduleName, secret.Name, err)
+	}
+	return goSecretHandle{
+		Name:       secret.Name,
+		Module:     moduleName,
+		Type:       st,
+		nativeType: nt,
+	}, nil
 }
 
 func (b *mainModuleContextBuilder) processDatabase(moduleName string, db *schema.Database) (goDBHandle, error) {
@@ -1130,6 +1205,18 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	},
 	"getTopicHandle": func(resource verbResource) *goTopicHandle {
 		if c, ok := resource.(goTopicHandle); ok {
+			return &c
+		}
+		return nil
+	},
+	"getConfigHandle": func(resource verbResource) *goConfigHandle {
+		if c, ok := resource.(goConfigHandle); ok {
+			return &c
+		}
+		return nil
+	},
+	"getSecretHandle": func(resource verbResource) *goSecretHandle {
+		if c, ok := resource.(goSecretHandle); ok {
 			return &c
 		}
 		return nil

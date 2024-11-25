@@ -9,7 +9,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
-var nonce = ftl.Config[string]("nonce")
+type Nonce = ftl.Config[string]
 
 //ftl:export
 type AgentBroadcast = ftl.TopicHandle[Agent]
@@ -54,6 +54,6 @@ type GetNonceRequest struct{}
 type GetNonceResponse struct{ Nonce string }
 
 //ftl:verb export
-func GetNonce(ctx context.Context, req GetNonceRequest) (GetNonceResponse, error) {
+func GetNonce(ctx context.Context, req GetNonceRequest, nonce Nonce) (GetNonceResponse, error) {
 	return GetNonceResponse{Nonce: nonce.Get(ctx)}, nil
 }

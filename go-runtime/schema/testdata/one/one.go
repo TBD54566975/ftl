@@ -132,8 +132,8 @@ type ExportedData struct {
 	Field string
 }
 
-var configValue = ftl.Config[Config]("configValue")
-var secretValue = ftl.Secret[string]("secretValue")
+type ConfigValue = ftl.Config[Config]
+type SecretValue = ftl.Secret[string]
 
 type MyDbConfig struct {
 	ftl.DefaultPostgresDatabaseConfig

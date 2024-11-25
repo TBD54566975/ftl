@@ -34,10 +34,10 @@ const (
 	SameVariant EnumVariantConflictChild = iota
 )
 
-var duplConfig = ftl.Config[string]("FTL_CONFIG_ENDPOINT")
-var duplSecret = ftl.Secret[string]("FTL_SECRET_ENDPOINT")
+type FtlConfigEndpoint = ftl.Config[string]
+type FtlSecretEndpoint = ftl.Secret[string]
 
-var duplicateDeclName = ftl.Config[string]("PrivateData")
+type DifferentDeclDupl = ftl.Config[string]
 
 type DuplDbConfig struct {
 	ftl.DefaultPostgresDatabaseConfig

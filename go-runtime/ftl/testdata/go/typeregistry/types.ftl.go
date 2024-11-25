@@ -2,13 +2,11 @@
 package typeregistry
 
 import (
-    "context"
-
-     "github.com/TBD54566975/ftl/go-runtime/ftl"
-    "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
-
-    ftlbuiltin "ftl/builtin"
-    ftlsubpackage "ftl/typeregistry/subpackage"
+	"context"
+	ftlbuiltin "ftl/builtin"
+	ftlsubpackage "ftl/typeregistry/subpackage"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 )
 
 type EchoClient func(context.Context, ftlbuiltin.HttpRequest[EchoRequest, ftl.Unit, ftl.Unit]) (ftlbuiltin.HttpResponse[EchoResponse, string], error)
@@ -21,7 +19,7 @@ func init() {
 			*new(ftlsubpackage.Single),
 		),
 		reflection.ProvideResourcesForVerb(
-            Echo,
+			Echo,
 		),
 	)
 }

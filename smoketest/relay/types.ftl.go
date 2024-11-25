@@ -28,6 +28,7 @@ func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
 			AppendLog,
+			server.Config[string]("relay", "logFile"),
 		),
 		reflection.ProvideResourcesForVerb(
 			Briefed,
@@ -35,6 +36,7 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			Deployed,
+			server.Config[string]("relay", "logFile"),
 		),
 		reflection.ProvideResourcesForVerb(
 			ConsumeAgentBroadcast,
@@ -42,6 +44,7 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			FetchLogs,
+			server.Config[string]("relay", "logFile"),
 		),
 		reflection.ProvideResourcesForVerb(
 			MissionResult,
@@ -50,9 +53,11 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			Succeeded,
+			server.Config[string]("relay", "logFile"),
 		),
 		reflection.ProvideResourcesForVerb(
 			Terminated,
+			server.Config[string]("relay", "logFile"),
 		),
 	)
 }

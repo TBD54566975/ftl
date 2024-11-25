@@ -92,7 +92,7 @@ func (f *fakeFTL) setConfig(name string, value any) error {
 func (f *fakeFTL) GetConfig(ctx context.Context, name string, dest any) error {
 	data, ok := f.configValues[name]
 	if !ok {
-		return fmt.Errorf("secret value %q not found, did you remember to ctx := ftltest.Context(ftltest.WithDefaultProjectFile()) ?: %w", name, configuration.ErrNotFound)
+		return fmt.Errorf("config value %q not found, did you remember to ctx := ftltest.Context(ftltest.WithDefaultProjectFile()) ?: %w", name, configuration.ErrNotFound)
 	}
 	return json.Unmarshal(data, dest)
 }

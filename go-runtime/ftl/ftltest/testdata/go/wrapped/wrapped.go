@@ -12,8 +12,8 @@ import (
 // Outer calls Inner and Inner calls time.Time.
 // This module is useful to testing mocking verbs and setting up test config and secrets
 
-var mySecret = ftl.Secret[string]("secret")
-var myConfig = ftl.Config[string]("config")
+type Secret = ftl.Secret[string]
+type Config = ftl.Config[string]
 
 type WrappedResponse struct {
 	Output string `json:"output"`
@@ -27,7 +27,7 @@ func Outer(ctx context.Context, inner InnerClient) (WrappedResponse, error) {
 }
 
 //ftl:verb
-func Inner(ctx context.Context, tc time.TimeClient) (WrappedResponse, error) {
+func Inner(ctx context.Context, tc time.TimeClient, myConfig Config, mySecret Secret) (WrappedResponse, error) {
 	resp, err := tc(ctx, time.TimeRequest{})
 	if err != nil {
 		return WrappedResponse{}, err

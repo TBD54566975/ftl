@@ -17,6 +17,7 @@ func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
 			GetNonce,
+			server.Config[string]("origin", "nonce"),
 		),
 		reflection.ProvideResourcesForVerb(
 			PostAgent,

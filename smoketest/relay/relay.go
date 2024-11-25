@@ -11,7 +11,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
-var logFile = ftl.Config[string]("log_file")
+type LogFile = ftl.Config[string]
 
 // PubSub
 
@@ -49,21 +49,21 @@ func Briefed(ctx context.Context, agent origin.Agent, deployed DeployedClient) e
 }
 
 //ftl:verb
-func Deployed(ctx context.Context, d AgentDeployment) error {
+func Deployed(ctx context.Context, d AgentDeployment, logFile LogFile) error {
 	ftl.LoggerFromContext(ctx).Infof("Deployed agent %v to %s", d.Agent.Id, d.Target)
-	return appendLog(ctx, "deployed %d", d.Agent.Id)
+	return appendLog(ctx, logFile, "deployed %d", d.Agent.Id)
 }
 
 //ftl:verb
-func Succeeded(ctx context.Context, s MissionSuccess) error {
+func Succeeded(ctx context.Context, s MissionSuccess, logFile LogFile) error {
 	ftl.LoggerFromContext(ctx).Infof("Agent %d succeeded at %s\n", s.AgentID, s.SuccessAt)
-	return appendLog(ctx, "succeeded %d", s.AgentID)
+	return appendLog(ctx, logFile, "succeeded %d", s.AgentID)
 }
 
 //ftl:verb
-func Terminated(ctx context.Context, t AgentTerminated) error {
+func Terminated(ctx context.Context, t AgentTerminated, logFile LogFile) error {
 	ftl.LoggerFromContext(ctx).Infof("Agent %d terminated at %s\n", t.AgentID, t.TerminatedAt)
-	return appendLog(ctx, "terminated %d", t.AgentID)
+	return appendLog(ctx, logFile, "terminated %d", t.AgentID)
 }
 
 // Exported verbs
@@ -116,16 +116,16 @@ type FetchLogsResponse struct {
 }
 
 //ftl:verb export
-func AppendLog(ctx context.Context, req AppendLogRequest) error {
+func AppendLog(ctx context.Context, req AppendLogRequest, logFile LogFile) error {
 	ftl.LoggerFromContext(ctx).Infof("Appending message: %s", req.Message)
-	return appendLog(ctx, req.Message)
+	return appendLog(ctx, logFile, req.Message)
 }
 
 //ftl:verb export
-func FetchLogs(ctx context.Context, req FetchLogsRequest) (FetchLogsResponse, error) {
+func FetchLogs(ctx context.Context, req FetchLogsRequest, logFile LogFile) (FetchLogsResponse, error) {
 	path := logFile.Get(ctx)
 	if path == "" {
-		return FetchLogsResponse{}, fmt.Errorf("log_file config not set")
+		return FetchLogsResponse{}, fmt.Errorf("logFile config not set")
 	}
 	r, err := os.Open(path)
 	if err != nil {
@@ -146,10 +146,10 @@ func FetchLogs(ctx context.Context, req FetchLogsRequest) (FetchLogsResponse, er
 
 // Helpers
 
-func appendLog(ctx context.Context, msg string, args ...interface{}) error {
+func appendLog(ctx context.Context, logFile LogFile, msg string, args ...interface{}) error {
 	path := logFile.Get(ctx)
 	if path == "" {
-		return fmt.Errorf("log_file config not set")
+		return fmt.Errorf("logFile config not set")
 	}
 	w, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

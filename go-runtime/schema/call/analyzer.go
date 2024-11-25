@@ -88,7 +88,7 @@ func isTopicHandleType(typ types.Type) bool {
 	case *types.Alias:
 		return isTopicHandleType(t.Rhs())
 	case *types.Named:
-		return common.IsTopicHandleType(t)
+		return t.Obj().Pkg().Path()+"."+t.Obj().Name() == common.FtlTopicHandlePath
 	}
 	return false
 }

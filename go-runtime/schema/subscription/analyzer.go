@@ -33,10 +33,15 @@ func Extract(pass *analysis.Pass, obj types.Object, node *ast.TypeSpec) optional
 		common.Errorf(pass, node, "unsupported topic type; please declare topics on a separate line: `MyTopic = ftl.TopicHandle[MyEvent]`, then use `MyTopic` in the subscription")
 		return optional.None[*schema.Subscription]()
 	}
+	name := strcase.ToLowerCamel(node.Name.Name)
+	if !schema.ValidateName(name) {
+		common.Errorf(pass, node, "subscription names must be valid identifiers")
+		return optional.None[*schema.Subscription]()
+	}
 
 	subscription := &schema.Subscription{
 		Pos:   common.GoPosToSchemaPos(pass.Fset, node.Pos()),
-		Name:  strcase.ToLowerCamel(node.Name.Name),
+		Name:  name,
 		Topic: topicRef,
 	}
 	common.ApplyMetadata[*schema.Subscription](pass, obj, func(md *common.ExtractedMetadata) {

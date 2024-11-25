@@ -73,6 +73,12 @@ func init() {
                 {{- with getTopicHandle . }}
 			server.TopicHandle[{{ trimModuleQualifier $moduleName .EventType.TypeName }}]("{{.Module}}", "{{.Name}}"),
                 {{- end }}
+				{{- with getConfigHandle . }}
+			server.Config[{{ trimModuleQualifier $moduleName .Type.TypeName }}]("{{.Module}}", "{{.Name}}"),
+				{{- end }}
+				{{- with getSecretHandle . }}
+			server.Secret[{{ trimModuleQualifier $moduleName .Type.TypeName }}]("{{.Module}}", "{{.Name}}"),
+				{{- end }}
 			{{- end}}
 		),
 {{- end}}
