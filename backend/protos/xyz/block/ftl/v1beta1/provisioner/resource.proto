@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package xyz.block.ftl.v1beta1.provisioner;
 
-import "google/protobuf/struct.proto";
 import "xyz/block/ftl/v1/controller.proto";
 import "xyz/block/ftl/v1/schema/schema.proto";
 
@@ -21,6 +20,7 @@ message Resource {
     SqlMigrationResource sql_migration = 105;
     TopicResource topic = 106;
     SubscriptionResource subscription = 107;
+    RunnerResource runner = 108;
   }
 }
 
@@ -50,8 +50,14 @@ message ModuleResource {
 
   v1.schema.Module schema = 2;
   repeated xyz.block.ftl.v1.DeploymentArtefact artefacts = 3;
-  // Runner labels required to run this deployment.
-  optional google.protobuf.Struct labels = 4;
+}
+
+message RunnerResource {
+  message RunnerResourceOutput {
+    string runner_uri = 1;
+    string deployment_key = 2;
+  }
+  RunnerResourceOutput output = 1;
 }
 
 message TopicResource {

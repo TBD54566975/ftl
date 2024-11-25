@@ -11,7 +11,6 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal/bind"
@@ -90,7 +89,7 @@ func (d *devCmd) Run(
 	d.ServeCmd.Ingress.AllowOrigins = []*url.URL{{Scheme: "*", Host: "*"}}
 	d.ServeCmd.Ingress.AllowHeaders = []string{"*"}
 
-	devModeEndpointUpdates := make(chan scaling.DevModeEndpoints, 1)
+	devModeEndpointUpdates := make(chan dev.LocalEndpoint, 1)
 	// cmdServe will notify this channel when startup commands are complete and the controller is ready
 	controllerReady := make(chan bool, 1)
 	if !d.NoServe {

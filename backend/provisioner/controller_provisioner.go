@@ -16,13 +16,13 @@ import (
 // NewControllerProvisioner creates a new provisioner that uses the FTL controller to provision modules
 func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMemProvisioner {
 	return NewEmbeddedProvisioner(map[ResourceType]InMemResourceProvisionerFn{
-		ResourceTypeModule: func(ctx context.Context, rc *provisioner.ResourceContext, module, _ string) (*provisioner.Resource, error) {
+		ResourceTypeModule: func(ctx context.Context, rc *provisioner.ResourceContext, module, _ string, previous *provisioner.Resource) (*provisioner.Resource, error) {
 			mod, ok := rc.Resource.Resource.(*provisioner.Resource_Module)
 			if !ok {
 				panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
 			}
 			logger := log.FromContext(ctx)
-			logger.Infof("Provisioning module: %s", module)
+			logger.Debugf("Provisioning module: %s", module)
 
 			for _, dep := range rc.Dependencies {
 				switch r := dep.Resource.(type) {
@@ -83,7 +83,6 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 			resp, err := client.CreateDeployment(ctx, connect.NewRequest(&ftlv1.CreateDeploymentRequest{
 				Schema:    mod.Module.Schema,
 				Artefacts: mod.Module.Artefacts,
-				Labels:    mod.Module.Labels,
 			}))
 			if err != nil {
 				return nil, fmt.Errorf("failed to create deployment: %w", err)

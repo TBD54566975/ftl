@@ -149,6 +149,8 @@ func replaceOutputs(to []*provproto.Resource, from []*provproto.Resource) error 
 				}
 				r.Subscription.Output = subscriptionFrom.Subscription.Output
 			}
+		case *provproto.Resource_Runner:
+			// Ignore
 		default:
 			return fmt.Errorf("can not replace outputs for an unknown resource type %T", r)
 		}

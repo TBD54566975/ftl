@@ -99,7 +99,7 @@ FROM runners r
 ORDER BY r.key;
 
 -- name: GetActiveDeployments :many
-SELECT sqlc.embed(d), m.name AS module_name, m.language, COUNT(r.id) AS replicas
+SELECT sqlc.embed(d), m.name AS module_name, m.language, COUNT(r.id) AS replicas, d.endpoint
 FROM deployments d
   JOIN modules m ON d.module_id = m.id
   LEFT JOIN runners r ON d.id = r.deployment_id
@@ -135,6 +135,12 @@ ORDER BY d.key;
 -- name: SetDeploymentDesiredReplicas :exec
 UPDATE deployments
 SET min_replicas = $2, last_activated_at = CASE WHEN min_replicas = 0 THEN (NOW() AT TIME ZONE 'utc') ELSE  last_activated_at END
+WHERE key = sqlc.arg('key')::deployment_key
+RETURNING 1;
+
+-- name: SetDeploymentEndpoint :exec
+UPDATE deployments
+SET endpoint = $2
 WHERE key = sqlc.arg('key')::deployment_key
 RETURNING 1;
 

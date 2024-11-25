@@ -28,11 +28,11 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/TBD54566975/ftl/backend/controller/scaling/k8sscaling"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	"github.com/TBD54566975/ftl/backend/provisioner/scaling/k8sscaling"
 	"github.com/TBD54566975/ftl/internal"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"

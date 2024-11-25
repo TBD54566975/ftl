@@ -31,9 +31,8 @@ func NewDevProvisioner(postgresPort int, mysqlPort int) *InMemProvisioner {
 		ResourceTypeSubscription: provisionSubscription(),
 	})
 }
-
 func provisionMysql(mysqlPort int) InMemResourceProvisionerFn {
-	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string) (*provisioner.Resource, error) {
+	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
 		mysql, ok := rc.Resource.Resource.(*provisioner.Resource_Mysql)
 		if !ok {
 			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
@@ -120,7 +119,7 @@ func ProvisionPostgresForTest(ctx context.Context, module string, id string) (st
 	rc.Resource = &provisioner.Resource{
 		Resource: &provisioner.Resource_Postgres{},
 	}
-	res, err := provisionPostgres(15432)(ctx, rc, module, id+"_test")
+	res, err := provisionPostgres(15432)(ctx, rc, module, id+"_test", nil)
 	if err != nil {
 		return "", err
 	}
@@ -133,15 +132,15 @@ func ProvisionMySQLForTest(ctx context.Context, module string, id string) (strin
 	rc.Resource = &provisioner.Resource{
 		Resource: &provisioner.Resource_Mysql{},
 	}
-	res, err := provisionMysql(13306)(ctx, rc, module, id+"_test")
+	res, err := provisionMysql(13306)(ctx, rc, module, id+"_test", nil)
 	if err != nil {
 		return "", err
 	}
 	return res.GetMysql().GetOutput().WriteConnector.GetDsnDatabaseConnector().GetDsn(), nil
 }
 
-func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provisioner.ResourceContext, module string, id string) (*provisioner.Resource, error) {
-	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string) (*provisioner.Resource, error) {
+func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provisioner.ResourceContext, module string, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
+	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
 		pg, ok := rc.Resource.Resource.(*provisioner.Resource_Postgres)
 		if !ok {
 			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
@@ -210,8 +209,8 @@ func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provision
 
 }
 
-func provisionTopic() func(ctx context.Context, rc *provisioner.ResourceContext, module, id string) (*provisioner.Resource, error) {
-	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string) (*provisioner.Resource, error) {
+func provisionTopic() func(ctx context.Context, rc *provisioner.ResourceContext, module string, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
+	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
 		logger := log.FromContext(ctx)
 		if err := dev.SetUpRedPanda(ctx); err != nil {
 			return nil, fmt.Errorf("could not set up redpanda: %w", err)
@@ -263,8 +262,8 @@ func provisionTopic() func(ctx context.Context, rc *provisioner.ResourceContext,
 	}
 }
 
-func provisionSubscription() func(ctx context.Context, rc *provisioner.ResourceContext, module, id string) (*provisioner.Resource, error) {
-	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string) (*provisioner.Resource, error) {
+func provisionSubscription() func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
+	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
 		logger := log.FromContext(ctx)
 		if err := dev.SetUpRedPanda(ctx); err != nil {
 			return nil, fmt.Errorf("could not set up redpanda: %w", err)

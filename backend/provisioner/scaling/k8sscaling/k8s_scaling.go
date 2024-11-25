@@ -1,24 +1,10 @@
-/*
-Copyright 2024.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package k8sscaling
 
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -35,11 +21,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 const thisDeploymentName = "ftl-controller"
@@ -49,19 +36,210 @@ const deploymentTemplate = "deploymentTemplate"
 const serviceTemplate = "serviceTemplate"
 const serviceAccountTemplate = "serviceAccountTemplate"
 
-// DeploymentProvisioner reconciles a Foo object
-type DeploymentProvisioner struct {
-	Client           *kubernetes.Clientset
-	MyDeploymentName string
-	Namespace        string
+var _ scaling.RunnerScaling = &k8sScaling{}
+
+type k8sScaling struct {
+	ctx          context.Context
+	disableIstio bool
+	controller   string
+
+	client           *kubernetes.Clientset
+	myDeploymentName string
+	namespace        string
 	// Map of known deployments
-	KnownDeployments *xsync.MapOf[string, bool]
-	FTLEndpoint      string
-	IstioSecurity    optional.Option[istioclient.Clientset]
+	knownDeployments *xsync.MapOf[string, bool]
+	ftlEndpoint      string
+	istioSecurity    optional.Option[istioclient.Clientset]
 }
 
-func (r *DeploymentProvisioner) updateDeployment(ctx context.Context, name string, mod func(deployment *kubeapps.Deployment)) error {
-	deploymentClient := r.Client.AppsV1().Deployments(r.Namespace)
+func (r k8sScaling) StartDeployment(module string, deploymentKey string, sch *schema.Module) error {
+	ctx := r.ctx
+	logger := log.FromContext(ctx)
+	logger = logger.Module(module)
+	ctx = log.ContextWithLogger(ctx, logger)
+	logger.Debugf("Handling schema change for %s", deploymentKey)
+	deploymentClient := r.client.AppsV1().Deployments(r.namespace)
+	deployment, err := deploymentClient.Get(ctx, deploymentKey, v1.GetOptions{})
+	deploymentExists := true
+	if err != nil {
+		if errors.IsNotFound(err) {
+			deploymentExists = false
+		} else {
+			return fmt.Errorf("failed to get deployment %s: %w", deploymentKey, err)
+		}
+	}
+
+	// Note that a change is now currently usually and add and a delete
+	// As it should really be called a module changed, not a deployment changed
+	// This will need to be fixed as part of the support for rolling deployments
+	r.knownDeployments.Store(deploymentKey, true)
+	if deploymentExists {
+		logger.Debugf("Updating deployment %s", deploymentKey)
+		return r.handleExistingDeployment(ctx, deployment)
+	} else {
+		return r.handleNewDeployment(ctx, deploymentKey, sch)
+	}
+}
+
+func (r k8sScaling) TerminateDeployment(module string, deploymentKey string) error {
+	logger := log.FromContext(r.ctx)
+	logger = logger.Module(module)
+	ctx := log.ContextWithLogger(r.ctx, logger)
+	logger.Debugf("Handling schema change for %s", deploymentKey)
+	deploymentClient := r.client.AppsV1().Deployments(r.namespace)
+	_, err := deploymentClient.Get(ctx, deploymentKey, v1.GetOptions{})
+	deploymentExists := true
+	if err != nil {
+		if errors.IsNotFound(err) {
+			deploymentExists = false
+		} else {
+			return fmt.Errorf("failed to get deployment %s: %w", deploymentKey, err)
+		}
+	}
+
+	if deploymentExists {
+		go func() {
+
+			// Nasty hack, we want all the controllers to have updated their route tables before we kill the runner
+			// so we add a slight delay here
+			time.Sleep(time.Second * 10)
+			r.knownDeployments.Delete(deploymentKey)
+			logger.Debugf("Deleting service %s", module)
+			err = r.client.CoreV1().Services(r.namespace).Delete(ctx, deploymentKey, v1.DeleteOptions{})
+			if err != nil {
+				if !errors.IsNotFound(err) {
+					logger.Errorf(err, "Failed to delete service %s", module)
+				}
+			}
+		}()
+	}
+	return nil
+}
+
+func (r k8sScaling) Start(ctx context.Context) error {
+
+	logger := log.FromContext(ctx).Scope("K8sScaling")
+	ctx = log.ContextWithLogger(ctx, logger)
+	clientset, err := CreateClientSet()
+	if err != nil {
+		return fmt.Errorf("failed to create clientset: %w", err)
+	}
+
+	namespace, err := GetCurrentNamespace()
+	if err != nil {
+		// Nothing we can do here, if we don't have a namespace we have no runners
+		return fmt.Errorf("failed to get current namespace: %w", err)
+	}
+
+	var sec *istioclient.Clientset
+	if !r.disableIstio {
+		groups, err := clientset.Discovery().ServerGroups()
+		if err != nil {
+			return fmt.Errorf("failed to get server groups: %w", err)
+		}
+		// If istio is present and not explicitly disabled we create the client
+		for _, group := range groups.Groups {
+			if group.Name == "security.istio.io" {
+				sec, err = CreateIstioClientSet()
+				if err != nil {
+					return fmt.Errorf("failed to create istio clientset: %w", err)
+				}
+				break
+			}
+		}
+	}
+
+	logger.Debugf("Using namespace %s", namespace)
+	r.ctx = ctx
+	r.client = clientset
+	r.namespace = namespace
+	r.knownDeployments = xsync.NewMapOf[string, bool]()
+	r.istioSecurity = optional.Ptr(sec)
+	return nil
+}
+
+func CreateClientSet() (*kubernetes.Clientset, error) {
+	config, err := getKubeConfig()
+	if err != nil {
+		return nil, err
+	}
+	// creates the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client set: %w", err)
+	}
+	return clientset, nil
+}
+
+func CreateIstioClientSet() (*istioclient.Clientset, error) {
+	config, err := getKubeConfig()
+	if err != nil {
+		return nil, err
+	}
+	// creates the clientset
+	clientset, err := istioclient.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client set: %w", err)
+	}
+	return clientset, nil
+}
+
+func getKubeConfig() (*rest.Config, error) {
+	// creates the in-cluster config
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		// if we're not in a cluster, use the kubeconfig
+		config, err = clientcmd.BuildConfigFromFlags("", clientcmd.RecommendedHomeFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
+		}
+	}
+	return config, nil
+}
+
+func (r k8sScaling) GetEndpointForDeployment(ctx context.Context, module string, deployment string) (optional.Option[url.URL], error) {
+	// TODO: hard coded port? It's hard to deal with as we might not have the lease
+	// I think requiring this port is fine for now
+	return optional.Some(url.URL{Scheme: "http",
+		Host: fmt.Sprintf("%s:8893", deployment),
+	}), nil
+}
+
+func NewK8sScaling(disableIstio bool, controllerURL string) scaling.RunnerScaling {
+	return &k8sScaling{disableIstio: disableIstio, controller: controllerURL}
+}
+
+func GetCurrentNamespace() (string, error) {
+	namespaceFile := "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+	namespace, err := os.ReadFile(namespaceFile)
+	if err != nil && !os.IsNotExist(err) {
+		return "", fmt.Errorf("failed to read namespace file: %w", err)
+	} else if err == nil {
+		return string(namespace), nil
+	}
+
+	// If not running in a cluster, get the namespace from the kubeconfig
+	configAccess := clientcmd.NewDefaultPathOptions()
+	config, err := configAccess.GetStartingConfig()
+	if err != nil {
+		return "", fmt.Errorf("failed to get kubeconfig: %w", err)
+	}
+
+	currentContext := config.CurrentContext
+	if currentContext == "" {
+		return "", fmt.Errorf("no current context found in kubeconfig")
+	}
+
+	context, exists := config.Contexts[currentContext]
+	if !exists {
+		return "", fmt.Errorf("context %s not found in kubeconfig", currentContext)
+	}
+
+	return context.Namespace, nil
+}
+
+func (r *k8sScaling) updateDeployment(ctx context.Context, name string, mod func(deployment *kubeapps.Deployment)) error {
+	deploymentClient := r.client.AppsV1().Deployments(r.namespace)
 	for range 10 {
 
 		get, err := deploymentClient.Get(ctx, name, v1.GetOptions{})
@@ -82,90 +260,8 @@ func (r *DeploymentProvisioner) updateDeployment(ctx context.Context, name strin
 	return fmt.Errorf("failed to update deployment %s, 10 clonflicts in a row", name)
 }
 
-func (r *DeploymentProvisioner) HandleSchemaChange(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
-	logger := log.FromContext(ctx).Scope("DeploymentProvisioner")
-	ctx = log.ContextWithLogger(ctx, logger)
-	defer func() {
-		if r := recover(); r != nil {
-			var err error
-			if rerr, ok := r.(error); ok {
-				err = rerr
-			} else {
-				err = fmt.Errorf("%v", r)
-			}
-			logger.Errorf(err, "Panic creating kube deployment")
-		}
-	}()
-	err := r.handleSchemaChange(ctx, msg)
-	if err != nil {
-		logger.Errorf(err, "Failed to handle schema change")
-	}
-	logger.Debugf("Handled schema change for %s", msg.ModuleName)
-	return err
-}
-func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
-	if !msg.More {
-		defer r.deleteMissingDeployments(ctx)
-	}
-	if msg.DeploymentKey == nil {
-		// Builtins don't have deployments
-		return nil
-	}
-	logger := log.FromContext(ctx)
-	logger = logger.Module(msg.ModuleName)
-	ctx = log.ContextWithLogger(ctx, logger)
-	deploymentKey, err := model.ParseDeploymentKey(msg.GetDeploymentKey())
-	if err != nil {
-		return fmt.Errorf("failed to parse deployment key %s: %w", msg.GetDeploymentKey(), err)
-	}
-	logger.Debugf("Handling schema change for %s", deploymentKey)
-	deploymentClient := r.Client.AppsV1().Deployments(r.Namespace)
-	deployment, err := deploymentClient.Get(ctx, deploymentKey.String(), v1.GetOptions{})
-	deploymentExists := true
-	if err != nil {
-		if errors.IsNotFound(err) {
-			deploymentExists = false
-		} else {
-			return fmt.Errorf("failed to get deployment %s: %w", deploymentKey, err)
-		}
-	}
-
-	switch msg.ChangeType {
-	case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
-
-		// Note that a change is now currently usually and add and a delete
-		// As it should really be called a module changed, not a deployment changed
-		// This will need to be fixed as part of the support for rolling deployments
-		r.KnownDeployments.Store(deploymentKey.String(), true)
-		if deploymentExists {
-			logger.Debugf("Updating deployment %s", deploymentKey)
-			return r.handleExistingDeployment(ctx, deployment, msg.Schema)
-		} else {
-			return r.handleNewDeployment(ctx, msg.Schema, deploymentKey.String())
-		}
-	case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
-		if deploymentExists {
-			go func() {
-
-				// Nasty hack, we want all the controllers to have updated their route tables before we kill the runner
-				// so we add a slight delay here
-				time.Sleep(time.Second * 10)
-				r.KnownDeployments.Delete(deploymentKey.String())
-				logger.Debugf("Deleting service %s", msg.ModuleName)
-				err = r.Client.CoreV1().Services(r.Namespace).Delete(ctx, deploymentKey.String(), v1.DeleteOptions{})
-				if err != nil {
-					if !errors.IsNotFound(err) {
-						logger.Errorf(err, "Failed to delete service %s", msg.ModuleName)
-					}
-				}
-			}()
-		}
-	}
-	return nil
-}
-
-func (r *DeploymentProvisioner) thisContainerImage(ctx context.Context) (string, error) {
-	deploymentClient := r.Client.AppsV1().Deployments(r.Namespace)
+func (r *k8sScaling) thisContainerImage(ctx context.Context) (string, error) {
+	deploymentClient := r.client.AppsV1().Deployments(r.namespace)
 	thisDeployment, err := deploymentClient.Get(ctx, thisDeploymentName, v1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to get deployment %s: %w", thisDeploymentName, err)
@@ -174,17 +270,14 @@ func (r *DeploymentProvisioner) thisContainerImage(ctx context.Context) (string,
 
 }
 
-func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *schemapb.Module, name string) error {
-	if dep.Runtime == nil {
-		return nil
-	}
+func (r *k8sScaling) handleNewDeployment(ctx context.Context, name string, sch *schema.Module) error {
 	logger := log.FromContext(ctx)
 
-	cm, err := r.Client.CoreV1().ConfigMaps(r.Namespace).Get(ctx, configMapName, v1.GetOptions{})
+	cm, err := r.client.CoreV1().ConfigMaps(r.namespace).Get(ctx, configMapName, v1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get configMap %s: %w", configMapName, err)
 	}
-	deploymentClient := r.Client.AppsV1().Deployments(r.Namespace)
+	deploymentClient := r.client.AppsV1().Deployments(r.namespace)
 	thisDeployment, err := deploymentClient.Get(ctx, thisDeploymentName, v1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get deployment %s: %w", thisDeploymentName, err)
@@ -192,7 +285,7 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 
 	// First create a Service, this will be the root owner of all the other resources
 	// Only create if it does not exist already
-	servicesClient := r.Client.CoreV1().Services(r.Namespace)
+	servicesClient := r.client.CoreV1().Services(r.namespace)
 	service, err := servicesClient.Get(ctx, name, v1.GetOptions{})
 	if err != nil {
 		if !errors.IsNotFound(err) {
@@ -219,7 +312,7 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 
 	// Now create a ServiceAccount, we mostly need this for Istio but we create it for all deployments
 	// To keep things consistent
-	serviceAccountClient := r.Client.CoreV1().ServiceAccounts(r.Namespace)
+	serviceAccountClient := r.client.CoreV1().ServiceAccounts(r.namespace)
 	serviceAccount, err := serviceAccountClient.Get(ctx, name, v1.GetOptions{})
 	if err != nil {
 		if !errors.IsNotFound(err) {
@@ -243,7 +336,7 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 	}
 
 	// Sync the istio policy if applicable
-	if sec, ok := r.IstioSecurity.Get(); ok {
+	if sec, ok := r.istioSecurity.Get(); ok {
 		err = r.syncIstioPolicy(ctx, sec, name, service, thisDeployment)
 		if err != nil {
 			return err
@@ -273,7 +366,10 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 	}
 
 	// runner images use the same tag as the controller
-	rawRunnerImage := optional.Ptr(dep.Runtime.Image).Default("ftl0/ftl-runner")
+	rawRunnerImage := sch.Runtime.Image
+	if rawRunnerImage == "" {
+		rawRunnerImage = "ftl0/ftl-runner"
+	}
 	var runnerImage string
 	if len(strings.Split(rawRunnerImage, ":")) != 1 {
 		return fmt.Errorf("module runtime's image should not contain a tag: %s", rawRunnerImage)
@@ -300,7 +396,7 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 
 	deployment.Spec.Template.ObjectMeta.Labels = addLabel(deployment.Spec.Template.ObjectMeta.Labels, "app", name)
 	deployment.Spec.Template.Spec.ServiceAccountName = name
-	changes, err := r.syncDeployment(ctx, thisImage, deployment, dep)
+	changes, err := r.syncDeployment(ctx, thisImage, deployment, 1)
 
 	if err != nil {
 		return err
@@ -339,13 +435,13 @@ func decodeBytesToObject(bytes []byte, deployment runtime.Object) error {
 	return nil
 }
 
-func (r *DeploymentProvisioner) handleExistingDeployment(ctx context.Context, deployment *kubeapps.Deployment, ftlDeployment *schemapb.Module) error {
+func (r *k8sScaling) handleExistingDeployment(ctx context.Context, deployment *kubeapps.Deployment) error {
 
 	thisContainerImage, err := r.thisContainerImage(ctx)
 	if err != nil {
 		return err
 	}
-	changes, err := r.syncDeployment(ctx, thisContainerImage, deployment, ftlDeployment)
+	changes, err := r.syncDeployment(ctx, thisContainerImage, deployment, 1)
 	if err != nil {
 		return err
 	}
@@ -365,7 +461,7 @@ func (r *DeploymentProvisioner) handleExistingDeployment(ctx context.Context, de
 	return nil
 }
 
-func (r *DeploymentProvisioner) syncDeployment(ctx context.Context, thisImage string, deployment *kubeapps.Deployment, ftlDeployment *schemapb.Module) ([]func(*kubeapps.Deployment), error) {
+func (r *k8sScaling) syncDeployment(ctx context.Context, thisImage string, deployment *kubeapps.Deployment, replicas int32) ([]func(*kubeapps.Deployment), error) {
 	logger := log.FromContext(ctx)
 	changes := []func(*kubeapps.Deployment){}
 	ourVersion, err := extractTag(thisImage)
@@ -396,17 +492,17 @@ func (r *DeploymentProvisioner) syncDeployment(ctx context.Context, thisImage st
 	}
 
 	// For now we just make sure the number of replicas match
-	if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != ftlDeployment.Runtime.MinReplicas {
+	if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != replicas {
 		changes = append(changes, func(deployment *kubeapps.Deployment) {
-			deployment.Spec.Replicas = &ftlDeployment.Runtime.MinReplicas
+			deployment.Spec.Replicas = &replicas
 		})
 	}
 	changes = r.updateEnvVar(deployment, "FTL_DEPLOYMENT", deployment.Name, changes)
-	changes = r.updateEnvVar(deployment, "FTL_ENDPOINT", r.FTLEndpoint, changes)
+	changes = r.updateEnvVar(deployment, "FTL_ENDPOINT", r.controller, changes)
 	return changes, nil
 }
 
-func (r *DeploymentProvisioner) updateEnvVar(deployment *kubeapps.Deployment, envVerName string, envVarValue string, changes []func(*kubeapps.Deployment)) []func(*kubeapps.Deployment) {
+func (r *k8sScaling) updateEnvVar(deployment *kubeapps.Deployment, envVerName string, envVarValue string, changes []func(*kubeapps.Deployment)) []func(*kubeapps.Deployment) {
 	found := false
 	for pos, env := range deployment.Spec.Template.Spec.Containers[0].Env {
 		if env.Name == envVerName {
@@ -433,9 +529,9 @@ func (r *DeploymentProvisioner) updateEnvVar(deployment *kubeapps.Deployment, en
 	return changes
 }
 
-func (r *DeploymentProvisioner) deleteMissingDeployments(ctx context.Context) {
+func (r *k8sScaling) deleteMissingDeployments(ctx context.Context) {
 	logger := log.FromContext(ctx)
-	serviceClient := r.Client.CoreV1().Services(r.Namespace)
+	serviceClient := r.client.CoreV1().Services(r.namespace)
 
 	list, err := serviceClient.List(ctx, v1.ListOptions{LabelSelector: deploymentLabel})
 	if err != nil {
@@ -444,7 +540,7 @@ func (r *DeploymentProvisioner) deleteMissingDeployments(ctx context.Context) {
 	}
 
 	for _, service := range list.Items {
-		if _, ok := r.KnownDeployments.Load(service.Name); !ok {
+		if _, ok := r.knownDeployments.Load(service.Name); !ok {
 			// With owner references the deployments should be deleted automatically
 			// However this is in transition so delete both
 			logger.Debugf("Deleting service %s as it is not a known module", service.Name)
@@ -456,12 +552,12 @@ func (r *DeploymentProvisioner) deleteMissingDeployments(ctx context.Context) {
 	}
 }
 
-func (r *DeploymentProvisioner) syncIstioPolicy(ctx context.Context, sec istioclient.Clientset, name string, service *kubecore.Service, thisDeployment *kubeapps.Deployment) error {
+func (r *k8sScaling) syncIstioPolicy(ctx context.Context, sec istioclient.Clientset, name string, service *kubecore.Service, thisDeployment *kubeapps.Deployment) error {
 	logger := log.FromContext(ctx)
 	logger.Debugf("Creating new istio policy for %s", name)
 	var update func(policy *istiosec.AuthorizationPolicy) error
 
-	policiesClient := sec.SecurityV1().AuthorizationPolicies(r.Namespace)
+	policiesClient := sec.SecurityV1().AuthorizationPolicies(r.namespace)
 	policy, err := policiesClient.Get(ctx, name, v1.GetOptions{})
 	if err != nil {
 		if !errors.IsNotFound(err) {
@@ -469,7 +565,7 @@ func (r *DeploymentProvisioner) syncIstioPolicy(ctx context.Context, sec istiocl
 		}
 		policy = &istiosec.AuthorizationPolicy{}
 		policy.Name = name
-		policy.Namespace = r.Namespace
+		policy.Namespace = r.namespace
 		update = func(policy *istiosec.AuthorizationPolicy) error {
 			_, err := policiesClient.Create(ctx, policy, v1.CreateOptions{})
 			if err != nil {
@@ -495,7 +591,7 @@ func (r *DeploymentProvisioner) syncIstioPolicy(ctx context.Context, sec istiocl
 			From: []*istiosecmodel.Rule_From{
 				{
 					Source: &istiosecmodel.Source{
-						Principals: []string{"cluster.local/ns/" + r.Namespace + "/sa/" + thisDeployment.Spec.Template.Spec.ServiceAccountName},
+						Principals: []string{"cluster.local/ns/" + r.namespace + "/sa/" + thisDeployment.Spec.Template.Spec.ServiceAccountName},
 					},
 				},
 			},

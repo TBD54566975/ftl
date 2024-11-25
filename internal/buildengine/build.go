@@ -11,9 +11,9 @@ import (
 	"github.com/alecthomas/types/result"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/builderrors"
+	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -28,7 +28,7 @@ var errInvalidateDependencies = errors.New("dependencies need to be updated")
 // Plugins must use a lock file to ensure that only one build is running at a time.
 //
 // Returns invalidateDependenciesError if the build failed due to a change in dependencies.
-func build(ctx context.Context, plugin *languageplugin.LanguagePlugin, projectConfig projectconfig.Config, bctx languageplugin.BuildContext, devMode bool, devModeEndpoints chan scaling.DevModeEndpoints) (moduleSchema *schema.Module, deploy []string, err error) {
+func build(ctx context.Context, plugin *languageplugin.LanguagePlugin, projectConfig projectconfig.Config, bctx languageplugin.BuildContext, devMode bool, devModeEndpoints chan dev.LocalEndpoint) (moduleSchema *schema.Module, deploy []string, err error) {
 	logger := log.FromContext(ctx).Module(bctx.Config.Module).Scope("build")
 	ctx = log.ContextWithLogger(ctx, logger)
 
@@ -37,7 +37,7 @@ func build(ctx context.Context, plugin *languageplugin.LanguagePlugin, projectCo
 }
 
 // handleBuildResult processes the result of a build
-func handleBuildResult(ctx context.Context, projectConfig projectconfig.Config, c moduleconfig.ModuleConfig, eitherResult result.Result[languageplugin.BuildResult], devModeEndpoints chan scaling.DevModeEndpoints) (moduleSchema *schema.Module, deploy []string, err error) {
+func handleBuildResult(ctx context.Context, projectConfig projectconfig.Config, c moduleconfig.ModuleConfig, eitherResult result.Result[languageplugin.BuildResult], devModeEndpoints chan dev.LocalEndpoint) (moduleSchema *schema.Module, deploy []string, err error) {
 	logger := log.FromContext(ctx)
 	config := c.Abs()
 
@@ -88,7 +88,7 @@ func handleBuildResult(ctx context.Context, projectConfig projectconfig.Config, 
 		if devModeEndpoints != nil {
 			parsed, err := url.Parse(endpoint)
 			if err == nil {
-				devModeEndpoints <- scaling.DevModeEndpoints{Module: config.Module, Endpoint: *parsed, DebugPort: result.DebugPort, Language: config.Language}
+				devModeEndpoints <- dev.LocalEndpoint{Module: config.Module, Endpoint: *parsed, DebugPort: result.DebugPort, Language: config.Language}
 			}
 		}
 	}

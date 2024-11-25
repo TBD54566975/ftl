@@ -14,6 +14,7 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	"github.com/TBD54566975/ftl/backend/provisioner/scaling/k8sscaling"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -91,6 +92,14 @@ func provisionerIDToProvisioner(ctx context.Context, id string, controller ftlv1
 	switch id {
 	case "controller":
 		return NewControllerProvisioner(controller), nil
+	case "kubernetes":
+		// TODO: move this into a plugin
+		scaling := k8sscaling.NewK8sScaling(false, "http://ftl-controller")
+		err := scaling.Start(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error starting k8s scaling: %w", err)
+		}
+		return NewRunnerScalingProvisioner(scaling, controller), nil
 	case "noop":
 		return &NoopProvisioner{}, nil
 	default:
@@ -263,7 +272,6 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 			Module: &provisioner.ModuleResource{
 				Schema:    msg.Schema,
 				Artefacts: msg.Artefacts,
-				Labels:    msg.Labels,
 			},
 		},
 	}
@@ -273,9 +281,18 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 			to:   dep.ResourceId,
 		})
 	}
-
+	runnerResource := &provisioner.Resource{
+		ResourceId: module.GetName() + "-runner",
+		Resource: &provisioner.Resource_Runner{
+			Runner: &provisioner.RunnerResource{},
+		},
+	}
+	edges = append(edges, &ResourceEdge{
+		from: runnerResource.ResourceId,
+		to:   root.ResourceId,
+	})
 	result := &ResourceGraph{
-		nodes: append(deps, root),
+		nodes: append(deps, root, runnerResource),
 		edges: edges,
 	}
 

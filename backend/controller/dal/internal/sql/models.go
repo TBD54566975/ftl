@@ -227,6 +227,7 @@ type Deployment struct {
 	Labels          json.RawMessage
 	MinReplicas     int32
 	LastActivatedAt time.Time
+	Endpoint        optional.Option[string]
 }
 
 type Module struct {
