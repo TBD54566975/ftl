@@ -54,3 +54,6 @@ __pycache__/
 *.pyc
 *.pyo
 .venv/
+
+# Rust
+!internal/sqlc-gen-ftl/dist/
