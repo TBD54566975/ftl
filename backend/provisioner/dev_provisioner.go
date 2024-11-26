@@ -259,7 +259,7 @@ func provisionSubscription() func(ctx context.Context, rc *provisioner.ResourceC
 			TopicId:         topicID,
 			ConsumerGroupId: consumerGroupID,
 		}
-		logger.Infof("Provisioning subscription: %v", subscription)
+		logger.Infof("Provisioning subscription: %v", consumerGroupID)
 		return rc.Resource, nil
 	}
 }
