@@ -22,7 +22,7 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 				panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
 			}
 			logger := log.FromContext(ctx)
-			logger.Infof("provisioning module: %s", module)
+			logger.Infof("Provisioning module: %s", module)
 
 			for _, dep := range rc.Dependencies {
 				switch r := dep.Resource.(type) {
