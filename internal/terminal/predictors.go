@@ -1,41 +1,30 @@
 package terminal
 
 import (
-	"context"
-
-	"connectrpc.com/connect"
 	"github.com/posener/complete"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
-func Predictors(ctx context.Context, client ftlv1connect.SchemaServiceClient) map[string]complete.Predictor {
+func Predictors(view schemaeventsource.View) map[string]complete.Predictor {
 	return map[string]complete.Predictor{
-		"verbs": &verbPredictor{
-			Client: client,
-			Ctx:    ctx,
-		},
+		"verbs": &verbPredictor{view: view},
 	}
 }
 
 type verbPredictor struct {
-	Client ftlv1connect.SchemaServiceClient
-	Ctx    context.Context
+	view schemaeventsource.View
 }
 
 func (v *verbPredictor) Predict(args complete.Args) []string {
-	response, err := v.Client.GetSchema(v.Ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
-	if err != nil {
-		// Do we want to report errors here?
-		return nil
-	}
+	sch := v.view.Get()
 	ret := []string{}
-	for _, module := range response.Msg.Schema.Modules {
+	for _, module := range sch.Modules {
 		for _, dec := range module.Decls {
-			if dec.GetVerb() != nil {
-				verb := module.Name + "." + dec.GetVerb().Name
-				ret = append(ret, verb)
+			if verb, ok := dec.(*schema.Verb); ok {
+				ref := schema.Ref{Module: module.Name, Name: verb.Name}
+				ret = append(ret, ref.String())
 			}
 		}
 	}

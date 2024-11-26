@@ -59,7 +59,7 @@ func (d *devCmd) Run(
 		return errors.New("no directories specified")
 	}
 
-	terminal.LaunchEmbeddedConsole(ctx, k, bindContext, schemaClient)
+	terminal.LaunchEmbeddedConsole(ctx, k, bindContext, schemaEventSourceFactory())
 	var client buildengine.DeployClient = controllerClient
 	if d.ServeCmd.Provisioners > 0 {
 		client = rpc.ClientFromContext[provisionerconnect.ProvisionerServiceClient](ctx)
