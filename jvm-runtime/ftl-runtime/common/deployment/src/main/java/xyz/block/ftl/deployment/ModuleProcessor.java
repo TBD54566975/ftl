@@ -13,6 +13,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.stream.Collectors;
 
 import org.jboss.jandex.DotName;
@@ -21,6 +23,7 @@ import org.tomlj.Toml;
 import org.tomlj.TomlParseResult;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import io.quarkus.bootstrap.classloading.QuarkusClassLoader;
 import io.quarkus.deployment.IsDevelopment;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -33,6 +36,7 @@ import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.RunTimeConfigBuilderBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
 import io.quarkus.deployment.builditem.SystemPropertyBuildItem;
+import io.quarkus.deployment.dev.RuntimeUpdatesProcessor;
 import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
 import io.quarkus.grpc.deployment.BindableServiceBuildItem;
 import io.quarkus.vertx.http.deployment.RequireSocketHttpBuildItem;
@@ -46,6 +50,8 @@ import xyz.block.ftl.runtime.VerbHandler;
 import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.config.FTLConfigSourceFactoryBuilder;
 import xyz.block.ftl.runtime.http.FTLHttpHandler;
+import xyz.block.ftl.v1.language.Error;
+import xyz.block.ftl.v1.language.ErrorList;
 
 public class ModuleProcessor {
 
@@ -70,6 +76,50 @@ public class ModuleProcessor {
     @BuildStep
     public SystemPropertyBuildItem moduleNameConfig(ApplicationInfoBuildItem applicationInfoBuildItem) {
         return new SystemPropertyBuildItem("ftl.module.name", applicationInfoBuildItem.getName());
+    }
+
+    private static volatile Timer devModeProblemTimer;
+
+    @BuildStep(onlyIf = IsDevelopment.class)
+    @Record(ExecutionTime.STATIC_INIT)
+    public void reportDevModeProblems(FTLRecorder recorder, OutputTargetBuildItem outputTargetBuildItem) {
+        if (devModeProblemTimer != null) {
+            return;
+        }
+        Path errorOutput = outputTargetBuildItem.getOutputDirectory().resolve(ERRORS_OUT);
+        devModeProblemTimer = new Timer("FTL Dev Mode Error Report", true);
+        devModeProblemTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                Throwable compileProblem = RuntimeUpdatesProcessor.INSTANCE.getCompileProblem();
+                Throwable deploymentProblems = RuntimeUpdatesProcessor.INSTANCE.getDeploymentProblem();
+                if (compileProblem != null || deploymentProblems != null) {
+                    ErrorList.Builder builder = ErrorList.newBuilder();
+                    if (compileProblem != null) {
+                        builder.addErrors(
+                                Error.newBuilder().setLevel(Error.ErrorLevel.ERROR).setType(Error.ErrorType.COMPILER)
+                                        .setMsg(compileProblem.getMessage()).build());
+                    }
+                    if (deploymentProblems != null) {
+                        builder.addErrors(
+                                Error.newBuilder().setLevel(Error.ErrorLevel.ERROR).setType(Error.ErrorType.FTL)
+                                        .setMsg(deploymentProblems.getMessage()).build());
+                    }
+                    try (var out = Files.newOutputStream(errorOutput)) {
+                        builder.build().writeTo(out);
+                    } catch (IOException e) {
+                        log.error("Failed to write error list", e);
+                    }
+                }
+            }
+        }, 1000, 1000);
+        ((QuarkusClassLoader) Thread.currentThread().getContextClassLoader()).addCloseTask(new Runnable() {
+            @Override
+            public void run() {
+                devModeProblemTimer.cancel();
+                devModeProblemTimer = null;
+            }
+        });
     }
 
     @BuildStep

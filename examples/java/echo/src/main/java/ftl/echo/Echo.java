@@ -3,7 +3,6 @@ package ftl.echo;
 import ftl.time.TimeClient;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Verb;
-import xyz.block.ftl.VerbName;
 
 public class Echo {
 

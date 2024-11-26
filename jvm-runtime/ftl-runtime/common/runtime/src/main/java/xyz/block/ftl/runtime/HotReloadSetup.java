@@ -1,11 +1,15 @@
 package xyz.block.ftl.runtime;
 
+import org.jboss.logging.Logger;
+
 import io.quarkus.dev.spi.HotReplacementContext;
 import io.quarkus.dev.spi.HotReplacementSetup;
 
 public class HotReloadSetup implements HotReplacementSetup {
 
     static volatile HotReplacementContext context;
+    private static volatile String errorOutputPath;
+    private static final String ERRORS_OUT = "errors.pb";
 
     @Override
     public void setupHotDeployment(HotReplacementContext hrc) {
@@ -17,7 +21,7 @@ public class HotReloadSetup implements HotReplacementSetup {
             try {
                 context.doScan(false);
             } catch (Exception e) {
-                // ignore
+                Logger.getLogger(HotReloadSetup.class).error("Failed to scan for changes", e);
             }
         }
     }
