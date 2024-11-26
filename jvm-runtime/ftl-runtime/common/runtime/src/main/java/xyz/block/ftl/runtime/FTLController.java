@@ -99,6 +99,9 @@ public class FTLController implements LeaseClient {
         if (databases.get(name) == ModuleContextResponse.DBType.POSTGRES) {
             var proxyAddress = System.getenv("FTL_PROXY_POSTGRES_ADDRESS");
             return new Datasource("jdbc:postgresql://" + proxyAddress + "/" + name, "ftl", "ftl");
+        } else if (databases.get(name) == ModuleContextResponse.DBType.MYSQL) {
+            var proxyAddress = System.getenv("FTL_PROXY_MYSQL_ADDRESS_" + name.toUpperCase());
+            return new Datasource("jdbc:mysql://" + proxyAddress + "/" + name, "ftl", "ftl");
         }
         List<ModuleContextResponse.DSN> databasesList = getModuleContext().getDatabasesList();
         for (var i : databasesList) {

@@ -164,6 +164,9 @@ func (m ModuleContext) GetDatabase(name string, dbType DBType) (string, bool, er
 		if dbType == DBTypePostgres {
 			proxyAddress := os.Getenv("FTL_PROXY_POSTGRES_ADDRESS")
 			return "postgres://" + proxyAddress + "/" + name, false, nil
+		} else if dbType == DBTypeMySQL {
+			proxyAddress := os.Getenv("FTL_PROXY_MYSQL_ADDRESS_" + strings.ToUpper(name))
+			return "ftl:ftl@tcp(" + proxyAddress + ")/" + name, false, nil
 		}
 		return "", false, fmt.Errorf("missing DSN for database %s", name)
 	}

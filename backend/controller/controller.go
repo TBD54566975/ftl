@@ -700,7 +700,6 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	if err != nil {
 		return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get deployments: %w", err))
 	}
-	databases := map[string]modulecontext.Database{}
 	for _, dep := range deps {
 		if dep.Module == name {
 			for _, decl := range dep.Schema.Decls {
@@ -711,17 +710,6 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 						continue
 					}
 					dbTypes[db.Name] = dbType
-					// TODO: Move the DSN resolution to the runtime once MySQL proxy is working
-					if db.Runtime != nil && dbType == modulecontext.DBTypeMySQL {
-						if dsn, ok := db.Runtime.(*schema.DSNDatabaseRuntime); ok {
-							databases[db.Name] = modulecontext.Database{
-								DSN:    dsn.DSN,
-								DBType: dbType,
-							}
-						} else {
-							return connect.NewError(connect.CodeInternal, fmt.Errorf("unknown database runtime type: %T", db.Runtime))
-						}
-					}
 				}
 			}
 			break
@@ -738,13 +726,6 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get secrets: %w", err))
 		}
-		secretDbs, err := modulecontext.DatabasesFromSecrets(ctx, name, secrets, dbTypes)
-		if err != nil {
-			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get databases: %w", err))
-		}
-		for k, v := range secretDbs {
-			databases[k] = v
-		}
 
 		if err := hashConfigurationMap(h, configs); err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not detect change on configs: %w", err))
@@ -752,14 +733,11 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 		if err := hashConfigurationMap(h, secrets); err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not detect change on secrets: %w", err))
 		}
-		if err := hashDatabaseConfiguration(h, databases); err != nil {
-			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not detect change on databases: %w", err))
-		}
 
 		checksum := int64(binary.BigEndian.Uint64((h.Sum(nil))[0:8]))
 
 		if checksum != lastChecksum {
-			response := modulecontext.NewBuilder(name).AddConfigs(configs).AddSecrets(secrets).AddDatabases(databases).Build().ToProto()
+			response := modulecontext.NewBuilder(name).AddConfigs(configs).AddSecrets(secrets).Build().ToProto()
 
 			if err := resp.Send(response); err != nil {
 				return connect.NewError(connect.CodeInternal, fmt.Errorf("could not send response: %w", err))
