@@ -81,8 +81,8 @@ func Start(ctx context.Context, config Config, pullSchemaClient PullSchemaClient
 		rpc.RetryStreamingServerStream(ctx, "pull-schema", backoff.Backoff{}, &ftlv1.PullSchemaRequest{}, pullSchemaClient.PullSchema, func(ctx context.Context, resp *ftlv1.PullSchemaResponse) error {
 			existing := svc.schemaState.Load().protoSchema
 			newState := schemaState{
-				protoSchema:                 &schemapb.Schema{},
-				httpRoutes:                  make(map[string][]ingressRoute),
+				protoSchema: &schemapb.Schema{},
+				httpRoutes:  make(map[string][]ingressRoute),
 			}
 			if resp.ChangeType != ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED {
 				found := false
@@ -151,9 +151,9 @@ func (s *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type schemaState struct {
-	protoSchema                 *schemapb.Schema
-	schema                      *schema.Schema
-	httpRoutes                  map[string][]ingressRoute
+	protoSchema *schemapb.Schema
+	schema      *schema.Schema
+	httpRoutes  map[string][]ingressRoute
 }
 
 type ingressRoute struct {
