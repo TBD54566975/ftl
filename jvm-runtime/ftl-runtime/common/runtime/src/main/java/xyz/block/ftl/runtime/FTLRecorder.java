@@ -158,7 +158,7 @@ public class FTLRecorder {
     }
 
     public void startReloadTimer(ShutdownContext shutdownContext) {
-        Timer t = new Timer();
+        Timer t = new Timer("FTL Hot Reload Timer", true);
         t.schedule(new TimerTask() {
             @Override
             public void run() {
