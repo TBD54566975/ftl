@@ -54,9 +54,11 @@ func TestResourceEqual(t *testing.T) {
 			Resource: &provisioner.Resource_Postgres{
 				Postgres: &provisioner.PostgresResource{
 					Output: &schemapb.DatabaseRuntime{
-						Value: &schemapb.DatabaseRuntime_DsnDatabaseRuntime{
-							DsnDatabaseRuntime: &schemapb.DSNDatabaseRuntime{
-								Dsn: "foo",
+						WriteConnector: &schemapb.DatabaseConnector{
+							Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
+								DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
+									Dsn: "foo",
+								},
 							},
 						},
 					},

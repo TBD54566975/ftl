@@ -11,8 +11,9 @@ func TestRedact(t *testing.T) {
 	module := &Module{
 		Decls: []Decl{
 			&Database{
-				Runtime: &DSNDatabaseRuntime{
-					DSN: "sensitive",
+				Runtime: &DatabaseRuntime{
+					ReadConnector:  &DSNDatabaseConnector{DSN: "sensitive"},
+					WriteConnector: &DSNDatabaseConnector{DSN: "sensitive"},
 				},
 			},
 		},

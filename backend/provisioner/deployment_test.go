@@ -123,9 +123,11 @@ func TestDeployment_Progress(t *testing.T) {
 					}
 					if psql.Postgres.Output == nil {
 						psql.Postgres.Output = &schemapb.DatabaseRuntime{
-							Value: &schemapb.DatabaseRuntime_DsnDatabaseRuntime{
-								DsnDatabaseRuntime: &schemapb.DSNDatabaseRuntime{
-									Dsn: "postgres://localhost:5432/foo",
+							WriteConnector: &schemapb.DatabaseConnector{
+								Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
+									DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
+										Dsn: "postgres://localhost:5432/foo",
+									},
 								},
 							},
 						}

@@ -15,8 +15,8 @@ const MySQLDatabaseType = "mysql"
 
 //protobuf:3
 type Database struct {
-	Pos     Position        `parser:"" protobuf:"1,optional"`
-	Runtime DatabaseRuntime `parser:"" protobuf:"31634,optional"`
+	Pos     Position         `parser:"" protobuf:"1,optional"`
+	Runtime *DatabaseRuntime `parser:"" protobuf:"31634,optional"`
 
 	Comments []string   `parser:"@Comment*" protobuf:"2"`
 	Type     string     `parser:"'database' @('postgres'|'mysql')" protobuf:"4"`
@@ -80,45 +80,82 @@ func DatabaseFromProto(s *schemapb.Database) *Database {
 	}
 }
 
-type DatabaseRuntime interface {
+type DatabaseRuntime struct {
+	ReadConnector  DatabaseConnector `parser:"" protobuf:"1"`
+	WriteConnector DatabaseConnector `parser:"" protobuf:"2"`
+}
+
+var _ Symbol = (*DatabaseRuntime)(nil)
+
+func (d *DatabaseRuntime) Position() Position { return d.ReadConnector.Position() }
+func (d *DatabaseRuntime) schemaSymbol()      {}
+func (d *DatabaseRuntime) String() string {
+	return fmt.Sprintf("read: %s, write: %s", d.ReadConnector, d.WriteConnector)
+}
+func (d *DatabaseRuntime) ToProto() protoreflect.ProtoMessage {
+	rc, ok := d.ReadConnector.ToProto().(*schemapb.DatabaseConnector)
+	if !ok {
+		panic(fmt.Sprintf("unknown database connector type: %T", d.ReadConnector))
+	}
+	wc, ok := d.WriteConnector.ToProto().(*schemapb.DatabaseConnector)
+	if !ok {
+		panic(fmt.Sprintf("unknown database connector type: %T", d.WriteConnector))
+	}
+
+	return &schemapb.DatabaseRuntime{
+		ReadConnector:  rc,
+		WriteConnector: wc,
+	}
+}
+func (d *DatabaseRuntime) schemaChildren() []Node { return []Node{d.ReadConnector, d.WriteConnector} }
+
+type DatabaseConnector interface {
 	Symbol
-	databaseRuntime()
+
+	databaseConnector()
 }
 
 //protobuf:1
-type DSNDatabaseRuntime struct {
+type DSNDatabaseConnector struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
 	DSN string `parser:"" protobuf:"2"`
 }
 
-var _ DatabaseRuntime = (*DSNDatabaseRuntime)(nil)
+var _ DatabaseConnector = (*DSNDatabaseConnector)(nil)
 
-func (d *DSNDatabaseRuntime) Position() Position { return d.Pos }
-func (d *DSNDatabaseRuntime) databaseRuntime()   {}
-func (d *DSNDatabaseRuntime) String() string     { return d.DSN }
-func (d *DSNDatabaseRuntime) ToProto() protoreflect.ProtoMessage {
+func (d *DSNDatabaseConnector) Position() Position { return d.Pos }
+func (d *DSNDatabaseConnector) databaseConnector() {}
+func (d *DSNDatabaseConnector) String() string     { return d.DSN }
+func (d *DSNDatabaseConnector) ToProto() protoreflect.ProtoMessage {
 	if d == nil {
 		return nil
 	}
-	return &schemapb.DatabaseRuntime{
-		Value: &schemapb.DatabaseRuntime_DsnDatabaseRuntime{
-			DsnDatabaseRuntime: &schemapb.DSNDatabaseRuntime{Dsn: d.DSN},
+	return &schemapb.DatabaseConnector{
+		Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
+			DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{Dsn: d.DSN},
 		},
 	}
 }
 
-func (d *DSNDatabaseRuntime) schemaChildren() []Node { return nil }
-func (d *DSNDatabaseRuntime) schemaSymbol()          {}
+func (d *DSNDatabaseConnector) schemaChildren() []Node { return nil }
+func (d *DSNDatabaseConnector) schemaSymbol()          {}
 
-func DatabaseRuntimeFromProto(s *schemapb.DatabaseRuntime) DatabaseRuntime {
+func DatabaseRuntimeFromProto(s *schemapb.DatabaseRuntime) *DatabaseRuntime {
 	if s == nil {
 		return nil
 	}
+	return &DatabaseRuntime{
+		ReadConnector:  DatabaseConnectorFromProto(s.ReadConnector),
+		WriteConnector: DatabaseConnectorFromProto(s.WriteConnector),
+	}
+}
+
+func DatabaseConnectorFromProto(s *schemapb.DatabaseConnector) DatabaseConnector {
 	switch s := s.Value.(type) {
-	case *schemapb.DatabaseRuntime_DsnDatabaseRuntime:
-		return &DSNDatabaseRuntime{DSN: s.DsnDatabaseRuntime.Dsn}
+	case *schemapb.DatabaseConnector_DsnDatabaseConnector:
+		return &DSNDatabaseConnector{DSN: s.DsnDatabaseConnector.Dsn}
 	default:
-		panic(fmt.Sprintf("unknown database runtime type: %T", s))
+		panic(fmt.Sprintf("unknown database connector type: %T", s))
 	}
 }

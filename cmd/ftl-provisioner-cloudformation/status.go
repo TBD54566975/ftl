@@ -109,9 +109,18 @@ func (c *CloudformationProvisioner) updatePostgresOutputs(ctx context.Context, t
 		return fmt.Errorf("failed to get username and password from secret ARN: %w", err)
 	}
 
-	to.Value = &schemapb.DatabaseRuntime_DsnDatabaseRuntime{
-		DsnDatabaseRuntime: &schemapb.DSNDatabaseRuntime{
-			Dsn: endpointToDSN(byName[PropertyMySQLWriteEndpoint].OutputValue, resourceID, 5432, username, password),
+	to.WriteConnector = &schemapb.DatabaseConnector{
+		Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
+			DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
+				Dsn: endpointToDSN(byName[PropertyMySQLWriteEndpoint].OutputValue, resourceID, 5432, username, password),
+			},
+		},
+	}
+	to.ReadConnector = &schemapb.DatabaseConnector{
+		Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
+			DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
+				Dsn: endpointToDSN(byName[PropertyMySQLReadEndpoint].OutputValue, resourceID, 5432, username, password),
+			},
 		},
 	}
 

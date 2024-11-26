@@ -50,7 +50,7 @@ class Config(_message.Message):
     type: Type
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., name: _Optional[str] = ..., type: _Optional[_Union[Type, _Mapping]] = ...) -> None: ...
 
-class DSNDatabaseRuntime(_message.Message):
+class DSNDatabaseConnector(_message.Message):
     __slots__ = ("pos", "dsn")
     POS_FIELD_NUMBER: _ClassVar[int]
     DSN_FIELD_NUMBER: _ClassVar[int]
@@ -92,11 +92,19 @@ class Database(_message.Message):
     metadata: _containers.RepeatedCompositeFieldContainer[Metadata]
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., runtime: _Optional[_Union[DatabaseRuntime, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., type: _Optional[str] = ..., name: _Optional[str] = ..., metadata: _Optional[_Iterable[_Union[Metadata, _Mapping]]] = ...) -> None: ...
 
+class DatabaseConnector(_message.Message):
+    __slots__ = ("dsn_database_connector",)
+    DSN_DATABASE_CONNECTOR_FIELD_NUMBER: _ClassVar[int]
+    dsn_database_connector: DSNDatabaseConnector
+    def __init__(self, dsn_database_connector: _Optional[_Union[DSNDatabaseConnector, _Mapping]] = ...) -> None: ...
+
 class DatabaseRuntime(_message.Message):
-    __slots__ = ("dsn_database_runtime",)
-    DSN_DATABASE_RUNTIME_FIELD_NUMBER: _ClassVar[int]
-    dsn_database_runtime: DSNDatabaseRuntime
-    def __init__(self, dsn_database_runtime: _Optional[_Union[DSNDatabaseRuntime, _Mapping]] = ...) -> None: ...
+    __slots__ = ("read_connector", "write_connector")
+    READ_CONNECTOR_FIELD_NUMBER: _ClassVar[int]
+    WRITE_CONNECTOR_FIELD_NUMBER: _ClassVar[int]
+    read_connector: DatabaseConnector
+    write_connector: DatabaseConnector
+    def __init__(self, read_connector: _Optional[_Union[DatabaseConnector, _Mapping]] = ..., write_connector: _Optional[_Union[DatabaseConnector, _Mapping]] = ...) -> None: ...
 
 class Decl(_message.Message):
     __slots__ = ("config", "data", "database", "enum", "secret", "subscription", "topic", "type_alias", "verb")

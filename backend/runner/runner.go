@@ -38,6 +38,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/download"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/identity"
+	"github.com/TBD54566975/ftl/internal/infra"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	ftlobservability "github.com/TBD54566975/ftl/internal/observability"
@@ -640,12 +641,13 @@ func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, start
 			return "", fmt.Errorf("database %s not found", params["database"])
 		}
 
-		if dsn, ok := db.Runtime.(*schema.DSNDatabaseRuntime); ok {
-			logger.Debugf("Resolved DSN (%s): %s", params["database"], dsn.DSN)
-			return dsn.DSN, nil
+		dsn, err := infra.ResolvePostgresDSN(ctx, db.Runtime.WriteConnector)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve postgres DSN: %w", err)
 		}
 
-		return "", fmt.Errorf("unknown database runtime type: %T", db.Runtime)
+		logger.Debugf("Resolved DSN (%s): %s", params["database"], dsn)
+		return dsn, nil
 	}).Start(ctx, channel); err != nil {
 		started.Done()
 		return fmt.Errorf("failed to start pgproxy: %w", err)
@@ -675,8 +677,8 @@ func (s *Service) startMySQLProxy(ctx context.Context, module *schema.Module, la
 		errorC := make(chan error)
 		databaseRuntime := decl.Runtime
 		var proxy *mysql.Proxy
-		switch db := databaseRuntime.(type) {
-		case *schema.DSNDatabaseRuntime:
+		switch db := databaseRuntime.WriteConnector.(type) {
+		case *schema.DSNDatabaseConnector:
 			proxy = mysql.NewProxy("localhost", 0, db.DSN, &mysqlLogger{logger: logger}, portC)
 		default:
 			return fmt.Errorf("unknown database runtime type: %T", databaseRuntime)

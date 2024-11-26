@@ -4,21 +4,21 @@ import (
 	"context"
 	"fmt"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
-func ResolvePostgresDSN(ctx context.Context, schema *schemapb.DatabaseRuntime) (string, error) {
-	dsnRuntime, ok := schema.Value.(*schemapb.DatabaseRuntime_DsnDatabaseRuntime)
+func ResolvePostgresDSN(ctx context.Context, connector schema.DatabaseConnector) (string, error) {
+	dsnRuntime, ok := connector.(*schema.DSNDatabaseConnector)
 	if !ok {
-		return "", fmt.Errorf("unexpected database runtime type: %T", schema.Value)
+		return "", fmt.Errorf("unexpected database connector type: %T", connector)
 	}
-	return dsnRuntime.DsnDatabaseRuntime.Dsn, nil
+	return dsnRuntime.DSN, nil
 }
 
-func ResolveMySQLDSN(ctx context.Context, schema *schemapb.DatabaseRuntime) (string, error) {
-	dsnRuntime, ok := schema.Value.(*schemapb.DatabaseRuntime_DsnDatabaseRuntime)
+func ResolveMySQLDSN(ctx context.Context, connector schema.DatabaseConnector) (string, error) {
+	dsnRuntime, ok := connector.(*schema.DSNDatabaseConnector)
 	if !ok {
-		return "", fmt.Errorf("unexpected database runtime type: %T", schema.Value)
+		return "", fmt.Errorf("unexpected database connector type: %T", connector)
 	}
-	return dsnRuntime.DsnDatabaseRuntime.Dsn, nil
+	return dsnRuntime.DSN, nil
 }
