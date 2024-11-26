@@ -22,6 +22,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/types/optional"
+	mysql "github.com/block/ftl-mysql-auth-proxy"
 	"github.com/jpillora/backoff"
 	"github.com/otiai10/copy"
 	"golang.org/x/sync/errgroup"
@@ -144,27 +145,29 @@ func Start(ctx context.Context, config Config) error {
 		return fmt.Errorf("failed to get module: %w", err)
 	}
 
-	pgProxyStarted := make(chan optional.Option[pgproxy.Started])
+	startedLatch := &sync.WaitGroup{}
+	startedLatch.Add(2)
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
-		return svc.startPgProxy(ctx, module, pgProxyStarted)
+		return svc.startPgProxy(ctx, module, startedLatch)
 	})
 	g.Go(func() error {
+		return svc.startMySQLProxy(ctx, module, startedLatch)
+	})
+	g.Go(func() error {
+		startedLatch.Wait()
 		select {
-		case pgProxy := <-pgProxyStarted:
-			return svc.startDeployment(ctx, deploymentKey, module, pgProxy)
 		case <-ctx.Done():
 			return ctx.Err()
+		default:
+			return svc.startDeployment(ctx, deploymentKey, module)
 		}
 	})
 
 	return fmt.Errorf("failure in runner: %w", g.Wait())
 }
 
-func (s *Service) startDeployment(ctx context.Context, key model.DeploymentKey, module *schema.Module, pgProxyOpt optional.Option[pgproxy.Started]) error {
-	if pgProxy, ok := pgProxyOpt.Get(); ok {
-		os.Setenv("FTL_PROXY_POSTGRES_ADDRESS", fmt.Sprintf("127.0.0.1:%d", pgProxy.Address.Port))
-	}
+func (s *Service) startDeployment(ctx context.Context, key model.DeploymentKey, module *schema.Module) error {
 
 	err := s.deploy(ctx, key, module)
 	if err != nil {
@@ -603,7 +606,7 @@ func (s *Service) healthCheck(writer http.ResponseWriter, request *http.Request)
 	writer.WriteHeader(http.StatusServiceUnavailable)
 }
 
-func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, started chan<- optional.Option[pgproxy.Started]) error {
+func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, started *sync.WaitGroup) error {
 	logger := log.FromContext(ctx)
 
 	databases := map[string]*schema.Database{}
@@ -614,7 +617,7 @@ func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, start
 	}
 
 	if len(databases) == 0 {
-		started <- optional.None[pgproxy.Started]()
+		started.Done()
 		return nil
 	}
 
@@ -623,13 +626,15 @@ func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, start
 	go func() {
 		select {
 		case pgProxy := <-channel:
-			started <- optional.Some(pgProxy)
+			os.Setenv("FTL_PROXY_POSTGRES_ADDRESS", fmt.Sprintf("127.0.0.1:%d", pgProxy.Address.Port))
+			started.Done()
 		case <-ctx.Done():
+			started.Done()
 			return
 		}
 	}()
 
-	if err := pgproxy.New(":0", func(ctx context.Context, params map[string]string) (string, error) {
+	if err := pgproxy.New("127.0.0.1:0", func(ctx context.Context, params map[string]string) (string, error) {
 		db, ok := databases[params["database"]]
 		if !ok {
 			return "", fmt.Errorf("database %s not found", params["database"])
@@ -642,8 +647,66 @@ func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, start
 
 		return "", fmt.Errorf("unknown database runtime type: %T", db.Runtime)
 	}).Start(ctx, channel); err != nil {
+		started.Done()
 		return fmt.Errorf("failed to start pgproxy: %w", err)
 	}
 
 	return nil
+}
+
+func (s *Service) startMySQLProxy(ctx context.Context, module *schema.Module, latch *sync.WaitGroup) error {
+	defer latch.Done()
+	logger := log.FromContext(ctx)
+
+	databases := map[string]*schema.Database{}
+	for _, decl := range module.Decls {
+		if db, ok := decl.(*schema.Database); ok && db.Type == "mysql" {
+			databases[db.Name] = db
+		}
+	}
+
+	if len(databases) == 0 {
+		return nil
+	}
+	for db, decl := range databases {
+		logger.Debugf("Starting MySQL proxy for %s", db)
+		logger := log.FromContext(ctx)
+		portC := make(chan int)
+		errorC := make(chan error)
+		databaseRuntime := decl.Runtime
+		var proxy *mysql.Proxy
+		switch db := databaseRuntime.(type) {
+		case *schema.DSNDatabaseRuntime:
+			proxy = mysql.NewProxy("localhost", 0, db.DSN, &mysqlLogger{logger: logger}, portC)
+		default:
+			return fmt.Errorf("unknown database runtime type: %T", databaseRuntime)
+		}
+		go func() {
+			err := proxy.ListenAndServe(ctx)
+			if err != nil {
+				errorC <- err
+			}
+		}()
+		port := 0
+		select {
+		case err := <-errorC:
+			return fmt.Errorf("error: %w", err)
+		case port = <-portC:
+		}
+
+		os.Setenv(strings.ToUpper("FTL_PROXY_MYSQL_ADDRESS_"+decl.Name), fmt.Sprintf("127.0.0.1:%d", port))
+	}
+	return nil
+}
+
+var _ mysql.Logger = (*mysqlLogger)(nil)
+
+type mysqlLogger struct {
+	logger *log.Logger
+}
+
+func (m *mysqlLogger) Print(v ...any) {
+	for _, s := range v {
+		m.logger.Infof("mysql: %v", s)
+	}
 }

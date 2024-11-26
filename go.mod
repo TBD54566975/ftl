@@ -27,6 +27,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.34.6
 	github.com/aws/smithy-go v1.22.1
 	github.com/beevik/etree v1.4.1
+	github.com/block/ftl-mysql-auth-proxy v0.0.0-20241126024735-7acb0031b469
 	github.com/block/scaffolder v1.3.0
 	github.com/bmatcuk/doublestar/v4 v4.7.1
 	github.com/deckarep/golang-set/v2 v2.6.0
