@@ -194,7 +194,8 @@ func nodeToJSSchema(node Node, refs map[RefKey]*Ref) *jsonschema.Schema {
 		*Schema, Type, *Database, *Verb, *EnumVariant, *MetadataCronJob, Value,
 		*StringValue, *IntValue, *TypeValue, *Config, *Secret, Symbol, Named,
 		*MetadataRetry, *Topic, *Subscription, *MetadataSubscriber, *MetadataTypeMap,
-		*MetadataEncoding, *MetadataPublisher, *MetadataSQLMigration, *DSNDatabaseRuntime, DatabaseRuntime:
+		*MetadataEncoding, *MetadataPublisher, *MetadataSQLMigration, *DSNDatabaseConnector, *DatabaseRuntime,
+		DatabaseConnector:
 		panic(fmt.Sprintf("unsupported node type %T", node))
 
 	default:

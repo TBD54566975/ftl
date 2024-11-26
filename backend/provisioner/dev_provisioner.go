@@ -11,9 +11,10 @@ import (
 	"github.com/XSAM/otelsql"
 	_ "github.com/go-sql-driver/mysql"
 
-	"github.com/TBD54566975/ftl/backend/controller/dsn"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/internal/dev"
+	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
@@ -96,9 +97,21 @@ func establishMySQLDB(ctx context.Context, rc *provisioner.ResourceContext, mysq
 		mysql.Mysql = &provisioner.MysqlResource{}
 	}
 	dsn := dsn.MySQLDSN(dbName, dsn.Port(mysqlPort))
-	mysql.Mysql.Output = &provisioner.MysqlResource_MysqlResourceOutput{
-		WriteDsn: dsn,
-		ReadDsn:  dsn,
+	mysql.Mysql.Output = &schemapb.DatabaseRuntime{
+		WriteConnector: &schemapb.DatabaseConnector{
+			Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
+				DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
+					Dsn: dsn,
+				},
+			},
+		},
+		ReadConnector: &schemapb.DatabaseConnector{
+			Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
+				DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
+					Dsn: dsn,
+				},
+			},
+		},
 	}
 	return rc.Resource, nil
 }
@@ -113,7 +126,7 @@ func ProvisionPostgresForTest(ctx context.Context, module string, id string) (st
 		return "", err
 	}
 
-	return res.GetPostgres().GetOutput().GetWriteDsn(), nil
+	return res.GetPostgres().GetOutput().WriteConnector.GetDsnDatabaseConnector().GetDsn(), nil
 }
 
 func ProvisionMySQLForTest(ctx context.Context, module string, id string) (string, error) {
@@ -125,7 +138,7 @@ func ProvisionMySQLForTest(ctx context.Context, module string, id string) (strin
 	if err != nil {
 		return "", err
 	}
-	return res.GetMysql().GetOutput().GetWriteDsn(), nil
+	return res.GetMysql().GetOutput().WriteConnector.GetDsnDatabaseConnector().GetDsn(), nil
 }
 
 func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provisioner.ResourceContext, module string, id string) (*provisioner.Resource, error) {
@@ -179,9 +192,21 @@ func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provision
 			pg.Postgres = &provisioner.PostgresResource{}
 		}
 		dsn := dsn.PostgresDSN(dbName, dsn.Port(postgresPort))
-		pg.Postgres.Output = &provisioner.PostgresResource_PostgresResourceOutput{
-			WriteDsn: dsn,
-			ReadDsn:  dsn,
+		pg.Postgres.Output = &schemapb.DatabaseRuntime{
+			WriteConnector: &schemapb.DatabaseConnector{
+				Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
+					DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
+						Dsn: dsn,
+					},
+				},
+			},
+			ReadConnector: &schemapb.DatabaseConnector{
+				Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
+					DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
+						Dsn: dsn,
+					},
+				},
+			},
 		}
 		return rc.Resource, nil
 	}

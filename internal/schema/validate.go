@@ -174,7 +174,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 						validateRetries(module, md, optional.Some(n.Request), scopes, optional.Some(schema))
 
 					case *MetadataCronJob, *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap,
-						*MetadataEncoding, *MetadataSecrets, *MetadataPublisher, *MetadataSQLMigration:
+						*MetadataEncoding, *MetadataSecrets, *MetadataPublisher, *MetadataSQLMigration, DatabaseConnector:
 					}
 				}
 			case *Database:
@@ -217,7 +217,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant, *MetadataRetry,
 				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named,
 				*MetadataSubscriber, *Subscription, *Topic, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher,
-				*MetadataSQLMigration, *DSNDatabaseRuntime, DatabaseRuntime:
+				*MetadataSQLMigration, *DSNDatabaseConnector, *DatabaseRuntime, DatabaseConnector:
 			}
 			return next()
 		})
@@ -367,7 +367,7 @@ func ValidateModule(module *Module) error {
 			*MetadataSecrets, IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
 			*Config, *Secret, *MetadataSubscriber, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher,
-			*MetadataSQLMigration, *DSNDatabaseRuntime, DatabaseRuntime:
+			*MetadataSQLMigration, *DSNDatabaseConnector, *DatabaseRuntime, DatabaseConnector:
 
 		case Named, Symbol, Type, Metadata, Value, Decl: // Union types.
 		}

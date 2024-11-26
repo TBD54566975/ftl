@@ -37,13 +37,7 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 					if !ok {
 						return nil, fmt.Errorf("failed to find database declaration for %s", dep.ResourceId)
 					}
-					decl.Database.Runtime = &schemapb.DatabaseRuntime{
-						Value: &schemapb.DatabaseRuntime_DsnDatabaseRuntime{
-							DsnDatabaseRuntime: &schemapb.DSNDatabaseRuntime{
-								Dsn: r.Postgres.Output.WriteDsn,
-							},
-						},
-					}
+					decl.Database.Runtime = r.Postgres.Output
 				case *provisioner.Resource_Mysql:
 					if r.Mysql == nil || r.Mysql.Output == nil {
 						return nil, fmt.Errorf("mysql resource has not been provisioned")
@@ -55,13 +49,7 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 					if !ok {
 						return nil, fmt.Errorf("failed to find database declaration for %s", dep.ResourceId)
 					}
-					decl.Database.Runtime = &schemapb.DatabaseRuntime{
-						Value: &schemapb.DatabaseRuntime_DsnDatabaseRuntime{
-							DsnDatabaseRuntime: &schemapb.DSNDatabaseRuntime{
-								Dsn: r.Mysql.Output.WriteDsn,
-							},
-						},
-					}
+					decl.Database.Runtime = r.Mysql.Output
 				case *provisioner.Resource_Topic:
 					if r.Topic == nil || r.Topic.Output == nil {
 						return nil, fmt.Errorf("topic resource has not been provisioned")

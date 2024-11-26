@@ -29,19 +29,11 @@ message Resource {
 // any output created by the provisioner is stored in a field called "output"
 
 message PostgresResource {
-  message PostgresResourceOutput {
-    string read_dsn = 1;
-    string write_dsn = 2;
-  }
-  PostgresResourceOutput output = 1;
+  v1.schema.DatabaseRuntime output = 1;
 }
 
 message MysqlResource {
-  message MysqlResourceOutput {
-    string read_dsn = 1;
-    string write_dsn = 2;
-  }
-  MysqlResourceOutput output = 1;
+  v1.schema.DatabaseRuntime output = 1;
 }
 
 message SqlMigrationResource {

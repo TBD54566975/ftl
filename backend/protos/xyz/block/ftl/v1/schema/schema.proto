@@ -36,7 +36,7 @@ message Config {
   Type type = 4;
 }
 
-message DSNDatabaseRuntime {
+message DSNDatabaseConnector {
   optional Position pos = 1;
   string dsn = 2;
 }
@@ -60,10 +60,15 @@ message Database {
   repeated Metadata metadata = 5;
 }
 
-message DatabaseRuntime {
+message DatabaseConnector {
   oneof value {
-    DSNDatabaseRuntime dsn_database_runtime = 1;
+    DSNDatabaseConnector dsn_database_connector = 1;
   }
+}
+
+message DatabaseRuntime {
+  DatabaseConnector read_connector = 1;
+  DatabaseConnector write_connector = 2;
 }
 
 message Decl {

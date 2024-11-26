@@ -18,8 +18,10 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
+	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
@@ -57,19 +59,26 @@ func provisionSQLMigration(registryConfig artefacts.RegistryConfig) func(ctx con
 		if err != nil {
 			return nil, fmt.Errorf("failed to extract tar: %w", err)
 		}
-		dsn := ""
+		d := ""
 
 		resource := rc.Dependencies[0].Resource
 		switch res := resource.(type) {
 		case *provisioner.Resource_Postgres:
-			dsn = res.Postgres.GetOutput().GetWriteDsn()
+			d, err = dsn.ResolvePostgresDSN(ctx, schema.DatabaseConnectorFromProto(res.Postgres.GetOutput().WriteConnector))
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve postgres DSN: %w", err)
+			}
 		case *provisioner.Resource_Mysql:
-			dsn = "mysql://" + res.Mysql.GetOutput().GetWriteDsn()
+			d, err = dsn.ResolveMySQLDSN(ctx, schema.DatabaseConnectorFromProto(res.Mysql.GetOutput().WriteConnector))
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve mysql DSN: %w", err)
+			}
+			d = "mysql://" + d
 			// strip the tcp part
 			exp := regexp.MustCompile(`tcp\((.*?)\)`)
-			dsn = exp.ReplaceAllString(dsn, "$1")
+			d = exp.ReplaceAllString(d, "$1")
 		}
-		u, err := url.Parse(dsn)
+		u, err := url.Parse(d)
 		if err != nil {
 			return nil, fmt.Errorf("invalid DSN: %w", err)
 		}
