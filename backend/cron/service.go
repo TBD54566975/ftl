@@ -87,15 +87,17 @@ func run(ctx context.Context, verbClient CallClient, changes chan *ftlv1.PullSch
 		next, ok := scheduleNext(cronQueue)
 		var nextCh <-chan time.Time
 		if ok {
-			logger.Tracef("Next cron job scheduled in %s", next)
+			logger.Debugf("Next cron job scheduled in %s", next)
 			nextCh = time.After(next)
+		} else {
+			logger.Debugf("No cron jobs scheduled")
 		}
 		select {
 		case <-ctx.Done():
 			return fmt.Errorf("cron service stopped: %w", ctx.Err())
 
 		case resp := <-changes:
-			if err := updateCronJobs(cronJobs, resp); err != nil {
+			if err := updateCronJobs(ctx, cronJobs, resp); err != nil {
 				logger.Errorf(err, "Failed to update cron jobs")
 				continue
 			}
@@ -162,12 +164,21 @@ func scheduleNext(cronQueue []cronJob) (time.Duration, bool) {
 	return time.Until(cronQueue[0].next), true
 }
 
-func updateCronJobs(cronJobs map[string][]cronJob, resp *ftlv1.PullSchemaResponse) error {
+func updateCronJobs(ctx context.Context, cronJobs map[string][]cronJob, resp *ftlv1.PullSchemaResponse) error {
+	logger := log.FromContext(ctx).Scope("cron")
 	switch resp.ChangeType {
 	case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
+		// We see the new state of the module before we see the removed deployment.
+		// We only want to actually remove if it was not replaced by a new deployment.
+		if !resp.ModuleRemoved {
+			logger.Debugf("Not removing cron jobs for %s as module is still present", resp.DeploymentKey)
+			return nil
+		}
+		logger.Debugf("Removing cron jobs for module %s", resp.ModuleName)
 		delete(cronJobs, resp.ModuleName)
 
 	case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
+		logger.Debugf("Updated cron jobs for module %s", resp.ModuleName)
 		moduleSchema, err := schema.ModuleFromProto(resp.Schema)
 		if err != nil {
 			return fmt.Errorf("failed to extract module schema: %w", err)
@@ -176,6 +187,7 @@ func updateCronJobs(cronJobs map[string][]cronJob, resp *ftlv1.PullSchemaRespons
 		if err != nil {
 			return fmt.Errorf("failed to extract cron jobs: %w", err)
 		}
+		logger.Debugf("Adding %d cron jobs for module %s", len(moduleJobs), resp.ModuleName)
 		cronJobs[resp.ModuleName] = moduleJobs
 	}
 	return nil

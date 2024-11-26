@@ -100,13 +100,18 @@ func Start(ctx context.Context, config Config, pullSchemaClient PullSchemaClient
 					newState.protoSchema.Modules = append(newState.protoSchema.Modules, resp.Schema)
 				}
 			} else if existing != nil {
+				// We see the new state of the module before we see the removed deployment.
+				// We only want to actually remove if it was not replaced by a new deployment.
+				if !resp.ModuleRemoved {
+					logger.Debugf("Not removing ingress for %s as it is not the current deployment", resp.DeploymentKey)
+					return nil
+				}
 				for i := range existing.Modules {
 					if existing.Modules[i].Name != resp.ModuleName {
 						newState.protoSchema.Modules = append(newState.protoSchema.Modules, existing.Modules[i])
 					}
 				}
 			}
-
 			newState.httpRoutes = extractIngressRoutingEntries(newState.protoSchema)
 			sch, err := schema.FromProto(newState.protoSchema)
 			if err != nil {

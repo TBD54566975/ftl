@@ -166,6 +166,13 @@ export class PullSchemaResponse extends Message<PullSchemaResponse> {
    */
   changeType = DeploymentChangeType.DEPLOYMENT_ADDED;
 
+  /**
+   * If this is true then the module was removed as well as the deployment. This is only set for DEPLOYMENT_REMOVED.
+   *
+   * @generated from field: bool module_removed = 6;
+   */
+  moduleRemoved = false;
+
   constructor(data?: PartialMessage<PullSchemaResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -179,6 +186,7 @@ export class PullSchemaResponse extends Message<PullSchemaResponse> {
     { no: 4, name: "schema", kind: "message", T: Module, opt: true },
     { no: 3, name: "more", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 5, name: "change_type", kind: "enum", T: proto3.getEnumType(DeploymentChangeType) },
+    { no: 6, name: "module_removed", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PullSchemaResponse {
