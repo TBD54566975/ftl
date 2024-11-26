@@ -15,7 +15,7 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/posener/complete"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
 const interactivePrompt = "\033[32m>\033[0m "
@@ -26,15 +26,14 @@ type KongContextBinder func(ctx context.Context, kctx *kong.Context) context.Con
 
 type exitPanic struct{}
 
-func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, client ftlv1connect.SchemaServiceClient) error {
-
+func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, eventSource schemaeventsource.EventSource) error {
 	if !readline.DefaultIsTerminal() {
 		return nil
 	}
 	l, err := readline.NewEx(&readline.Config{
 		Prompt:          interactivePrompt,
 		InterruptPrompt: "^C",
-		AutoComplete:    &FTLCompletion{app: k, ctx: ctx, client: client},
+		AutoComplete:    &FTLCompletion{app: k, view: eventSource.ViewOnly()},
 		Listener: &ExitListener{cancel: func() {
 			_ = syscall.Kill(-syscall.Getpid(), syscall.SIGINT) //nolint:forcetypeassert,errcheck // best effort
 		}},
@@ -141,9 +140,8 @@ func errorf(format string, args ...any) {
 }
 
 type FTLCompletion struct {
-	app    *kong.Kong
-	client ftlv1connect.SchemaServiceClient
-	ctx    context.Context
+	app  *kong.Kong
+	view schemaeventsource.View
 }
 
 func (f *FTLCompletion) Do(line []rune, pos int) ([][]rune, int) {
@@ -197,7 +195,7 @@ func (f *FTLCompletion) Do(line []rune, pos int) ([][]rune, int) {
 		LastCompleted: lastCompleted,
 	}
 
-	command, err := kongcompletion.Command(parser, kongcompletion.WithPredictors(Predictors(f.ctx, f.client)))
+	command, err := kongcompletion.Command(parser, kongcompletion.WithPredictors(Predictors(f.view)))
 	if err != nil {
 		// TODO handle error
 		println(err.Error())

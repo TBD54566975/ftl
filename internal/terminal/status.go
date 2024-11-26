@@ -18,8 +18,8 @@ import (
 	"github.com/tidwall/pretty"
 	"golang.org/x/term"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
 type BuildState string
@@ -491,11 +491,11 @@ func (r *terminalStatusLine) SetMessage(message string) {
 	r.manager.recalculateLines()
 }
 
-func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, client ftlv1connect.SchemaServiceClient) {
+func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, eventSource schemaeventsource.EventSource) {
 	sm := FromContext(ctx)
 	if _, ok := sm.(*terminalStatusManager); ok {
 		go func() {
-			err := RunInteractiveConsole(ctx, k, binder, client)
+			err := RunInteractiveConsole(ctx, k, binder, eventSource)
 			if err != nil {
 				fmt.Printf("\033[31mError: %s\033[0m\n", err)
 				return

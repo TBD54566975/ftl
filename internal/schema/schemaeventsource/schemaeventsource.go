@@ -18,6 +18,14 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
+// View is a read-only view of the schema.
+type View struct {
+	view *atomic.Value[*schema.Schema]
+}
+
+// Get returns the current schema.
+func (v *View) Get() *schema.Schema { return v.view.Load() }
+
 // Event represents a change in the schema.
 //
 //sumtype:decl
@@ -78,6 +86,17 @@ type EventSource struct {
 // Events is a stream of schema change events. "View" will be updated with these changes prior to being sent on this
 // channel.
 func (e EventSource) Events() <-chan Event { return e.events }
+
+// ViewOnly converts the EventSource into a read-only view of the schema.
+//
+// This will consume all events so the EventSource dodesn't block as the view is automatically updated.
+func (e EventSource) ViewOnly() View {
+	go func() {
+		for range e.Events() { //nolint:revive
+		}
+	}()
+	return View{e.view}
+}
 
 // View is the materialised view of the schema from "Events".
 func (e EventSource) View() *schema.Schema { return e.view.Load() }
