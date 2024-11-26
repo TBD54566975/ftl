@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Struct } from "@bufbuild/protobuf";
-import { Module, Ref } from "../../v1/schema/schema_pb.js";
+import { DatabaseRuntime, Module, Ref } from "../../v1/schema/schema_pb.js";
 import { DeploymentArtefact } from "../../v1/controller_pb.js";
 
 /**
@@ -101,9 +101,9 @@ export class Resource extends Message<Resource> {
  */
 export class PostgresResource extends Message<PostgresResource> {
   /**
-   * @generated from field: xyz.block.ftl.v1beta1.provisioner.PostgresResource.PostgresResourceOutput output = 1;
+   * @generated from field: xyz.block.ftl.v1.schema.DatabaseRuntime output = 1;
    */
-  output?: PostgresResource_PostgresResourceOutput;
+  output?: DatabaseRuntime;
 
   constructor(data?: PartialMessage<PostgresResource>) {
     super();
@@ -113,7 +113,7 @@ export class PostgresResource extends Message<PostgresResource> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.PostgresResource";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "output", kind: "message", T: PostgresResource_PostgresResourceOutput },
+    { no: 1, name: "output", kind: "message", T: DatabaseRuntime },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PostgresResource {
@@ -134,56 +134,13 @@ export class PostgresResource extends Message<PostgresResource> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1beta1.provisioner.PostgresResource.PostgresResourceOutput
- */
-export class PostgresResource_PostgresResourceOutput extends Message<PostgresResource_PostgresResourceOutput> {
-  /**
-   * @generated from field: string read_dsn = 1;
-   */
-  readDsn = "";
-
-  /**
-   * @generated from field: string write_dsn = 2;
-   */
-  writeDsn = "";
-
-  constructor(data?: PartialMessage<PostgresResource_PostgresResourceOutput>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.PostgresResource.PostgresResourceOutput";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "read_dsn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "write_dsn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PostgresResource_PostgresResourceOutput {
-    return new PostgresResource_PostgresResourceOutput().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PostgresResource_PostgresResourceOutput {
-    return new PostgresResource_PostgresResourceOutput().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PostgresResource_PostgresResourceOutput {
-    return new PostgresResource_PostgresResourceOutput().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: PostgresResource_PostgresResourceOutput | PlainMessage<PostgresResource_PostgresResourceOutput> | undefined, b: PostgresResource_PostgresResourceOutput | PlainMessage<PostgresResource_PostgresResourceOutput> | undefined): boolean {
-    return proto3.util.equals(PostgresResource_PostgresResourceOutput, a, b);
-  }
-}
-
-/**
  * @generated from message xyz.block.ftl.v1beta1.provisioner.MysqlResource
  */
 export class MysqlResource extends Message<MysqlResource> {
   /**
-   * @generated from field: xyz.block.ftl.v1beta1.provisioner.MysqlResource.MysqlResourceOutput output = 1;
+   * @generated from field: xyz.block.ftl.v1.schema.DatabaseRuntime output = 1;
    */
-  output?: MysqlResource_MysqlResourceOutput;
+  output?: DatabaseRuntime;
 
   constructor(data?: PartialMessage<MysqlResource>) {
     super();
@@ -193,7 +150,7 @@ export class MysqlResource extends Message<MysqlResource> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.MysqlResource";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "output", kind: "message", T: MysqlResource_MysqlResourceOutput },
+    { no: 1, name: "output", kind: "message", T: DatabaseRuntime },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MysqlResource {
@@ -210,49 +167,6 @@ export class MysqlResource extends Message<MysqlResource> {
 
   static equals(a: MysqlResource | PlainMessage<MysqlResource> | undefined, b: MysqlResource | PlainMessage<MysqlResource> | undefined): boolean {
     return proto3.util.equals(MysqlResource, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1beta1.provisioner.MysqlResource.MysqlResourceOutput
- */
-export class MysqlResource_MysqlResourceOutput extends Message<MysqlResource_MysqlResourceOutput> {
-  /**
-   * @generated from field: string read_dsn = 1;
-   */
-  readDsn = "";
-
-  /**
-   * @generated from field: string write_dsn = 2;
-   */
-  writeDsn = "";
-
-  constructor(data?: PartialMessage<MysqlResource_MysqlResourceOutput>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.MysqlResource.MysqlResourceOutput";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "read_dsn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "write_dsn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MysqlResource_MysqlResourceOutput {
-    return new MysqlResource_MysqlResourceOutput().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MysqlResource_MysqlResourceOutput {
-    return new MysqlResource_MysqlResourceOutput().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MysqlResource_MysqlResourceOutput {
-    return new MysqlResource_MysqlResourceOutput().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: MysqlResource_MysqlResourceOutput | PlainMessage<MysqlResource_MysqlResourceOutput> | undefined, b: MysqlResource_MysqlResourceOutput | PlainMessage<MysqlResource_MysqlResourceOutput> | undefined): boolean {
-    return proto3.util.equals(MysqlResource_MysqlResourceOutput, a, b);
   }
 }
 

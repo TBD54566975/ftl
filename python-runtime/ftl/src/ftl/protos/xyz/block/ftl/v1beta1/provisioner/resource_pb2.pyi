@@ -28,29 +28,15 @@ class Resource(_message.Message):
 
 class PostgresResource(_message.Message):
     __slots__ = ("output",)
-    class PostgresResourceOutput(_message.Message):
-        __slots__ = ("read_dsn", "write_dsn")
-        READ_DSN_FIELD_NUMBER: _ClassVar[int]
-        WRITE_DSN_FIELD_NUMBER: _ClassVar[int]
-        read_dsn: str
-        write_dsn: str
-        def __init__(self, read_dsn: _Optional[str] = ..., write_dsn: _Optional[str] = ...) -> None: ...
     OUTPUT_FIELD_NUMBER: _ClassVar[int]
-    output: PostgresResource.PostgresResourceOutput
-    def __init__(self, output: _Optional[_Union[PostgresResource.PostgresResourceOutput, _Mapping]] = ...) -> None: ...
+    output: _schema_pb2.DatabaseRuntime
+    def __init__(self, output: _Optional[_Union[_schema_pb2.DatabaseRuntime, _Mapping]] = ...) -> None: ...
 
 class MysqlResource(_message.Message):
     __slots__ = ("output",)
-    class MysqlResourceOutput(_message.Message):
-        __slots__ = ("read_dsn", "write_dsn")
-        READ_DSN_FIELD_NUMBER: _ClassVar[int]
-        WRITE_DSN_FIELD_NUMBER: _ClassVar[int]
-        read_dsn: str
-        write_dsn: str
-        def __init__(self, read_dsn: _Optional[str] = ..., write_dsn: _Optional[str] = ...) -> None: ...
     OUTPUT_FIELD_NUMBER: _ClassVar[int]
-    output: MysqlResource.MysqlResourceOutput
-    def __init__(self, output: _Optional[_Union[MysqlResource.MysqlResourceOutput, _Mapping]] = ...) -> None: ...
+    output: _schema_pb2.DatabaseRuntime
+    def __init__(self, output: _Optional[_Union[_schema_pb2.DatabaseRuntime, _Mapping]] = ...) -> None: ...
 
 class SqlMigrationResource(_message.Message):
     __slots__ = ("output", "digest")

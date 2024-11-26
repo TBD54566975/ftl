@@ -188,8 +188,7 @@ func resourceEqual(desired, existing *provisioner.Resource) bool {
 	return cmp.Equal(desired, existing,
 		protocmp.Transform(),
 		protocmp.IgnoreMessages(
-			&provisioner.MysqlResource_MysqlResourceOutput{},
-			&provisioner.PostgresResource_PostgresResourceOutput{},
+			&schemapb.DatabaseRuntime{},
 			&provisioner.ModuleResource_ModuleResourceOutput{},
 			&provisioner.SqlMigrationResource_SqlMigrationResourceOutput{},
 			&provisioner.TopicResource_TopicResourceOutput{},

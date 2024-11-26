@@ -7,6 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	proto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/backend/provisioner"
@@ -121,9 +122,14 @@ func TestDeployment_Progress(t *testing.T) {
 						psql.Postgres = &proto.PostgresResource{}
 					}
 					if psql.Postgres.Output == nil {
-						psql.Postgres.Output = &proto.PostgresResource_PostgresResourceOutput{}
+						psql.Postgres.Output = &schemapb.DatabaseRuntime{
+							Value: &schemapb.DatabaseRuntime_DsnDatabaseRuntime{
+								DsnDatabaseRuntime: &schemapb.DSNDatabaseRuntime{
+									Dsn: "postgres://localhost:5432/foo",
+								},
+							},
+						}
 					}
-					psql.Postgres.Output.ReadDsn = "postgres://localhost:5432/foo"
 				} else {
 					return nil, fmt.Errorf("expected postgres resource, got %T", req.DesiredResources[0].Resource)
 				}
@@ -143,8 +149,8 @@ func TestDeployment_Progress(t *testing.T) {
 				for _, res := range req.DesiredResources {
 					for _, dep := range res.Dependencies {
 						if psql, ok := dep.Resource.(*proto.Resource_Postgres); ok && psql.Postgres != nil {
-							if psql.Postgres.Output == nil || psql.Postgres.Output.ReadDsn == "" {
-								return nil, fmt.Errorf("read dsn is empty")
+							if psql.Postgres.Output == nil {
+								return nil, fmt.Errorf("output is nil")
 							}
 						}
 					}
