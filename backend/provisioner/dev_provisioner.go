@@ -38,7 +38,7 @@ func provisionMysql(mysqlPort int) InMemResourceProvisionerFn {
 			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
 		}
 		logger := log.FromContext(ctx)
-		logger.Infof("provisioning mysql database: %s_%s", module, id)
+		logger.Infof("Provisioning mysql database: %s_%s", module, id)
 
 		dbName := strcase.ToLowerSnake(module) + "_" + strcase.ToLowerSnake(id)
 
@@ -135,7 +135,7 @@ func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provision
 			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
 		}
 		logger := log.FromContext(ctx)
-		logger.Infof("provisioning postgres database: %s_%s", module, id)
+		logger.Infof("Provisioning postgres database: %s_%s", module, id)
 
 		dbName := strcase.ToLowerSnake(module) + "_" + strcase.ToLowerSnake(id)
 
