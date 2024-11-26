@@ -1,6 +1,6 @@
 import type React from 'react'
 import { useState } from 'react'
-import type { ExpandablePanelProps } from '../features/console/ExpandablePanel'
+import type { ExpandablePanelProps } from '../features/graph/ExpandablePanel'
 import useLocalStorage from '../hooks/use-local-storage'
 import RightPanel from './RightPanel'
 

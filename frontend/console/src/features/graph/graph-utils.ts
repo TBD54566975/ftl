@@ -1,7 +1,9 @@
 import type { EdgeDefinition, ElementDefinition } from 'cytoscape'
 import type { StreamModulesResult } from '../../api/modules/use-stream-modules'
-import type { Config, Module, Secret, Subscription, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import type { FTLNode } from './GraphPane'
+import type { Config, Data, Database, Enum, Module, Secret, Subscription, Topic, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { getNodeBackgroundColor } from './graph-styles'
+
+export type FTLNode = Module | Verb | Secret | Config | Data | Database | Subscription | Topic | Enum
 
 const createParentNode = (module: Module, nodePositions: Record<string, { x: number; y: number }>) => ({
   group: 'nodes' as const,
@@ -23,6 +25,7 @@ const createChildNode = (
   childType: string,
   nodePositions: Record<string, { x: number; y: number }>,
   item: FTLNode,
+  isDarkMode: boolean,
 ) => ({
   group: 'nodes' as const,
   data: {
@@ -32,37 +35,62 @@ const createChildNode = (
     nodeType: childType,
     parent: parentName,
     item,
-    backgroundColor: childType === 'verb' ? '#e3f2fd' : childType === 'config' ? '#e8f5e9' : childType === 'secret' ? '#fce4ec' : '#ffffff',
+    backgroundColor: getNodeBackgroundColor(isDarkMode, childType),
   },
   ...(nodePositions[childId] && {
     position: nodePositions[childId],
   }),
 })
 
-const createModuleChildren = (module: Module, nodePositions: Record<string, { x: number; y: number }>) => {
+const createModuleChildren = (module: Module, nodePositions: Record<string, { x: number; y: number }>, isDarkMode: boolean) => {
   const children = [
-    // Create nodes for verbs
-    ...(module.verbs || []).map((verb: Verb) =>
-      createChildNode(module.name, `${module.name}-verb-${verb.verb?.name}`, verb.verb?.name || '', 'verb', nodePositions, verb),
-    ),
     // Create nodes for configs
     ...(module.configs || []).map((config: Config) =>
-      createChildNode(module.name, `${module.name}-config-${config.config?.name}`, config.config?.name || '', 'config', nodePositions, config),
+      createChildNode(module.name, nodeId(module.name, config.config?.name), config.config?.name || '', 'config', nodePositions, config, isDarkMode),
+    ),
+    // Create nodes for data
+    ...(module.data || []).map((data: Data) =>
+      createChildNode(module.name, nodeId(module.name, data.data?.name), data.data?.name || '', 'data', nodePositions, data, isDarkMode),
+    ),
+    // Create nodes for databases
+    ...(module.databases || []).map((database: Database) =>
+      createChildNode(
+        module.name,
+        nodeId(module.name, database.database?.name),
+        database.database?.name || '',
+        'database',
+        nodePositions,
+        database,
+        isDarkMode,
+      ),
+    ),
+    // Create nodes for enums
+    ...(module.enums || []).map((enumDecl: Enum) =>
+      createChildNode(module.name, nodeId(module.name, enumDecl.enum?.name), enumDecl.enum?.name || '', 'enum', nodePositions, enumDecl, isDarkMode),
     ),
     // Create nodes for secrets
     ...(module.secrets || []).map((secret: Secret) =>
-      createChildNode(module.name, `${module.name}-secret-${secret.secret?.name}`, secret.secret?.name || '', 'secret', nodePositions, secret),
+      createChildNode(module.name, nodeId(module.name, secret.secret?.name), secret.secret?.name || '', 'secret', nodePositions, secret, isDarkMode),
     ),
     // Create nodes for subscriptions
     ...(module.subscriptions || []).map((subscription: Subscription) =>
       createChildNode(
         module.name,
-        `${module.name}-subscription-${subscription.subscription?.name}`,
+        nodeId(module.name, subscription.subscription?.name),
         subscription.subscription?.name || '',
         'subscription',
         nodePositions,
         subscription,
+        isDarkMode,
       ),
+    ),
+    // Create nodes for topics
+    ...(module.topics || []).map((topic: Topic) =>
+      createChildNode(module.name, nodeId(module.name, topic.topic?.name), topic.topic?.name || '', 'topic', nodePositions, topic, isDarkMode),
+    ),
+    // Create nodes for verbs
+    ...(module.verbs || []).map((verb: Verb) =>
+      createChildNode(module.name, nodeId(module.name, verb.verb?.name), verb.verb?.name || '', 'verb', nodePositions, verb, isDarkMode),
     ),
   ]
   return children
@@ -71,9 +99,9 @@ const createModuleChildren = (module: Module, nodePositions: Record<string, { x:
 const createChildEdge = (sourceModule: string, sourceVerb: string, targetModule: string, targetVerb: string) => ({
   group: 'edges' as const,
   data: {
-    id: `${sourceModule}-${sourceVerb}-to-${targetModule}-${targetVerb}`,
-    source: `${sourceModule}-verb-${sourceVerb}`,
-    target: `${targetModule}-verb-${targetVerb}`,
+    id: `edge-${nodeId(sourceModule, sourceVerb)}->${nodeId(targetModule, targetVerb)}`,
+    source: nodeId(sourceModule, sourceVerb),
+    target: nodeId(targetModule, targetVerb),
     type: 'childConnection',
   },
 })
@@ -81,9 +109,9 @@ const createChildEdge = (sourceModule: string, sourceVerb: string, targetModule:
 const createModuleEdge = (sourceModule: string, targetModule: string) => ({
   group: 'edges' as const,
   data: {
-    id: `module-${sourceModule}-to-${targetModule}`,
-    source: sourceModule,
-    target: targetModule,
+    id: `module-${sourceModule}->${targetModule}`,
+    source: nodeId(sourceModule),
+    target: nodeId(targetModule),
     type: 'moduleConnection',
   },
 })
@@ -117,6 +145,17 @@ const createVerbEdges = (modules: Module[]) => {
         moduleConnections.add(`${sourceModule}-${targetModule}`)
       }
     }
+
+    for (const data of module.data || []) {
+      for (const ref of data.references || []) {
+        edges.push(createChildEdge(ref.module, ref.name, module.name, data.data?.name || ''))
+
+        // Track module-to-module connection
+        // Sort module names to ensure consistent edge IDs
+        const [sourceModule, targetModule] = [module.name, ref.module].sort()
+        moduleConnections.add(`${sourceModule}-${targetModule}`)
+      }
+    }
   }
 
   // Create module-level edges for each unique module connection
@@ -128,15 +167,21 @@ const createVerbEdges = (modules: Module[]) => {
   return edges
 }
 
-export const getGraphData = (modules: StreamModulesResult | undefined, nodePositions: Record<string, { x: number; y: number }> = {}): ElementDefinition[] => {
+export const getGraphData = (
+  modules: StreamModulesResult | undefined,
+  isDarkMode: boolean,
+  nodePositions: Record<string, { x: number; y: number }> = {},
+): ElementDefinition[] => {
   if (!modules) return []
 
   return [
-    // Add parent nodes (modules)
     ...modules.modules.map((module) => createParentNode(module, nodePositions)),
-    // Add all child nodes
-    ...modules.modules.flatMap((module) => createModuleChildren(module, nodePositions)),
-    // Add both verb-level and module-level edges
+    ...modules.modules.flatMap((module) => createModuleChildren(module, nodePositions, isDarkMode)),
     ...createVerbEdges(modules.modules),
   ]
+}
+
+const nodeId = (moduleName: string, name?: string) => {
+  if (!name) return moduleName
+  return `${moduleName}.${name}`
 }

@@ -1,6 +1,6 @@
 import { RightPanelAttribute } from '../../../../components/RightPanelAttribute'
 import type { Config } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
-import type { ExpandablePanelProps } from '../../../console/ExpandablePanel'
+import type { ExpandablePanelProps } from '../../../graph/ExpandablePanel'
 import { DeclDefaultPanels } from '../DeclDefaultPanels'
 
 export const configPanels = (config: Config, schema?: string) => {

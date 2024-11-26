@@ -1,5 +1,5 @@
 import { Navigate, Route, RouterProvider, createBrowserRouter, createRoutesFromElements } from 'react-router-dom'
-import { ConsolePage } from '../features/console/ConsolePage'
+import { GraphPage } from '../features/graph/GraphPage'
 import { InfrastructurePage } from '../features/infrastructure/InfrastructurePage'
 import { ModulePanel } from '../features/modules/ModulePanel'
 import { ModulesPage } from '../features/modules/ModulesPage'
@@ -19,7 +19,7 @@ const router = createBrowserRouter(
         <Route path='modules' element={<ModulesPage body={<ModulesPanel />} />} />
         <Route path='modules/:moduleName' element={<ModulesPage body={<ModulePanel />} />} />
         <Route path='modules/:moduleName/:declCase/:declName' element={<ModulesPage body={<DeclPanel />} />} />
-        <Route path='graph' element={<ConsolePage />} />
+        <Route path='graph' element={<GraphPage />} />
         <Route path='infrastructure' element={<Navigate to='infrastructure/controllers' replace />} />
         <Route path='infrastructure/*' element={<InfrastructurePage />} />
         <Route path='traces/:requestKey' element={<TracesPage />} />
@@ -28,17 +28,8 @@ const router = createBrowserRouter(
       <Route path='*' element={<NotFoundPage />} />
     </>,
   ),
-  {
-    future: {
-      v7_relativeSplatPath: true,
-      v7_fetcherPersist: true,
-      v7_normalizeFormMethod: true,
-      v7_partialHydration: true,
-      v7_skipActionErrorRevalidation: true,
-    },
-  },
 )
 
 export const RoutingProvider = () => {
-  return <RouterProvider router={router} future={{ v7_startTransition: true }} />
+  return <RouterProvider router={router} />
 }
