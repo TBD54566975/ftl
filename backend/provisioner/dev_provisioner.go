@@ -11,10 +11,10 @@ import (
 	"github.com/XSAM/otelsql"
 	_ "github.com/go-sql-driver/mysql"
 
-	"github.com/TBD54566975/ftl/backend/controller/dsn"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/internal/dev"
+	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )

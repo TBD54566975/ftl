@@ -36,9 +36,9 @@ import (
 	"github.com/TBD54566975/ftl/backend/runner/observability"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/download"
+	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/identity"
-	"github.com/TBD54566975/ftl/internal/infra"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	ftlobservability "github.com/TBD54566975/ftl/internal/observability"
@@ -641,7 +641,7 @@ func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, start
 			return "", fmt.Errorf("database %s not found", params["database"])
 		}
 
-		dsn, err := infra.ResolvePostgresDSN(ctx, db.Runtime.WriteConnector)
+		dsn, err := dsn.ResolvePostgresDSN(ctx, db.Runtime.WriteConnector)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve postgres DSN: %w", err)
 		}
