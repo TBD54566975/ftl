@@ -17,6 +17,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
 var cli struct {
@@ -45,7 +46,8 @@ func main() {
 
 	verbClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.ControllerEndpoint.String(), log.Error)
 	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.ControllerEndpoint.String(), log.Error)
+	schemaEventSource := schemaeventsource.New(ctx, schemaClient)
 
-	err = ingress.Start(ctx, cli.HTTPIngressConfig, schemaClient, verbClient)
+	err = ingress.Start(ctx, cli.HTTPIngressConfig, schemaEventSource, verbClient)
 	kctx.FatalIfErrorf(err, "failed to start HTTP ingress")
 }

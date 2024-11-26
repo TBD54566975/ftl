@@ -12,25 +12,31 @@ import { Module, Schema } from "./schema/schema_pb.js";
  */
 export enum DeploymentChangeType {
   /**
-   * @generated from enum value: DEPLOYMENT_ADDED = 0;
+   * @generated from enum value: DEPLOYMENT_UNKNOWN = 0;
    */
-  DEPLOYMENT_ADDED = 0,
+  DEPLOYMENT_UNKNOWN = 0,
 
   /**
-   * @generated from enum value: DEPLOYMENT_REMOVED = 1;
+   * @generated from enum value: DEPLOYMENT_ADDED = 1;
    */
-  DEPLOYMENT_REMOVED = 1,
+  DEPLOYMENT_ADDED = 1,
 
   /**
-   * @generated from enum value: DEPLOYMENT_CHANGED = 2;
+   * @generated from enum value: DEPLOYMENT_REMOVED = 2;
    */
-  DEPLOYMENT_CHANGED = 2,
+  DEPLOYMENT_REMOVED = 2,
+
+  /**
+   * @generated from enum value: DEPLOYMENT_CHANGED = 3;
+   */
+  DEPLOYMENT_CHANGED = 3,
 }
 // Retrieve enum metadata with: proto3.getEnumType(DeploymentChangeType)
 proto3.util.setEnumType(DeploymentChangeType, "xyz.block.ftl.v1.DeploymentChangeType", [
-  { no: 0, name: "DEPLOYMENT_ADDED" },
-  { no: 1, name: "DEPLOYMENT_REMOVED" },
-  { no: 2, name: "DEPLOYMENT_CHANGED" },
+  { no: 0, name: "DEPLOYMENT_UNKNOWN" },
+  { no: 1, name: "DEPLOYMENT_ADDED" },
+  { no: 2, name: "DEPLOYMENT_REMOVED" },
+  { no: 3, name: "DEPLOYMENT_CHANGED" },
 ]);
 
 /**
@@ -166,7 +172,7 @@ export class PullSchemaResponse extends Message<PullSchemaResponse> {
   /**
    * @generated from field: xyz.block.ftl.v1.DeploymentChangeType change_type = 5;
    */
-  changeType = DeploymentChangeType.DEPLOYMENT_ADDED;
+  changeType = DeploymentChangeType.DEPLOYMENT_UNKNOWN;
 
   /**
    * If this is true then the module was removed as well as the deployment. This is only set for DEPLOYMENT_REMOVED.

@@ -11,9 +11,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/types/optional"
-	"github.com/jpillora/backoff"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -22,14 +20,9 @@ import (
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
-
-type PullSchemaClient interface {
-	PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest]) (*connect.ServerStreamForClient[ftlv1.PullSchemaResponse], error)
-}
 
 type CallClient interface {
 	Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error)
@@ -50,15 +43,15 @@ func (c *Config) Validate() error {
 
 type service struct {
 	// Complete schema synchronised from the database.
-	schemaState atomic.Value[schemaState]
-	callClient  CallClient
+	view       *atomic.Value[materialisedView]
+	callClient CallClient
 }
 
 // Start the HTTP ingress service. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, pullSchemaClient PullSchemaClient, verbClient CallClient) error {
-	wg, ctx := errgroup.WithContext(ctx)
+func Start(ctx context.Context, config Config, schemaEventSource schemaeventsource.EventSource, verbClient CallClient) error {
 	logger := log.FromContext(ctx).Scope("http-ingress")
 	svc := &service{
+		view:       syncView(ctx, schemaEventSource),
 		callClient: verbClient,
 	}
 
@@ -72,60 +65,8 @@ func Start(ctx context.Context, config Config, pullSchemaClient PullSchemaClient
 	}
 
 	// Start the HTTP server
-	wg.Go(func() error {
-		logger.Infof("HTTP ingress server listening on: %s", config.Bind)
-		return ftlhttp.Serve(ctx, config.Bind, ingressHandler)
-	})
-	// Start watching for schema changes.
-	wg.Go(func() error {
-		rpc.RetryStreamingServerStream(ctx, "pull-schema", backoff.Backoff{}, &ftlv1.PullSchemaRequest{}, pullSchemaClient.PullSchema, func(ctx context.Context, resp *ftlv1.PullSchemaResponse) error {
-			existing := svc.schemaState.Load().protoSchema
-			newState := schemaState{
-				protoSchema: &schemapb.Schema{},
-				httpRoutes:  make(map[string][]ingressRoute),
-			}
-			if resp.ChangeType != ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED {
-				found := false
-				if existing != nil {
-					for i := range existing.Modules {
-						if existing.Modules[i].Name == resp.ModuleName {
-							newState.protoSchema.Modules = append(newState.protoSchema.Modules, resp.Schema)
-							found = true
-						} else {
-							newState.protoSchema.Modules = append(newState.protoSchema.Modules, existing.Modules[i])
-						}
-					}
-				}
-				if !found {
-					newState.protoSchema.Modules = append(newState.protoSchema.Modules, resp.Schema)
-				}
-			} else if existing != nil {
-				// We see the new state of the module before we see the removed deployment.
-				// We only want to actually remove if it was not replaced by a new deployment.
-				if !resp.ModuleRemoved {
-					logger.Debugf("Not removing ingress for %s as it is not the current deployment", resp.GetDeploymentKey())
-					return nil
-				}
-				for i := range existing.Modules {
-					if existing.Modules[i].Name != resp.ModuleName {
-						newState.protoSchema.Modules = append(newState.protoSchema.Modules, existing.Modules[i])
-					}
-				}
-			}
-			newState.httpRoutes = extractIngressRoutingEntries(newState.protoSchema)
-			sch, err := schema.FromProto(newState.protoSchema)
-			if err != nil {
-				// Not much we can do here, we don't update the state with the broken schema.
-				logger.Errorf(err, "failed to parse schema")
-				return nil
-			}
-			newState.schema = sch
-			svc.schemaState.Store(newState)
-			return nil
-		}, rpc.AlwaysRetry())
-		return nil
-	})
-	err := wg.Wait()
+	logger.Infof("HTTP ingress server listening on: %s", config.Bind)
+	err := ftlhttp.Serve(ctx, config.Bind, ingressHandler)
 	if err != nil {
 		return fmt.Errorf("ingress service stopped: %w", err)
 	}
@@ -141,58 +82,12 @@ func (s *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	method := strings.ToLower(r.Method)
 	requestKey := model.NewRequestKey(model.OriginIngress, fmt.Sprintf("%s %s", method, r.URL.Path))
 
-	routes := s.schemaState.Load().httpRoutes[r.Method]
+	state := s.view.Load()
+	routes := state.routes[r.Method]
 	if len(routes) == 0 {
 		http.NotFound(w, r)
 		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("route not found in dal"))
 		return
 	}
-	handleHTTP(start, s.schemaState.Load().schema, requestKey, routes, w, r, s.callClient)
-}
-
-type schemaState struct {
-	protoSchema *schemapb.Schema
-	schema      *schema.Schema
-	httpRoutes  map[string][]ingressRoute
-}
-
-type ingressRoute struct {
-	path   string
-	module string
-	verb   string
-	method string
-}
-
-func extractIngressRoutingEntries(schema *schemapb.Schema) map[string][]ingressRoute {
-	var ingressRoutes = make(map[string][]ingressRoute)
-	for _, module := range schema.Modules {
-		for _, decl := range module.Decls {
-			if verb, ok := decl.Value.(*schemapb.Decl_Verb); ok {
-				for _, metadata := range verb.Verb.Metadata {
-					if ingress, ok := metadata.Value.(*schemapb.Metadata_Ingress); ok {
-						ingressRoutes[ingress.Ingress.Method] = append(ingressRoutes[ingress.Ingress.Method], ingressRoute{
-							verb:   verb.Verb.Name,
-							method: ingress.Ingress.Method,
-							path:   ingressPathString(ingress.Ingress.Path),
-							module: module.Name,
-						})
-					}
-				}
-			}
-		}
-	}
-	return ingressRoutes
-}
-
-func ingressPathString(path []*schemapb.IngressPathComponent) string {
-	pathString := make([]string, len(path))
-	for i, p := range path {
-		switch p.Value.(type) {
-		case *schemapb.IngressPathComponent_IngressPathLiteral:
-			pathString[i] = p.GetIngressPathLiteral().Text
-		case *schemapb.IngressPathComponent_IngressPathParameter:
-			pathString[i] = fmt.Sprintf("{%s}", p.GetIngressPathParameter().Name)
-		}
-	}
-	return "/" + strings.Join(pathString, "/")
+	handleHTTP(start, state.schema, requestKey, routes, w, r, s.callClient)
 }

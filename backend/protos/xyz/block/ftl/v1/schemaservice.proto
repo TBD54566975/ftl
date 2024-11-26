@@ -14,9 +14,10 @@ message GetSchemaResponse {
 }
 
 enum DeploymentChangeType {
-  DEPLOYMENT_ADDED = 0;
-  DEPLOYMENT_REMOVED = 1;
-  DEPLOYMENT_CHANGED = 2;
+  DEPLOYMENT_UNKNOWN = 0;
+  DEPLOYMENT_ADDED = 1;
+  DEPLOYMENT_REMOVED = 2;
+  DEPLOYMENT_CHANGED = 3;
 }
 
 message PullSchemaRequest {}
