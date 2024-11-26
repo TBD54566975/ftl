@@ -67,7 +67,7 @@ func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.SchemaServic
 				}
 			}
 		case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
-			fmt.Printf("deployment %s removed\n", msg.DeploymentKey)
+			fmt.Printf("deployment %s removed\n", msg.GetDeploymentKey())
 		}
 
 	}

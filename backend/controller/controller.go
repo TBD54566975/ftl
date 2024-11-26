@@ -1531,7 +1531,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				moduleRemoved := mostRecentDeploymentByModule[name] == deletion.String()
 				response = &ftlv1.PullSchemaResponse{
 					ModuleName:    name,
-					DeploymentKey: deletion.String(),
+					DeploymentKey: proto.String(deletion.String()),
 					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED,
 					ModuleRemoved: moduleRemoved,
 				}
@@ -1571,7 +1571,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 						}
 						response = &ftlv1.PullSchemaResponse{
 							ModuleName:    moduleSchema.Name,
-							DeploymentKey: message.Key.String(),
+							DeploymentKey: proto.String(message.Key.String()),
 							Schema:        moduleSchema,
 							ChangeType:    changeType,
 							ModuleRemoved: moduleRemoved,
@@ -1581,7 +1581,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 					mostRecentDeploymentByModule[message.Schema.Name] = message.Key.String()
 					response = &ftlv1.PullSchemaResponse{
 						ModuleName:    moduleSchema.Name,
-						DeploymentKey: message.Key.String(),
+						DeploymentKey: proto.String(message.Key.String()),
 						Schema:        moduleSchema,
 						ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
 						More:          initialCount > 1,

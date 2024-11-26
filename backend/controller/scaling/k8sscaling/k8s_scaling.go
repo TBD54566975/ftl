@@ -61,7 +61,7 @@ func (k k8sScaling) Start(ctx context.Context, controller url.URL, leaser leases
 	deploymentReconciler := &DeploymentProvisioner{
 		Client:           clientset,
 		Namespace:        namespace,
-		KnownDeployments: xsync.NewMap(),
+		KnownDeployments: xsync.NewMapOf[string, bool](),
 		FTLEndpoint:      controller.String(),
 		IstioSecurity:    optional.Ptr(sec),
 	}
