@@ -265,11 +265,11 @@ func provisionSubscription() func(ctx context.Context, rc *provisioner.ResourceC
 }
 
 func kafkaTopicID(module, id string) string {
-	return shortenString(fmt.Sprintf("%s-%s", module, id), pubSubNameLimit)
+	return shortenString(fmt.Sprintf("%s.%s", module, id), pubSubNameLimit)
 }
 
 func consumerGroupID(module, id string) string {
-	return shortenString(fmt.Sprintf("%s-%s", module, id), pubSubNameLimit)
+	return shortenString(fmt.Sprintf("%s.%s", module, id), pubSubNameLimit)
 }
 
 // shortenString truncates the input string to maxLength and appends a hash of the original string for uniqueness
