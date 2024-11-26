@@ -1,8 +1,8 @@
 import { CellsIcon, PackageIcon } from 'hugeicons-react'
 import { Config, Data, Database, Enum, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import type { FTLNode } from '../graph/GraphPane'
 import { RightPanelHeader } from '../modules/decls/RightPanelHeader'
 import { declIcon } from '../modules/module.utils'
+import type { FTLNode } from './graph-utils'
 
 export const headerForNode = (node: FTLNode | null) => {
   if (!node) {
