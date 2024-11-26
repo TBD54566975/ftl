@@ -59,7 +59,7 @@ type Config struct {
 	DeploymentKeepHistory int                      `help:"Number of deployments to keep history for." default:"3"`
 	HeartbeatPeriod       time.Duration            `help:"Minimum period between heartbeats." default:"3s"`
 	HeartbeatJitter       time.Duration            `help:"Jitter to add to heartbeat period." default:"2s"`
-	Deployment            string                   `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
+	Deployment            model.DeploymentKey      `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
 	DebugPort             int                      `help:"The port to use for debugging." env:"FTL_DEBUG_PORT"`
 	Registry              artefacts.RegistryConfig `embed:"" prefix:"oci-"`
 	ObservabilityConfig   ftlobservability.Config  `embed:"" prefix:"o11y-"`
@@ -133,14 +133,7 @@ func Start(ctx context.Context, config Config) error {
 		devEndpoint:        config.DevEndpoint,
 	}
 
-	deploymentKey, err := model.ParseDeploymentKey(config.Deployment)
-	if err != nil {
-		observability.Deployment.Failure(ctx, optional.None[string]())
-		svc.cancelFunc()
-		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deployment key: %w", err))
-	}
-
-	module, err := svc.getModule(ctx, deploymentKey)
+	module, err := svc.getModule(ctx, config.Deployment)
 	if err != nil {
 		return fmt.Errorf("failed to get module: %w", err)
 	}
@@ -160,7 +153,7 @@ func Start(ctx context.Context, config Config) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			return svc.startDeployment(ctx, deploymentKey, module)
+			return svc.startDeployment(ctx, config.Deployment, module)
 		}
 	})
 
@@ -194,7 +187,7 @@ func newIdentityStore(ctx context.Context, config Config, key model.RunnerKey, c
 		return nil, fmt.Errorf("failed to create controller verifier: %w", err)
 	}
 
-	identityStore, err := identity.NewStoreNewKeys(identity.NewRunner(key, config.Deployment))
+	identityStore, err := identity.NewStoreNewKeys(identity.NewRunner(key, config.Deployment.String()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create identity store: %w", err)
 	}
@@ -333,7 +326,7 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 }
 
 func (s *Service) getModule(ctx context.Context, key model.DeploymentKey) (*schema.Module, error) {
-	gdResp, err := s.controllerClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: s.config.Deployment}))
+	gdResp, err := s.controllerClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: s.config.Deployment.String()}))
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.Some(key.String()))
 		return nil, fmt.Errorf("failed to get deployment: %w", err)
@@ -518,7 +511,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 		Key:        s.key.String(),
 		Endpoint:   s.config.Bind.String(),
 		Labels:     s.labels,
-		Deployment: s.config.Deployment,
+		Deployment: s.config.Deployment.String(),
 	})
 	if err != nil {
 		s.registrationFailure.Store(optional.Some(err))

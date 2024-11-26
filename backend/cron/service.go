@@ -171,7 +171,7 @@ func updateCronJobs(ctx context.Context, cronJobs map[string][]cronJob, resp *ft
 		// We see the new state of the module before we see the removed deployment.
 		// We only want to actually remove if it was not replaced by a new deployment.
 		if !resp.ModuleRemoved {
-			logger.Debugf("Not removing cron jobs for %s as module is still present", resp.DeploymentKey)
+			logger.Debugf("Not removing cron jobs for %s as module is still present", resp.GetDeploymentKey())
 			return nil
 		}
 		logger.Debugf("Removing cron jobs for module %s", resp.ModuleName)

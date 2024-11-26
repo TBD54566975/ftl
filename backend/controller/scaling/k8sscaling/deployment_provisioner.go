@@ -39,6 +39,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 const thisDeploymentName = "ftl-controller"
@@ -54,7 +55,7 @@ type DeploymentProvisioner struct {
 	MyDeploymentName string
 	Namespace        string
 	// Map of known deployments
-	KnownDeployments *xsync.Map
+	KnownDeployments *xsync.MapOf[string, bool]
 	FTLEndpoint      string
 	IstioSecurity    optional.Option[istioclient.Clientset]
 }
@@ -106,22 +107,26 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 	if !msg.More {
 		defer r.deleteMissingDeployments(ctx)
 	}
-	if msg.DeploymentKey == "" {
+	if msg.DeploymentKey == nil {
 		// Builtins don't have deployments
 		return nil
 	}
 	logger := log.FromContext(ctx)
 	logger = logger.Module(msg.ModuleName)
 	ctx = log.ContextWithLogger(ctx, logger)
-	logger.Debugf("Handling schema change for %s", msg.DeploymentKey)
+	deploymentKey, err := model.ParseDeploymentKey(msg.GetDeploymentKey())
+	if err != nil {
+		return fmt.Errorf("failed to parse deployment key %s: %w", msg.GetDeploymentKey(), err)
+	}
+	logger.Debugf("Handling schema change for %s", deploymentKey)
 	deploymentClient := r.Client.AppsV1().Deployments(r.Namespace)
-	deployment, err := deploymentClient.Get(ctx, msg.DeploymentKey, v1.GetOptions{})
+	deployment, err := deploymentClient.Get(ctx, deploymentKey.String(), v1.GetOptions{})
 	deploymentExists := true
 	if err != nil {
 		if errors.IsNotFound(err) {
 			deploymentExists = false
 		} else {
-			return fmt.Errorf("failed to get deployment %s: %w", msg.DeploymentKey, err)
+			return fmt.Errorf("failed to get deployment %s: %w", deploymentKey, err)
 		}
 	}
 
@@ -131,12 +136,12 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 		// Note that a change is now currently usually and add and a delete
 		// As it should really be called a module changed, not a deployment changed
 		// This will need to be fixed as part of the support for rolling deployments
-		r.KnownDeployments.Store(msg.DeploymentKey, true)
+		r.KnownDeployments.Store(deploymentKey.String(), true)
 		if deploymentExists {
-			logger.Debugf("Updating deployment %s", msg.DeploymentKey)
+			logger.Debugf("Updating deployment %s", deploymentKey)
 			return r.handleExistingDeployment(ctx, deployment, msg.Schema)
 		} else {
-			return r.handleNewDeployment(ctx, msg.Schema, msg.DeploymentKey)
+			return r.handleNewDeployment(ctx, msg.Schema, deploymentKey.String())
 		}
 	case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
 		if deploymentExists {
@@ -145,9 +150,9 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 				// Nasty hack, we want all the controllers to have updated their route tables before we kill the runner
 				// so we add a slight delay here
 				time.Sleep(time.Second * 10)
-				r.KnownDeployments.Delete(msg.DeploymentKey)
+				r.KnownDeployments.Delete(deploymentKey.String())
 				logger.Debugf("Deleting service %s", msg.ModuleName)
-				err = r.Client.CoreV1().Services(r.Namespace).Delete(ctx, msg.DeploymentKey, v1.DeleteOptions{})
+				err = r.Client.CoreV1().Services(r.Namespace).Delete(ctx, deploymentKey.String(), v1.DeleteOptions{})
 				if err != nil {
 					if !errors.IsNotFound(err) {
 						logger.Errorf(err, "Failed to delete service %s", msg.ModuleName)

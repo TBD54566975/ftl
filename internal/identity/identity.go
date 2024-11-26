@@ -33,19 +33,19 @@ var _ Identity = Runner{}
 // Runner identity
 // TODO: Maybe use KeyType[T any, TP keyPayloadConstraint[T]]?
 type Runner struct {
-	Key    model.RunnerKey
-	Module string
+	Key        model.RunnerKey
+	Deployment string
 }
 
 func NewRunner(key model.RunnerKey, module string) Runner {
 	return Runner{
-		Key:    key,
-		Module: module,
+		Key:        key,
+		Deployment: module,
 	}
 }
 
 func (r Runner) String() string {
-	return fmt.Sprintf("%s:%s", r.Key, r.Module)
+	return fmt.Sprintf("%s:%s", r.Key, r.Deployment)
 }
 
 func Parse(s string) (Identity, error) {

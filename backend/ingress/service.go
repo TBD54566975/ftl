@@ -103,7 +103,7 @@ func Start(ctx context.Context, config Config, pullSchemaClient PullSchemaClient
 				// We see the new state of the module before we see the removed deployment.
 				// We only want to actually remove if it was not replaced by a new deployment.
 				if !resp.ModuleRemoved {
-					logger.Debugf("Not removing ingress for %s as it is not the current deployment", resp.DeploymentKey)
+					logger.Debugf("Not removing ingress for %s as it is not the current deployment", resp.GetDeploymentKey())
 					return nil
 				}
 				for i := range existing.Modules {

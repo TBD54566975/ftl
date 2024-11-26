@@ -50,8 +50,9 @@ type localScaling struct {
 }
 
 type devModeRunner struct {
-	uri           url.URL
-	deploymentKey string
+	uri url.URL
+	// Set to None under mysterious circumstances...
+	deploymentKey optional.Option[model.DeploymentKey]
 	debugPort     int
 }
 
@@ -113,7 +114,7 @@ type deploymentInfo struct {
 	runner   optional.Option[runnerInfo]
 	module   string
 	replicas int32
-	key      string
+	key      model.DeploymentKey
 	language string
 	exits    int
 }
@@ -149,24 +150,28 @@ func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*u
 }
 
 func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
-	if msg.DeploymentKey == "" {
+	if msg.DeploymentKey == nil {
 		// Builtins don't have deployments
 		return nil
+	}
+	deploymentKey, err := model.ParseDeploymentKey(msg.GetDeploymentKey())
+	if err != nil {
+		return fmt.Errorf("failed to parse deployment key: %w", err)
 	}
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	logger := log.FromContext(ctx).Scope("localScaling").Module(msg.ModuleName)
 	ctx = log.ContextWithLogger(ctx, logger)
-	logger.Debugf("Handling schema change for %s", msg.DeploymentKey)
+	logger.Debugf("Handling schema change for %s", deploymentKey)
 	moduleDeployments := l.runners[msg.ModuleName]
 	if moduleDeployments == nil {
 		moduleDeployments = map[string]*deploymentInfo{}
 		l.runners[msg.ModuleName] = moduleDeployments
 	}
-	deploymentRunners := moduleDeployments[msg.DeploymentKey]
+	deploymentRunners := moduleDeployments[deploymentKey.String()]
 	if deploymentRunners == nil {
-		deploymentRunners = &deploymentInfo{runner: optional.None[runnerInfo](), key: msg.DeploymentKey, module: msg.ModuleName, language: msg.Schema.Runtime.Language}
-		moduleDeployments[msg.DeploymentKey] = deploymentRunners
+		deploymentRunners = &deploymentInfo{runner: optional.None[runnerInfo](), key: deploymentKey, module: msg.ModuleName, language: msg.Schema.Runtime.Language}
+		moduleDeployments[deploymentKey.String()] = deploymentRunners
 	}
 
 	switch msg.ChangeType {
@@ -174,7 +179,7 @@ func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSc
 		deploymentRunners.replicas = msg.Schema.Runtime.MinReplicas
 	case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
 		deploymentRunners.replicas = 0
-		delete(moduleDeployments, msg.DeploymentKey)
+		delete(moduleDeployments, deploymentKey.String())
 	}
 	return l.reconcileRunners(ctx, deploymentRunners)
 }
@@ -203,7 +208,7 @@ func (l *localScaling) reconcileRunners(ctx context.Context, deploymentRunners *
 	return nil
 }
 
-func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, info *deploymentInfo) error {
+func (l *localScaling) startRunner(ctx context.Context, deploymentKey model.DeploymentKey, info *deploymentInfo) error {
 	select {
 	case <-ctx.Done():
 		// In some cases this gets called with an expired context, generally after the lease is released
@@ -217,11 +222,11 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	debugPort := 0
 	if devEndpoint != nil {
 		devURI = optional.Some(devEndpoint.uri)
-		if devEndpoint.deploymentKey == deploymentKey {
+		if devKey, ok := devEndpoint.deploymentKey.Get(); ok && devKey.Equal(deploymentKey) {
 			// Already running, don't start another
 			return nil
 		}
-		devEndpoint.deploymentKey = deploymentKey
+		devEndpoint.deploymentKey = optional.Some(deploymentKey)
 		debugPort = devEndpoint.debugPort
 	} else if ide, ok := l.ideSupport.Get(); ok {
 		var debug *localdebug.DebugInfo
@@ -282,7 +287,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		l.lock.Lock()
 		defer l.lock.Unlock()
 		if devEndpoint != nil {
-			devEndpoint.deploymentKey = ""
+			devEndpoint.deploymentKey = optional.None[model.DeploymentKey]()
 		}
 		// Don't count context.Canceled as an a restart error
 		if err != nil && !errors.Is(err, context.Canceled) {
