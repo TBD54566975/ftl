@@ -251,7 +251,17 @@ func (s *serveCommonConfig) run(
 
 		// default local dev provisioner
 		provisionerRegistry := &provisioner.ProvisionerRegistry{
-			Provisioners: []*provisioner.ProvisionerBinding{
+			Bindings: []*provisioner.ProvisionerBinding{
+				{
+					Provisioner: provisioner.NewDevProvisioner(s.DBPort, s.MysqlPort),
+					Types: []provisioner.ResourceType{
+						provisioner.ResourceTypeMysql,
+						provisioner.ResourceTypePostgres,
+						provisioner.ResourceTypeTopic,
+						provisioner.ResourceTypeSubscription,
+					},
+					ID: "dev",
+				},
 				{
 					Provisioner: provisioner.NewControllerProvisioner(controllerClient),
 					Types:       []provisioner.ResourceType{provisioner.ResourceTypeModule},
@@ -262,10 +272,6 @@ func (s *serveCommonConfig) run(
 					Types:       []provisioner.ResourceType{provisioner.ResourceTypeSQLMigration},
 					ID:          "migration",
 				},
-			},
-			Default: &provisioner.ProvisionerBinding{
-				Provisioner: provisioner.NewDevProvisioner(s.DBPort, s.MysqlPort),
-				ID:          "dev",
 			},
 		}
 
