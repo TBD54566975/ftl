@@ -78,6 +78,13 @@ func (d KeyType[T, TP]) Kind() string {
 	return payload.Kind()
 }
 
+func (d KeyType[T, TP]) GoString() string {
+	var t T
+	// Assumes the naming convention of:
+	// type DeploymentKey = KeyType[DeploymentPayload, *DeploymentPayload]
+	return fmt.Sprintf("model.%s(%q)", strings.ReplaceAll(reflect.TypeOf(t).Name(), "Payload", "Key"), d.String())
+}
+
 func (d KeyType[T, TP]) String() string {
 	parts := []string{d.Kind()}
 	var payload TP = &d.Payload

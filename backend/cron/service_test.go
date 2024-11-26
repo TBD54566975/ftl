@@ -11,11 +11,14 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
 type verbClient struct {
@@ -30,7 +33,7 @@ func (v *verbClient) Call(ctx context.Context, req *connect.Request[ftlv1.CallRe
 }
 
 func TestCron(t *testing.T) {
-	changes := make(chan *ftlv1.PullSchemaResponse, 8)
+	eventSource := schemaeventsource.NewUnattached()
 	module := &schema.Module{
 		Name: "echo",
 		Decls: []schema.Decl{
@@ -52,10 +55,10 @@ func TestCron(t *testing.T) {
 			},
 		},
 	}
-	changes <- &ftlv1.PullSchemaResponse{
-		ModuleName: "echo",
-		Schema:     module.ToProto().(*schemapb.Module), //nolint:forcetypeassert
-	}
+	eventSource.Publish(schemaeventsource.EventUpsert{
+		Deployment: optional.Some(model.NewDeploymentKey("echo")),
+		Module:     module,
+	})
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{Level: log.Trace}))
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
@@ -68,7 +71,7 @@ func TestCron(t *testing.T) {
 		requests: requestsch,
 	}
 
-	wg.Go(func() error { return run(ctx, client, changes) })
+	wg.Go(func() error { return Start(ctx, eventSource, client) })
 
 	requests := make([]*ftlv1.CallRequest, 0, 2)
 

@@ -39,6 +39,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
 type serveCmd struct {
@@ -76,13 +77,14 @@ func (s *serveCmd) Run(
 	controllerClient ftlv1connect.ControllerServiceClient,
 	provisionerClient provisionerconnect.ProvisionerServiceClient,
 	schemaClient ftlv1connect.SchemaServiceClient,
+	schemaEventSourceFactory func() schemaeventsource.EventSource,
 	verbClient ftlv1connect.VerbServiceClient,
 ) error {
 	bindAllocator, err := bind.NewBindAllocator(s.Bind, 2)
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
-	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, controllerClient, provisionerClient, schemaClient, verbClient, s.Recreate, nil)
+	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, controllerClient, schemaClient, provisionerClient, schemaEventSourceFactory, verbClient, s.Recreate, nil)
 }
 
 //nolint:maintidx
@@ -95,9 +97,10 @@ func (s *serveCommonConfig) run(
 	devMode bool,
 	bindAllocator *bind.BindAllocator,
 	controllerClient ftlv1connect.ControllerServiceClient,
+	schemaServiceClient ftlv1connect.SchemaServiceClient,
 	provisionerClient provisionerconnect.ProvisionerServiceClient,
-	schemaClient ftlv1connect.SchemaServiceClient,
-	vervClient ftlv1connect.VerbServiceClient,
+	schemaEventSourceFactory func() schemaeventsource.EventSource,
+	verbClient ftlv1connect.VerbServiceClient,
 	recreate bool,
 	devModeEndpoints <-chan scaling.DevModeEndpoints,
 ) error {
@@ -276,7 +279,7 @@ func (s *serveCommonConfig) run(
 		}
 
 		wg.Go(func() error {
-			if err := provisioner.Start(provisionerCtx, config, provisionerRegistry, controllerClient, schemaClient); err != nil {
+			if err := provisioner.Start(provisionerCtx, config, provisionerRegistry, controllerClient, schemaServiceClient); err != nil {
 				logger.Errorf(err, "provisioner%d failed: %v", i, err)
 				return fmt.Errorf("provisioner%d failed: %w", i, err)
 			}
@@ -286,7 +289,7 @@ func (s *serveCommonConfig) run(
 
 	// Start Cron
 	wg.Go(func() error {
-		err := cron.Start(ctx, schemaClient, vervClient)
+		err := cron.Start(ctx, schemaEventSourceFactory(), verbClient)
 		if err != nil {
 			return fmt.Errorf("cron failed: %w", err)
 		}
@@ -294,7 +297,7 @@ func (s *serveCommonConfig) run(
 	})
 	// Start Ingress
 	wg.Go(func() error {
-		err := ingress.Start(ctx, s.Ingress, schemaClient, vervClient)
+		err := ingress.Start(ctx, s.Ingress, schemaEventSourceFactory(), verbClient)
 		if err != nil {
 			return fmt.Errorf("ingress failed: %w", err)
 		}

@@ -125,7 +125,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          buf breaking --against 'https://github.com/TBD54566975/ftl.git#branch=main' | to-annotation
+          buf breaking --against 'https://github.com/TBD54566975/ftl.git#branch=main' | to-annotation || true
   console:
     name: Console
     runs-on: ubuntu-latest

@@ -23,7 +23,6 @@ PROTOS_IN := "backend/protos"
 PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go " + \
               "backend/protos/xyz/block/ftl/v1/ftl.pb.go " + \
               "backend/protos/xyz/block/ftl/v1/schema/schema.pb.go " + \
-              "backend/protos/xyz/block/ftl/v2alpha1/ftl.pb.go " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/console/console_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts " + \

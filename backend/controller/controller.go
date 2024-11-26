@@ -1502,14 +1502,14 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	logger.Debugf("Seeded %d deployments", initialCount)
 
 	builtins := schema.Builtins().ToProto().(*schemapb.Module) //nolint:forcetypeassert
-	buildinsResponse := &ftlv1.PullSchemaResponse{
+	builtinsResponse := &ftlv1.PullSchemaResponse{
 		ModuleName: builtins.Name,
 		Schema:     builtins,
 		ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
 		More:       initialCount > 0,
 	}
 
-	err = sendChange(buildinsResponse)
+	err = sendChange(builtinsResponse)
 	if err != nil {
 		return err
 	}

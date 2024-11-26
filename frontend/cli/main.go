@@ -31,6 +31,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/profiles"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 	"github.com/TBD54566975/ftl/internal/terminal"
 )
 
@@ -215,6 +216,12 @@ func makeBindContext(logger *log.Logger, cancel context.CancelFunc) terminal.Kon
 		schemaServiceClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.Endpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, schemaServiceClient)
 		kctx.BindTo(schemaServiceClient, (*ftlv1connect.SchemaServiceClient)(nil))
+
+		// Bind a factory function that creates a new schema event source, as the event source cannot be reused.
+		err = kctx.BindToProvider(func(client ftlv1connect.SchemaServiceClient) (func() schemaeventsource.EventSource, error) {
+			return func() schemaeventsource.EventSource { return schemaeventsource.New(ctx, schemaServiceClient) }, nil
+		})
+		kctx.FatalIfErrorf(err)
 
 		controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, controllerServiceClient)

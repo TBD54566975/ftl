@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/jpillora/backoff"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/cron/observability"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -17,14 +15,10 @@ import (
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
-
-type PullSchemaClient interface {
-	PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest]) (*connect.ServerStreamForClient[ftlv1.PullSchemaResponse], error)
-}
 
 type CallClient interface {
 	Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error)
@@ -52,29 +46,7 @@ func (c cronJob) String() string {
 }
 
 // Start the cron service. Blocks until the context is cancelled.
-func Start(ctx context.Context, pullSchemaClient PullSchemaClient, verbClient CallClient) error {
-	wg, ctx := errgroup.WithContext(ctx)
-	changes := make(chan *ftlv1.PullSchemaResponse, 8)
-	// Start processing cron jobs and schema changes.
-	wg.Go(func() error {
-		return run(ctx, verbClient, changes)
-	})
-	// Start watching for schema changes.
-	wg.Go(func() error {
-		rpc.RetryStreamingServerStream(ctx, "pull-schema", backoff.Backoff{}, &ftlv1.PullSchemaRequest{}, pullSchemaClient.PullSchema, func(ctx context.Context, resp *ftlv1.PullSchemaResponse) error {
-			changes <- resp
-			return nil
-		}, rpc.AlwaysRetry())
-		return nil
-	})
-	err := wg.Wait()
-	if err != nil {
-		return fmt.Errorf("cron service stopped: %w", err)
-	}
-	return nil
-}
-
-func run(ctx context.Context, verbClient CallClient, changes chan *ftlv1.PullSchemaResponse) error {
+func Start(ctx context.Context, eventSource schemaeventsource.EventSource, verbClient CallClient) error {
 	logger := log.FromContext(ctx).Scope("cron")
 	// Map of cron jobs for each module.
 	cronJobs := map[string][]cronJob{}
@@ -96,8 +68,8 @@ func run(ctx context.Context, verbClient CallClient, changes chan *ftlv1.PullSch
 		case <-ctx.Done():
 			return fmt.Errorf("cron service stopped: %w", ctx.Err())
 
-		case resp := <-changes:
-			if err := updateCronJobs(ctx, cronJobs, resp); err != nil {
+		case change := <-eventSource.Events():
+			if err := updateCronJobs(ctx, cronJobs, change); err != nil {
 				logger.Errorf(err, "Failed to update cron jobs")
 				continue
 			}
@@ -164,31 +136,27 @@ func scheduleNext(cronQueue []cronJob) (time.Duration, bool) {
 	return time.Until(cronQueue[0].next), true
 }
 
-func updateCronJobs(ctx context.Context, cronJobs map[string][]cronJob, resp *ftlv1.PullSchemaResponse) error {
+func updateCronJobs(ctx context.Context, cronJobs map[string][]cronJob, change schemaeventsource.Event) error {
 	logger := log.FromContext(ctx).Scope("cron")
-	switch resp.ChangeType {
-	case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
+	switch change := change.(type) {
+	case schemaeventsource.EventRemove:
 		// We see the new state of the module before we see the removed deployment.
 		// We only want to actually remove if it was not replaced by a new deployment.
-		if !resp.ModuleRemoved {
-			logger.Debugf("Not removing cron jobs for %s as module is still present", resp.GetDeploymentKey())
+		if !change.Deleted {
+			logger.Debugf("Not removing cron jobs for %s as module is still present", change.Deployment)
 			return nil
 		}
-		logger.Debugf("Removing cron jobs for module %s", resp.ModuleName)
-		delete(cronJobs, resp.ModuleName)
+		logger.Debugf("Removing cron jobs for module %s", change.Module.Name)
+		delete(cronJobs, change.Module.Name)
 
-	case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
-		logger.Debugf("Updated cron jobs for module %s", resp.ModuleName)
-		moduleSchema, err := schema.ModuleFromProto(resp.Schema)
-		if err != nil {
-			return fmt.Errorf("failed to extract module schema: %w", err)
-		}
-		moduleJobs, err := extractCronJobs(moduleSchema)
+	case schemaeventsource.EventUpsert:
+		logger.Debugf("Updated cron jobs for module %s", change.Module.Name)
+		moduleJobs, err := extractCronJobs(change.Module)
 		if err != nil {
 			return fmt.Errorf("failed to extract cron jobs: %w", err)
 		}
-		logger.Debugf("Adding %d cron jobs for module %s", len(moduleJobs), resp.ModuleName)
-		cronJobs[resp.ModuleName] = moduleJobs
+		logger.Debugf("Adding %d cron jobs for module %s", len(moduleJobs), change.Module.Name)
+		cronJobs[change.Module.Name] = moduleJobs
 	}
 	return nil
 }

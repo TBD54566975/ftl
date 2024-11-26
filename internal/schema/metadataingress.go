@@ -22,6 +22,13 @@ var _ Metadata = (*MetadataIngress)(nil)
 
 func (m *MetadataIngress) Position() Position { return m.Pos }
 func (m *MetadataIngress) String() string {
+	return fmt.Sprintf("+ingress %s %s %s", m.Type, strings.ToUpper(m.Method), m.PathString())
+}
+
+// PathString returns the path as a string, with parameters enclosed in curly braces.
+//
+// For example, /foo/{bar}
+func (m *MetadataIngress) PathString() string {
 	path := make([]string, len(m.Path))
 	for i, p := range m.Path {
 		switch v := p.(type) {
@@ -31,7 +38,7 @@ func (m *MetadataIngress) String() string {
 			path[i] = fmt.Sprintf("{%s}", v.Name)
 		}
 	}
-	return fmt.Sprintf("+ingress %s %s /%s", m.Type, strings.ToUpper(m.Method), strings.Join(path, "/"))
+	return "/" + strings.Join(path, "/")
 }
 
 func (m *MetadataIngress) schemaChildren() []Node {

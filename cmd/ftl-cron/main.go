@@ -16,6 +16,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
 var cli struct {
@@ -43,7 +44,8 @@ func main() {
 
 	verbClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.CronConfig.ControllerEndpoint.String(), log.Error)
 	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.CronConfig.ControllerEndpoint.String(), log.Error)
+	eventSource := schemaeventsource.New(ctx, schemaClient)
 
-	err = cron.Start(ctx, schemaClient, verbClient)
+	err = cron.Start(ctx, eventSource, verbClient)
 	kctx.FatalIfErrorf(err, "failed to start cron")
 }
