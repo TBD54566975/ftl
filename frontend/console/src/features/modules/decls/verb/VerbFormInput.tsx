@@ -1,6 +1,6 @@
 import { Copy01Icon } from 'hugeicons-react'
+import { useEffect, useRef } from 'react'
 import { Button } from '../../../../components/Button'
-import {useEffect, useRef} from "react";
 
 export const VerbFormInput = ({
   requestType,
