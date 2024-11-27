@@ -72,18 +72,6 @@ const createModuleChildren = (module: Module, nodePositions: Record<string, { x:
     ...(module.secrets || []).map((secret: Secret) =>
       createChildNode(module.name, nodeId(module.name, secret.secret?.name), secret.secret?.name || '', 'secret', nodePositions, secret, isDarkMode),
     ),
-    // Create nodes for subscriptions
-    // ...(module.subscriptions || []).map((subscription: Subscription) =>
-    //   createChildNode(
-    //     module.name,
-    //     nodeId(module.name, subscription.subscription?.name),
-    //     subscription.subscription?.name || '',
-    //     'subscription',
-    //     nodePositions,
-    //     subscription,
-    //     isDarkMode,
-    //   ),
-    // ),
     // Create nodes for topics
     ...(module.topics || []).map((topic: Topic) =>
       createChildNode(module.name, nodeId(module.name, topic.topic?.name), topic.topic?.name || '', 'topic', nodePositions, topic, isDarkMode),
