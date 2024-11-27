@@ -168,20 +168,20 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
     })
 
     if (hasNewNodesWithoutPositions) {
-      const layoutOptions: FcoseLayoutOptions = {
+      const layoutOptions = {
         name: 'fcose',
         animate: false,
         quality: 'default',
-        nodeSeparation: 75,
-        idealEdgeLength: 75,
+        nodeSeparation: 50,
+        idealEdgeLength: 50,
         nodeRepulsion: 4500,
-        padding: 30,
+        padding: 20,
         randomize: false,
         // Make the layout more deterministic
         tile: true,
         tilingPaddingVertical: 20,
         tilingPaddingHorizontal: 20,
-      }
+      } as FcoseLayoutOptions
 
       const layout = cy.layout(layoutOptions)
       layout.run()

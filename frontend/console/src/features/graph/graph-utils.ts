@@ -116,7 +116,7 @@ const createModuleEdge = (sourceModule: string, targetModule: string) => ({
   },
 })
 
-const createVerbEdges = (modules: Module[]) => {
+const createEdges = (modules: Module[]) => {
   const edges: EdgeDefinition[] = []
   const moduleConnections = new Set<string>() // Track unique module connections
 
@@ -125,33 +125,70 @@ const createVerbEdges = (modules: Module[]) => {
     for (const verb of module.verbs || []) {
       // For each reference in the verb
       for (const ref of verb.references || []) {
-        // Create verb-to-verb edge
+        // Only create verb-to-verb child edges
         edges.push(createChildEdge(ref.module, ref.name, module.name, verb.verb?.name || ''))
 
-        // Track module-to-module connection
-        // Sort module names to ensure consistent edge IDs
+        // Track module-to-module connection for all reference types
         const [sourceModule, targetModule] = [module.name, ref.module].sort()
         moduleConnections.add(`${sourceModule}-${targetModule}`)
       }
     }
 
     for (const config of module.configs || []) {
+      // For each reference in the verb
       for (const ref of config.references || []) {
+        // Only create verb-to-verb child edges
         edges.push(createChildEdge(ref.module, ref.name, module.name, config.config?.name || ''))
 
-        // Track module-to-module connection
-        // Sort module names to ensure consistent edge IDs
+        // Track module-to-module connection for all reference types
         const [sourceModule, targetModule] = [module.name, ref.module].sort()
         moduleConnections.add(`${sourceModule}-${targetModule}`)
       }
     }
 
-    for (const data of module.data || []) {
-      for (const ref of data.references || []) {
-        edges.push(createChildEdge(ref.module, ref.name, module.name, data.data?.name || ''))
+    for (const secret of module.secrets || []) {
+      // For each reference in the verb
+      for (const ref of secret.references || []) {
+        // Only create verb-to-verb child edges
+        edges.push(createChildEdge(ref.module, ref.name, module.name, secret.secret?.name || ''))
 
-        // Track module-to-module connection
-        // Sort module names to ensure consistent edge IDs
+        // Track module-to-module connection for all reference types
+        const [sourceModule, targetModule] = [module.name, ref.module].sort()
+        moduleConnections.add(`${sourceModule}-${targetModule}`)
+      }
+    }
+
+    for (const database of module.databases || []) {
+      // For each reference in the verb
+      for (const ref of database.references || []) {
+        // Only create verb-to-verb child edges
+        edges.push(createChildEdge(ref.module, ref.name, module.name, database.database?.name || ''))
+
+        // Track module-to-module connection for all reference types
+        const [sourceModule, targetModule] = [module.name, ref.module].sort()
+        moduleConnections.add(`${sourceModule}-${targetModule}`)
+      }
+    }
+
+    for (const subscription of module.subscriptions || []) {
+      // For each reference in the verb
+      for (const ref of subscription.references || []) {
+        // Only create verb-to-verb child edges
+        edges.push(createChildEdge(ref.module, ref.name, module.name, subscription.subscription?.name || ''))
+
+        // Track module-to-module connection for all reference types
+        const [sourceModule, targetModule] = [module.name, ref.module].sort()
+        moduleConnections.add(`${sourceModule}-${targetModule}`)
+      }
+    }
+
+    for (const topic of module.topics || []) {
+      // For each reference in the verb
+      for (const ref of topic.references || []) {
+        // Only create verb-to-verb child edges
+        edges.push(createChildEdge(ref.module, ref.name, module.name, topic.topic?.name || ''))
+
+        // Track module-to-module connection for all reference types
         const [sourceModule, targetModule] = [module.name, ref.module].sort()
         moduleConnections.add(`${sourceModule}-${targetModule}`)
       }
@@ -177,7 +214,7 @@ export const getGraphData = (
   return [
     ...modules.modules.map((module) => createParentNode(module, nodePositions)),
     ...modules.modules.flatMap((module) => createModuleChildren(module, nodePositions, isDarkMode)),
-    ...createVerbEdges(modules.modules),
+    ...createEdges(modules.modules),
   ]
 }
 
