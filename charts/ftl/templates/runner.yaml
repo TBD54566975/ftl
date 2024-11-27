@@ -111,3 +111,13 @@ data:
           tolerations:
             {{- toYaml .Values.runner.tolerations | nindent 12 }}
           {{- end }}
+  serviceAccountTemplate: |-
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      labels:
+        app: ftl-runner
+      {{- if .Values.runner.runnersRoleArn }}
+      annotations:
+        eks.amazonaws.com/role-arn: {{ .Values.runner.runnersRoleArn }}
+      {{- end }}
