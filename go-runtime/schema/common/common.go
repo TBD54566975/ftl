@@ -28,8 +28,6 @@ var (
 	FtlDatabaseHandlePath = "github.com/TBD54566975/ftl/go-runtime/ftl.DatabaseHandle"
 	// FtlTopicHandlePath is the path to the FTL topic handle type.
 	FtlTopicHandlePath = "github.com/TBD54566975/ftl/go-runtime/ftl.TopicHandle"
-	// FtlSubscriptionHandlePath is the path to the FTL subscription handle type.
-	FtlSubscriptionHandlePath = "github.com/TBD54566975/ftl/go-runtime/ftl.SubscriptionHandle"
 	// FtlConfigTypePath is the path to the FTL config handle type.
 	FtlConfigTypePath = "github.com/TBD54566975/ftl/go-runtime/ftl.Config"
 	// FtlSecretTypePath is the path to the FTL secret handle type.
@@ -405,7 +403,7 @@ func extractSelectorType(pass *analysis.Pass, node ast.Node, typ *ast.SelectorEx
 				return optional.Some[schema.Type](&schema.Optional{
 					Pos: GoPosToSchemaPos(pass.Fset, node.Pos()),
 				})
-			case FtlTopicHandlePath, FtlSubscriptionHandlePath:
+			case FtlTopicHandlePath:
 				t, ok := extractRef(pass, node).Get()
 				if !ok {
 					return optional.None[schema.Type]()
@@ -793,7 +791,6 @@ const (
 	VerbResourceTypeConfig
 	VerbResourceTypeDatabaseHandle
 	VerbResourceTypeSecret
-	VerbResourceTypeSubscriptionHandle
 	VerbResourceTypeTopicHandle
 	VerbResourceTypeVerbClient
 )
@@ -816,8 +813,6 @@ func GetVerbResourceType(pass *analysis.Pass, obj types.Object) VerbResourceType
 			return VerbResourceTypeNone
 		case FtlTopicHandlePath:
 			return VerbResourceTypeTopicHandle
-		case FtlSubscriptionHandlePath:
-			return VerbResourceTypeSubscriptionHandle
 		case FtlConfigTypePath:
 			return VerbResourceTypeConfig
 		case FtlSecretTypePath:

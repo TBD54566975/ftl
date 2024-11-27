@@ -37,8 +37,6 @@ func declListToSchema(s []*schemapb.Decl) []Decl {
 			out = append(out, SecretFromProto(n.Secret))
 		case *schemapb.Decl_Topic:
 			out = append(out, TopicFromProto(n.Topic))
-		case *schemapb.Decl_Subscription:
-			out = append(out, SubscriptionFromProto(n.Subscription))
 		}
 	}
 	return out
@@ -168,8 +166,10 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 
 	case *schemapb.Metadata_Subscriber:
 		return &MetadataSubscriber{
-			Pos:  PosFromProto(s.Subscriber.Pos),
-			Name: s.Subscriber.Name,
+			Pos:        PosFromProto(s.Subscriber.Pos),
+			Topic:      RefFromProto(s.Subscriber.Topic),
+			FromOffset: FromOffset(s.Subscriber.FromOffset),
+			DeadLetter: s.Subscriber.DeadLetter,
 		}
 
 	case *schemapb.Metadata_TypeMap:
@@ -196,6 +196,7 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			Pos:    PosFromProto(s.SqlMigration.Pos),
 			Digest: s.SqlMigration.Digest,
 		}
+
 	default:
 		panic(fmt.Sprintf("unhandled metadata type: %T", s))
 	}

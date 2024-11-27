@@ -425,12 +425,6 @@ func TestParsing(t *testing.T) {
 
 					topic topicB test.eventB
 
-					subscription subA1 test.topicA
-
-					subscription subA2 test.topicA
-
-					subscription subB test.topicB
-
 					export data eventA {
 					}
 
@@ -438,16 +432,15 @@ func TestParsing(t *testing.T) {
 					}
 
 					verb consumesA(test.eventA) Unit
-						+subscribe subA1
+						+subscribe test.topicA from=beginning
 						+retry 1m5s 1h catch catchesAny
 
 					verb consumesB1(test.eventB) Unit
-						+subscribe subB
+						+subscribe test.topicB from=beginning deadletter
 						+retry 1m5s 1h catch catchesB
 
 					verb consumesBothASubs(test.eventA) Unit
-						+subscribe subA1
-						+subscribe subA2
+						+subscribe test.topicA from=latest deadletter
 						+retry 1m5s 1h catch test.catchesA
 
 					verb catchesA(builtin.CatchRequest<test.eventA>) Unit
@@ -474,27 +467,6 @@ func TestParsing(t *testing.T) {
 							Event: &Ref{
 								Module: "test",
 								Name:   "eventB",
-							},
-						},
-						&Subscription{
-							Name: "subA1",
-							Topic: &Ref{
-								Module: "test",
-								Name:   "topicA",
-							},
-						},
-						&Subscription{
-							Name: "subA2",
-							Topic: &Ref{
-								Module: "test",
-								Name:   "topicA",
-							},
-						},
-						&Subscription{
-							Name: "subB",
-							Topic: &Ref{
-								Module: "test",
-								Name:   "topicB",
 							},
 						},
 						&Data{
@@ -560,7 +532,12 @@ func TestParsing(t *testing.T) {
 							},
 							Metadata: []Metadata{
 								&MetadataSubscriber{
-									Name: "subA1",
+									Topic: &Ref{
+										Module: "test",
+										Name:   "topicA",
+									},
+									FromOffset: FromOffsetBeginning,
+									DeadLetter: false,
 								},
 								&MetadataRetry{
 									MinBackoff: "1m5s",
@@ -583,7 +560,11 @@ func TestParsing(t *testing.T) {
 							},
 							Metadata: []Metadata{
 								&MetadataSubscriber{
-									Name: "subB",
+									Topic: &Ref{
+										Module: "test",
+										Name:   "topicB",
+									},
+									DeadLetter: true,
 								},
 								&MetadataRetry{
 									MinBackoff: "1m5s",
@@ -606,11 +587,12 @@ func TestParsing(t *testing.T) {
 							},
 							Metadata: []Metadata{
 								&MetadataSubscriber{
-									Name: "subA1",
-								},
-								&MetadataSubscriber{
-									Name: "subA2",
-								},
+									Topic: &Ref{
+										Module: "test",
+										Name:   "topicA",
+									},
+									FromOffset: FromOffsetLatest,
+									DeadLetter: true},
 								&MetadataRetry{
 									MinBackoff: "1m5s",
 									MaxBackoff: "1h",
@@ -630,19 +612,16 @@ func TestParsing(t *testing.T) {
 				module test {
 					export topic topicA test.eventA
 
-					subscription subA test.topicB
-
 					export data eventA {
 					}
 
 					verb consumesB(test.eventB) Unit
-						+subscribe subB
+						+subscribe test.topicB from=beginning
 				}
 			`,
 			errors: []string{
-				`10:21: unknown reference "test.eventB", is the type annotated and exported?`,
-				`11:7: verb consumesB: could not find subscription "subB"`,
-				`5:24: unknown reference "test.topicB", is the type annotated and exported?`,
+				`8:21: unknown reference "test.eventB", is the type annotated and exported?`,
+				`9:18: unknown reference "test.topicB", is the type annotated and exported?`,
 			},
 		},
 		{name: "Cron",

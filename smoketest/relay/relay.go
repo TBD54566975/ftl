@@ -13,11 +13,8 @@ import (
 
 type LogFile = ftl.Config[string]
 
-// PubSub
-
-type AgentConsumer = ftl.SubscriptionHandle[origin.AgentBroadcast, ConsumeAgentBroadcastClient, origin.Agent]
-
 //ftl:verb
+//ftl:subscribe origin.agentBroadcast from=beginning
 func ConsumeAgentBroadcast(ctx context.Context, agent origin.Agent, client BriefedClient) error {
 	ftl.LoggerFromContext(ctx).Infof("Received agent %v", agent.Id)
 	return client(ctx, agent)

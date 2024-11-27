@@ -39,8 +39,6 @@ type Result struct {
 	FunctionCalls map[schema.Position]FunctionCall
 	// VerbResourceParamOrder contains the order of resource parameters for each verb.
 	VerbResourceParamOrder map[*schema.Verb][]common.VerbResourceParam
-	// SinksToSubscriptions maps sink names to subscription names.
-	SinksToSubscriptions map[string]*schema.Subscription
 }
 
 type FunctionCall struct {
@@ -59,7 +57,6 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 	declKeys := make(map[string]types.Object)
 	nativeNames := make(map[schema.Node]string)
 	verbParamOrder := make(map[*schema.Verb][]common.VerbResourceParam)
-	sinks := make(map[string]*schema.Subscription)
 	for obj, fact := range common.GetAllFactsExtractionStatus(pass) {
 		switch f := fact.(type) {
 		case *common.ExtractedDecl:
@@ -94,10 +91,6 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 			nativeNames[fact.Node] = common.GetNativeName(obj)
 		}
 	}
-	for _, facts := range common.GetAllFactsOfType[*common.SubscriptionSink](pass) {
-		fact := facts[0]
-		sinks[fact.SinkName] = fact.Subscription
-	}
 	return Result{
 		ModuleName:             moduleName,
 		ModuleComments:         extractModuleComments(pass),
@@ -106,7 +99,6 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 		NativeNames:            nativeNames,
 		FunctionCalls:          getFunctionCalls(pass),
 		VerbResourceParamOrder: verbParamOrder,
-		SinksToSubscriptions:   sinks,
 	}, nil
 }
 

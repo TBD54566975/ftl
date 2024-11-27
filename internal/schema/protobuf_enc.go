@@ -50,8 +50,6 @@ func declListToProto(nodes []Decl) []*schemapb.Decl {
 		case *Topic:
 			v = &schemapb.Decl_Topic{Topic: n.ToProto().(*schemapb.Topic)}
 
-		case *Subscription:
-			v = &schemapb.Decl_Subscription{Subscription: n.ToProto().(*schemapb.Subscription)}
 		}
 		out[i] = &schemapb.Decl{Value: v}
 	}
@@ -101,6 +99,7 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 
 		case *MetadataSQLMigration:
 			v = &schemapb.Metadata_SqlMigration{SqlMigration: n.ToProto().(*schemapb.MetadataSQLMigration)}
+
 		default:
 			panic(fmt.Sprintf("unhandled metadata type %T", n))
 		}

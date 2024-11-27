@@ -147,10 +147,16 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				}
 
 			case *Verb:
+				hasSubscribed := false
 				for _, md := range n.Metadata {
 					switch md := md.(type) {
 					case *MetadataSubscriber:
-						subErrs := validateVerbSubscriptions(module, n, md, scopes, optional.Some(schema))
+						if hasSubscribed {
+							merr = append(merr, errorf(md, "verb can not subscribe to multiple topics"))
+							continue
+						}
+						hasSubscribed = true
+						subErrs := validateVerbSubscriptions(module, n, md, scopes)
 						merr = append(merr, subErrs...)
 
 					case *MetadataIngress:
@@ -216,7 +222,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				*MetadataIngress, *MetadataAlias, *MetadataSecrets, *Module, *Optional, *Schema, *TypeAlias,
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant, *MetadataRetry,
 				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named,
-				*MetadataSubscriber, *Subscription, *Topic, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher,
+				*MetadataSubscriber, *Topic, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher,
 				*MetadataSQLMigration, *DSNDatabaseConnector, *DatabaseRuntime, DatabaseConnector:
 			}
 			return next()
@@ -281,16 +287,13 @@ func ValidateModule(module *Module) error {
 		switch n := n.(type) {
 		case *Ref:
 			mdecl := scopes.Resolve(*n)
-			if mdecl == nil && (n.Module == "" || n.Module == module.Name) {
-				merr = append(merr, errorf(n, "unknown reference %q, is the type annotated and exported?", n))
-			}
 			if mdecl != nil {
 				moduleName := ""
 				if m, ok := mdecl.Module.Get(); ok {
 					moduleName = m.Name
 				}
 				switch decl := mdecl.Symbol.(type) {
-				case *Verb, *Enum, *Database, *Config, *Secret:
+				case *Verb, *Enum, *Database, *Config, *Secret, *Topic:
 					if n.Module == "" {
 						n.Module = moduleName
 					}
@@ -342,11 +345,6 @@ func ValidateModule(module *Module) error {
 			// - start with a lower case letter: this allows us to deterministically derive the topic name from the generated variable name
 			if !ValidateName(n.Name) || !unicode.IsLower(rune(n.Name[0])) {
 				merr = append(merr, errorf(n, "invalid name: must consist of only letters, numbers and underscores, and start with a lowercase letter."))
-			}
-
-		case *Subscription:
-			if !ValidateName(n.Name) {
-				merr = append(merr, errorf(n, "invalid name: must consist of only letters, numbers and underscores, and start with a letter."))
 			}
 
 		case *TypeAlias:
@@ -406,16 +404,14 @@ func getDeclSortingPriority(decl Decl) int {
 		priority = 3
 	case *Topic:
 		priority = 4
-	case *Subscription:
-		priority = 5
 	case *TypeAlias:
-		priority = 6
+		priority = 5
 	case *Enum:
-		priority = 7
+		priority = 6
 	case *Data:
-		priority = 8
+		priority = 7
 	case *Verb:
-		priority = 9
+		priority = 8
 	}
 	return priority
 }
@@ -696,7 +692,7 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 			merr = append(merr, subErrs...)
 
 		case *MetadataSubscriber:
-			subErrs := validateVerbSubscriptions(module, n, md, scopes, optional.None[*Schema]())
+			subErrs := validateVerbSubscriptions(module, n, md, scopes)
 			merr = append(merr, subErrs...)
 		case *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap, *MetadataEncoding,
 			*MetadataSecrets, *MetadataPublisher, *MetadataSQLMigration:
@@ -914,32 +910,19 @@ func validateQueryParamsPayloadType(n Node, r Type, v *Verb, reqOrResp string) e
 	return errorf(r, "ingress verb %s: %s type %s query params can only support maps of strings or string arrays, or data types not %v", v.Name, reqOrResp, r, n)
 }
 
-func validateVerbSubscriptions(module *Module, v *Verb, md *MetadataSubscriber, scopes Scopes, schema optional.Option[*Schema]) (merr []error) {
+func validateVerbSubscriptions(module *Module, v *Verb, md *MetadataSubscriber, scopes Scopes) (merr []error) {
 	merr = []error{}
-	var subscription *Subscription
-	for _, decl := range module.Decls {
-		if sub, ok := decl.(*Subscription); ok && sub.Name == md.Name {
-			subscription = sub
-			break
-		}
+	if md.Topic.Module == "" {
+		md.Topic.Module = module.Name
 	}
-	if subscription == nil {
-		merr = append(merr, errorf(md, "verb %s: could not find subscription %q", v.Name, md.Name))
-		return
-	}
-
-	topicDecl := scopes.Resolve(*subscription.Topic)
+	topicDecl := scopes.Resolve(*md.Topic)
 	if topicDecl == nil {
-		if subscription.Topic.Module != "" && subscription.Topic.Module != module.Name && !schema.Ok() {
-			// can not validate subscriptions from external modules until we have the whole schema
-			return
-		}
-		merr = append(merr, errorf(md, "verb %s: could not resolve topic %q for subscription %q", v.Name, subscription.Topic, md.Name))
+		// errors for invalid refs are handled elsewhere
 		return
 	}
 	topic, ok := topicDecl.Symbol.(*Topic)
 	if !ok {
-		merr = append(merr, errorf(md, "verb %s: expected topic but found %T for %q", v.Name, topicDecl, subscription.Topic))
+		merr = append(merr, errorf(md, "verb %s: expected topic but found %T for %q", v.Name, topicDecl, md.Topic))
 		return
 	}
 

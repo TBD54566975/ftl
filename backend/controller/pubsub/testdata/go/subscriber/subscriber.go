@@ -14,25 +14,24 @@ import (
 	//"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
-type TestTopicSubscription = ftl.SubscriptionHandle[publisher.TestTopic, ConsumeClient, publisher.PubSubEvent]
-type DoomedSubscription = ftl.SubscriptionHandle[publisher.Topic2, ConsumeButFailAndRetryClient, publisher.PubSubEvent]
-type DoomedSubscription2 = ftl.SubscriptionHandle[publisher.Topic2, ConsumeButFailAndCatchAnyClient, publisher.PubSubEvent]
-
 var catchCount atomic.Value[int]
 
 //ftl:verb
+//ftl:subscribe publisher.testTopic from=beginning
 func Consume(ctx context.Context, req publisher.PubSubEvent) error {
 	ftl.LoggerFromContext(ctx).Infof("Subscriber is consuming %v", req.Time)
 	return nil
 }
 
 //ftl:verb
+//ftl:subscribe publisher.topic2 from=beginning
 //ftl:retry 2 1s 1s catch catch
 func ConsumeButFailAndRetry(ctx context.Context, req publisher.PubSubEvent) error {
 	return fmt.Errorf("always error: event %v", req.Time)
 }
 
 //ftl:verb
+//ftl:subscribe publisher.topic2 from=beginning
 //ftl:retry 1 1s 1s catch catchAny
 func ConsumeButFailAndCatchAny(ctx context.Context, req publisher.PubSubEvent) error {
 	return fmt.Errorf("always error: event %v", req.Time)
