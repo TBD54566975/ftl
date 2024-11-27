@@ -11,6 +11,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/BurntSushi/toml"
 	"github.com/alecthomas/kong"
+	"github.com/puzpuzpuz/xsync/v3"
 	"golang.org/x/sync/errgroup"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -41,7 +42,7 @@ func (c *Config) SetDefaults() {
 type Service struct {
 	controllerClient ftlv1connect.ControllerServiceClient
 	schemaClient     ftlv1connect.SchemaServiceClient
-	currentResources map[string]*ResourceGraph
+	currentResources *xsync.MapOf[string, *ResourceGraph]
 	registry         *ProvisionerRegistry
 }
 
@@ -54,10 +55,11 @@ func New(
 	schemaClient ftlv1connect.SchemaServiceClient,
 	registry *ProvisionerRegistry,
 ) (*Service, error) {
+	resourceMap := xsync.NewMapOf[string, *ResourceGraph]()
 	return &Service{
 		controllerClient: controllerClient,
 		schemaClient:     schemaClient,
-		currentResources: map[string]*ResourceGraph{},
+		currentResources: resourceMap,
 		registry:         registry,
 	}, nil
 }
@@ -70,7 +72,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	logger := log.FromContext(ctx)
 	// TODO: Block deployments to make sure only one module is modified at a time
 	moduleName := req.Msg.Schema.Name
-	existingResources := s.currentResources[moduleName]
+	existingResources, _ := s.currentResources.Load(moduleName)
 	desiredGraph, err := ExtractResources(req.Msg)
 	if err != nil {
 		return nil, fmt.Errorf("error extracting resources from schema: %w", err)
@@ -92,7 +94,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	logger.Debugf("Finished deployment for module %s", moduleName)
 
 	// update the resource state to match the resources updated in the deployment
-	s.currentResources[moduleName] = deployment.Graph
+	s.currentResources.Store(moduleName, deployment.Graph)
 
 	deploymentKey := ""
 	for _, r := range desiredGraph.Resources() {
