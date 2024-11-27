@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/rds/auth"
 )
 
 type dsnOptions struct {
@@ -45,11 +47,25 @@ func MySQLDSN(dbName string, options ...Option) string {
 }
 
 func ResolvePostgresDSN(ctx context.Context, connector schema.DatabaseConnector) (string, error) {
-	dsnRuntime, ok := connector.(*schema.DSNDatabaseConnector)
-	if !ok {
+	switch c := connector.(type) {
+	case *schema.DSNDatabaseConnector:
+		return c.DSN, nil
+	case *schema.AWSIAMAuthDatabaseConnector:
+		cfg, err := config.LoadDefaultConfig(ctx)
+		if err != nil {
+			return "", fmt.Errorf("configuration error: %w", err)
+		}
+
+		authenticationToken, err := auth.BuildAuthToken(
+			// TODO: proper region
+			ctx, c.Endpoint, "us-west-2", c.Username, cfg.Credentials)
+		if err != nil {
+			return "", fmt.Errorf("failed to create authentication token: %w", err)
+		}
+		return fmt.Sprintf("postgres://%s:%s@%s/%s", c.Username, authenticationToken, c.Endpoint, c.Database), nil
+	default:
 		return "", fmt.Errorf("unexpected database connector type: %T", connector)
 	}
-	return dsnRuntime.DSN, nil
 }
 
 func ResolveMySQLDSN(ctx context.Context, connector schema.DatabaseConnector) (string, error) {

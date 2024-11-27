@@ -191,6 +191,7 @@ require (
 require (
 	github.com/akamensky/base58 v0.0.0-20210829145138-ce8bf8802e8f
 	github.com/alecthomas/repr v0.4.0
+	github.com/aws/aws-sdk-go-v2/feature/rds/auth v1.4.24
 	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.56.0
 	github.com/awslabs/goformation/v7 v7.14.9
 	github.com/benbjohnson/clock v1.3.5

@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/alecthomas/atomic"
@@ -93,32 +91,8 @@ func (t *task) postUpdate(ctx context.Context, secrets *secretsmanager.Client, o
 		if err != nil {
 			return fmt.Errorf("failed to group outputs by property name: %w", err)
 		}
-
-		if write, ok := byName[PropertyPsqlWriteEndpoint]; ok {
-			if secret, ok := byName[PropertyPsqlMasterUserARN]; ok {
-				secretARN := *secret.OutputValue
-				username, password, err := secretARNToUsernamePassword(ctx, secrets, secretARN)
-				if err != nil {
-					return fmt.Errorf("failed to get username and password from secret ARN: %w", err)
-				}
-
-				adminEndpoint := endpointToDSN(write.OutputValue, "postgres", 5432, username, password)
-
-				// Connect to postgres without a specific database to create the new one
-				db, err := sql.Open("pgx", adminEndpoint)
-				if err != nil {
-					return fmt.Errorf("failed to connect to postgres: %w", err)
-				}
-				defer db.Close()
-
-				// Create the database if it doesn't exist
-				if _, err := db.ExecContext(ctx, "CREATE DATABASE "+resourceID); err != nil {
-					// Ignore if database already exists
-					if !strings.Contains(err.Error(), "already exists") {
-						return fmt.Errorf("failed to create database: %w", err)
-					}
-				}
-			}
+		if err := PostgresPostUpdate(ctx, secrets, byName, resourceID); err != nil {
+			return fmt.Errorf("failed to post-update postgres: %w", err)
 		}
 	}
 
