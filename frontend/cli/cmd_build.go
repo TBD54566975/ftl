@@ -8,6 +8,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
 type buildCmd struct {
@@ -19,7 +20,7 @@ type buildCmd struct {
 func (b *buildCmd) Run(
 	ctx context.Context,
 	controllerClient ftlv1connect.ControllerServiceClient,
-	schemaClient ftlv1connect.SchemaServiceClient,
+	schemaSourceFactory func() schemaeventsource.EventSource,
 	projConfig projectconfig.Config,
 ) error {
 	if len(b.Dirs) == 0 {
@@ -35,7 +36,7 @@ func (b *buildCmd) Run(
 	engine, err := buildengine.New(
 		ctx,
 		controllerClient,
-		schemaClient,
+		schemaSourceFactory(),
 		projConfig,
 		b.Dirs,
 		buildengine.BuildEnv(b.BuildEnv),

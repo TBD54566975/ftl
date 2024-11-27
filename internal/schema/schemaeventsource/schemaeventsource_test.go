@@ -100,11 +100,19 @@ func TestSchemaEventSource(t *testing.T) {
 			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
 		})
 
+		waitCtx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+		assert.False(t, changes.WaitForInitialSync(waitCtx))
+
 		send(t, &ftlv1.PullSchemaResponse{
 			More:       false,
 			Schema:     (echo1).ToProto().(*schemapb.Module), //nolint:forcetypeassert
 			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
 		})
+
+		waitCtx, cancel = context.WithTimeout(ctx, time.Second)
+		defer cancel()
+		assert.True(t, changes.WaitForInitialSync(waitCtx))
 
 		var expected Event = EventUpsert{Module: time1, more: true}
 		assertEqual(t, expected, recv(t))
@@ -171,6 +179,12 @@ type mockSchemaService struct {
 	changes chan *ftlv1.PullSchemaResponse
 }
 
+var _ ftlv1connect.SchemaServiceHandler = &mockSchemaService{}
+
+func (m *mockSchemaService) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
+	return connect.NewResponse(&ftlv1.PingResponse{}), nil
+}
+
 func (m *mockSchemaService) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], resp *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
 	for {
 		select {
@@ -183,8 +197,6 @@ func (m *mockSchemaService) PullSchema(ctx context.Context, req *connect.Request
 		}
 	}
 }
-
-var _ ftlv1connect.SchemaServiceHandler = &mockSchemaService{}
 
 func assertEqual[T comparable](t testing.TB, expected, actual T) {
 	t.Helper()

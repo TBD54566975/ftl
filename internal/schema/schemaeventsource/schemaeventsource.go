@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/types/optional"
 	"github.com/jpillora/backoff"
@@ -72,19 +74,26 @@ func (c EventUpsert) Schema() *schema.Schema { return c.schema }
 // NewUnattached creates a new EventSource that is not attached to a SchemaService.
 func NewUnattached() EventSource {
 	return EventSource{
-		events: make(chan Event, 64),
-		view:   atomic.New[*schema.Schema](&schema.Schema{}),
+		events:              make(chan Event, 1024),
+		view:                atomic.New[*schema.Schema](&schema.Schema{}),
+		live:                atomic.New[bool](false),
+		initialSyncComplete: make(chan struct{}),
 	}
 }
 
 // EventSource represents a stream of schema events and the materialised view of those events.
 type EventSource struct {
-	events chan Event
-	view   *atomic.Value[*schema.Schema]
+	events              chan Event
+	view                *atomic.Value[*schema.Schema]
+	live                *atomic.Value[bool]
+	initialSyncComplete chan struct{}
 }
 
-// Events is a stream of schema change events. "View" will be updated with these changes prior to being sent on this
-// channel.
+// Events is a stream of schema change events.
+//
+// "View" will be updated with these changes prior to being sent on this channel.
+//
+// NOTE: Only a single goroutine should read from the EventSource.
 func (e EventSource) Events() <-chan Event { return e.events }
 
 // ViewOnly converts the EventSource into a read-only view of the schema.
@@ -96,6 +105,22 @@ func (e EventSource) ViewOnly() View {
 		}
 	}()
 	return View{e.view}
+}
+
+// Live returns true if the EventSource is connected to the SchemaService.
+func (e EventSource) Live() bool { return e.live.Load() }
+
+// WaitForInitialSync blocks until the initial sync has completed or the context is cancelled.
+//
+// Returns true if the initial sync has completed, false if the context was cancelled.
+func (e EventSource) WaitForInitialSync(ctx context.Context) bool {
+	select {
+	case <-e.initialSyncComplete:
+		return true
+
+	case <-ctx.Done():
+		return false
+	}
 }
 
 // View is the materialised view of the schema from "Events".
@@ -138,8 +163,17 @@ func New(ctx context.Context, client ftlv1connect.SchemaServiceClient) EventSour
 	logger := log.FromContext(ctx).Scope("schema-sync")
 	out := NewUnattached()
 	more := true
+	initialSyncComplete := false
 	logger.Debugf("Starting schema pull")
+
+	// Set the initial "live" state by pinging the server. After that we'll rely on the stream.
+	pingCtx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	resp, err := client.Ping(pingCtx, connect.NewRequest(&ftlv1.PingRequest{}))
+	out.live.Store(err == nil && resp.Msg.NotReady == nil)
+
 	go rpc.RetryStreamingServerStream(ctx, "schema-sync", backoff.Backoff{}, &ftlv1.PullSchemaRequest{}, client.PullSchema, func(_ context.Context, resp *ftlv1.PullSchemaResponse) error {
+		out.live.Store(true)
 		sch, err := schema.ModuleFromProto(resp.Schema)
 		if err != nil {
 			return fmt.Errorf("schema-sync: failed to decode module schema: %w", err)
@@ -178,7 +212,14 @@ func New(ctx context.Context, client ftlv1connect.SchemaServiceClient) EventSour
 		default:
 			return fmt.Errorf("schema-sync: unknown change type %q", resp.ChangeType)
 		}
+		if !more && !initialSyncComplete {
+			initialSyncComplete = true
+			close(out.initialSyncComplete)
+		}
 		return nil
-	}, rpc.AlwaysRetry())
+	}, func(_ error) bool {
+		out.live.Store(false)
+		return true
+	})
 	return out
 }
