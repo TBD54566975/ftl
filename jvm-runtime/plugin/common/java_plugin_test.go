@@ -37,6 +37,12 @@ func TestJavaConfigDefaults(t *testing.T) {
 				LanguageConfig: map[string]any{
 					"build-tool": "maven",
 				},
+				Watch: []string{
+					"pom.xml",
+					"src/**",
+					"build/generated",
+					"target/generated-sources",
+				},
 			},
 		},
 		{
@@ -49,6 +55,12 @@ func TestJavaConfigDefaults(t *testing.T) {
 				GeneratedSchemaDir: optional.Some("src/main/ftl-module-schema"),
 				LanguageConfig: map[string]any{
 					"build-tool": "maven",
+				},
+				Watch: []string{
+					"pom.xml",
+					"src/**",
+					"build/generated",
+					"target/generated-sources",
 				},
 			},
 		},

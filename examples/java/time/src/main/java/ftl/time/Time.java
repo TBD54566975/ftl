@@ -10,6 +10,6 @@ public class Time {
     @Verb
     @Export
     public TimeResponse time() {
-        return new TimeResponse(OffsetDateTime.now());
+        return new TimeResponse(OffsetDateTime.now().plusDays(1));
     }
 }
