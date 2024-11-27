@@ -158,18 +158,6 @@ const createEdges = (modules: Module[]) => {
       }
     }
 
-    for (const subscription of module.subscriptions || []) {
-      // For each reference in the verb
-      for (const ref of subscription.references || []) {
-        // Only create verb-to-verb child edges
-        edges.push(createChildEdge(ref.module, ref.name, module.name, subscription.subscription?.name || ''))
-
-        // Track module-to-module connection for all reference types
-        const [sourceModule, targetModule] = [module.name, ref.module].sort()
-        moduleConnections.add(`${sourceModule}-${targetModule}`)
-      }
-    }
-
     for (const topic of module.topics || []) {
       // For each reference in the verb
       for (const ref of topic.references || []) {
