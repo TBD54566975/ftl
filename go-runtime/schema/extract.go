@@ -348,6 +348,8 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 				cd.externalTypeAliases.Add(d)
 				cd.nativeNames[d] = common.GetNativeName(obj)
 			}
+		case *schema.Verb:
+			cd.verbs[obj] = d
 
 		default:
 		}
