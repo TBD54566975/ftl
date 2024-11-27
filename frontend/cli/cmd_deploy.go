@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
 type deployCmd struct {
@@ -22,7 +22,7 @@ func (d *deployCmd) Run(
 	ctx context.Context,
 	projConfig projectconfig.Config,
 	provisionerClient provisionerconnect.ProvisionerServiceClient,
-	schemaClient ftlv1connect.SchemaServiceClient,
+	schemaSourceFactory func() schemaeventsource.EventSource,
 ) error {
 	// Cancel build engine context to ensure all language plugins are killed.
 	var cancel context.CancelFunc
@@ -34,7 +34,7 @@ func (d *deployCmd) Run(
 	}
 	defer cancel()
 	engine, err := buildengine.New(
-		ctx, provisionerClient, schemaClient, projConfig, d.Build.Dirs,
+		ctx, provisionerClient, schemaSourceFactory(), projConfig, d.Build.Dirs,
 		buildengine.BuildEnv(d.Build.BuildEnv),
 		buildengine.Parallelism(d.Build.Parallelism),
 	)

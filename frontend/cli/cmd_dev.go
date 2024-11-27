@@ -126,7 +126,7 @@ func (d *devCmd) Run(
 			})
 		}
 
-		engine, err := buildengine.New(ctx, client, schemaClient, projConfig, d.Build.Dirs, opts...)
+		engine, err := buildengine.New(ctx, client, schemaEventSourceFactory(), projConfig, d.Build.Dirs, opts...)
 		if err != nil {
 			return err
 		}

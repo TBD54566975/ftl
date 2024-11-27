@@ -11,6 +11,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
 func TestGraph(t *testing.T) {
@@ -20,7 +21,7 @@ func TestGraph(t *testing.T) {
 		Path: filepath.Join(t.TempDir(), "ftl-project.toml"),
 		Name: "test",
 	}
-	engine, err := buildengine.New(ctx, nil, nil, projConfig, []string{"testdata/alpha", "testdata/other", "testdata/another"})
+	engine, err := buildengine.New(ctx, nil, schemaeventsource.NewUnattached(), projConfig, []string{"testdata/alpha", "testdata/other", "testdata/another"})
 	assert.NoError(t, err)
 
 	defer engine.Close()
