@@ -51,7 +51,7 @@ type localScaling struct {
 
 type devModeRunner struct {
 	uri url.URL
-	// Set to None under mysterious circumstances...
+	// The deployment key of the deployment that is currently running
 	deploymentKey optional.Option[model.DeploymentKey]
 	debugPort     int
 }
@@ -287,6 +287,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey model.Depl
 		l.lock.Lock()
 		defer l.lock.Unlock()
 		if devEndpoint != nil {
+			// Runner is complete, clear the deployment key
 			devEndpoint.deploymentKey = optional.None[model.DeploymentKey]()
 		}
 		// Don't count context.Canceled as an a restart error
