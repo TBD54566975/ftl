@@ -110,7 +110,7 @@ func (d *DatabaseRuntime) ToProto() protoreflect.ProtoMessage {
 func (d *DatabaseRuntime) schemaChildren() []Node { return []Node{d.ReadConnector, d.WriteConnector} }
 
 type DatabaseConnector interface {
-	Symbol
+	Node
 
 	databaseConnector()
 }
@@ -139,7 +139,39 @@ func (d *DSNDatabaseConnector) ToProto() protoreflect.ProtoMessage {
 }
 
 func (d *DSNDatabaseConnector) schemaChildren() []Node { return nil }
-func (d *DSNDatabaseConnector) schemaSymbol()          {}
+
+//protobuf:2
+type AWSIAMAuthDatabaseConnector struct {
+	Pos Position `parser:"" protobuf:"1,optional"`
+
+	Username string `parser:"" protobuf:"2"`
+	Endpoint string `parser:"" protobuf:"3"`
+	Database string `parser:"" protobuf:"4"`
+}
+
+var _ DatabaseConnector = (*AWSIAMAuthDatabaseConnector)(nil)
+
+func (d *AWSIAMAuthDatabaseConnector) Position() Position { return d.Pos }
+func (d *AWSIAMAuthDatabaseConnector) databaseConnector() {}
+func (d *AWSIAMAuthDatabaseConnector) String() string {
+	return fmt.Sprintf("%s@%s/%s", d.Username, d.Endpoint, d.Database)
+}
+func (d *AWSIAMAuthDatabaseConnector) ToProto() protoreflect.ProtoMessage {
+	if d == nil {
+		return nil
+	}
+	return &schemapb.DatabaseConnector{
+		Value: &schemapb.DatabaseConnector_AwsiamAuthDatabaseConnector{
+			AwsiamAuthDatabaseConnector: &schemapb.AWSIAMAuthDatabaseConnector{
+				Username: d.Username,
+				Endpoint: d.Endpoint,
+				Database: d.Database,
+			},
+		},
+	}
+}
+
+func (d *AWSIAMAuthDatabaseConnector) schemaChildren() []Node { return nil }
 
 func DatabaseRuntimeFromProto(s *schemapb.DatabaseRuntime) *DatabaseRuntime {
 	if s == nil {
