@@ -1488,6 +1488,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	moduleState := map[string]moduleStateEntry{}
 	moduleByDeploymentKey := map[string]string{}
 	mostRecentDeploymentByModule := map[string]string{}
+	schemaByDeploymentKey := map[string]*schemapb.Module{}
 
 	// Seed the notification channel with the current deployments.
 	seedDeployments, err := s.dal.GetActiveDeployments(ctx)
@@ -1528,15 +1529,18 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 			// Deleted key
 			if deletion, ok := notification.Deleted.Get(); ok {
 				name := moduleByDeploymentKey[deletion.String()]
+				schema := schemaByDeploymentKey[deletion.String()]
 				moduleRemoved := mostRecentDeploymentByModule[name] == deletion.String()
 				response = &ftlv1.PullSchemaResponse{
 					ModuleName:    name,
 					DeploymentKey: proto.String(deletion.String()),
 					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED,
 					ModuleRemoved: moduleRemoved,
+					Schema:        schema,
 				}
 				delete(moduleState, name)
 				delete(moduleByDeploymentKey, deletion.String())
+				delete(schemaByDeploymentKey, deletion.String())
 				if moduleRemoved {
 					delete(mostRecentDeploymentByModule, name)
 				}
@@ -1592,7 +1596,9 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				}
 				moduleState[message.Schema.Name] = newState
 				delete(moduleByDeploymentKey, message.Key.String()) // The deployment may have changed.
+				delete(schemaByDeploymentKey, message.Key.String())
 				moduleByDeploymentKey[message.Key.String()] = message.Schema.Name
+				schemaByDeploymentKey[message.Key.String()] = moduleSchema
 			}
 
 			if response != nil {

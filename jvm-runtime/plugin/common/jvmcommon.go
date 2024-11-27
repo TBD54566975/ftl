@@ -40,6 +40,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	islices "github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/internal/watch"
 )
 
 const BuildLockTimeout = time.Minute
@@ -161,13 +162,12 @@ func (s *Service) SyncStubReferences(ctx context.Context, req *connect.Request[l
 // rebuild must include the latest build context id provided by the request or subsequent BuildContextUpdated
 // calls.
 func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent]) error {
-	if req.Msg.RebuildAutomatically {
-		return s.handleDevModeRequest(ctx, req, stream)
-	}
-
 	buildCtx, err := buildContextFromProto(req.Msg.BuildContext)
 	if err != nil {
 		return err
+	}
+	if req.Msg.RebuildAutomatically {
+		return s.runDevMode(ctx, req, buildCtx, stream)
 	}
 
 	// Initial build
@@ -178,9 +178,89 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 	return nil
 }
 
-func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent]) error {
-	logger := log.FromContext(ctx)
+func (s *Service) runDevMode(ctx context.Context, req *connect.Request[langpb.BuildRequest], buildCtx buildContext, stream *connect.ServerStream[langpb.BuildEvent]) error {
+	s.acceptsContextUpdates.Store(true)
+	defer s.acceptsContextUpdates.Store(false)
+	first := true
+	for {
+		if !first {
+			err := stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_AutoRebuildStarted{AutoRebuildStarted: &langpb.AutoRebuildStarted{ContextId: buildCtx.ID}}})
+			if err != nil {
+				return fmt.Errorf("could not send build event: %w", err)
+			}
+		}
+		err := s.runQuarkusDev(ctx, req, stream, first)
+		first = false
+		if err != nil {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+		watchPatterns, err := relativeWatchPatterns(buildCtx.Config.Dir, buildCtx.Config.Watch)
+		if err != nil {
+			return err
+		}
 
+		watcher := watch.NewWatcher(watchPatterns...)
+		if err := watchFiles(ctx, watcher, buildCtx); err != nil {
+			return err
+		}
+	}
+}
+
+func relativeWatchPatterns(moduleDir string, watchPaths []string) ([]string, error) {
+	relativePaths := make([]string, len(watchPaths))
+	for i, path := range watchPaths {
+		relative, err := filepath.Rel(moduleDir, path)
+		if err != nil {
+			return nil, fmt.Errorf("could create relative path for watch pattern: %w", err)
+		}
+		relativePaths[i] = relative
+	}
+	return relativePaths, nil
+}
+
+// watchFiles watches for file changes in the module directory and triggers a rebuild when changes are detected.
+// This is only used when quarkus:dev is not running, e.g. if the module is so broken that it can't start.
+func watchFiles(ctx context.Context, watcher *watch.Watcher, buildCtx buildContext) error {
+	watchTopic, err := watcher.Watch(ctx, time.Second, []string{buildCtx.Config.Dir})
+	if err != nil {
+		return fmt.Errorf("could not watch for file changes: %w", err)
+	}
+	log.FromContext(ctx).Debugf("Watching for file changes: %s", buildCtx.Config.Dir)
+	watchEvents := make(chan watch.WatchEvent, 32)
+	watchTopic.Subscribe(watchEvents)
+
+	// We need watcher to calculate file hashes before we do initial build so we can detect changes
+	select {
+	case e := <-watchEvents:
+		_, ok := e.(watch.WatchEventModuleAdded)
+		if !ok {
+			return fmt.Errorf("expected module added event, got: %T", e)
+		}
+	case <-time.After(3 * time.Second):
+		return fmt.Errorf("expected module added event, got no event")
+	case <-ctx.Done():
+		return fmt.Errorf("context done: %w", ctx.Err())
+	}
+
+	select {
+	case e := <-watchEvents:
+		if change, ok := e.(watch.WatchEventModuleChanged); ok {
+			log.FromContext(ctx).Infof("Found file changes: %s", change)
+			return nil
+		}
+	case <-ctx.Done():
+		return nil
+	}
+
+	return nil
+}
+func (s *Service) runQuarkusDev(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent], firstAttempt bool) error {
+	logger := log.FromContext(ctx)
 	// cancel context when stream ends so that watcher can be stopped
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -188,7 +268,6 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 	events := make(chan buildContextUpdatedEvent, 32)
 	s.updatesTopic.Subscribe(events)
 	defer s.updatesTopic.Unsubscribe(events)
-	first := true
 	buildCtx, err := buildContextFromProto(req.Msg.BuildContext)
 	if err != nil {
 		return err
@@ -237,6 +316,19 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 	for {
 		select {
 		case <-ctx.Done():
+			if firstAttempt {
+				// the context is done before we notified the build engine
+				// we need to send a build failure event
+				err = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
+					BuildFailure: &langpb.BuildFailure{
+						IsAutomaticRebuild: !firstAttempt,
+						ContextId:          buildCtx.ID,
+						Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: "The dev mode process exited", Level: langpb.Error_ERROR, Type: langpb.Error_COMPILER}}},
+					}}})
+				if err != nil {
+					return fmt.Errorf("could not send build event: %w", err)
+				}
+			}
 			return nil
 		case bc := <-events:
 			buildCtx = bc.buildCtx
@@ -260,9 +352,7 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 				}
 			}
 			if changed {
-				if !first {
-					logger.Infof("New schema detected, doing fast redeploy")
-				}
+
 				buildErrs, err := loadProtoErrors(buildCtx.Config)
 				if err != nil {
 					// This is likely a transient error
@@ -273,14 +363,14 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 					// skip reading schema
 					err = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
 						BuildFailure: &langpb.BuildFailure{
-							IsAutomaticRebuild: !first,
+							IsAutomaticRebuild: !firstAttempt,
 							ContextId:          buildCtx.ID,
 							Errors:             buildErrs,
 						}}})
 					if err != nil {
 						return fmt.Errorf("could not send build event: %w", err)
 					}
-					first = false
+					firstAttempt = false
 					continue
 				}
 
@@ -295,7 +385,7 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 					Event: &langpb.BuildEvent_BuildSuccess{
 						BuildSuccess: &langpb.BuildSuccess{
 							ContextId:          req.Msg.BuildContext.Id,
-							IsAutomaticRebuild: !first,
+							IsAutomaticRebuild: !firstAttempt,
 							Module:             moduleProto,
 							DevEndpoint:        ptr(fmt.Sprintf("http://localhost:%d", address.Port)),
 							DebugPort:          &debugPort32,
@@ -306,7 +396,7 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 				if err != nil {
 					return fmt.Errorf("could not send build event: %w", err)
 				}
-				first = false
+				firstAttempt = false
 			}
 
 		}
@@ -483,6 +573,7 @@ func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request
 	defaults := langpb.ModuleConfigDefaultsResponse{
 		GeneratedSchemaDir: ptr("src/main/ftl-module-schema"),
 		LanguageConfig:     &structpb.Struct{Fields: map[string]*structpb.Value{}},
+		Watch:              []string{"pom.xml", "src/**", "build/generated", "target/generated-sources"},
 	}
 	dir := req.Msg.Dir
 	pom := filepath.Join(dir, "pom.xml")

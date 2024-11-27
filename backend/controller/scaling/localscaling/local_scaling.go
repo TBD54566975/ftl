@@ -64,30 +64,36 @@ func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser lease
 				return
 			case devEndpoints := <-l.devModeEndpointsUpdates:
 				l.lock.Lock()
-				l.devModeEndpoints[devEndpoints.Module] = &devModeRunner{
-					uri:       devEndpoints.Endpoint,
-					debugPort: devEndpoints.DebugPort,
-				}
-				if ide, ok := l.ideSupport.Get(); ok {
-					if devEndpoints.DebugPort != 0 {
-						if debug, ok := l.debugPorts[devEndpoints.Module]; ok {
-							debug.Port = devEndpoints.DebugPort
-						} else {
-							l.debugPorts[devEndpoints.Module] = &localdebug.DebugInfo{
-								Port:     devEndpoints.DebugPort,
-								Language: devEndpoints.Language,
-							}
-						}
-					}
-					ide.SyncIDEDebugIntegrations(ctx, l.debugPorts)
-
-				}
+				l.updateDevModeEndpoint(ctx, devEndpoints)
 				l.lock.Unlock()
 			}
 		}
 	}()
 	scaling.BeginGrpcScaling(ctx, endpoint, leaser, l.handleSchemaChange)
 	return nil
+}
+
+// updateDevModeEndpoint updates the dev mode endpoint for a module
+// Must be called under lock
+func (l *localScaling) updateDevModeEndpoint(ctx context.Context, devEndpoints scaling.DevModeEndpoints) {
+	l.devModeEndpoints[devEndpoints.Module] = &devModeRunner{
+		uri:       devEndpoints.Endpoint,
+		debugPort: devEndpoints.DebugPort,
+	}
+	if ide, ok := l.ideSupport.Get(); ok {
+		if devEndpoints.DebugPort != 0 {
+			if debug, ok := l.debugPorts[devEndpoints.Module]; ok {
+				debug.Port = devEndpoints.DebugPort
+			} else {
+				l.debugPorts[devEndpoints.Module] = &localdebug.DebugInfo{
+					Port:     devEndpoints.DebugPort,
+					Language: devEndpoints.Language,
+				}
+			}
+		}
+		ide.SyncIDEDebugIntegrations(ctx, l.debugPorts)
+
+	}
 }
 
 func (l *localScaling) GetEndpointForDeployment(ctx context.Context, module string, deployment string) (optional.Option[url.URL], error) {
@@ -186,6 +192,18 @@ func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSc
 
 func (l *localScaling) reconcileRunners(ctx context.Context, deploymentRunners *deploymentInfo) error {
 	// Must be called under lock
+
+	// First make sure we have all endpoint updates
+	for {
+		select {
+		case devEndpoints := <-l.devModeEndpointsUpdates:
+			l.updateDevModeEndpoint(ctx, devEndpoints)
+			continue
+		default:
+		}
+		break
+	}
+
 	logger := log.FromContext(ctx)
 	if deploymentRunners.replicas > 0 && !deploymentRunners.runner.Ok() && deploymentRunners.exits < maxExits {
 		if err := l.startRunner(ctx, deploymentRunners.key, deploymentRunners); err != nil {
