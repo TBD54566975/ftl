@@ -32,7 +32,8 @@ export const VerbFormInput = ({
     const handleKeydown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
         event.preventDefault()
-        formRef.current?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))      }
+        formRef.current?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
+      }
     }
 
     document.addEventListener('keydown', handleKeydown)
