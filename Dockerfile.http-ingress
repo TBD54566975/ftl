@@ -27,7 +27,7 @@ COPY . /src/
 RUN just errtrace
 # Reset timestamps so that the build state is reset
 RUN git ls-files -z | xargs -0 touch -r go.mod
-RUN just build ftl-http-ingress
+RUN just build-without-frontend ftl-http-ingress
 
 # Finally create the runtime image.
 FROM scratch
