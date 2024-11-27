@@ -54,4 +54,3 @@ test('submit cron form using ⌥+⏎ shortcut without focusing first', async ({ 
 
   expect(responseJson).toEqual({})
 })
-
