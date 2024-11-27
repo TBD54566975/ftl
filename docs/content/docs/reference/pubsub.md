@@ -63,7 +63,7 @@ fun publishInvoice(request: InvoiceRequest, topic: InvoiceTopic) {
 To subscribe to a topic use the `@Subscription` annotation, referencing the topic class and providing a method to consume the event:
 
 ```kotlin
-@Subscription(topic = InvoiceTopic, from = FromOffset.LATEST)
+@Subscription(topic = InvoiceTopic::class, from = FromOffset.LATEST)
 fun consumeInvoice(event: Invoice) {
     // ...
 }

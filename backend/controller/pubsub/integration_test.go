@@ -8,17 +8,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alecthomas/assert/v2"
+
 	"github.com/TBD54566975/ftl/backend/controller/async"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/alecthomas/assert/v2"
 )
 
 func TestPubSub(t *testing.T) {
 	calls := 20
 	events := calls * 10
 	in.Run(t,
-		in.WithLanguages("java", "go"),
+		in.WithLanguages("java", "go", "kotlin"),
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),

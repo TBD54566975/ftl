@@ -581,13 +581,13 @@ func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request
 	buildGradleKts := filepath.Join(dir, "build.gradle.kts")
 	if fileExists(pom) {
 		defaults.LanguageConfig.Fields["build-tool"] = structpb.NewStringValue(JavaBuildToolMaven)
-		defaults.DevModeBuild = ptr("mvn quarkus:dev")
-		defaults.Build = ptr("mvn -B package")
+		defaults.DevModeBuild = ptr("mvn clean quarkus:dev")
+		defaults.Build = ptr("mvn -B clean package")
 		defaults.DeployDir = "target"
 	} else if fileExists(buildGradle) || fileExists(buildGradleKts) {
 		defaults.LanguageConfig.Fields["build-tool"] = structpb.NewStringValue(JavaBuildToolGradle)
-		defaults.DevModeBuild = ptr("gradle quarkusDev")
-		defaults.Build = ptr("gradle build")
+		defaults.DevModeBuild = ptr("gradle clean quarkusDev")
+		defaults.Build = ptr("gradle clean build")
 		defaults.DeployDir = "build"
 	} else {
 		return nil, fmt.Errorf("could not find JVM build file in %s", dir)
