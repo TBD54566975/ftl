@@ -791,7 +791,6 @@ const (
 	VerbResourceTypeConfig
 	VerbResourceTypeDatabaseHandle
 	VerbResourceTypeSecret
-	VerbResourceTypeSubscriptionHandle
 	VerbResourceTypeTopicHandle
 	VerbResourceTypeVerbClient
 )
@@ -814,8 +813,6 @@ func GetVerbResourceType(pass *analysis.Pass, obj types.Object) VerbResourceType
 			return VerbResourceTypeNone
 		case FtlTopicHandlePath:
 			return VerbResourceTypeTopicHandle
-		case FtlSubscriptionHandlePath:
-			return VerbResourceTypeSubscriptionHandle
 		case FtlConfigTypePath:
 			return VerbResourceTypeConfig
 		case FtlSecretTypePath:
