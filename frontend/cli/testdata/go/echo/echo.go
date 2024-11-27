@@ -32,8 +32,8 @@ func Echo(ctx context.Context, req EchoRequest, tc time.TimeClient) (EchoRespons
 }
 
 //ftl:verb
-//ftl:subscribe time.Invoices from=beginning
-func SendInvoiceEmail(ctx context.Context, in time.Invoice) error {
+//ftl:subscribe time.invoices from=beginning
+func EmailInvoices(ctx context.Context, in time.Invoice) error {
 	if in.Amount == 10 {
 		return fmt.Errorf("can't process $10 invoices")
 	}
