@@ -6,7 +6,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   config.toml: |
-    default = "controller"
     plugins = [
         { id = "cloudformation", resources = ["postgres"] },
         { id = "controller", resources = ["module"] },

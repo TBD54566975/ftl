@@ -60,31 +60,19 @@ func (p ProvisionerBinding) String() string {
 
 // ProvisionerRegistry contains all known resource handlers in the order they should be executed
 type ProvisionerRegistry struct {
-	Default      *ProvisionerBinding
-	Provisioners []*ProvisionerBinding
+	Bindings []*ProvisionerBinding
 }
 
-// listProvisioners in the order they should be executed
-func (reg *ProvisionerRegistry) listProvisioners() []*ProvisionerBinding {
+// listBindings in the order they should be executed
+func (reg *ProvisionerRegistry) listBindings() []*ProvisionerBinding {
 	result := []*ProvisionerBinding{}
-	if reg.Default != nil {
-		result = append(result, reg.Default)
-	}
-	result = append(result, reg.Provisioners...)
+	result = append(result, reg.Bindings...)
 	return result
 }
 
 func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig, controller ftlv1connect.ControllerServiceClient) (*ProvisionerRegistry, error) {
 	logger := log.FromContext(ctx)
-	var def provisionerconnect.ProvisionerPluginServiceClient
-	if cfg.Default != "" {
-		d, err := provisionerIDToProvisioner(ctx, cfg.Default, controller)
-		if err != nil {
-			return nil, err
-		}
-		def = d
-	}
-	result := &ProvisionerRegistry{Default: &ProvisionerBinding{Provisioner: def, ID: cfg.Default}}
+	result := &ProvisionerRegistry{}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("error validating provisioner config: %w", err)
 	}
@@ -129,7 +117,7 @@ func (reg *ProvisionerRegistry) Register(id string, handler provisionerconnect.P
 		Types:       types,
 		ID:          id,
 	}
-	reg.Provisioners = append(reg.Provisioners, binding)
+	reg.Bindings = append(reg.Bindings, binding)
 	return binding
 }
 
@@ -137,17 +125,14 @@ func (reg *ProvisionerRegistry) Register(id string, handler provisionerconnect.P
 func (reg *ProvisionerRegistry) CreateDeployment(ctx context.Context, module string, desiredResources, existingResources *ResourceGraph) *Deployment {
 	logger := log.FromContext(ctx)
 
-	existingByHandler := reg.groupByProvisioner(existingResources.Resources())
-	desiredByHandler := reg.groupByProvisioner(desiredResources.Resources())
-
 	deployment := &Deployment{
 		Module: module,
 		Graph:  desiredResources,
 	}
 
-	for _, binding := range reg.listProvisioners() {
-		desired := desiredByHandler[binding.Provisioner]
-		existing := existingByHandler[binding.Provisioner]
+	for _, binding := range reg.listBindings() {
+		desired := getTypes(desiredResources.Resources(), binding.Types)
+		existing := getTypes(existingResources.Resources(), binding.Types)
 
 		if !resourcesEqual(desired, existing) {
 			logger.Debugf("Adding task for module %s: %s", module, binding)
@@ -162,6 +147,18 @@ func (reg *ProvisionerRegistry) CreateDeployment(ctx context.Context, module str
 		}
 	}
 	return deployment
+}
+
+func getTypes(resources []*provisioner.Resource, types []ResourceType) []*provisioner.Resource {
+	result := []*provisioner.Resource{}
+	for _, r := range resources {
+		for _, t := range types {
+			if TypeOf(r) == t {
+				result = append(result, r)
+			}
+		}
+	}
+	return result
 }
 
 func resourcesEqual(desired, existing []*provisioner.Resource) bool {
@@ -279,25 +276,4 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 	}
 
 	return result, nil
-}
-
-func (reg *ProvisionerRegistry) groupByProvisioner(resources []*provisioner.Resource) map[provisionerconnect.ProvisionerPluginServiceClient][]*provisioner.Resource {
-	result := map[provisionerconnect.ProvisionerPluginServiceClient][]*provisioner.Resource{}
-	for _, r := range resources {
-		found := false
-		for _, cfg := range reg.Provisioners {
-			for _, t := range cfg.Types {
-				typed := TypeOf(r)
-				if t == typed {
-					result[cfg.Provisioner] = append(result[cfg.Provisioner], r)
-					found = true
-					break
-				}
-			}
-		}
-		if !found && reg.Default != nil {
-			result[reg.Default.Provisioner] = append(result[reg.Default.Provisioner], r)
-		}
-	}
-	return result
 }
