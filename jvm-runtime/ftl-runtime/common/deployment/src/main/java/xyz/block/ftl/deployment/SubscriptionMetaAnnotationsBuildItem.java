@@ -9,7 +9,7 @@ import org.jboss.jandex.IndexView;
 
 import io.quarkus.builder.item.SimpleBuildItem;
 import xyz.block.ftl.FromOffset;
-import xyz.block.ftl.Topic;
+import xyz.block.ftl.WriteableTopic;
 
 public final class SubscriptionMetaAnnotationsBuildItem extends SimpleBuildItem {
 
@@ -34,11 +34,11 @@ public final class SubscriptionMetaAnnotationsBuildItem extends SimpleBuildItem 
         AnnotationValue topicClassValue = subscriptions.value("topicClass");
         String topicName;
         if (topicValue != null && !topicValue.asString().isEmpty()) {
-            if (topicClassValue != null && !topicClassValue.asClass().name().toString().equals(Topic.class.getName())) {
+            if (topicClassValue != null && !topicClassValue.asClass().name().toString().equals(WriteableTopic.class.getName())) {
                 throw new IllegalArgumentException("Cannot specify both topic and topicClass");
             }
             topicName = topicValue.asString();
-        } else if (topicClassValue != null && !topicClassValue.asClass().name().toString().equals(Topic.class.getName())) {
+        } else if (topicClassValue != null && !topicClassValue.asClass().name().toString().equals(WriteableTopic.class.getName())) {
             var topicClass = indexView.getClassByName(topicClassValue.asClass().name());
             AnnotationInstance annotation = topicClass.annotation(FTLDotNames.TOPIC_DEFINITION);
             if (annotation == null) {

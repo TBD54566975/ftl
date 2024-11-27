@@ -17,14 +17,16 @@ import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
 import io.quarkus.gizmo.ClassCreator;
 import io.quarkus.gizmo.MethodDescriptor;
+import xyz.block.ftl.ConsumableTopic;
 import xyz.block.ftl.Export;
-import xyz.block.ftl.Topic;
+import xyz.block.ftl.WriteableTopic;
 import xyz.block.ftl.runtime.TopicHelper;
 import xyz.block.ftl.v1.schema.Decl;
 
 public class TopicsProcessor {
 
-    public static final DotName TOPIC = DotName.createSimple(Topic.class);
+    public static final DotName WRITEABLE_TOPIC = DotName.createSimple(WriteableTopic.class);
+    public static final DotName CONSUMEABLE_TOPIC = DotName.createSimple(ConsumableTopic.class);
     private static final Logger log = Logger.getLogger(TopicsProcessor.class);
 
     @BuildStep
@@ -40,16 +42,23 @@ public class TopicsProcessor {
                         "@TopicDefinition can only be applied to interfaces " + iface.name() + " is not an interface");
             }
             Type paramType = null;
+            var consumer = false;
             for (var i : iface.interfaceTypes()) {
-                if (i.name().equals(TOPIC)) {
+                if (i.name().equals(WRITEABLE_TOPIC)) {
                     if (i.kind() == Type.Kind.PARAMETERIZED_TYPE) {
                         paramType = i.asParameterizedType().arguments().get(0);
                     }
+                } else if (i.name().equals(CONSUMEABLE_TOPIC)) {
+                    consumer = true;
                 }
 
             }
             if (paramType == null) {
-                throw new RuntimeException("@TopicDefinition can only be applied to interfaces that directly extend " + TOPIC
+                if (consumer) {
+                    // We don't care about these here, they are handled by the subscriptions processor
+                    continue;
+                }
+                throw new RuntimeException("@TopicDefinition can only be applied to interfaces that directly extend " + WRITEABLE_TOPIC
                         + " with a concrete type parameter " + iface.name() + " does not extend this interface");
             }
 

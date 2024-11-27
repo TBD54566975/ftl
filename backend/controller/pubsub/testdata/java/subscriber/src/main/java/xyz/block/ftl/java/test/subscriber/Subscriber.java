@@ -5,12 +5,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import ftl.builtin.CatchRequest;
 import ftl.publisher.PubSubEvent;
-import ftl.publisher.TestTopicSubscription;
 import io.quarkus.logging.Log;
 import xyz.block.ftl.FromOffset;
 import xyz.block.ftl.Retry;
 import xyz.block.ftl.Subscription;
-import xyz.block.ftl.SubscriptionOptions;
 import xyz.block.ftl.Verb;
 import xyz.block.ftl.VerbName;
 
@@ -18,21 +16,18 @@ public class Subscriber {
 
     private static final AtomicInteger catchCount = new AtomicInteger();
 
-    @TestTopicSubscription
-    @SubscriptionOptions(from = FromOffset.BEGINNING)
+    @Subscription(topic = TestTopic.class, from = FromOffset.BEGINNING)
     void consume(PubSubEvent event) throws Exception {
         Log.infof("Subscriber is consuming %s", event.getTime());
     }
 
-    @Subscription(topic = "topic2", module = "publisher")
-    @SubscriptionOptions(from = FromOffset.BEGINNING)
+    @Subscription(topic = Topic2.class, from = FromOffset.BEGINNING)
     @Retry(count = 2, minBackoff = "1s", maxBackoff = "1s", catchVerb = "catch")
     public void consumeButFailAndRetry(PubSubEvent event) {
         throw new RuntimeException("always error: event " + event.getTime());
     }
 
-    @Subscription(topic = "topic2", module = "publisher")
-    @SubscriptionOptions(from = FromOffset.BEGINNING)
+    @Subscription(topic = Topic2.class, from = FromOffset.BEGINNING)
     @Retry(count = 1, minBackoff = "1s", maxBackoff = "1s", catchVerb = "catchAny")
     public void consumeButFailAndCatchAny(PubSubEvent event) {
         throw new RuntimeException("always error: event " + event.getTime());
