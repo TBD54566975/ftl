@@ -27,14 +27,14 @@ public class Subscriber {
     @Subscription(topic = "topic2", module = "publisher")
     @SubscriptionOptions(from = FromOffset.BEGINNING)
     @Retry(count = 2, minBackoff = "1s", maxBackoff = "1s", catchVerb = "catch")
-    public void doomedSubscription(PubSubEvent event) {
+    public void consumeButFailAndRetry(PubSubEvent event) {
         throw new RuntimeException("always error: event " + event.getTime());
     }
 
     @Subscription(topic = "topic2", module = "publisher")
     @SubscriptionOptions(from = FromOffset.BEGINNING)
     @Retry(count = 1, minBackoff = "1s", maxBackoff = "1s", catchVerb = "catchAny")
-    public void doomedSubscription2(PubSubEvent event) {
+    public void consumeButFailAndCatchAny(PubSubEvent event) {
         throw new RuntimeException("always error: event " + event.getTime());
     }
 
