@@ -14,7 +14,7 @@ type RunnerScaling interface {
 
 	GetEndpointForDeployment(ctx context.Context, module string, deployment string) (optional.Option[url.URL], error)
 
-	StartDeployment(module string, deployment string, language *schema.Module) error
+	StartDeployment(ctx context.Context, module string, deployment string, sch *schema.Module) error
 
-	TerminateDeployment(module string, deployment string) error
+	TerminateDeployment(ctx context.Context, module string, deployment string) error
 }

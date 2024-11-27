@@ -48,7 +48,7 @@ func provisionRunner(scaling scaling.RunnerScaling, client ftlv1connect.Controll
 			return nil, fmt.Errorf("failed to parse schema: %w", err)
 		}
 		logger.Debugf("provisioning runner: %s.%s for deployment %s", module, id, deployment)
-		err = scaling.StartDeployment(module, deployment, schema)
+		err = scaling.StartDeployment(ctx, module, deployment, schema)
 		if err != nil {
 			return nil, fmt.Errorf("failed to start deployment: %w", err)
 		}
@@ -63,7 +63,7 @@ func provisionRunner(scaling scaling.RunnerScaling, client ftlv1connect.Controll
 			DeploymentKey: deployment,
 		}
 		if previous != nil && previous.GetRunner().GetOutput().GetDeploymentKey() != deployment {
-			err := scaling.TerminateDeployment(module, previous.GetRunner().GetOutput().GetDeploymentKey())
+			err := scaling.TerminateDeployment(ctx, module, previous.GetRunner().GetOutput().GetDeploymentKey())
 			if err != nil {
 				logger.Errorf(err, "failed to terminate previous deployment")
 			}

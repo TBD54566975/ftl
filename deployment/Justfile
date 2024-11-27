@@ -24,6 +24,9 @@ rm: teardown
 full-deploy: build-all-images setup-istio-cluster
   #!/bin/bash
   kubectl rollout restart deployment ftl-controller || true # if this exists already restart it to get the latest image
+  kubectl rollout restart deployment ftl-provisioner || true # if this exists already restart it to get the latest image
+  kubectl rollout restart deployment ftl-cron || true # if this exists already restart it to get the latest image
+  kubectl rollout restart deployment ftl-http-ingress || true # if this exists already restart it to get the latest image
   just apply || sleep 5 # wait for CRDs to be created, the initial apply will usually fail
   just apply
 
@@ -58,7 +61,9 @@ setup-cluster: setup-registry
   if [ -z "$(k3d cluster list | grep ftl)" ]; then
   k3d cluster create ftl --api-port 6550 -p "8892:80@loadbalancer" -p "8891:80@loadbalancer" -p "8893:80@loadbalancer"  --agents 2 \
       --registry-use {{registry_full}} \
-      --registry-config '{{mirrors}}'
+      --registry-config '{{mirrors}}'\
+      --k3s-arg '--kubelet-arg=eviction-hard=imagefs.available<1%,nodefs.available<1%@agent:*' \
+      --k3s-arg '--kubelet-arg=eviction-minimum-reclaim=imagefs.available=1%,nodefs.available=1%@agent:*'
   fi
   kubectl config set-context --current --namespace=default
 
@@ -69,8 +74,8 @@ setup-istio-cluster: setup-cluster
       kubectl create namespace istio-system
       helm repo add istio https://istio-release.storage.googleapis.com/charts
       helm repo update
-      helm install istio-base istio/base -n istio-system --wait
-      helm install istiod istio/istiod -n istio-system --wait
+      helm install istio-base istio/base -n istio-system --wait --version 1.23.3
+      helm install istiod istio/istiod -n istio-system --wait --version 1.23.3
   fi
   kubectl label namespace default istio-injection=enabled --overwrite
   kubectl apply -f istio-access-logs.yaml

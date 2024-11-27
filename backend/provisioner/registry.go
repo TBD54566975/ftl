@@ -14,7 +14,7 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
-	"github.com/TBD54566975/ftl/backend/provisioner/scaling/k8sscaling"
+	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -71,14 +71,14 @@ func (reg *ProvisionerRegistry) listBindings() []*ProvisionerBinding {
 	return result
 }
 
-func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig, controller ftlv1connect.ControllerServiceClient) (*ProvisionerRegistry, error) {
+func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig, controller ftlv1connect.ControllerServiceClient, runnerScaling scaling.RunnerScaling) (*ProvisionerRegistry, error) {
 	logger := log.FromContext(ctx)
 	result := &ProvisionerRegistry{}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("error validating provisioner config: %w", err)
 	}
 	for _, plugin := range cfg.Plugins {
-		provisioner, err := provisionerIDToProvisioner(ctx, plugin.ID, controller)
+		provisioner, err := provisionerIDToProvisioner(ctx, plugin.ID, controller, runnerScaling)
 		if err != nil {
 			return nil, err
 		}
@@ -88,17 +88,12 @@ func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig, contr
 	return result, nil
 }
 
-func provisionerIDToProvisioner(ctx context.Context, id string, controller ftlv1connect.ControllerServiceClient) (provisionerconnect.ProvisionerPluginServiceClient, error) {
+func provisionerIDToProvisioner(ctx context.Context, id string, controller ftlv1connect.ControllerServiceClient, scaling scaling.RunnerScaling) (provisionerconnect.ProvisionerPluginServiceClient, error) {
 	switch id {
 	case "controller":
 		return NewControllerProvisioner(controller), nil
 	case "kubernetes":
 		// TODO: move this into a plugin
-		scaling := k8sscaling.NewK8sScaling(false, "http://ftl-controller")
-		err := scaling.Start(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("error starting k8s scaling: %w", err)
-		}
 		return NewRunnerScalingProvisioner(scaling, controller), nil
 	case "noop":
 		return &NoopProvisioner{}, nil

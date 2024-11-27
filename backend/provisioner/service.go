@@ -18,6 +18,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	provproto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -190,7 +191,7 @@ func Start(
 	return nil
 }
 
-func RegistryFromConfigFile(ctx context.Context, file *os.File, controller ftlv1connect.ControllerServiceClient) (*ProvisionerRegistry, error) {
+func RegistryFromConfigFile(ctx context.Context, file *os.File, controller ftlv1connect.ControllerServiceClient, scaling scaling.RunnerScaling) (*ProvisionerRegistry, error) {
 	config := provisionerPluginConfig{}
 	bytes, err := io.ReadAll(bufio.NewReader(file))
 	if err != nil {
@@ -200,7 +201,7 @@ func RegistryFromConfigFile(ctx context.Context, file *os.File, controller ftlv1
 		return nil, fmt.Errorf("error parsing plugin configuration: %w", err)
 	}
 
-	registry, err := registryFromConfig(ctx, &config, controller)
+	registry, err := registryFromConfig(ctx, &config, controller, scaling)
 	if err != nil {
 		return nil, fmt.Errorf("error creating provisioner registry: %w", err)
 	}

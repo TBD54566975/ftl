@@ -29,7 +29,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
-const thisDeploymentName = "ftl-controller"
+const controllerDeploymentName = "ftl-controller"
 const deploymentLabel = "ftl-deployment"
 const configMapName = "ftl-controller-deployment-config"
 const deploymentTemplate = "deploymentTemplate"
@@ -39,21 +39,21 @@ const serviceAccountTemplate = "serviceAccountTemplate"
 var _ scaling.RunnerScaling = &k8sScaling{}
 
 type k8sScaling struct {
-	ctx          context.Context
 	disableIstio bool
 	controller   string
 
-	client           *kubernetes.Clientset
-	myDeploymentName string
-	namespace        string
+	client    *kubernetes.Clientset
+	namespace string
 	// Map of known deployments
 	knownDeployments *xsync.MapOf[string, bool]
-	ftlEndpoint      string
 	istioSecurity    optional.Option[istioclient.Clientset]
 }
 
-func (r k8sScaling) StartDeployment(module string, deploymentKey string, sch *schema.Module) error {
-	ctx := r.ctx
+func NewK8sScaling(disableIstio bool, controllerURL string) scaling.RunnerScaling {
+	return &k8sScaling{disableIstio: disableIstio, controller: controllerURL}
+}
+
+func (r *k8sScaling) StartDeployment(ctx context.Context, module string, deploymentKey string, sch *schema.Module) error {
 	logger := log.FromContext(ctx)
 	logger = logger.Module(module)
 	ctx = log.ContextWithLogger(ctx, logger)
@@ -76,15 +76,13 @@ func (r k8sScaling) StartDeployment(module string, deploymentKey string, sch *sc
 	if deploymentExists {
 		logger.Debugf("Updating deployment %s", deploymentKey)
 		return r.handleExistingDeployment(ctx, deployment)
-	} else {
-		return r.handleNewDeployment(ctx, deploymentKey, sch)
 	}
+	return r.handleNewDeployment(ctx, deploymentKey, sch)
 }
 
-func (r k8sScaling) TerminateDeployment(module string, deploymentKey string) error {
-	logger := log.FromContext(r.ctx)
+func (r *k8sScaling) TerminateDeployment(ctx context.Context, module string, deploymentKey string) error {
+	logger := log.FromContext(ctx)
 	logger = logger.Module(module)
-	ctx := log.ContextWithLogger(r.ctx, logger)
 	logger.Debugf("Handling schema change for %s", deploymentKey)
 	deploymentClient := r.client.AppsV1().Deployments(r.namespace)
 	_, err := deploymentClient.Get(ctx, deploymentKey, v1.GetOptions{})
@@ -116,10 +114,8 @@ func (r k8sScaling) TerminateDeployment(module string, deploymentKey string) err
 	return nil
 }
 
-func (r k8sScaling) Start(ctx context.Context) error {
-
+func (r *k8sScaling) Start(ctx context.Context) error {
 	logger := log.FromContext(ctx).Scope("K8sScaling")
-	ctx = log.ContextWithLogger(ctx, logger)
 	clientset, err := CreateClientSet()
 	if err != nil {
 		return fmt.Errorf("failed to create clientset: %w", err)
@@ -150,7 +146,6 @@ func (r k8sScaling) Start(ctx context.Context) error {
 	}
 
 	logger.Debugf("Using namespace %s", namespace)
-	r.ctx = ctx
 	r.client = clientset
 	r.namespace = namespace
 	r.knownDeployments = xsync.NewMapOf[string, bool]()
@@ -197,16 +192,12 @@ func getKubeConfig() (*rest.Config, error) {
 	return config, nil
 }
 
-func (r k8sScaling) GetEndpointForDeployment(ctx context.Context, module string, deployment string) (optional.Option[url.URL], error) {
+func (r *k8sScaling) GetEndpointForDeployment(ctx context.Context, module string, deployment string) (optional.Option[url.URL], error) {
 	// TODO: hard coded port? It's hard to deal with as we might not have the lease
 	// I think requiring this port is fine for now
 	return optional.Some(url.URL{Scheme: "http",
 		Host: fmt.Sprintf("%s:8893", deployment),
 	}), nil
-}
-
-func NewK8sScaling(disableIstio bool, controllerURL string) scaling.RunnerScaling {
-	return &k8sScaling{disableIstio: disableIstio, controller: controllerURL}
 }
 
 func GetCurrentNamespace() (string, error) {
@@ -262,9 +253,9 @@ func (r *k8sScaling) updateDeployment(ctx context.Context, name string, mod func
 
 func (r *k8sScaling) thisContainerImage(ctx context.Context) (string, error) {
 	deploymentClient := r.client.AppsV1().Deployments(r.namespace)
-	thisDeployment, err := deploymentClient.Get(ctx, thisDeploymentName, v1.GetOptions{})
+	thisDeployment, err := deploymentClient.Get(ctx, controllerDeploymentName, v1.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("failed to get deployment %s: %w", thisDeploymentName, err)
+		return "", fmt.Errorf("failed to get deployment %s: %w", controllerDeploymentName, err)
 	}
 	return thisDeployment.Spec.Template.Spec.Containers[0].Image, nil
 
@@ -278,9 +269,9 @@ func (r *k8sScaling) handleNewDeployment(ctx context.Context, name string, sch *
 		return fmt.Errorf("failed to get configMap %s: %w", configMapName, err)
 	}
 	deploymentClient := r.client.AppsV1().Deployments(r.namespace)
-	thisDeployment, err := deploymentClient.Get(ctx, thisDeploymentName, v1.GetOptions{})
+	thisDeployment, err := deploymentClient.Get(ctx, controllerDeploymentName, v1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to get deployment %s: %w", thisDeploymentName, err)
+		return fmt.Errorf("failed to get deployment %s: %w", controllerDeploymentName, err)
 	}
 
 	// First create a Service, this will be the root owner of all the other resources
@@ -299,7 +290,7 @@ func (r *k8sScaling) handleNewDeployment(ctx context.Context, name string, sch *
 		service.Name = name
 		service.Labels = addLabel(service.Labels, "app", name)
 		service.Labels = addLabel(service.Labels, deploymentLabel, name)
-		service.OwnerReferences = []v1.OwnerReference{{APIVersion: "apps/v1", Kind: "deployment", Name: thisDeploymentName, UID: thisDeployment.UID}}
+		service.OwnerReferences = []v1.OwnerReference{{APIVersion: "apps/v1", Kind: "deployment", Name: controllerDeploymentName, UID: thisDeployment.UID}}
 		service.Spec.Selector = map[string]string{"app": name}
 		service, err = servicesClient.Create(ctx, service, v1.CreateOptions{})
 		if err != nil {
@@ -402,6 +393,7 @@ func (r *k8sScaling) handleNewDeployment(ctx context.Context, name string, sch *
 		return err
 	}
 	for _, change := range changes {
+
 		change(deployment)
 	}
 	deployment.Labels = addLabel(deployment.Labels, deploymentLabel, name)
@@ -529,30 +521,7 @@ func (r *k8sScaling) updateEnvVar(deployment *kubeapps.Deployment, envVerName st
 	return changes
 }
 
-func (r *k8sScaling) deleteMissingDeployments(ctx context.Context) {
-	logger := log.FromContext(ctx)
-	serviceClient := r.client.CoreV1().Services(r.namespace)
-
-	list, err := serviceClient.List(ctx, v1.ListOptions{LabelSelector: deploymentLabel})
-	if err != nil {
-		logger.Errorf(err, "Failed to list services")
-		return
-	}
-
-	for _, service := range list.Items {
-		if _, ok := r.knownDeployments.Load(service.Name); !ok {
-			// With owner references the deployments should be deleted automatically
-			// However this is in transition so delete both
-			logger.Debugf("Deleting service %s as it is not a known module", service.Name)
-			err := serviceClient.Delete(ctx, service.Name, v1.DeleteOptions{})
-			if err != nil {
-				logger.Errorf(err, "Failed to delete service %s", service.Name)
-			}
-		}
-	}
-}
-
-func (r *k8sScaling) syncIstioPolicy(ctx context.Context, sec istioclient.Clientset, name string, service *kubecore.Service, thisDeployment *kubeapps.Deployment) error {
+func (r *k8sScaling) syncIstioPolicy(ctx context.Context, sec istioclient.Clientset, name string, service *kubecore.Service, controllerDeployment *kubeapps.Deployment) error {
 	logger := log.FromContext(ctx)
 	logger.Debugf("Creating new istio policy for %s", name)
 	var update func(policy *istiosec.AuthorizationPolicy) error
@@ -591,7 +560,7 @@ func (r *k8sScaling) syncIstioPolicy(ctx context.Context, sec istioclient.Client
 			From: []*istiosecmodel.Rule_From{
 				{
 					Source: &istiosecmodel.Source{
-						Principals: []string{"cluster.local/ns/" + r.namespace + "/sa/" + thisDeployment.Spec.Template.Spec.ServiceAccountName},
+						Principals: []string{"cluster.local/ns/" + r.namespace + "/sa/" + controllerDeployment.Spec.Template.Spec.ServiceAccountName},
 					},
 				},
 			},

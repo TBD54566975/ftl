@@ -50,7 +50,7 @@ type localScaling struct {
 	devModeEndpoints        map[string]*devModeRunner
 }
 
-func (l *localScaling) StartDeployment(module string, deployment string, sch *schema.Module) error {
+func (l *localScaling) StartDeployment(ctx context.Context, module string, deployment string, sch *schema.Module) error {
 	if sch.Runtime == nil {
 		return nil
 	}
@@ -83,7 +83,7 @@ func (l *localScaling) setReplicas(module string, deployment string, language st
 	return l.reconcileRunners(ctx, deploymentRunners)
 }
 
-func (l *localScaling) TerminateDeployment(module string, deployment string) error {
+func (l *localScaling) TerminateDeployment(ctx context.Context, module string, deployment string) error {
 	return l.setReplicas(module, deployment, "", 0)
 }
 
