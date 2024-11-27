@@ -367,29 +367,6 @@ func (*DirectiveEncoding) MustAnnotate() []ast.Node {
 	return []ast.Node{&ast.FuncDecl{}}
 }
 
-// DirectiveFromOffset can be used to enable custom encoding behavior.
-type DirectiveFromOffset struct {
-	Pos token.Pos
-
-	Offet schema.FromOffset `parser:"'from' @('beginning'|'latest')"`
-}
-
-var _ Directive = (*DirectiveFromOffset)(nil)
-
-func (*DirectiveFromOffset) directive() {}
-
-func (d *DirectiveFromOffset) String() string {
-	return "from " + d.Offet.String()
-}
-func (*DirectiveFromOffset) GetTypeName() string { return "from" }
-func (d *DirectiveFromOffset) SetPosition(pos token.Pos) {
-	d.Pos = pos
-}
-func (d *DirectiveFromOffset) GetPosition() token.Pos {
-	return d.Pos
-}
-func (*DirectiveFromOffset) MustAnnotate() []ast.Node { return []ast.Node{&ast.GenDecl{}} }
-
 var DirectiveParser = participle.MustBuild[directiveWrapper](
 	participle.Lexer(schema.Lexer),
 	participle.Elide("Whitespace"),
@@ -397,7 +374,7 @@ var DirectiveParser = participle.MustBuild[directiveWrapper](
 	participle.UseLookahead(2),
 	participle.Union[Directive](&DirectiveVerb{}, &DirectiveData{}, &DirectiveEnum{}, &DirectiveTypeAlias{},
 		&DirectiveIngress{}, &DirectiveCronJob{}, &DirectiveRetry{}, &DirectiveSubscriber{}, &DirectiveExport{},
-		&DirectiveTypeMap{}, &DirectiveEncoding{}, &DirectiveFromOffset{}),
+		&DirectiveTypeMap{}, &DirectiveEncoding{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 
