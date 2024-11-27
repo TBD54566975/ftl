@@ -30,9 +30,9 @@ test('submit cron form using ⌘+⏎ shortcut', async ({ page }) => {
 
   await page.locator('input#request-path').focus()
 
-  const isMac = process.platform === 'darwin';
-  const commandKey = isMac ? 'Meta' : 'Control';
-  await page.keyboard.press(`${commandKey}+Enter`);
+  const isMac = process.platform === 'darwin'
+  const commandKey = isMac ? 'Meta' : 'Control'
+  await page.keyboard.press(`${commandKey}+Enter`)
 
   const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
   await expect(responseEditor).toBeVisible()
@@ -46,9 +46,9 @@ test('submit cron form using ⌘+⏎ shortcut', async ({ page }) => {
 test('submit cron form using ⌘+⏎ shortcut without focusing first', async ({ page }) => {
   await navigateToDecl(page, 'cron', 'thirtySeconds')
 
-  const isMac = process.platform === 'darwin';
-  const commandKey = isMac ? 'Meta' : 'Control';
-  await page.keyboard.press(`${commandKey}+Enter`);
+  const isMac = process.platform === 'darwin'
+  const commandKey = isMac ? 'Meta' : 'Control'
+  await page.keyboard.press(`${commandKey}+Enter`)
 
   const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
   await expect(responseEditor).toBeVisible()
