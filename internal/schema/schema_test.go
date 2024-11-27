@@ -436,12 +436,11 @@ func TestParsing(t *testing.T) {
 						+retry 1m5s 1h catch catchesAny
 
 					verb consumesB1(test.eventB) Unit
-						+subscribe test.topicB from=beginning
+						+subscribe test.topicB from=beginning deadletter
 						+retry 1m5s 1h catch catchesB
 
 					verb consumesBothASubs(test.eventA) Unit
-						+subscribe test.topicA from=latest
-						+subscribe test.topicA from=beginning
+						+subscribe test.topicA from=latest deadletter
 						+retry 1m5s 1h catch test.catchesA
 
 					verb catchesA(builtin.CatchRequest<test.eventA>) Unit
@@ -532,7 +531,14 @@ func TestParsing(t *testing.T) {
 								Unit: true,
 							},
 							Metadata: []Metadata{
-								&MetadataSubscriber{},
+								&MetadataSubscriber{
+									Topic: &Ref{
+										Module: "test",
+										Name:   "topicA",
+									},
+									FromOffset: FromOffsetBeginning,
+									DeadLetter: false,
+								},
 								&MetadataRetry{
 									MinBackoff: "1m5s",
 									MaxBackoff: "1h",
@@ -553,7 +559,13 @@ func TestParsing(t *testing.T) {
 								Unit: true,
 							},
 							Metadata: []Metadata{
-								&MetadataSubscriber{},
+								&MetadataSubscriber{
+									Topic: &Ref{
+										Module: "test",
+										Name:   "topicB",
+									},
+									DeadLetter: true,
+								},
 								&MetadataRetry{
 									MinBackoff: "1m5s",
 									MaxBackoff: "1h",
@@ -574,8 +586,13 @@ func TestParsing(t *testing.T) {
 								Unit: true,
 							},
 							Metadata: []Metadata{
-								&MetadataSubscriber{},
-								&MetadataSubscriber{},
+								&MetadataSubscriber{
+									Topic: &Ref{
+										Module: "test",
+										Name:   "topicA",
+									},
+									FromOffset: FromOffsetLatest,
+									DeadLetter: true},
 								&MetadataRetry{
 									MinBackoff: "1m5s",
 									MaxBackoff: "1h",

@@ -86,6 +86,9 @@ func (r *Ref) Equal(other Type) bool {
 }
 
 func (r *Ref) schemaChildren() []Node {
+	if r.TypeParameters == nil {
+		return nil
+	}
 	out := make([]Node, 0, len(r.TypeParameters))
 	for _, t := range r.TypeParameters {
 		out = append(out, t)

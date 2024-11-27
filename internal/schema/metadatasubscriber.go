@@ -61,9 +61,14 @@ type MetadataSubscriber struct {
 
 var _ Metadata = (*MetadataSubscriber)(nil)
 
-func (*MetadataSubscriber) schemaMetadata()          {}
-func (m *MetadataSubscriber) schemaChildren() []Node { return []Node{m.Topic} }
-func (m *MetadataSubscriber) Position() Position     { return m.Pos }
+func (*MetadataSubscriber) schemaMetadata() {}
+func (m *MetadataSubscriber) schemaChildren() []Node {
+	if m.Topic == nil {
+		return nil
+	}
+	return []Node{m.Topic}
+}
+func (m *MetadataSubscriber) Position() Position { return m.Pos }
 func (m *MetadataSubscriber) String() string {
 	components := []string{
 		"+subscribe",
