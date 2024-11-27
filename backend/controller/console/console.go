@@ -121,7 +121,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 			case *schema.Config:
 				configs = append(configs, configFromDecl(decl, deployment.Module, nilMap))
 
-			case *schema.Database, *schema.Enum, *schema.TypeAlias, *schema.Topic, *schema.Subscription:
+			case *schema.Database, *schema.Enum, *schema.TypeAlias, *schema.Topic:
 			}
 		}
 
@@ -179,7 +179,6 @@ func moduleFromDecls(decls []schema.Decl, sch *schema.Schema, module string, ref
 	var topics []*pbconsole.Topic
 	var typealiases []*pbconsole.TypeAlias
 	var secrets []*pbconsole.Secret
-	var subscriptions []*pbconsole.Subscription
 	var verbs []*pbconsole.Verb
 
 	for _, d := range decls {
@@ -202,9 +201,6 @@ func moduleFromDecls(decls []schema.Decl, sch *schema.Schema, module string, ref
 		case *schema.Secret:
 			secrets = append(secrets, secretFromDecl(decl, module, refMap))
 
-		case *schema.Subscription:
-			subscriptions = append(subscriptions, subscriptionFromDecl(decl, module, refMap))
-
 		case *schema.TypeAlias:
 			typealiases = append(typealiases, typealiasFromDecl(decl, module, refMap))
 
@@ -218,15 +214,14 @@ func moduleFromDecls(decls []schema.Decl, sch *schema.Schema, module string, ref
 	}
 
 	return &pbconsole.Module{
-		Configs:       configs,
-		Data:          data,
-		Databases:     databases,
-		Enums:         enums,
-		Topics:        topics,
-		Typealiases:   typealiases,
-		Secrets:       secrets,
-		Subscriptions: subscriptions,
-		Verbs:         verbs,
+		Configs:     configs,
+		Data:        data,
+		Databases:   databases,
+		Enums:       enums,
+		Topics:      topics,
+		Typealiases: typealiases,
+		Secrets:     secrets,
+		Verbs:       verbs,
 	}, nil
 }
 
@@ -285,14 +280,6 @@ func secretFromDecl(decl *schema.Secret, module string, refMap map[schema.RefKey
 		//nolint:forcetypeassert
 		Secret:     decl.ToProto().(*schemapb.Secret),
 		References: getReferencesFromMap(refMap, module, decl.Name),
-	}
-}
-
-func subscriptionFromDecl(decl *schema.Subscription, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Subscription {
-	return &pbconsole.Subscription{
-		//nolint:forcetypeassert
-		Subscription: decl.ToProto().(*schemapb.Subscription),
-		References:   getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 

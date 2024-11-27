@@ -78,7 +78,6 @@ message Decl {
     Database database = 3;
     Enum enum = 4;
     Secret secret = 7;
-    Subscription subscription = 10;
     Topic topic = 9;
     TypeAlias type_alias = 5;
     Verb verb = 2;
@@ -111,6 +110,11 @@ message Field {
 
 message Float {
   optional Position pos = 1;
+}
+
+enum FromOffset {
+  FROM_OFFSET_BEGINNING = 0;
+  FROM_OFFSET_LATEST = 1;
 }
 
 message IngressPathComponent {
@@ -227,7 +231,9 @@ message MetadataSecrets {
 
 message MetadataSubscriber {
   optional Position pos = 1;
-  string name = 2;
+  Ref topic = 2;
+  FromOffset from_offset = 3;
+  bool dead_letter = 4;
 }
 
 message MetadataTypeMap {
@@ -291,20 +297,6 @@ message String {
 message StringValue {
   optional Position pos = 1;
   string value = 2;
-}
-
-message Subscription {
-  optional Position pos = 1;
-  optional SubscriptionRuntime runtime = 31634;
-  repeated string comments = 2;
-  string name = 3;
-  Ref topic = 4;
-}
-
-message SubscriptionRuntime {
-  repeated string kafka_brokers = 1;
-  string topic_id = 2;
-  string consumer_group_id = 3;
 }
 
 message Time {
@@ -385,6 +377,7 @@ message Verb {
 }
 
 message VerbRuntime {
-  google.protobuf.Timestamp create_time = 1;
-  google.protobuf.Timestamp start_time = 2;
+  optional google.protobuf.Timestamp create_time = 1;
+  optional google.protobuf.Timestamp start_time = 2;
+  repeated string kafka_brokers = 3;
 }

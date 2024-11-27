@@ -252,6 +252,42 @@ func (d *DirectiveRetry) Catch() optional.Option[schema.Ref] {
 	})
 }
 
+// DirectiveSubscriber is used to subscribe a sink to a subscription
+type DirectiveSubscriber struct {
+	Pos token.Pos
+
+	TopicModule string             `parser:"'subscribe' (@Ident '.')?"`
+	TopicName   string             `parser:"@Ident"`
+	FromOffset  *schema.FromOffset `parser:"'from' '='@('beginning'|'latest')"`
+	DeadLetter  bool               `parser:"@'deadletter'?"`
+}
+
+func (*DirectiveSubscriber) directive() {}
+
+func (d *DirectiveSubscriber) String() string {
+	components := []string{"subscribe"}
+	if d.TopicModule != "" {
+		components = append(components, d.TopicModule+"."+d.TopicName)
+	} else {
+		components = append(components, d.TopicName)
+	}
+	components = append(components, "from="+d.FromOffset.String())
+	if d.DeadLetter {
+		components = append(components, "deadletter")
+	}
+	return strings.Join(components, " ")
+}
+func (*DirectiveSubscriber) GetTypeName() string { return "subscribe" }
+func (d *DirectiveSubscriber) SetPosition(pos token.Pos) {
+	d.Pos = pos
+}
+func (d *DirectiveSubscriber) GetPosition() token.Pos {
+	return d.Pos
+}
+func (*DirectiveSubscriber) MustAnnotate() []ast.Node {
+	return []ast.Node{&ast.FuncDecl{}}
+}
+
 // DirectiveExport is used on declarations that don't include export in other directives.
 type DirectiveExport struct {
 	Pos token.Pos
@@ -311,7 +347,14 @@ type DirectiveEncoding struct {
 func (*DirectiveEncoding) directive() {}
 
 func (d *DirectiveEncoding) String() string {
-	return "encoding"
+	components := []string{"encoding"}
+	if d.Type != "" {
+		components = append(components, d.Type)
+	}
+	if d.Lenient {
+		components = append(components, "lenient")
+	}
+	return strings.Join(components, " ")
 }
 func (*DirectiveEncoding) GetTypeName() string { return "encoding" }
 func (d *DirectiveEncoding) SetPosition(pos token.Pos) {
@@ -324,14 +367,37 @@ func (*DirectiveEncoding) MustAnnotate() []ast.Node {
 	return []ast.Node{&ast.FuncDecl{}}
 }
 
+// DirectiveFromOffset can be used to enable custom encoding behavior.
+type DirectiveFromOffset struct {
+	Pos token.Pos
+
+	Offet schema.FromOffset `parser:"'from' @('beginning'|'latest')"`
+}
+
+var _ Directive = (*DirectiveFromOffset)(nil)
+
+func (*DirectiveFromOffset) directive() {}
+
+func (d *DirectiveFromOffset) String() string {
+	return "from " + d.Offet.String()
+}
+func (*DirectiveFromOffset) GetTypeName() string { return "from" }
+func (d *DirectiveFromOffset) SetPosition(pos token.Pos) {
+	d.Pos = pos
+}
+func (d *DirectiveFromOffset) GetPosition() token.Pos {
+	return d.Pos
+}
+func (*DirectiveFromOffset) MustAnnotate() []ast.Node { return []ast.Node{&ast.GenDecl{}} }
+
 var DirectiveParser = participle.MustBuild[directiveWrapper](
 	participle.Lexer(schema.Lexer),
 	participle.Elide("Whitespace"),
 	participle.Unquote(),
 	participle.UseLookahead(2),
 	participle.Union[Directive](&DirectiveVerb{}, &DirectiveData{}, &DirectiveEnum{}, &DirectiveTypeAlias{},
-		&DirectiveIngress{}, &DirectiveCronJob{}, &DirectiveRetry{}, &DirectiveExport{},
-		&DirectiveTypeMap{}, &DirectiveEncoding{}),
+		&DirectiveIngress{}, &DirectiveCronJob{}, &DirectiveRetry{}, &DirectiveSubscriber{}, &DirectiveExport{},
+		&DirectiveTypeMap{}, &DirectiveEncoding{}, &DirectiveFromOffset{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 

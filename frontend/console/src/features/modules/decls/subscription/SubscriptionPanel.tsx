@@ -1,38 +1,37 @@
-import { ResizablePanels } from '../../../../components/ResizablePanels'
-import type { Subscription } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
-import { declIcon } from '../../module.utils'
-import { Schema } from '../../schema/Schema'
-import { PanelHeader } from '../PanelHeader'
-import { RightPanelHeader } from '../RightPanelHeader'
-import { subscriptionPanels } from './SubscriptionRightPanels'
+// import { ResizablePanels } from '../../../../components/ResizablePanels'
+// import { declIcon } from '../../module.utils'
+// import { Schema } from '../../schema/Schema'
+// import { PanelHeader } from '../PanelHeader'
+// import { RightPanelHeader } from '../RightPanelHeader'
+// import { subscriptionPanels } from './SubscriptionRightPanels'
 
-export const SubscriptionPanel = ({ value, schema, moduleName, declName }: { value: Subscription; schema: string; moduleName: string; declName: string }) => {
-  if (!value || !schema) {
-    return
-  }
+// export const SubscriptionPanel = ({ value, schema, moduleName, declName }: { value: Subscription; schema: string; moduleName: string; declName: string }) => {
+//   if (!value || !schema) {
+//     return
+//   }
 
-  const decl = value.subscription
-  if (!decl) {
-    return
-  }
+//   const decl = value.subscription
+//   if (!decl) {
+//     return
+//   }
 
-  return (
-    <div className='h-full'>
-      <ResizablePanels
-        mainContent={
-          <div className='p-4'>
-            <div className=''>
-              <PanelHeader title='Subscription' declRef={`${moduleName}.${declName}`} exported={false} comments={decl.comments} />
-              <div className='-mx-3.5'>
-                <Schema schema={schema} />
-              </div>
-            </div>
-          </div>
-        }
-        rightPanelHeader={<RightPanelHeader Icon={declIcon('subscription', decl)} title={declName} />}
-        rightPanelPanels={subscriptionPanels(value, schema)}
-        storageKeyPrefix='subscriptionPanel'
-      />
-    </div>
-  )
-}
+//   return (
+//     <div className='h-full'>
+//       <ResizablePanels
+//         mainContent={
+//           <div className='p-4'>
+//             <div className=''>
+//               <PanelHeader title='Subscription' declRef={`${moduleName}.${declName}`} exported={false} comments={decl.comments} />
+//               <div className='-mx-3.5'>
+//                 <Schema schema={schema} />
+//               </div>
+//             </div>
+//           </div>
+//         }
+//         rightPanelHeader={<RightPanelHeader Icon={declIcon('subscription', decl)} title={declName} />}
+//         rightPanelPanels={subscriptionPanels(value, schema)}
+//         storageKeyPrefix='subscriptionPanel'
+//       />
+//     </div>
+//   )
+// }

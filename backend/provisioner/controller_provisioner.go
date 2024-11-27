@@ -68,16 +68,14 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 					if r.Subscription == nil || r.Subscription.Output == nil {
 						return nil, fmt.Errorf("subscription resource has not been provisioned")
 					}
-					decl, ok := findDecl(mod.Module.Schema, func(t *schemapb.Decl_Subscription) bool {
-						return t.Subscription.Name == dep.ResourceId
+					decl, ok := findDecl(mod.Module.Schema, func(t *schemapb.Decl_Verb) bool {
+						return t.Verb.Name == dep.ResourceId
 					})
 					if !ok {
 						return nil, fmt.Errorf("failed to find subscription declaration: %s", dep.ResourceId)
 					}
-					decl.Subscription.Runtime = &schemapb.SubscriptionRuntime{
-						KafkaBrokers:    r.Subscription.Output.KafkaBrokers,
-						TopicId:         r.Subscription.Output.TopicId,
-						ConsumerGroupId: r.Subscription.Output.ConsumerGroupId,
+					decl.Verb.Runtime = &schemapb.VerbRuntime{
+						KafkaBrokers: r.Subscription.Output.KafkaBrokers,
 					}
 				default:
 				}

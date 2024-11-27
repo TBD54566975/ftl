@@ -172,11 +172,6 @@ message Secret {
   repeated schema.Ref references = 2;
 }
 
-message Subscription {
-  schema.Subscription subscription = 1;
-  repeated schema.Ref references = 2;
-}
-
 message Verb {
   schema.Verb verb = 1;
   string schema = 2;
@@ -197,7 +192,6 @@ message Module {
   repeated Enum enums = 10;
   repeated Topic topics = 11;
   repeated TypeAlias typealiases = 12;
-  repeated Subscription subscriptions = 13;
 }
 
 message TopologyGroup {

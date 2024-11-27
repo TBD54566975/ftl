@@ -29,9 +29,8 @@ func OrderPizza(ctx context.Context, req OrderPizzaRequest, topic NewOrderTopic)
 	return OrderPizzaResponse{ID: randomID}, nil
 }
 
-type DeliverPizzaSub = ftl.SubscriptionHandle[PizzaReadyTopic, DeliverPizzaClient, Pizza]
-
 //ftl:verb
+//ftl:subscribe pubsub.pizzaReadyTopic from=beginning
 func DeliverPizza(ctx context.Context, pizza Pizza) error {
 	ftl.LoggerFromContext(ctx).Infof("Delivering pizza: %v", pizza)
 	return nil

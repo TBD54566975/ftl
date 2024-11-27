@@ -15,7 +15,7 @@ import {
   SquareLock02Icon,
 } from 'hugeicons-react'
 import type { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import type { Config, Data, Database, Decl, Enum, Secret, Subscription, Topic, TypeAlias, Verb } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import type { Config, Data, Database, Decl, Enum, Secret, Topic, TypeAlias, Verb } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import type { MetadataCalls, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { verbCalls } from './decls/verb/verb.utils'
 
@@ -73,7 +73,7 @@ export const deploymentKeyModuleName = (deploymentKey: string) => {
   return null
 }
 
-export type DeclSumType = Config | Data | Database | Enum | Topic | TypeAlias | Secret | Subscription | Verb
+export type DeclSumType = Config | Data | Database | Enum | Topic | TypeAlias | Secret | Verb
 
 export interface DeclInfo {
   declType: string
@@ -100,7 +100,6 @@ export const moduleTreeFromStream = (modules: Module[]) => {
           ...module.secrets.map((d) => ({ declType: 'secret', value: d.secret })),
           ...module.databases.map((d) => ({ declType: 'database', value: d.database })),
           ...module.topics.map((d) => ({ declType: 'topic', value: d.topic })),
-          ...module.subscriptions.map((d) => ({ declType: 'subscription', value: d.subscription })),
           ...module.typealiases.map((d) => ({ declType: 'typealias', value: d.typealias })),
           ...module.enums.map((d) => ({ declType: 'enum', value: d.enum })),
           ...module.data.map((d) => ({ declType: 'data', value: d.data })),
@@ -135,8 +134,6 @@ export const declFromModules = (moduleName: string, declCase: string, declName: 
       return module.enums.find((d) => d.enum?.name === declName)
     case 'secret':
       return module.secrets.find((d) => d.secret?.name === declName)
-    case 'subscription':
-      return module.subscriptions.find((d) => d.subscription?.name === declName)
     case 'topic':
       return module.topics.find((d) => d.topic?.name === declName)
     case 'typealias':

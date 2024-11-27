@@ -23,6 +23,26 @@ proto3.util.setEnumType(AliasKind, "xyz.block.ftl.v1.schema.AliasKind", [
 ]);
 
 /**
+ * @generated from enum xyz.block.ftl.v1.schema.FromOffset
+ */
+export enum FromOffset {
+  /**
+   * @generated from enum value: FROM_OFFSET_BEGINNING = 0;
+   */
+  BEGINNING = 0,
+
+  /**
+   * @generated from enum value: FROM_OFFSET_LATEST = 1;
+   */
+  LATEST = 1,
+}
+// Retrieve enum metadata with: proto3.getEnumType(FromOffset)
+proto3.util.setEnumType(FromOffset, "xyz.block.ftl.v1.schema.FromOffset", [
+  { no: 0, name: "FROM_OFFSET_BEGINNING" },
+  { no: 1, name: "FROM_OFFSET_LATEST" },
+]);
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Any
  */
 export class Any extends Message<Any> {
@@ -539,12 +559,6 @@ export class Decl extends Message<Decl> {
     case: "secret";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.Subscription subscription = 10;
-     */
-    value: Subscription;
-    case: "subscription";
-  } | {
-    /**
      * @generated from field: xyz.block.ftl.v1.schema.Topic topic = 9;
      */
     value: Topic;
@@ -576,7 +590,6 @@ export class Decl extends Message<Decl> {
     { no: 3, name: "database", kind: "message", T: Database, oneof: "value" },
     { no: 4, name: "enum", kind: "message", T: Enum, oneof: "value" },
     { no: 7, name: "secret", kind: "message", T: Secret, oneof: "value" },
-    { no: 10, name: "subscription", kind: "message", T: Subscription, oneof: "value" },
     { no: 9, name: "topic", kind: "message", T: Topic, oneof: "value" },
     { no: 5, name: "type_alias", kind: "message", T: TypeAlias, oneof: "value" },
     { no: 2, name: "verb", kind: "message", T: Verb, oneof: "value" },
@@ -1736,9 +1749,19 @@ export class MetadataSubscriber extends Message<MetadataSubscriber> {
   pos?: Position;
 
   /**
-   * @generated from field: string name = 2;
+   * @generated from field: xyz.block.ftl.v1.schema.Ref topic = 2;
    */
-  name = "";
+  topic?: Ref;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.FromOffset from_offset = 3;
+   */
+  fromOffset = FromOffset.BEGINNING;
+
+  /**
+   * @generated from field: bool dead_letter = 4;
+   */
+  deadLetter = false;
 
   constructor(data?: PartialMessage<MetadataSubscriber>) {
     super();
@@ -1749,7 +1772,9 @@ export class MetadataSubscriber extends Message<MetadataSubscriber> {
   static readonly typeName = "xyz.block.ftl.v1.schema.MetadataSubscriber";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "topic", kind: "message", T: Ref },
+    { no: 3, name: "from_offset", kind: "enum", T: proto3.getEnumType(FromOffset) },
+    { no: 4, name: "dead_letter", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataSubscriber {
@@ -2274,116 +2299,6 @@ export class StringValue extends Message<StringValue> {
 
   static equals(a: StringValue | PlainMessage<StringValue> | undefined, b: StringValue | PlainMessage<StringValue> | undefined): boolean {
     return proto3.util.equals(StringValue, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.schema.Subscription
- */
-export class Subscription extends Message<Subscription> {
-  /**
-   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
-   */
-  pos?: Position;
-
-  /**
-   * @generated from field: optional xyz.block.ftl.v1.schema.SubscriptionRuntime runtime = 31634;
-   */
-  runtime?: SubscriptionRuntime;
-
-  /**
-   * @generated from field: repeated string comments = 2;
-   */
-  comments: string[] = [];
-
-  /**
-   * @generated from field: string name = 3;
-   */
-  name = "";
-
-  /**
-   * @generated from field: xyz.block.ftl.v1.schema.Ref topic = 4;
-   */
-  topic?: Ref;
-
-  constructor(data?: PartialMessage<Subscription>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.schema.Subscription";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
-    { no: 31634, name: "runtime", kind: "message", T: SubscriptionRuntime, opt: true },
-    { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "topic", kind: "message", T: Ref },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subscription {
-    return new Subscription().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Subscription {
-    return new Subscription().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Subscription {
-    return new Subscription().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Subscription | PlainMessage<Subscription> | undefined, b: Subscription | PlainMessage<Subscription> | undefined): boolean {
-    return proto3.util.equals(Subscription, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.schema.SubscriptionRuntime
- */
-export class SubscriptionRuntime extends Message<SubscriptionRuntime> {
-  /**
-   * @generated from field: repeated string kafka_brokers = 1;
-   */
-  kafkaBrokers: string[] = [];
-
-  /**
-   * @generated from field: string topic_id = 2;
-   */
-  topicId = "";
-
-  /**
-   * @generated from field: string consumer_group_id = 3;
-   */
-  consumerGroupId = "";
-
-  constructor(data?: PartialMessage<SubscriptionRuntime>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.schema.SubscriptionRuntime";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "kafka_brokers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 2, name: "topic_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "consumer_group_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubscriptionRuntime {
-    return new SubscriptionRuntime().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SubscriptionRuntime {
-    return new SubscriptionRuntime().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SubscriptionRuntime {
-    return new SubscriptionRuntime().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: SubscriptionRuntime | PlainMessage<SubscriptionRuntime> | undefined, b: SubscriptionRuntime | PlainMessage<SubscriptionRuntime> | undefined): boolean {
-    return proto3.util.equals(SubscriptionRuntime, a, b);
   }
 }
 
@@ -2985,14 +2900,19 @@ export class Verb extends Message<Verb> {
  */
 export class VerbRuntime extends Message<VerbRuntime> {
   /**
-   * @generated from field: google.protobuf.Timestamp create_time = 1;
+   * @generated from field: optional google.protobuf.Timestamp create_time = 1;
    */
   createTime?: Timestamp;
 
   /**
-   * @generated from field: google.protobuf.Timestamp start_time = 2;
+   * @generated from field: optional google.protobuf.Timestamp start_time = 2;
    */
   startTime?: Timestamp;
+
+  /**
+   * @generated from field: repeated string kafka_brokers = 3;
+   */
+  kafkaBrokers: string[] = [];
 
   constructor(data?: PartialMessage<VerbRuntime>) {
     super();
@@ -3002,8 +2922,9 @@ export class VerbRuntime extends Message<VerbRuntime> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.schema.VerbRuntime";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "create_time", kind: "message", T: Timestamp },
-    { no: 2, name: "start_time", kind: "message", T: Timestamp },
+    { no: 1, name: "create_time", kind: "message", T: Timestamp, opt: true },
+    { no: 2, name: "start_time", kind: "message", T: Timestamp, opt: true },
+    { no: 3, name: "kafka_brokers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerbRuntime {

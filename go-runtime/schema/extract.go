@@ -24,7 +24,6 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/metadata"
 	"github.com/TBD54566975/ftl/go-runtime/schema/resourceconfig"
 	"github.com/TBD54566975/ftl/go-runtime/schema/secret"
-	"github.com/TBD54566975/ftl/go-runtime/schema/subscription"
 	"github.com/TBD54566975/ftl/go-runtime/schema/topic"
 	"github.com/TBD54566975/ftl/go-runtime/schema/transitive"
 	"github.com/TBD54566975/ftl/go-runtime/schema/typealias"
@@ -71,7 +70,6 @@ var extractors = [][]*analysis.Analyzer{
 		// must run after valueenumvariant.Extractor and typeenumvariant.Extractor;
 		// visits a node and aggregates its enum variants if present
 		enum.Extractor,
-		subscription.Extractor,
 		verb.Extractor,
 	},
 	{
@@ -159,7 +157,6 @@ type combinedData struct {
 	refResults             map[schema.RefKey]refResult
 	extractedDecls         map[schema.Decl]types.Object
 	externalTypeAliases    sets.Set[*schema.TypeAlias]
-	sinksToSubscriptions   map[string]*schema.Subscription
 	// for detecting duplicates
 	typeUniqueness   map[string]tuple.Pair[types.Object, schema.Position]
 	globalUniqueness map[string]tuple.Pair[types.Object, schema.Position]
@@ -170,7 +167,6 @@ func newCombinedData(diagnostics []analysis.SimpleDiagnostic) *combinedData {
 		errs:                   diagnosticsToSchemaErrors(diagnostics),
 		nativeNames:            make(NativeNames),
 		functionCalls:          make(map[schema.Position]finalize.FunctionCall),
-		sinksToSubscriptions:   make(map[string]*schema.Subscription),
 		verbs:                  make(map[types.Object]*schema.Verb),
 		verbResourceParamOrder: make(map[*schema.Verb][]common.VerbResourceParam),
 		refResults:             make(map[schema.RefKey]refResult),
@@ -194,7 +190,6 @@ func (cd *combinedData) update(fr finalize.Result) {
 	maps.Copy(cd.nativeNames, fr.NativeNames)
 	maps.Copy(cd.functionCalls, fr.FunctionCalls)
 	maps.Copy(cd.verbResourceParamOrder, fr.VerbResourceParamOrder)
-	maps.Copy(cd.sinksToSubscriptions, fr.SinksToSubscriptions)
 }
 
 func (cd *combinedData) toResult() Result {
@@ -310,9 +305,7 @@ func (cd *combinedData) propagateTypeErrors() {
 func dependenciesBeforeIndex(idx int) []*analysis.Analyzer {
 	var deps []*analysis.Analyzer
 	for i := range idx {
-		for _, extractor := range extractors[i] {
-			deps = append(deps, extractor)
-		}
+		deps = append(deps, extractors[i]...)
 	}
 	return deps
 }
@@ -355,15 +348,6 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 				cd.externalTypeAliases.Add(d)
 				cd.nativeNames[d] = common.GetNativeName(obj)
 			}
-		case *schema.Verb:
-			cd.verbs[obj] = d
-			if sub, ok := cd.sinksToSubscriptions[d.Name]; ok {
-				d.AddSubscription(&schema.MetadataSubscriber{
-					Pos:  sub.Position(),
-					Name: sub.Name,
-				})
-			}
-		case *schema.Subscription:
 
 		default:
 		}
@@ -406,7 +390,7 @@ func updateTransitiveVisibility(d schema.Decl, module *schema.Module) {
 				t.Export = true
 			case *schema.Verb:
 				t.Export = true
-			case *schema.Database, *schema.Config, *schema.Secret, *schema.Subscription:
+			case *schema.Database, *schema.Config, *schema.Secret:
 			}
 			updateTransitiveVisibility(decl, module)
 		}

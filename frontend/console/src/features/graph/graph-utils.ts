@@ -1,9 +1,9 @@
 import type { EdgeDefinition, ElementDefinition } from 'cytoscape'
 import type { StreamModulesResult } from '../../api/modules/use-stream-modules'
-import type { Config, Data, Database, Enum, Module, Secret, Subscription, Topic, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Config, Data, Database, Enum, Module, Secret, Topic, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { getNodeBackgroundColor } from './graph-styles'
 
-export type FTLNode = Module | Verb | Secret | Config | Data | Database | Subscription | Topic | Enum
+export type FTLNode = Module | Verb | Secret | Config | Data | Database | Topic | Enum
 
 const createParentNode = (module: Module, nodePositions: Record<string, { x: number; y: number }>) => ({
   group: 'nodes' as const,
@@ -73,17 +73,17 @@ const createModuleChildren = (module: Module, nodePositions: Record<string, { x:
       createChildNode(module.name, nodeId(module.name, secret.secret?.name), secret.secret?.name || '', 'secret', nodePositions, secret, isDarkMode),
     ),
     // Create nodes for subscriptions
-    ...(module.subscriptions || []).map((subscription: Subscription) =>
-      createChildNode(
-        module.name,
-        nodeId(module.name, subscription.subscription?.name),
-        subscription.subscription?.name || '',
-        'subscription',
-        nodePositions,
-        subscription,
-        isDarkMode,
-      ),
-    ),
+    // ...(module.subscriptions || []).map((subscription: Subscription) =>
+    //   createChildNode(
+    //     module.name,
+    //     nodeId(module.name, subscription.subscription?.name),
+    //     subscription.subscription?.name || '',
+    //     'subscription',
+    //     nodePositions,
+    //     subscription,
+    //     isDarkMode,
+    //   ),
+    // ),
     // Create nodes for topics
     ...(module.topics || []).map((topic: Topic) =>
       createChildNode(module.name, nodeId(module.name, topic.topic?.name), topic.topic?.name || '', 'topic', nodePositions, topic, isDarkMode),
