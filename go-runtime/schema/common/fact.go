@@ -167,16 +167,6 @@ type VerbResourceParam struct {
 
 func (*VerbResourceParamOrder) schemaFactValue() {}
 
-// SubscriptionSink marks a subscription with its corresponding sink.
-type SubscriptionSink struct {
-	// The subscription corresponding to this object.
-	Subscription *schema.Subscription
-	// The name of the subscribing verb.
-	SinkName string
-}
-
-func (*SubscriptionSink) schemaFactValue() {}
-
 // MarkSchemaDecl marks the given object as having been extracted to the given schema decl.
 func MarkSchemaDecl(pass *analysis.Pass, obj types.Object, decl schema.Decl) {
 	fact := newFact(pass, obj)
@@ -252,13 +242,6 @@ func MarkDatabaseConfig(pass *analysis.Pass, obj types.Object, dbType DatabaseTy
 func MarkVerbResourceParamOrder(pass *analysis.Pass, obj types.Object, resources []VerbResourceParam) {
 	fact := newFact(pass, obj)
 	fact.Add(&VerbResourceParamOrder{Resources: resources})
-	pass.ExportObjectFact(obj, fact)
-}
-
-// MarkSubscriptionSink marks the given subscription with its sink.
-func MarkSubscriptionSink(pass *analysis.Pass, obj types.Object, sinkName string, sub *schema.Subscription) {
-	fact := newFact(pass, obj)
-	fact.Add(&SubscriptionSink{SinkName: sinkName, Subscription: sub})
 	pass.ExportObjectFact(obj, fact)
 }
 

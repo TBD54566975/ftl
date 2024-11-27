@@ -3,13 +3,12 @@ import { type NavigateFunction, useNavigate } from 'react-router-dom'
 import { useModules } from '../../api/modules/use-modules'
 import { Loader } from '../../components/Loader'
 import { ResizablePanels } from '../../components/ResizablePanels'
-import { Config, Data, Database, Enum, Module, Secret, Subscription, Topic, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Config, Data, Database, Enum, Module, Secret, Topic, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { configPanels } from '../modules/decls/config/ConfigRightPanels'
 import { dataPanels } from '../modules/decls/data/DataRightPanels'
 import { databasePanels } from '../modules/decls/database/DatabaseRightPanels'
 import { enumPanels } from '../modules/decls/enum/EnumRightPanels'
 import { secretPanels } from '../modules/decls/secret/SecretRightPanels'
-import { subscriptionPanels } from '../modules/decls/subscription/SubscriptionRightPanels'
 import { topicPanels } from '../modules/decls/topic/TopicRightPanels'
 import { verbPanels } from '../modules/decls/verb/VerbRightPanel'
 import { Timeline } from '../timeline/Timeline'
@@ -66,9 +65,6 @@ const panelsForNode = (modules: Module[], node: FTLNode | null, navigate: Naviga
   }
   if (node instanceof Topic) {
     return topicPanels(node)
-  }
-  if (node instanceof Subscription) {
-    return subscriptionPanels(node)
   }
   if (node instanceof Verb) {
     return verbPanels(node)

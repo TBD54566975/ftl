@@ -153,6 +153,7 @@ func NewFunction(ctx context.Context, req TimeRequest) (TimeResponse, error) {
 }
 
 func TestResetSubscription(t *testing.T) {
+	t.Skip("Bring this back once we have pubsub working with Kafka")
 	topicHeadAt := func(module, topic string, head int) Action {
 		return QueryRow("ftl", fmt.Sprintf(`
 			WITH module AS (

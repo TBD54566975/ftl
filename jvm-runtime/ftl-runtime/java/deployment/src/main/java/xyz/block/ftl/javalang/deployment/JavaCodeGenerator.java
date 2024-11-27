@@ -90,7 +90,6 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
         dataBuilder.addAnnotation(AnnotationSpec.builder(Subscription.class)
                 .addMember("topic", "\"" + data.getName() + "\"")
                 .addMember("module", "\"" + module.getName() + "\"")
-                .addMember("name", "\"" + data.getName() + "Subscription\"")
                 .build());
 
         JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())

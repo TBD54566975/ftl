@@ -84,7 +84,8 @@ func ProcessPayment(ctx context.Context, payment Payment) error {
 <!-- kotlin -->
 
 ```kotlin
-@Subscription(topic = "example", module = "publisher", name = "exampleSubscription")
+@Subscription(topic = "example", name = "exampleSubscription")
+@SubscriptionOptions(from = FromOffset.LATEST)
 @Retry(count = 5, minBackoff = "1s", catchVerb = "recoverPaymentProcessing")
 fun processPayment(payment: Payment) {
     // ... 
@@ -93,7 +94,8 @@ fun processPayment(payment: Payment) {
 <!-- java -->
 
 ```java
-@Subscription(topic = "example", module = "publisher", name = "exampleSubscription")
+@Subscription(topic = "example", name = "exampleSubscription")
+@SubscriptionOptions(from = FromOffset.LATEST)
 @Retry(count = 5, minBackoff = "1s", catchVerb = "recoverPaymentProcessing")
 public void processPayment(Payment payment) {
     // ... 

@@ -412,8 +412,6 @@ func testExtractModulePubSub(t *testing.T) {
 		// publicBroadcast is a topic that broadcasts payin events to the public.
 		// out of order with subscription registration to test ordering doesn't matter.
 		export topic publicBroadcast pubsub.PayinEvent
-		subscription broadcastSubscription pubsub.publicBroadcast
-		subscription paymentProcessing pubsub.payins
 
         export data PayinEvent {
         	name String
@@ -426,11 +424,11 @@ func testExtractModulePubSub(t *testing.T) {
         	+publish pubsub.payins
 
         verb processBroadcast(pubsub.PayinEvent) Unit
-        	+subscribe broadcastSubscription
+        	+subscribe pubsub.publicBroadcast from=beginning
 			+retry 10 1s
 
         verb processPayin(pubsub.PayinEvent) Unit
-        	+subscribe paymentProcessing
+        	+subscribe pubsub.payins from=beginning
 	}
 `
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
@@ -446,10 +444,8 @@ func testExtractModuleSubscriber(t *testing.T) {
 	assert.Equal(t, nil, r.Errors, "expected no schema errors")
 	actual := schema.Normalise(r.Module)
 	expected := `module subscriber {
-		subscription subscriptionToExternalTopic pubsub.publicBroadcast
-
         verb consumesSubscriptionFromExternalTopic(pubsub.PayinEvent) Unit
-		+subscribe subscriptionToExternalTopic
+		+subscribe publisher.publicBroadcast from=beginning
 	}
 `
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))

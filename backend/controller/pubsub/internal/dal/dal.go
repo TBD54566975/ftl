@@ -270,28 +270,19 @@ func (d *DAL) ResetSubscription(ctx context.Context, module, name string) (err e
 func (d *DAL) CreateSubscriptions(ctx context.Context, key model.DeploymentKey, module *schema.Module) error {
 	logger := log.FromContext(ctx)
 
-	for _, decl := range module.Decls {
-		s, ok := decl.(*schema.Subscription)
+	for verb := range slices.FilterVariants[*schema.Verb](module.Decls) {
+		subscriber, ok := slices.FindVariant[*schema.MetadataSubscriber](verb.Metadata)
 		if !ok {
 			continue
 		}
-		if !hasSubscribers(s, module.Decls) {
-			// Ignore subscriptions without subscribers
-			// This ensures that controllers don't endlessly try to progress subscriptions without subscribers
-			// https://github.com/TBD54566975/ftl/issues/1685
-			//
-			// It does mean that a subscription will reset to the topic's head if all subscribers are removed and then later re-added
-			logger.Debugf("Skipping upsert of subscription %s for %s due to lack of subscribers", s.Name, key)
-			continue
-		}
-		subscriptionKey := model.NewSubscriptionKey(module.Name, s.Name)
+		subscriptionKey := model.NewSubscriptionKey(module.Name, verb.Name)
 		result, err := d.db.UpsertSubscription(ctx, dalsql.UpsertSubscriptionParams{
 			Key:         subscriptionKey,
 			Module:      module.Name,
 			Deployment:  key,
-			TopicModule: s.Topic.Module,
-			TopicName:   s.Topic.Name,
-			Name:        s.Name,
+			TopicModule: subscriber.Topic.Module,
+			TopicName:   subscriber.Topic.Name,
+			Name:        verb.Name,
 		})
 		if err != nil {
 			return fmt.Errorf("could not insert subscription: %w", libdal.TranslatePGError(err))
@@ -305,25 +296,6 @@ func (d *DAL) CreateSubscriptions(ctx context.Context, key model.DeploymentKey, 
 	return nil
 }
 
-func hasSubscribers(subscription *schema.Subscription, decls []schema.Decl) bool {
-	for _, d := range decls {
-		verb, ok := d.(*schema.Verb)
-		if !ok {
-			continue
-		}
-		for _, md := range verb.Metadata {
-			subscriber, ok := md.(*schema.MetadataSubscriber)
-			if !ok {
-				continue
-			}
-			if subscriber.Name == subscription.Name {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func (d *DAL) CreateSubscribers(ctx context.Context, key model.DeploymentKey, module *schema.Module) error {
 	logger := log.FromContext(ctx)
 	for _, decl := range module.Decls {
@@ -332,7 +304,7 @@ func (d *DAL) CreateSubscribers(ctx context.Context, key model.DeploymentKey, mo
 			continue
 		}
 		for _, md := range v.Metadata {
-			s, ok := md.(*schema.MetadataSubscriber)
+			_, ok := md.(*schema.MetadataSubscriber)
 			if !ok {
 				continue
 			}
@@ -348,11 +320,11 @@ func (d *DAL) CreateSubscribers(ctx context.Context, key model.DeploymentKey, mo
 					return fmt.Errorf("could not parse retry parameters for %q: %w", v.Name, err)
 				}
 			}
-			subscriberKey := model.NewSubscriberKey(module.Name, s.Name, v.Name)
+			subscriberKey := model.NewSubscriberKey(module.Name, v.Name, v.Name)
 			err = d.db.InsertSubscriber(ctx, dalsql.InsertSubscriberParams{
 				Key:              subscriberKey,
 				Module:           module.Name,
-				SubscriptionName: s.Name,
+				SubscriptionName: v.Name,
 				Deployment:       key,
 				Sink:             sinkRef,
 				RetryAttempts:    int32(retryParams.Count),

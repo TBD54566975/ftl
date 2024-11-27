@@ -14,9 +14,12 @@ import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
+import xyz.block.ftl.FromOffset;
 import xyz.block.ftl.Retry;
 import xyz.block.ftl.Subscription;
-import xyz.block.ftl.v1.schema.Decl;
+import xyz.block.ftl.SubscriptionOptions;
+import xyz.block.ftl.deployment.SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation;
+import xyz.block.ftl.deployment.SubscriptionMetaAnnotationsBuildItem.SubscriptionOptionsAnnotation;
 import xyz.block.ftl.v1.schema.Metadata;
 import xyz.block.ftl.v1.schema.MetadataRetry;
 import xyz.block.ftl.v1.schema.MetadataSubscriber;
@@ -32,7 +35,7 @@ public class SubscriptionProcessor {
         Collection<AnnotationInstance> subscriptionAnnotations = combinedIndexBuildItem.getComputingIndex()
                 .getAnnotations(Subscription.class);
         log.infof("Processing %s subscription annotations into decls", subscriptionAnnotations.size());
-        Map<DotName, SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation> annotations = new HashMap<>();
+        Map<DotName, SubscriptionAnnotation> annotations = new HashMap<>();
         for (var subscriptions : subscriptionAnnotations) {
             if (subscriptions.target().kind() != AnnotationTarget.Kind.CLASS) {
                 continue;
@@ -81,18 +84,24 @@ public class SubscriptionProcessor {
         additionalBeanBuildItemBuildProducer.produce(beans.build());
     }
 
-    private SchemaContributorBuildItem generateSubscription(MethodInfo method, String className,
-            SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation info) {
+    private SchemaContributorBuildItem generateSubscription(MethodInfo method, String className, SubscriptionAnnotation info) {
         return new SchemaContributorBuildItem(moduleBuilder -> {
-
-            moduleBuilder.addDecls(Decl.newBuilder()
-                    .setSubscription(xyz.block.ftl.v1.schema.Subscription.newBuilder()
-                            .setPos(PositionUtils.forMethod(method))
-                            .setName(info.name())
-                            .setTopic(Ref.newBuilder().setName(info.topic()).setModule(info.module()).build()))
-                    .build());
             moduleBuilder.registerVerbMethod(method, className, false, ModuleBuilder.BodyType.REQUIRED, (builder -> {
-                builder.addMetadata(Metadata.newBuilder().setSubscriber(MetadataSubscriber.newBuilder().setName(info.name())));
+                if (method.hasAnnotation(SubscriptionOptions.class)) {
+                    SubscriptionOptionsAnnotation options = SubscriptionOptionsAnnotation
+                            .fromJandex(method.annotation(SubscriptionOptions.class));
+
+                    builder.addMetadata(Metadata.newBuilder().setSubscriber(MetadataSubscriber.newBuilder()
+                            .setTopic(Ref.newBuilder().setName(info.topic()).setModule(info.module()).build())
+                            .setFromOffset(
+                                    options.from() == FromOffset.BEGINNING
+                                            ? xyz.block.ftl.v1.schema.FromOffset.FROM_OFFSET_BEGINNING
+                                            : xyz.block.ftl.v1.schema.FromOffset.FROM_OFFSET_LATEST)
+                            .setDeadLetter(options.deadLetter())));
+                } else {
+                    throw new RuntimeException("Subscription must have SubscriptionOptions annotation");
+                }
+
                 if (method.hasAnnotation(Retry.class)) {
                     RetryRecord retry = RetryRecord.fromJandex(method.annotation(Retry.class), moduleBuilder.getModuleName());
 

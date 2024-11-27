@@ -18,10 +18,3 @@ type TopicHandle[E any] struct {
 func (t TopicHandle[E]) Publish(ctx context.Context, event E) error {
 	return internal.FromContext(ctx).PublishEvent(ctx, t.Ref, event)
 }
-
-// SubscriptionHandle declares a subscription to a topic for the provided Sink
-// T: the topic handle type
-// S: the generated sink client type
-// E: the event type
-type SubscriptionHandle[T TopicHandle[E], S, E any] struct {
-}

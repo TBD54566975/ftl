@@ -20,12 +20,6 @@ public @interface Subscription {
     String topic() default "";
 
     /**
-     *
-     * @return The subscription name
-     */
-    String name();
-
-    /**
      * The class of the topic to subscribe to, which can be used in place of directly specifying the topic name and module.
      */
     Class<? extends Topic> topicClass() default Topic.class;

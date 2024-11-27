@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Duration, Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
-import { Config as Config$1, Data as Data$1, Database as Database$1, Enum as Enum$1, Ref, Secret as Secret$1, Subscription as Subscription$1, Topic as Topic$1, TypeAlias as TypeAlias$1, Verb as Verb$1 } from "../schema/schema_pb.js";
+import { Config as Config$1, Data as Data$1, Database as Database$1, Enum as Enum$1, Ref, Secret as Secret$1, Topic as Topic$1, TypeAlias as TypeAlias$1, Verb as Verb$1 } from "../schema/schema_pb.js";
 
 /**
  * @generated from enum xyz.block.ftl.v1.console.EventType
@@ -1146,49 +1146,6 @@ export class Secret extends Message<Secret> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.Subscription
- */
-export class Subscription extends Message<Subscription> {
-  /**
-   * @generated from field: xyz.block.ftl.v1.schema.Subscription subscription = 1;
-   */
-  subscription?: Subscription$1;
-
-  /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref references = 2;
-   */
-  references: Ref[] = [];
-
-  constructor(data?: PartialMessage<Subscription>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.Subscription";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "subscription", kind: "message", T: Subscription$1 },
-    { no: 2, name: "references", kind: "message", T: Ref, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subscription {
-    return new Subscription().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Subscription {
-    return new Subscription().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Subscription {
-    return new Subscription().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Subscription | PlainMessage<Subscription> | undefined, b: Subscription | PlainMessage<Subscription> | undefined): boolean {
-    return proto3.util.equals(Subscription, a, b);
-  }
-}
-
-/**
  * @generated from message xyz.block.ftl.v1.console.Verb
  */
 export class Verb extends Message<Verb> {
@@ -1307,11 +1264,6 @@ export class Module extends Message<Module> {
    */
   typealiases: TypeAlias[] = [];
 
-  /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.Subscription subscriptions = 13;
-   */
-  subscriptions: Subscription[] = [];
-
   constructor(data?: PartialMessage<Module>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1332,7 +1284,6 @@ export class Module extends Message<Module> {
     { no: 10, name: "enums", kind: "message", T: Enum, repeated: true },
     { no: 11, name: "topics", kind: "message", T: Topic, repeated: true },
     { no: 12, name: "typealiases", kind: "message", T: TypeAlias, repeated: true },
-    { no: 13, name: "subscriptions", kind: "message", T: Subscription, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Module {

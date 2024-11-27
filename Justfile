@@ -82,11 +82,7 @@ build-without-frontend +tools: build-protos build-zips
   for tool in $@; do
     path="cmd/$tool"
     test "$tool" = "ftl" && path="frontend/cli"
-    if [ "${FTL_DEBUG:-}" = "true" ]; then
-      go build -o "{{RELEASE}}/$tool" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./$path"
-    else
-      mk "{{RELEASE}}/$tool" : !(build|integration|infrastructure|node_modules|Procfile*|Dockerfile*) -- go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./$path"
-    fi
+    just build-go-binary "./$path" "$tool"
   done
 
 # Build all backend binaries
@@ -102,47 +98,24 @@ build-jvm *args:
   mvn -f jvm-runtime/ftl-runtime install {{args}}
 
 # Builds all language plugins
-build-language-plugins: build-go build-python build-java build-kotlin
+build-language-plugins:
+  @just build-go-binary ./go-runtime/cmd/ftl-language-go
+  @just build-go-binary ./python-runtime/cmd/ftl-language-python
+  @just build-go-binary ./jvm-runtime/cmd/ftl-language-java
+  @just build-go-binary ./jvm-runtime/cmd/ftl-language-kotlin
 
-# Build ftl-language-go
-build-go: build-zips build-protos
+# Build a Go binary with the correct flags and place it in the release dir
+build-go-binary dir binary="": build-zips build-protos build-frontend
   #!/bin/bash
+  set -euo pipefail
   shopt -s extglob
 
-  if [ "${FTL_DEBUG:-}" = "true" ]; then
-    go build -o "{{RELEASE}}/ftl-language-go" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./go-runtime/cmd/ftl-language-go"
-  else
-    mk "{{RELEASE}}/ftl-language-go" : !(build|integration) -- go build -o "{{RELEASE}}/ftl-language-go" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./go-runtime/cmd/ftl-language-go"
-  fi
-
-# Build ftl-language-python
-build-python: build-zips build-protos
-  #!/bin/bash
-  shopt -s extglob
+  binary="${2:-$(basename "$1")}"
 
   if [ "${FTL_DEBUG:-}" = "true" ]; then
-    go build -o "{{RELEASE}}/ftl-language-python" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./python-runtime/cmd/ftl-language-python"
+    go build -o "{{RELEASE}}/${binary}" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "$1"
   else
-    mk "{{RELEASE}}/ftl-language-python" : !(build|integration) -- go build -o "{{RELEASE}}/ftl-language-python" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./python-runtime/cmd/ftl-language-python"
-  fi
-
-build-kotlin *args: build-zips build-protos
-  #!/bin/bash
-  shopt -s extglob
-  if [ "${FTL_DEBUG:-}" = "true" ]; then
-    go build -o "{{RELEASE}}/ftl-language-kotlin" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./go-runtime/cmd/ftl-language-kotlin"
-  else
-    mk "{{RELEASE}}/ftl-language-kotlin" : !(build|integration) -- go build -o "{{RELEASE}}/ftl-language-kotlin" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./jvm-runtime/cmd/ftl-language-kotlin"
-  fi
-
-build-java *args: build-zips build-protos
-  #!/bin/bash
-  shopt -s extglob
-
-  if [ "${FTL_DEBUG:-}" = "true" ]; then
-    go build -o "{{RELEASE}}/ftl-language-java" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./jvm-runtime/cmd/ftl-language-java"
-  else
-    mk "{{RELEASE}}/ftl-language-java" : !(build|integration) -- go build -o "{{RELEASE}}/ftl-language-java" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./jvm-runtime/cmd/ftl-language-java"
+    mk "{{RELEASE}}/${binary}" : !(build|integration|infrastructure|node_modules|Procfile*|Dockerfile*) -- go build -o "{{RELEASE}}/${binary}" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "$1"
   fi
 
 export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable"
@@ -303,9 +276,11 @@ debug *args:
   dlv_pid=$!
   wait "$dlv_pid"
 
+# Bring up localstack
 localstack:
     docker compose up localstack -d --wait
 
+# Bring down localstack
 localstack-stop:
     docker compose down localstack
 
@@ -321,5 +296,6 @@ build-docker name:
     -t ftl0/ftl-{{name}}:latest \
     -f Dockerfile.{{name}} .
 
+# Run a Just command in the Helm charts directory
 chart *args:
     @cd charts && just {{args}}

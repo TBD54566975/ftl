@@ -2,7 +2,9 @@ package xyz.block.ftl.java.test.publisher;
 
 import io.quarkus.logging.Log;
 import xyz.block.ftl.Export;
+import xyz.block.ftl.FromOffset;
 import xyz.block.ftl.Subscription;
+import xyz.block.ftl.SubscriptionOptions;
 import xyz.block.ftl.Topic;
 import xyz.block.ftl.TopicDefinition;
 import xyz.block.ftl.Verb;
@@ -49,7 +51,8 @@ public class Publisher {
         topic2.publish(new PubSubEvent().setTime(t));
     }
 
-    @Subscription(topicClass = LocalTopic.class, name = "localSubscription")
+    @Subscription(topicClass = LocalTopic.class)
+    @SubscriptionOptions(from = FromOffset.LATEST)
     public void local(TestTopic testTopic, PubSubEvent event) {
         testTopic.publish(event);
     }

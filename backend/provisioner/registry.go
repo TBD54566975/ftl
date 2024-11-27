@@ -237,19 +237,23 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 				ResourceId: decl.GetName(),
 				Resource:   &provisioner.Resource_Topic{},
 			})
-		case *schema.Subscription:
+		case *schema.Verb:
+			subscriber, ok := slices.FindVariant[*schema.MetadataSubscriber](decl.Metadata)
+			if !ok {
+				continue
+			}
 			deps = append(deps, &provisioner.Resource{
 				ResourceId: decl.GetName(),
 				Resource: &provisioner.Resource_Subscription{
 					Subscription: &provisioner.SubscriptionResource{
 						Topic: &schemapb.Ref{
-							Module: decl.Topic.Module,
-							Name:   decl.Topic.Name,
+							Module: subscriber.Topic.Module,
+							Name:   subscriber.Topic.Name,
 						},
 					},
 				},
 			})
-		case *schema.Config, *schema.Data, *schema.Enum, *schema.Secret, *schema.TypeAlias, *schema.Verb:
+		case *schema.Config, *schema.Data, *schema.Enum, *schema.Secret, *schema.TypeAlias:
 		}
 	}
 

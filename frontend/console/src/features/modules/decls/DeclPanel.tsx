@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useStreamModules } from '../../../api/modules/use-stream-modules'
-import type { Config, Data, Database, Enum, Secret, Subscription, Topic, TypeAlias } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Config, Data, Database, Enum, Secret, Topic, TypeAlias } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { declFromModules } from '../module.utils'
 import { declSchemaFromModules } from '../schema/schema.utils'
 import { ConfigPanel } from './config/ConfigPanel'
@@ -9,7 +9,6 @@ import { DataPanel } from './data/DataPanel'
 import { DatabasePanel } from './database/DatabasePanel'
 import { EnumPanel } from './enum/EnumPanel'
 import { SecretPanel } from './secret/SecretPanel'
-import { SubscriptionPanel } from './subscription/SubscriptionPanel'
 import { TopicPanel } from './topic/TopicPanel'
 import { TypeAliasPanel } from './typealias/TypeAliasPanel'
 import { VerbPage } from './verb/VerbPage'
@@ -45,8 +44,6 @@ export const DeclPanel = () => {
       return <EnumPanel {...commonProps} value={decl as Enum} />
     case 'secret':
       return <SecretPanel {...commonProps} value={decl as Secret} />
-    case 'subscription':
-      return <SubscriptionPanel {...commonProps} value={decl as Subscription} />
     case 'topic':
       return <TopicPanel {...commonProps} value={decl as Topic} />
     case 'typealias':

@@ -13,9 +13,7 @@ toc = true
 top = false
 +++
 
-FTL has first-class support for PubSub, modelled on the concepts of topics (where events are sent), subscriptions (a cursor over the topic), and subscribers (functions events are delivered to). Subscribers are, as you would expect, sinks. Each subscription is a cursor over the topic it is associated with. Each topic may have multiple subscriptions. Each subscription may have multiple subscribers, in which case events will be distributed among them.
-
-Each published event has an at least once delivery guarantee for each subscription.
+FTL has first-class support for PubSub, modelled on the concepts of topics (where events are sent) and subscribers (a verb which consumes events). Subscribers are, as you would expect, sinks. Each subscriber is a cursor over the topic it is associated with. Each topic may have multiple subscriptions. Each published event has an at least once delivery guarantee for each subscription.
 
 {% code_selector() %}
 <!-- go -->
@@ -23,19 +21,15 @@ Each published event has an at least once delivery guarantee for each subscripti
 First, declare a new topic:
 
 ```go
+package payments
+
 var Invoices = ftl.Topic[Invoice]("invoices")
 ```
 
-Then declare each subscription on the topic:
+Then define a Sink to consume from the topic:
 
 ```go
-var _ = ftl.Subscription(Invoices, "emailInvoices")
-```
-
-And finally define a Sink to consume from the subscription:
-
-```go
-//ftl:subscribe emailInvoices
+//ftl:subscribe payments.invoices from=beginning
 func SendInvoiceEmail(ctx context.Context, in Invoice) error {
   // ...
 }
@@ -71,6 +65,7 @@ subscribing to a topic inside the same module:
 
 ```kotlin
 @Subscription(topic = "invoices", name = "invoicesSubscription")
+@SubscriptionOptions(from = FromOffset.LATEST)
 fun consumeInvoice(event: Invoice) {
     // ...
 }
@@ -81,6 +76,7 @@ another module, FTL will generate a type-safe subscription meta annotation you c
 
 ```kotlin
 @Subscription(topic = "invoices", module = "publisher", name = "invoicesSubscription")
+@SubscriptionOptions(from = FromOffset.LATEST)
 annotation class InvoicesSubscription 
 ```
 
@@ -88,6 +84,7 @@ This annotation can then be used to subscribe to the topic:
 
 ```kotlin
 @InvoicesSubscription
+@SubscriptionOptions(from = FromOffset.LATEST)
 fun consumeInvoice(event: Invoice) {
     // ...
 }
@@ -119,6 +116,7 @@ subscribing to a topic inside the same module:
 
 ```java
 @Subscription(topicClass = InvoiceTopic.class, name = "invoicesSubscription")
+@SubscriptionOptions(from = FromOffset.LATEST)
 public void consumeInvoice(Invoice event) {
     // ...
 }
@@ -141,6 +139,7 @@ This annotation can then be used to subscribe to the topic:
 
 ```java
 @InvoicesSubscription
+@SubscriptionOptions(from = FromOffset.LATEST)
 public void consumeInvoice(Invoice event) {
     // ...
 }

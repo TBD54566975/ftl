@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	declUnion            = []Decl{&Data{}, &Verb{}, &Database{}, &Enum{}, &TypeAlias{}, &Config{}, &Secret{}, &Topic{}, &Subscription{}}
+	declUnion            = []Decl{&Data{}, &Verb{}, &Database{}, &Enum{}, &TypeAlias{}, &Config{}, &Secret{}, &Topic{}}
 	nonOptionalTypeUnion = []Type{
 		&Int{}, &Float{}, &String{}, &Bytes{}, &Bool{}, &Time{}, &Array{},
 		&Map{}, &Any{}, &Unit{},
@@ -21,7 +21,6 @@ var (
 		// be prior to Ref.
 		&Ref{},
 	}
-	typeUnion     = append(nonOptionalTypeUnion, &Optional{})
 	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataConfig{}, &MetadataIngress{}, &MetadataCronJob{},
 		&MetadataDatabases{}, &MetadataAlias{}, &MetadataRetry{}, &MetadataSecrets{}, &MetadataSubscriber{},
 		&MetadataTypeMap{}, &MetadataEncoding{}, &MetadataPublisher{}, &MetadataSQLMigration{}}

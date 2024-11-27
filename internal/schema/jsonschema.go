@@ -52,7 +52,7 @@ func RequestResponseToJSONSchema(sch *Schema, ref Ref) (*jsonschema.Schema, erro
 		case *TypeAlias:
 			root.Definitions[r.String()] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(n.Type, refs)}
 
-		case *Config, *Database, *Secret, *Verb, *Topic, *Subscription:
+		case *Config, *Database, *Secret, *Verb, *Topic:
 			return nil, fmt.Errorf("reference to unsupported node type %T", decl)
 		}
 	}
@@ -193,7 +193,7 @@ func nodeToJSSchema(node Node, refs map[RefKey]*Ref) *jsonschema.Schema {
 		*MetadataAlias, *MetadataSecrets, IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Module,
 		*Schema, Type, *Database, *Verb, *EnumVariant, *MetadataCronJob, Value,
 		*StringValue, *IntValue, *TypeValue, *Config, *Secret, Symbol, Named,
-		*MetadataRetry, *Topic, *Subscription, *MetadataSubscriber, *MetadataTypeMap,
+		*MetadataRetry, *Topic, *MetadataSubscriber, *MetadataTypeMap,
 		*MetadataEncoding, *MetadataPublisher, *MetadataSQLMigration, *DSNDatabaseConnector, *DatabaseRuntime,
 		DatabaseConnector:
 		panic(fmt.Sprintf("unsupported node type %T", node))

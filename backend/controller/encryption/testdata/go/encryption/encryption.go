@@ -34,7 +34,6 @@ type Event struct {
 // Used to test encryption of topic_events and async_calls tables
 
 type Topic = ftl.TopicHandle[Event]
-type Subscription = ftl.SubscriptionHandle[Topic, ConsumeClient, Event]
 
 //ftl:verb
 func Publish(ctx context.Context, e Event, topic Topic) error {
@@ -43,6 +42,7 @@ func Publish(ctx context.Context, e Event, topic Topic) error {
 }
 
 //ftl:verb
+//ftl:subscribe topic from=beginning
 func Consume(ctx context.Context, e Event) error {
 	fmt.Printf("Received event: %s\n", e.Name)
 	if e.Name != "AliceInWonderland" {

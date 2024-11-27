@@ -296,14 +296,6 @@ class Secret(_message.Message):
     references: _containers.RepeatedCompositeFieldContainer[_schema_pb2.Ref]
     def __init__(self, secret: _Optional[_Union[_schema_pb2.Secret, _Mapping]] = ..., references: _Optional[_Iterable[_Union[_schema_pb2.Ref, _Mapping]]] = ...) -> None: ...
 
-class Subscription(_message.Message):
-    __slots__ = ("subscription", "references")
-    SUBSCRIPTION_FIELD_NUMBER: _ClassVar[int]
-    REFERENCES_FIELD_NUMBER: _ClassVar[int]
-    subscription: _schema_pb2.Subscription
-    references: _containers.RepeatedCompositeFieldContainer[_schema_pb2.Ref]
-    def __init__(self, subscription: _Optional[_Union[_schema_pb2.Subscription, _Mapping]] = ..., references: _Optional[_Iterable[_Union[_schema_pb2.Ref, _Mapping]]] = ...) -> None: ...
-
 class Verb(_message.Message):
     __slots__ = ("verb", "schema", "json_request_schema", "references")
     VERB_FIELD_NUMBER: _ClassVar[int]
@@ -317,7 +309,7 @@ class Verb(_message.Message):
     def __init__(self, verb: _Optional[_Union[_schema_pb2.Verb, _Mapping]] = ..., schema: _Optional[str] = ..., json_request_schema: _Optional[str] = ..., references: _Optional[_Iterable[_Union[_schema_pb2.Ref, _Mapping]]] = ...) -> None: ...
 
 class Module(_message.Message):
-    __slots__ = ("name", "deployment_key", "language", "schema", "verbs", "data", "secrets", "configs", "databases", "enums", "topics", "typealiases", "subscriptions")
+    __slots__ = ("name", "deployment_key", "language", "schema", "verbs", "data", "secrets", "configs", "databases", "enums", "topics", "typealiases")
     NAME_FIELD_NUMBER: _ClassVar[int]
     DEPLOYMENT_KEY_FIELD_NUMBER: _ClassVar[int]
     LANGUAGE_FIELD_NUMBER: _ClassVar[int]
@@ -330,7 +322,6 @@ class Module(_message.Message):
     ENUMS_FIELD_NUMBER: _ClassVar[int]
     TOPICS_FIELD_NUMBER: _ClassVar[int]
     TYPEALIASES_FIELD_NUMBER: _ClassVar[int]
-    SUBSCRIPTIONS_FIELD_NUMBER: _ClassVar[int]
     name: str
     deployment_key: str
     language: str
@@ -343,8 +334,7 @@ class Module(_message.Message):
     enums: _containers.RepeatedCompositeFieldContainer[Enum]
     topics: _containers.RepeatedCompositeFieldContainer[Topic]
     typealiases: _containers.RepeatedCompositeFieldContainer[TypeAlias]
-    subscriptions: _containers.RepeatedCompositeFieldContainer[Subscription]
-    def __init__(self, name: _Optional[str] = ..., deployment_key: _Optional[str] = ..., language: _Optional[str] = ..., schema: _Optional[str] = ..., verbs: _Optional[_Iterable[_Union[Verb, _Mapping]]] = ..., data: _Optional[_Iterable[_Union[Data, _Mapping]]] = ..., secrets: _Optional[_Iterable[_Union[Secret, _Mapping]]] = ..., configs: _Optional[_Iterable[_Union[Config, _Mapping]]] = ..., databases: _Optional[_Iterable[_Union[Database, _Mapping]]] = ..., enums: _Optional[_Iterable[_Union[Enum, _Mapping]]] = ..., topics: _Optional[_Iterable[_Union[Topic, _Mapping]]] = ..., typealiases: _Optional[_Iterable[_Union[TypeAlias, _Mapping]]] = ..., subscriptions: _Optional[_Iterable[_Union[Subscription, _Mapping]]] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., deployment_key: _Optional[str] = ..., language: _Optional[str] = ..., schema: _Optional[str] = ..., verbs: _Optional[_Iterable[_Union[Verb, _Mapping]]] = ..., data: _Optional[_Iterable[_Union[Data, _Mapping]]] = ..., secrets: _Optional[_Iterable[_Union[Secret, _Mapping]]] = ..., configs: _Optional[_Iterable[_Union[Config, _Mapping]]] = ..., databases: _Optional[_Iterable[_Union[Database, _Mapping]]] = ..., enums: _Optional[_Iterable[_Union[Enum, _Mapping]]] = ..., topics: _Optional[_Iterable[_Union[Topic, _Mapping]]] = ..., typealiases: _Optional[_Iterable[_Union[TypeAlias, _Mapping]]] = ...) -> None: ...
 
 class TopologyGroup(_message.Message):
     __slots__ = ("modules",)

@@ -14,8 +14,9 @@ import (
 )
 
 type VerbRuntime struct {
-	CreateTime time.Time `protobuf:"1"`
-	StartTime  time.Time `protobuf:"2"`
+	CreateTime   *time.Time `protobuf:"1,optional"`
+	StartTime    *time.Time `protobuf:"2,optional"`
+	KafkaBrokers []string   `protobuf:"3,optional"`
 }
 
 //protobuf:2
@@ -169,9 +170,15 @@ func (v *Verb) GetMetadataCronJob() optional.Option[*MetadataCronJob] {
 func (v *Verb) ToProto() proto.Message {
 	var runtime *schemapb.VerbRuntime
 	if v.Runtime != nil {
-		runtime = &schemapb.VerbRuntime{
-			CreateTime: timestamppb.New(v.Runtime.CreateTime),
-			StartTime:  timestamppb.New(v.Runtime.StartTime),
+		runtime = &schemapb.VerbRuntime{}
+		if v.Runtime.CreateTime != nil {
+			runtime.CreateTime = timestamppb.New(*v.Runtime.CreateTime)
+		}
+		if v.Runtime.StartTime != nil {
+			runtime.StartTime = timestamppb.New(*v.Runtime.StartTime)
+		}
+		if v.Runtime.KafkaBrokers != nil {
+			runtime.KafkaBrokers = v.Runtime.KafkaBrokers
 		}
 	}
 	return &schemapb.Verb{
@@ -189,9 +196,19 @@ func (v *Verb) ToProto() proto.Message {
 func VerbFromProto(s *schemapb.Verb) *Verb {
 	var runtime *VerbRuntime
 	if s.Runtime != nil {
-		runtime = &VerbRuntime{
-			CreateTime: s.Runtime.CreateTime.AsTime(),
-			StartTime:  s.Runtime.StartTime.AsTime(),
+		runtime = &VerbRuntime{}
+		if s.Runtime.CreateTime != nil {
+			createTime := s.Runtime.CreateTime.AsTime()
+			runtime.CreateTime = &createTime
+		}
+		if s.Runtime.StartTime != nil {
+			startTime := s.Runtime.StartTime.AsTime()
+			runtime.StartTime = &startTime
+		}
+		if s.Runtime.KafkaBrokers != nil {
+			brokers := []string{}
+			brokers = append(brokers, s.Runtime.KafkaBrokers...)
+			runtime.KafkaBrokers = brokers
 		}
 	}
 	return &Verb{

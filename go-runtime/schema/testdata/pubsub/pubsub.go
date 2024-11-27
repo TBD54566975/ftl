@@ -21,9 +21,8 @@ func Payin(ctx context.Context, topic Payins) error {
 	return nil
 }
 
-type PaymentProcessing = ftl.SubscriptionHandle[Payins, ProcessPayinClient, PayinEvent]
-
 //ftl:verb
+//ftl:subscribe payins from=beginning
 func ProcessPayin(ctx context.Context, event PayinEvent) error {
 	logger := ftl.LoggerFromContext(ctx)
 	logger.Infof("Received PubSub event: %v", event)
@@ -44,9 +43,8 @@ func Broadcast(ctx context.Context, topic PublicBroadcast) error {
 	return nil
 }
 
-type BroadcastSubscription = ftl.SubscriptionHandle[PublicBroadcast, ProcessBroadcastClient, PayinEvent]
-
 //ftl:verb
+//ftl:subscribe publicBroadcast from=beginning
 //ftl:retry 10 1s
 func ProcessBroadcast(ctx context.Context, event PayinEvent) error {
 	logger := ftl.LoggerFromContext(ctx)

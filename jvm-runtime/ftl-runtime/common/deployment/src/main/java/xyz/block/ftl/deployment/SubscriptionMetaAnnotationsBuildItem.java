@@ -8,6 +8,7 @@ import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
 
 import io.quarkus.builder.item.SimpleBuildItem;
+import xyz.block.ftl.FromOffset;
 import xyz.block.ftl.Topic;
 
 public final class SubscriptionMetaAnnotationsBuildItem extends SimpleBuildItem {
@@ -22,7 +23,7 @@ public final class SubscriptionMetaAnnotationsBuildItem extends SimpleBuildItem 
         return annotations;
     }
 
-    public record SubscriptionAnnotation(String module, String topic, String name) {
+    public record SubscriptionAnnotation(String module, String topic) {
     }
 
     public static SubscriptionAnnotation fromJandex(IndexView indexView, AnnotationInstance subscriptions,
@@ -51,7 +52,15 @@ public final class SubscriptionMetaAnnotationsBuildItem extends SimpleBuildItem 
         return new SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation(
                 moduleValue == null || moduleValue.asString().isEmpty() ? currentModuleName
                         : moduleValue.asString(),
-                topicName,
-                subscriptions.value("name").asString());
+                topicName);
+    }
+
+    public record SubscriptionOptionsAnnotation(FromOffset from, boolean deadLetter) {
+        public static SubscriptionOptionsAnnotation fromJandex(AnnotationInstance subscriptionsOptions) {
+            AnnotationValue deadLetterValue = subscriptionsOptions.value("deadLetter");
+            return new SubscriptionOptionsAnnotation(
+                    FromOffset.valueOf(subscriptionsOptions.value("from").asEnum()),
+                    deadLetterValue == null || deadLetterValue.asString().isEmpty() ? false : deadLetterValue.asBoolean());
+        }
     }
 }

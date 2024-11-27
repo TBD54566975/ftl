@@ -10,7 +10,14 @@ DESCRIPTOR: _descriptor.FileDescriptor
 class AliasKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     ALIAS_KIND_JSON: _ClassVar[AliasKind]
+
+class FromOffset(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    FROM_OFFSET_BEGINNING: _ClassVar[FromOffset]
+    FROM_OFFSET_LATEST: _ClassVar[FromOffset]
 ALIAS_KIND_JSON: AliasKind
+FROM_OFFSET_BEGINNING: FromOffset
+FROM_OFFSET_LATEST: FromOffset
 
 class Any(_message.Message):
     __slots__ = ("pos",)
@@ -107,13 +114,12 @@ class DatabaseRuntime(_message.Message):
     def __init__(self, read_connector: _Optional[_Union[DatabaseConnector, _Mapping]] = ..., write_connector: _Optional[_Union[DatabaseConnector, _Mapping]] = ...) -> None: ...
 
 class Decl(_message.Message):
-    __slots__ = ("config", "data", "database", "enum", "secret", "subscription", "topic", "type_alias", "verb")
+    __slots__ = ("config", "data", "database", "enum", "secret", "topic", "type_alias", "verb")
     CONFIG_FIELD_NUMBER: _ClassVar[int]
     DATA_FIELD_NUMBER: _ClassVar[int]
     DATABASE_FIELD_NUMBER: _ClassVar[int]
     ENUM_FIELD_NUMBER: _ClassVar[int]
     SECRET_FIELD_NUMBER: _ClassVar[int]
-    SUBSCRIPTION_FIELD_NUMBER: _ClassVar[int]
     TOPIC_FIELD_NUMBER: _ClassVar[int]
     TYPE_ALIAS_FIELD_NUMBER: _ClassVar[int]
     VERB_FIELD_NUMBER: _ClassVar[int]
@@ -122,11 +128,10 @@ class Decl(_message.Message):
     database: Database
     enum: Enum
     secret: Secret
-    subscription: Subscription
     topic: Topic
     type_alias: TypeAlias
     verb: Verb
-    def __init__(self, config: _Optional[_Union[Config, _Mapping]] = ..., data: _Optional[_Union[Data, _Mapping]] = ..., database: _Optional[_Union[Database, _Mapping]] = ..., enum: _Optional[_Union[Enum, _Mapping]] = ..., secret: _Optional[_Union[Secret, _Mapping]] = ..., subscription: _Optional[_Union[Subscription, _Mapping]] = ..., topic: _Optional[_Union[Topic, _Mapping]] = ..., type_alias: _Optional[_Union[TypeAlias, _Mapping]] = ..., verb: _Optional[_Union[Verb, _Mapping]] = ...) -> None: ...
+    def __init__(self, config: _Optional[_Union[Config, _Mapping]] = ..., data: _Optional[_Union[Data, _Mapping]] = ..., database: _Optional[_Union[Database, _Mapping]] = ..., enum: _Optional[_Union[Enum, _Mapping]] = ..., secret: _Optional[_Union[Secret, _Mapping]] = ..., topic: _Optional[_Union[Topic, _Mapping]] = ..., type_alias: _Optional[_Union[TypeAlias, _Mapping]] = ..., verb: _Optional[_Union[Verb, _Mapping]] = ...) -> None: ...
 
 class Enum(_message.Message):
     __slots__ = ("pos", "comments", "export", "name", "type", "variants")
@@ -357,12 +362,16 @@ class MetadataSecrets(_message.Message):
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., secrets: _Optional[_Iterable[_Union[Ref, _Mapping]]] = ...) -> None: ...
 
 class MetadataSubscriber(_message.Message):
-    __slots__ = ("pos", "name")
+    __slots__ = ("pos", "topic", "from_offset", "dead_letter")
     POS_FIELD_NUMBER: _ClassVar[int]
-    NAME_FIELD_NUMBER: _ClassVar[int]
+    TOPIC_FIELD_NUMBER: _ClassVar[int]
+    FROM_OFFSET_FIELD_NUMBER: _ClassVar[int]
+    DEAD_LETTER_FIELD_NUMBER: _ClassVar[int]
     pos: Position
-    name: str
-    def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., name: _Optional[str] = ...) -> None: ...
+    topic: Ref
+    from_offset: FromOffset
+    dead_letter: bool
+    def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., topic: _Optional[_Union[Ref, _Mapping]] = ..., from_offset: _Optional[_Union[FromOffset, str]] = ..., dead_letter: bool = ...) -> None: ...
 
 class MetadataTypeMap(_message.Message):
     __slots__ = ("pos", "runtime", "native_name")
@@ -469,30 +478,6 @@ class StringValue(_message.Message):
     pos: Position
     value: str
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., value: _Optional[str] = ...) -> None: ...
-
-class Subscription(_message.Message):
-    __slots__ = ("pos", "runtime", "comments", "name", "topic")
-    POS_FIELD_NUMBER: _ClassVar[int]
-    RUNTIME_FIELD_NUMBER: _ClassVar[int]
-    COMMENTS_FIELD_NUMBER: _ClassVar[int]
-    NAME_FIELD_NUMBER: _ClassVar[int]
-    TOPIC_FIELD_NUMBER: _ClassVar[int]
-    pos: Position
-    runtime: SubscriptionRuntime
-    comments: _containers.RepeatedScalarFieldContainer[str]
-    name: str
-    topic: Ref
-    def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., runtime: _Optional[_Union[SubscriptionRuntime, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., name: _Optional[str] = ..., topic: _Optional[_Union[Ref, _Mapping]] = ...) -> None: ...
-
-class SubscriptionRuntime(_message.Message):
-    __slots__ = ("kafka_brokers", "topic_id", "consumer_group_id")
-    KAFKA_BROKERS_FIELD_NUMBER: _ClassVar[int]
-    TOPIC_ID_FIELD_NUMBER: _ClassVar[int]
-    CONSUMER_GROUP_ID_FIELD_NUMBER: _ClassVar[int]
-    kafka_brokers: _containers.RepeatedScalarFieldContainer[str]
-    topic_id: str
-    consumer_group_id: str
-    def __init__(self, kafka_brokers: _Optional[_Iterable[str]] = ..., topic_id: _Optional[str] = ..., consumer_group_id: _Optional[str] = ...) -> None: ...
 
 class Time(_message.Message):
     __slots__ = ("pos",)
@@ -621,9 +606,11 @@ class Verb(_message.Message):
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., export: bool = ..., name: _Optional[str] = ..., request: _Optional[_Union[Type, _Mapping]] = ..., response: _Optional[_Union[Type, _Mapping]] = ..., metadata: _Optional[_Iterable[_Union[Metadata, _Mapping]]] = ..., runtime: _Optional[_Union[VerbRuntime, _Mapping]] = ...) -> None: ...
 
 class VerbRuntime(_message.Message):
-    __slots__ = ("create_time", "start_time")
+    __slots__ = ("create_time", "start_time", "kafka_brokers")
     CREATE_TIME_FIELD_NUMBER: _ClassVar[int]
     START_TIME_FIELD_NUMBER: _ClassVar[int]
+    KAFKA_BROKERS_FIELD_NUMBER: _ClassVar[int]
     create_time: _timestamp_pb2.Timestamp
     start_time: _timestamp_pb2.Timestamp
-    def __init__(self, create_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., start_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+    kafka_brokers: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, create_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., start_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., kafka_brokers: _Optional[_Iterable[str]] = ...) -> None: ...

@@ -10,7 +10,6 @@ import (
 )
 
 type Topic = ftl.TopicHandle[Event]
-type SlowSubscription = ftl.SubscriptionHandle[Topic, ConsumeClient, Event]
 
 type Event struct {
 	Duration int
@@ -32,6 +31,7 @@ func Publish(ctx context.Context, req PublishRequest, topic Topic) error {
 }
 
 //ftl:verb
+//ftl:subscribe topic from=beginning
 func Consume(ctx context.Context, event Event) error {
 	for i := range event.Duration {
 		select {

@@ -106,12 +106,11 @@ func (m *Module) String() string {
 	// Print decls with spacing rules
 	// Keep these in sync with frontend/console/src/features/modules/schema/schema.utils.ts
 	typeSpacingRules := map[reflect.Type]spacingRule{
-		reflect.TypeOf(&Config{}):       {gapWithinType: false},
-		reflect.TypeOf(&Secret{}):       {gapWithinType: false, skipGapAfterTypes: []reflect.Type{reflect.TypeOf(&Config{})}},
-		reflect.TypeOf(&Database{}):     {gapWithinType: false},
-		reflect.TypeOf(&Topic{}):        {gapWithinType: false},
-		reflect.TypeOf(&Subscription{}): {gapWithinType: false, skipGapAfterTypes: []reflect.Type{reflect.TypeOf(&Topic{})}},
-		reflect.TypeOf(&TypeAlias{}):    {gapWithinType: false},
+		reflect.TypeOf(&Config{}):    {gapWithinType: false},
+		reflect.TypeOf(&Secret{}):    {gapWithinType: false, skipGapAfterTypes: []reflect.Type{reflect.TypeOf(&Config{})}},
+		reflect.TypeOf(&Database{}):  {gapWithinType: false},
+		reflect.TypeOf(&Topic{}):     {gapWithinType: false},
+		reflect.TypeOf(&TypeAlias{}): {gapWithinType: false},
 	}
 
 	lastTypePrinted := optional.None[reflect.Type]()

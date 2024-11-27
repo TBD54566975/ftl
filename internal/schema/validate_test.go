@@ -291,59 +291,57 @@ func TestValidate(t *testing.T) {
 					data Event {}
 				    topic topicA one.Event
 
-					subscription subA one.topicA
-
 					verb A(one.Event) Unit
 						+retry 10 5s1m
-						+subscribe subA
+						+subscribe one.topicA from=beginning
 					verb B(one.Event) Unit
 						+retry 1d1m5s1d
-						+subscribe subA
+						+subscribe one.topicA from=beginning
 					verb C(one.Event) Unit
 						+retry 0h0m0s
-						+subscribe subA
+						+subscribe one.topicA from=beginning
 					verb D(one.Event) Unit
 						+retry 1
-						+subscribe subA
+						+subscribe one.topicA from=beginning
 					verb E(one.Event) Unit
 						+retry
-						+subscribe subA
+						+subscribe one.topicA from=beginning
 					verb F(one.Event) Unit
 						+retry 20m20m
-						+subscribe subA
+						+subscribe one.topicA from=beginning
 					verb G(one.Event) Unit
 						+retry 1s
 						+retry 1s
-						+subscribe subA
+						+subscribe one.topicA from=beginning
 					verb H(one.Event) Unit
 						+retry 2mins
-						+subscribe subA
+						+subscribe one.topicA from=beginning
 					verb I(one.Event) Unit
 						+retry 1m 1s
-						+subscribe subA
+						+subscribe one.topicA from=beginning
 					verb J(one.Event) Unit
 						+retry 1d1s
-						+subscribe subA
+						+subscribe one.topicA from=beginning
 					verb K(one.Event) Unit
 						+retry 0 5s
-						+subscribe subA
+						+subscribe one.topicA from=beginning
 
 					verb catchSub(builtin.CatchRequest<Unit>) Unit
 
 				}
 				`,
 			errs: []string{
-				"10:7: could not parse min backoff duration: could not parse retry duration: duration has unit \"m\" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'",
-				"13:7: could not parse min backoff duration: could not parse retry duration: duration has unit \"d\" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'",
-				"16:7: could not parse min backoff duration: retry must have a minimum backoff of 1s",
-				"19:7: retry must have a minimum backoff",
-				"22:7: retry must have a minimum backoff",
-				"25:7: could not parse min backoff duration: could not parse retry duration: duration has unit \"m\" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'",
-				"29:7: verb can not have multiple instances of retry",
-				"32:7: could not parse min backoff duration: could not parse retry duration: duration has unknown unit \"mins\" - use 'd', 'h', 'm' or 's', eg '1d' or '30s'",
-				"35:7: max backoff duration (1s) needs to be at least as long as initial backoff (1m)",
-				"38:7: could not parse min backoff duration: retry backoff can not be larger than 1d",
-				"41:7: can not define a backoff duration when retry count is 0 and no catch is declared",
+				"11:7: could not parse min backoff duration: could not parse retry duration: duration has unit \"d\" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'",
+				"14:7: could not parse min backoff duration: retry must have a minimum backoff of 1s",
+				"17:7: retry must have a minimum backoff",
+				"20:7: retry must have a minimum backoff",
+				"23:7: could not parse min backoff duration: could not parse retry duration: duration has unit \"m\" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'",
+				"27:7: verb can not have multiple instances of retry",
+				"30:7: could not parse min backoff duration: could not parse retry duration: duration has unknown unit \"mins\" - use 'd', 'h', 'm' or 's', eg '1d' or '30s'",
+				"33:7: max backoff duration (1s) needs to be at least as long as initial backoff (1m)",
+				"36:7: could not parse min backoff duration: retry backoff can not be larger than 1d",
+				"39:7: can not define a backoff duration when retry count is 0 and no catch is declared",
+				"8:7: could not parse min backoff duration: could not parse retry duration: duration has unit \"m\" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'",
 			},
 		},
 		{name: "InvalidRetryInvalidSpace",
@@ -366,10 +364,6 @@ func TestValidate(t *testing.T) {
 
 				topic StartsWithUpperCase test.eventA
 
-				subscription subA test.topicA
-
-				subscription subB test.topicB
-
 				export data eventA {
 				}
 
@@ -377,20 +371,20 @@ func TestValidate(t *testing.T) {
 				}
 
 				verb wrongEventType(test.eventA) Unit
-					+subscribe subB
+					+subscribe test.topicB from=beginning
 
 				verb SourceCantSubscribe(Unit) test.eventB
-					+subscribe subB
+					+subscribe test.topicB from=latest
 
 				verb EmptyCantSubscribe(Unit) Unit
-					+subscribe subB
+					+subscribe test.topicB from=beginning
 			}
 			`,
 			errs: []string{
-				`20:6: verb wrongEventType: request type test.eventA differs from subscription's event type test.eventB`,
-				`23:6: verb SourceCantSubscribe: must be a sink to subscribe but found response type test.eventB`,
-				`23:6: verb SourceCantSubscribe: request type Unit differs from subscription's event type test.eventB`,
-				`26:6: verb EmptyCantSubscribe: request type Unit differs from subscription's event type test.eventB`,
+				"16:6: verb wrongEventType: request type test.eventA differs from subscription's event type test.eventB",
+				"19:6: verb SourceCantSubscribe: must be a sink to subscribe but found response type test.eventB",
+				"19:6: verb SourceCantSubscribe: request type Unit differs from subscription's event type test.eventB",
+				"22:6: verb EmptyCantSubscribe: request type Unit differs from subscription's event type test.eventB",
 				`7:5: invalid name: must consist of only letters, numbers and underscores, and start with a lowercase letter.`,
 			},
 		},
@@ -406,9 +400,6 @@ func TestValidate(t *testing.T) {
 			topic topicA test.EventA
 			topic topicB test.EventB
 
-			subscription subA test.topicA
-			subscription subB test.topicB
-
 			// catch verbs
 
 			verb catchA(builtin.CatchRequest<test.EventA>) Unit	
@@ -420,40 +411,57 @@ func TestValidate(t *testing.T) {
 			// subscribers
 
 			verb correctSubA(test.EventA) Unit
-				+subscribe subA
+				+subscribe test.topicA from=beginning
 				+retry 1 1s catch test.catchA
 
 			verb correctSubB(test.EventB) Unit
-				+subscribe subB
+				+subscribe test.topicB from=latest
 				+retry 1 1s catch test.catchB
 
 			verb incorrectSubAWithCatchB(test.EventA) Unit
-				+subscribe subA
+				+subscribe test.topicA from=beginning
 				+retry 1 1s catch test.catchB
 
 			verb incorrectSubAWithCatchWithResponse(test.EventA) Unit
-				+subscribe subA
+				+subscribe test.topicA from=beginning
 				+retry 1 1s catch test.catchAWithResponse
 
 			verb incorrectSubBWithCatchUnit(test.EventB) Unit
-				+subscribe subB
+				+subscribe test.topicB from=beginning
 				+retry 1 1s catch test.catchUnit
 
 			verb incorrectSubBWithCatchEvent(test.EventB) Unit
-				+subscribe subB
+				+subscribe test.topicB from=beginning
 				+retry 1 1s catch test.catchBWithEventType
 
 			verb incorrectSubBWithCatchNotAVerb(test.EventB) Unit
-				+subscribe subB
+				+subscribe test.topicB from=beginning
 				+retry 1 1s catch test.EventB
 		}
 		`,
 			errs: []string{
-				"34:5: catch verb must have a request type of builtin.CatchRequest<test.EventA> or builtin.CatchRequest<Any>, but found builtin.CatchRequest<test.EventB>",
-				"38:5: catch verb must not have a response type but found test.EventA",
-				"42:5: catch verb must have a request type of builtin.CatchRequest<test.EventB> or builtin.CatchRequest<Any>, but found Unit",
-				"46:5: catch verb must have a request type of builtin.CatchRequest<test.EventB> or builtin.CatchRequest<Any>, but found test.EventB",
-				"50:5: expected catch to be a verb",
+				"31:5: catch verb must have a request type of builtin.CatchRequest<test.EventA> or builtin.CatchRequest<Any>, but found builtin.CatchRequest<test.EventB>",
+				"35:5: catch verb must not have a response type but found test.EventA",
+				"39:5: catch verb must have a request type of builtin.CatchRequest<test.EventB> or builtin.CatchRequest<Any>, but found Unit",
+				"43:5: catch verb must have a request type of builtin.CatchRequest<test.EventB> or builtin.CatchRequest<Any>, but found test.EventB",
+				"47:5: expected catch to be a verb",
+			},
+		},
+		{
+			name: "DoubleSubscribe",
+			schema: `
+			module one {
+				data EventA {}
+
+				topic topicA one.EventA
+
+				verb subA(one.EventA) Unit
+					+subscribe one.topicA from=beginning
+					+subscribe one.topicA from=beginning
+			}
+		`,
+			errs: []string{
+				`9:6: verb can not subscribe to multiple topics`,
 			},
 		},
 	}
