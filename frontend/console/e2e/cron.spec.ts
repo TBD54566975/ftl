@@ -25,12 +25,14 @@ test('send cron request', async ({ page }) => {
   expect(responseJson).toEqual({})
 })
 
-test('submit cron form using ⌥+⏎ shortcut', async ({ page }) => {
+test('submit cron form using ⌘+⏎ shortcut', async ({ page }) => {
   await navigateToDecl(page, 'cron', 'thirtySeconds')
 
   await page.locator('input#request-path').focus()
 
-  await page.keyboard.press('Alt+Enter')
+  const isMac = process.platform === 'darwin';
+  const commandKey = isMac ? 'Meta' : 'Control';
+  await page.keyboard.press(`${commandKey}+Enter`);
 
   const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
   await expect(responseEditor).toBeVisible()
@@ -41,10 +43,12 @@ test('submit cron form using ⌥+⏎ shortcut', async ({ page }) => {
   expect(responseJson).toEqual({})
 })
 
-test('submit cron form using ⌥+⏎ shortcut without focusing first', async ({ page }) => {
+test('submit cron form using ⌘+⏎ shortcut without focusing first', async ({ page }) => {
   await navigateToDecl(page, 'cron', 'thirtySeconds')
 
-  await page.keyboard.press('Alt+Enter')
+  const isMac = process.platform === 'darwin';
+  const commandKey = isMac ? 'Meta' : 'Control';
+  await page.keyboard.press(`${commandKey}+Enter`);
 
   const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
   await expect(responseEditor).toBeVisible()

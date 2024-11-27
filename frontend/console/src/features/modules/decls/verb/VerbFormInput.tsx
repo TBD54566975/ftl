@@ -26,17 +26,19 @@ export const VerbFormInput = ({
     onSubmit(path)
   }
 
+  const shortcutText = `Send ${window.navigator.userAgent.includes('Mac') ? '⌘ + ⏎' : 'Ctrl + ⏎'}`
+
   useEffect(() => {
-    const handleGlobalKeyDown = (event: KeyboardEvent) => {
-      if (event.altKey && event.key === 'Enter') {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
         event.preventDefault()
-        formRef.current?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
-      }
+        formRef.current?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))      }
     }
 
-    document.addEventListener('keydown', handleGlobalKeyDown)
+    document.addEventListener('keydown', handleKeydown)
+
     return () => {
-      document.removeEventListener('keydown', handleGlobalKeyDown)
+      document.removeEventListener('keydown', handleKeydown)
     }
   }, [path, readOnly, onSubmit])
 
@@ -55,7 +57,7 @@ export const VerbFormInput = ({
           readOnly={readOnly}
           onChange={(event) => setPath(event.target.value)}
         />
-        <Button variant='primary' size='md' type='submit' title='Send (⌥+⏎)' className='mx-2'>
+        <Button variant='primary' size='md' type='submit' title={shortcutText} className='mx-2'>
           Send
         </Button>
         <Button variant='secondary' size='md' type='button' title='Copy' onClick={handleCopyButton} className='mr-2'>
