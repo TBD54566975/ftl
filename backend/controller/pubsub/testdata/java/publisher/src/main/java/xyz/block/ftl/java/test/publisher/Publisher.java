@@ -4,9 +4,9 @@ import io.quarkus.logging.Log;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.FromOffset;
 import xyz.block.ftl.Subscription;
-import xyz.block.ftl.WriteableTopic;
 import xyz.block.ftl.Topic;
 import xyz.block.ftl.Verb;
+import xyz.block.ftl.WriteableTopic;
 
 public class Publisher {
 

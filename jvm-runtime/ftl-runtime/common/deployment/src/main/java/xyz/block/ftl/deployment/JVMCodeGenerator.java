@@ -130,7 +130,7 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
                         if (!data.getExport()) {
                             continue;
                         }
-                        generateTopicSubscription(module, data, packageName, typeAliasMap, nativeTypeAliasMap,
+                        generateTopicConsumer(module, data, packageName, typeAliasMap, nativeTypeAliasMap,
                                 context.outDir());
                     }
                 }
@@ -145,7 +145,7 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
     protected abstract void generateTypeAliasMapper(String module, TypeAlias typeAlias, String packageName,
             Optional<String> nativeTypeAlias, Path outputDir) throws IOException;
 
-    protected abstract void generateTopicSubscription(Module module, Topic data, String packageName,
+    protected abstract void generateTopicConsumer(Module module, Topic data, String packageName,
             Map<DeclRef, Type> typeAliasMap, Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException;
 
     protected abstract void generateEnum(Module module, Enum data, String packageName, Map<DeclRef, Type> typeAliasMap,

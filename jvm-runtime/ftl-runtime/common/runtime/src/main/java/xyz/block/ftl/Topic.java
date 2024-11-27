@@ -14,4 +14,10 @@ public @interface Topic {
      */
     String value();
 
+    /**
+     *
+     * @return The module that the topic is defined in. If not specified, the current module is assumed.
+     */
+    String module() default "";
+
 }

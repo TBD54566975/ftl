@@ -31,7 +31,7 @@ public class TopicsProcessor {
 
     @BuildStep
     TopicsBuildItem handleTopics(CombinedIndexBuildItem index, BuildProducer<GeneratedClassBuildItem> generatedTopicProducer) {
-        var topicDefinitions = index.getComputingIndex().getAnnotations(FTLDotNames.TOPIC_DEFINITION);
+        var topicDefinitions = index.getComputingIndex().getAnnotations(FTLDotNames.TOPIC);
         log.infof("Processing %d topic definition annotations into decls", topicDefinitions.size());
         Map<DotName, TopicsBuildItem.DiscoveredTopic> topics = new HashMap<>();
         Set<String> names = new HashSet<>();
@@ -58,8 +58,9 @@ public class TopicsProcessor {
                     // We don't care about these here, they are handled by the subscriptions processor
                     continue;
                 }
-                throw new RuntimeException("@TopicDefinition can only be applied to interfaces that directly extend " + WRITEABLE_TOPIC
-                        + " with a concrete type parameter " + iface.name() + " does not extend this interface");
+                throw new RuntimeException(
+                        "@TopicDefinition can only be applied to interfaces that directly extend " + WRITEABLE_TOPIC
+                                + " with a concrete type parameter " + iface.name() + " does not extend this interface");
             }
 
             String name = topicDefinition.value().asString();

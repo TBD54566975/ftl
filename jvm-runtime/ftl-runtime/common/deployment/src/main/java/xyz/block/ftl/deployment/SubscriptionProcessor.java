@@ -1,12 +1,9 @@
 package xyz.block.ftl.deployment;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
-import org.jboss.jandex.DotName;
+import org.jboss.jandex.AnnotationValue;
+import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.logging.Logger;
 
@@ -16,10 +13,6 @@ import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import xyz.block.ftl.FromOffset;
 import xyz.block.ftl.Retry;
-import xyz.block.ftl.Subscription;
-import xyz.block.ftl.SubscriptionOptions;
-import xyz.block.ftl.deployment.SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation;
-import xyz.block.ftl.deployment.SubscriptionMetaAnnotationsBuildItem.SubscriptionOptionsAnnotation;
 import xyz.block.ftl.v1.schema.Metadata;
 import xyz.block.ftl.v1.schema.MetadataRetry;
 import xyz.block.ftl.v1.schema.MetadataSubscriber;
@@ -30,33 +23,14 @@ public class SubscriptionProcessor {
     private static final Logger log = Logger.getLogger(SubscriptionProcessor.class);
 
     @BuildStep
-    SubscriptionMetaAnnotationsBuildItem subscriptionAnnotations(CombinedIndexBuildItem combinedIndexBuildItem,
-            ModuleNameBuildItem moduleNameBuildItem) {
-        Collection<AnnotationInstance> subscriptionAnnotations = combinedIndexBuildItem.getComputingIndex()
-                .getAnnotations(Subscription.class);
-        log.infof("Processing %s subscription annotations into decls", subscriptionAnnotations.size());
-        Map<DotName, SubscriptionAnnotation> annotations = new HashMap<>();
-        for (var subscriptions : subscriptionAnnotations) {
-            if (subscriptions.target().kind() != AnnotationTarget.Kind.CLASS) {
-                continue;
-            }
-            annotations.put(subscriptions.target().asClass().name(),
-                    SubscriptionMetaAnnotationsBuildItem.fromJandex(combinedIndexBuildItem.getComputingIndex(), subscriptions,
-                            moduleNameBuildItem.getModuleName()));
-        }
-        return new SubscriptionMetaAnnotationsBuildItem(annotations);
-    }
-
-    @BuildStep
     public void registerSubscriptions(CombinedIndexBuildItem index,
             ModuleNameBuildItem moduleNameBuildItem,
             BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItemBuildProducer,
-            SubscriptionMetaAnnotationsBuildItem subscriptionMetaAnnotationsBuildItem,
             BuildProducer<SchemaContributorBuildItem> schemaContributorBuildItems) throws Exception {
         AdditionalBeanBuildItem.Builder beans = AdditionalBeanBuildItem.builder().setUnremovable();
         var moduleName = moduleNameBuildItem.getModuleName();
         for (var subscription : index.getIndex().getAnnotations(FTLDotNames.SUBSCRIPTION)) {
-            var info = SubscriptionMetaAnnotationsBuildItem.fromJandex(index.getComputingIndex(), subscription, moduleName);
+            var info = fromJandex(index.getComputingIndex(), subscription, moduleName);
             if (subscription.target().kind() != AnnotationTarget.Kind.METHOD) {
                 continue;
             }
@@ -65,42 +39,20 @@ public class SubscriptionProcessor {
             beans.addBeanClass(className);
             schemaContributorBuildItems.produce(generateSubscription(method, className, info));
         }
-        for (var metaSub : subscriptionMetaAnnotationsBuildItem.getAnnotations().entrySet()) {
-            for (var subscription : index.getIndex().getAnnotations(metaSub.getKey())) {
-                if (subscription.target().kind() != AnnotationTarget.Kind.METHOD) {
-                    log.warnf("Subscription annotation on non-method target: %s", subscription.target());
-                    continue;
-                }
-                var method = subscription.target().asMethod();
-
-                String className = method.declaringClass().name().toString();
-                beans.addBeanClass(className);
-                schemaContributorBuildItems.produce(generateSubscription(method,
-                        className,
-                        metaSub.getValue()));
-            }
-
-        }
         additionalBeanBuildItemBuildProducer.produce(beans.build());
     }
 
     private SchemaContributorBuildItem generateSubscription(MethodInfo method, String className, SubscriptionAnnotation info) {
         return new SchemaContributorBuildItem(moduleBuilder -> {
             moduleBuilder.registerVerbMethod(method, className, false, ModuleBuilder.BodyType.REQUIRED, (builder -> {
-                if (method.hasAnnotation(SubscriptionOptions.class)) {
-                    SubscriptionOptionsAnnotation options = SubscriptionOptionsAnnotation
-                            .fromJandex(method.annotation(SubscriptionOptions.class));
 
-                    builder.addMetadata(Metadata.newBuilder().setSubscriber(MetadataSubscriber.newBuilder()
-                            .setTopic(Ref.newBuilder().setName(info.topic()).setModule(info.module()).build())
-                            .setFromOffset(
-                                    options.from() == FromOffset.BEGINNING
-                                            ? xyz.block.ftl.v1.schema.FromOffset.FROM_OFFSET_BEGINNING
-                                            : xyz.block.ftl.v1.schema.FromOffset.FROM_OFFSET_LATEST)
-                            .setDeadLetter(options.deadLetter())));
-                } else {
-                    throw new RuntimeException("Subscription must have SubscriptionOptions annotation");
-                }
+                builder.addMetadata(Metadata.newBuilder().setSubscriber(MetadataSubscriber.newBuilder()
+                        .setTopic(Ref.newBuilder().setName(info.topic()).setModule(info.module()).build())
+                        .setFromOffset(
+                                info.from() == FromOffset.BEGINNING
+                                        ? xyz.block.ftl.v1.schema.FromOffset.FROM_OFFSET_BEGINNING
+                                        : xyz.block.ftl.v1.schema.FromOffset.FROM_OFFSET_LATEST)
+                        .setDeadLetter(info.deadLetter())));
 
                 if (method.hasAnnotation(Retry.class)) {
                     RetryRecord retry = RetryRecord.fromJandex(method.annotation(Retry.class), moduleBuilder.getModuleName());
@@ -117,5 +69,33 @@ public class SubscriptionProcessor {
                 }
             }));
         });
+    }
+
+    public static SubscriptionAnnotation fromJandex(IndexView indexView, AnnotationInstance subscriptions,
+            String currentModuleName) {
+
+        AnnotationValue topicClassValue = subscriptions.value("topic");
+        String topicName;
+
+        var topicClass = indexView.getClassByName(topicClassValue.asClass().name());
+        AnnotationInstance annotation = topicClass.annotation(FTLDotNames.TOPIC);
+        if (annotation == null) {
+            throw new IllegalArgumentException(
+                    "topicClass must be annotated with @TopicDefinition for subscription " + subscriptions);
+        }
+        topicName = annotation.value().asString();
+        AnnotationValue moduleValue = annotation.value("module");
+        AnnotationValue deadLetterValue = annotation.value("deadLetter");
+        boolean deadLetter = deadLetterValue != null && !deadLetterValue.asString().isEmpty() && deadLetterValue.asBoolean();
+        AnnotationValue from = annotation.value("from");
+        FromOffset fromOffset = from == null ? FromOffset.LATEST : FromOffset.valueOf(from.asEnum());
+
+        return new SubscriptionAnnotation(
+                moduleValue == null || moduleValue.asString().isEmpty() ? currentModuleName
+                        : moduleValue.asString(),
+                topicName, deadLetter, fromOffset);
+    }
+
+    public record SubscriptionAnnotation(String module, String topic, boolean deadLetter, FromOffset from) {
     }
 }

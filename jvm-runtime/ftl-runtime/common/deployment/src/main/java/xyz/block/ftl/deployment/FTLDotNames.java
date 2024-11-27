@@ -34,5 +34,5 @@ public class FTLDotNames {
     public static final DotName SUBSCRIPTION = DotName.createSimple(Subscription.class);
     public static final DotName LEASE_CLIENT = DotName.createSimple(LeaseClient.class);
     public static final DotName GENERATED_REF = DotName.createSimple(GeneratedRef.class);
-    public static final DotName TOPIC_DEFINITION = DotName.createSimple(Topic.class);
+    public static final DotName TOPIC = DotName.createSimple(Topic.class);
 }
