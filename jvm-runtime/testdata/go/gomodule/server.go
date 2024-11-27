@@ -15,11 +15,6 @@ import (
 //ftl:export
 type TestTopic = ftl.TopicHandle[string]
 
-// Comment on subscription
-//
-//ftl:export
-type TestSubscription = ftl.SubscriptionHandle[TestTopic, SinkVerbClient, string]
-
 // Comment on data
 type TestObject struct {
 	IntField    int
@@ -142,6 +137,7 @@ type ExportedType[T any, S any] interface {
 
 // Comment on sink verb
 //
+//ftl:subscribe testTopic from=beginning
 //ftl:verb export
 func SinkVerb(ctx context.Context, req string) error {
 	return nil
