@@ -85,7 +85,7 @@ func (m *MetadataSubscriber) ToProto() proto.Message {
 	return &schemapb.MetadataSubscriber{
 		Pos: posToProto(m.Pos),
 
-		Topic:      m.Topic.ToProto().(*schemapb.Ref),
+		Topic:      m.Topic.ToProto().(*schemapb.Ref), //nolint:forcetypeassert
 		FromOffset: m.FromOffset.ToProto(),
 		DeadLetter: m.DeadLetter,
 	}
