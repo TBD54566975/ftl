@@ -369,7 +369,7 @@ func ComposeUp(ctx context.Context, name, composeYAML string, envars ...string) 
 	if err != nil {
 		return fmt.Errorf("failed to acquire lock: %w", err)
 	}
-	defer release()
+	defer release() //nolint:errcheck
 
 	envars = append(envars, "COMPOSE_IGNORE_ORPHANS=True")
 
