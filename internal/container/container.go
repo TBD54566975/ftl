@@ -360,7 +360,12 @@ func ComposeUp(ctx context.Context, name, composeYAML string, envars ...string) 
 	if !ok {
 		return fmt.Errorf("failed to get project config path")
 	}
-	release, err := flock.Acquire(ctx, filepath.Join(filepath.Dir(projCfg), ".ftl", fmt.Sprintf(".docker.%v.lock", name)), 1*time.Minute)
+	dir := filepath.Join(filepath.Dir(projCfg), ".ftl")
+	err := os.MkdirAll(dir, 0700)
+	if err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+	release, err := flock.Acquire(ctx, filepath.Join(dir, fmt.Sprintf(".docker.%v.lock", name)), 1*time.Minute)
 	if err != nil {
 		return fmt.Errorf("failed to acquire lock: %w", err)
 	}
