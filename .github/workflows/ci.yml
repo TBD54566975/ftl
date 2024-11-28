@@ -356,6 +356,8 @@ jobs:
         run: just init-db
       - name: Download Go Modules
         run: go mod download
+      - name: Build Test Images
+        run: just k8s full-deploy
       - name: Build Language Plugins
         run: just build-language-plugins
       - name: Run ${{ matrix.test }}
