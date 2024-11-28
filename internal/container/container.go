@@ -1,10 +1,12 @@
 package container
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -18,7 +20,10 @@ import (
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/go-connections/nat"
 
+	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
 var dockerClient = once.Once(func(ctx context.Context) (*client.Client, error) {
@@ -342,4 +347,41 @@ func PollContainerHealth(ctx context.Context, containerName string, timeout time
 			}
 		}
 	}
+}
+
+// ComposeUp runs docker-compose up with the given compose YAML.
+//
+// Make sure you obtain the compose yaml from a string literal or an embedded file, rather than
+// reading from disk. The project file will not be included in the release build.
+func ComposeUp(ctx context.Context, name, composeYAML string, envars ...string) error {
+	logger := log.FromContext(ctx).Scope(name)
+	ctx = log.ContextWithLogger(ctx, logger)
+
+	// A flock is used to provent Docker compose getting confused, which happens when we call `docker compose up`
+	// multiple times simultaneously for the same services.
+	projCfg, ok := projectconfig.DefaultConfigPath().Get()
+	if !ok {
+		return fmt.Errorf("failed to get project config path")
+	}
+	dir := filepath.Join(filepath.Dir(projCfg), ".ftl")
+	err := os.MkdirAll(dir, 0700)
+	if err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+	release, err := flock.Acquire(ctx, filepath.Join(dir, fmt.Sprintf(".docker.%v.lock", name)), 1*time.Minute)
+	if err != nil {
+		return fmt.Errorf("failed to acquire lock: %w", err)
+	}
+	defer release() //nolint:errcheck
+
+	logger.Debugf("Running docker compose up")
+
+	envars = append(envars, "COMPOSE_IGNORE_ORPHANS=True")
+
+	cmd := exec.CommandWithEnv(ctx, log.Debug, ".", envars, "docker", "compose", "-f", "-", "-p", "ftl", "up", "-d", "--wait")
+	cmd.Stdin = bytes.NewReader([]byte(composeYAML))
+	if err := cmd.RunStderrError(ctx); err != nil {
+		return fmt.Errorf("failed to run docker compose up: %w", err)
+	}
+	return nil
 }

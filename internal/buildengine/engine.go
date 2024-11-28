@@ -519,7 +519,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 	// Build and deploy all modules first.
 	err = e.BuildAndDeploy(ctx, 1, true)
 	if err != nil {
-		logger.Errorf(err, "initial deploy failed")
+		logger.Errorf(err, "Initial deploy failed")
 	}
 
 	moduleHashes := map[string][]byte{}

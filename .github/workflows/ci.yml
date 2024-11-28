@@ -17,7 +17,7 @@ jobs:
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Docker Compose
-        run: docker compose up -d --wait
+        run: just compose-up
       - name: Build Language Plugins
         run: just build-language-plugins
       - name: Test
@@ -35,7 +35,7 @@ jobs:
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Docker Compose
-        run: docker compose up -d --wait
+        run: just compose-up
       - name: Build Language Plugins
         run: just build-language-plugins
       - name: Test README
@@ -63,7 +63,7 @@ jobs:
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Docker Compose
-        run: docker compose up -d --wait
+        run: just compose-up
       - name: Initialise database
         run: just init-db
       - name: Vet SQL
@@ -188,7 +188,7 @@ jobs:
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Docker Compose
-        run: docker compose up -d --wait
+        run: just compose-up
       - name: Init DB
         run: just init-db
       - name: Rebuild All
@@ -300,7 +300,7 @@ jobs:
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Docker Compose
-        run: docker compose --profile integration up -d --wait
+        run: just compose-up
       - name: Create DB
         run: just init-db
       - name: Download Go Modules
@@ -351,7 +351,7 @@ jobs:
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Docker Compose
-        run: docker compose --profile integration up -d --wait
+        run: just compose-up
       - name: Create DB
         run: just init-db
       - name: Download Go Modules

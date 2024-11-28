@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5/pgproto3"
 
 	"github.com/TBD54566975/ftl/internal/dev"
@@ -17,7 +18,8 @@ func TestPgProxy(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	client, proxy := net.Pipe()
 
-	dsn, err := dev.SetupPostgres(ctx, "postgres:15.8", 0, false)
+	dsn := dev.PostgresDSN(ctx, 0)
+	err := dev.SetupPostgres(ctx, optional.None[string](), 0, false)
 	assert.NoError(t, err)
 
 	frontend := pgproto3.NewFrontend(client, client)

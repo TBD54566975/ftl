@@ -44,7 +44,7 @@ func provisionMysql(mysqlPort int) InMemResourceProvisionerFn {
 		dbName := strcase.ToLowerSnake(module) + "_" + strcase.ToLowerSnake(id)
 
 		// We assume that the DB hsas already been started when running in dev mode
-		mysqlDSN, err := dev.SetupMySQL(ctx, "mysql:8.4.3", mysqlPort)
+		mysqlDSN, err := dev.SetupMySQL(ctx, mysqlPort)
 		if err != nil {
 			return nil, fmt.Errorf("failed to wait for mysql to be ready: %w", err)
 		}
@@ -64,7 +64,6 @@ func provisionMysql(mysqlPort int) InMemResourceProvisionerFn {
 				}
 				return ret, nil
 			}
-
 		}
 	}
 }
@@ -84,13 +83,13 @@ func establishMySQLDB(ctx context.Context, rc *provisioner.ResourceContext, mysq
 	if res.Next() {
 		_, err = conn.ExecContext(ctx, "DROP DATABASE "+dbName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to drop database: %w", err)
+			return nil, fmt.Errorf("failed to drop database %q: %w", dbName, err)
 		}
 	}
 
 	_, err = conn.ExecContext(ctx, "CREATE DATABASE "+dbName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create database: %w", err)
+		return nil, fmt.Errorf("failed to create database %q: %w", dbName, err)
 	}
 
 	if mysql.Mysql == nil {
@@ -153,10 +152,8 @@ func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provision
 		dbName := strcase.ToLowerSnake(module) + "_" + strcase.ToLowerSnake(id)
 
 		// We assume that the DB has already been started when running in dev mode
-		postgresDSN, err := dev.WaitForPostgresReady(ctx, postgresPort)
-		if err != nil {
-			return nil, fmt.Errorf("failed to wait for postgres to be ready: %w", err)
-		}
+		postgresDSN := dsn.PostgresDSN("ftl", dsn.Port(postgresPort))
+
 		conn, err := otelsql.Open("pgx", postgresDSN)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to postgres: %w", err)
@@ -180,12 +177,12 @@ func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provision
 			}
 			_, err = conn.ExecContext(ctx, "DROP DATABASE "+dbName)
 			if err != nil {
-				return nil, fmt.Errorf("failed to create database: %w", err)
+				return nil, fmt.Errorf("failed to drop database %q: %w", dbName, err)
 			}
 		}
 		_, err = conn.ExecContext(ctx, "CREATE DATABASE "+dbName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create database: %w", err)
+			return nil, fmt.Errorf("failed to create database %q: %w", dbName, err)
 		}
 
 		if pg.Postgres == nil {
