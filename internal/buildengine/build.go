@@ -65,7 +65,7 @@ func handleBuildResult(ctx context.Context, projectConfig projectconfig.Config, 
 
 	logger.Infof("Module built (%.2fs)", time.Since(result.StartTime).Seconds())
 
-	migrationFiles, err := handleDatabaseMigrations(config.Dir, config.SQLMigrationDirectory, result.Schema)
+	migrationFiles, err := handleDatabaseMigrations(config.DeployDir, config.SQLMigrationDirectory, result.Schema)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to extract migrations %w", err)
 	}

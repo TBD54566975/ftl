@@ -43,6 +43,7 @@ func TestJavaConfigDefaults(t *testing.T) {
 					"build/generated",
 					"target/generated-sources",
 				},
+				SQLMigrationDir: "src/main/db",
 			},
 		},
 		{
@@ -62,6 +63,7 @@ func TestJavaConfigDefaults(t *testing.T) {
 					"build/generated",
 					"target/generated-sources",
 				},
+				SQLMigrationDir: "src/main/db",
 			},
 		},
 	} {

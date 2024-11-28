@@ -444,7 +444,7 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool) (*langpb.Bu
 	command := exec.Command(ctx, log.Debug, config.Dir, "bash", "-c", config.Build)
 	err = command.Run()
 	if err != nil {
-		return &langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{&langpb.BuildFailure{
+		return &langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{BuildFailure: &langpb.BuildFailure{
 			IsAutomaticRebuild: autoRebuild,
 			ContextId:          bctx.ID,
 			Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_COMPILER}}},
@@ -574,6 +574,7 @@ func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request
 		GeneratedSchemaDir: ptr("src/main/ftl-module-schema"),
 		LanguageConfig:     &structpb.Struct{Fields: map[string]*structpb.Value{}},
 		Watch:              []string{"pom.xml", "src/**", "build/generated", "target/generated-sources"},
+		SqlMigrationDir:    "src/main/db",
 	}
 	dir := req.Msg.Dir
 	pom := filepath.Join(dir, "pom.xml")
