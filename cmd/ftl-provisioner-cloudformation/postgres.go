@@ -109,7 +109,7 @@ func updatePostgresOutputs(_ context.Context, to *schemapb.DatabaseRuntime, reso
 	to.WriteConnector = &schemapb.DatabaseConnector{
 		Value: &schemapb.DatabaseConnector_AwsiamAuthDatabaseConnector{
 			AwsiamAuthDatabaseConnector: &schemapb.AWSIAMAuthDatabaseConnector{
-				Endpoint: *byName[PropertyPsqlWriteEndpoint].OutputValue,
+				Endpoint: fmt.Sprintf("%s:%d", *byName[PropertyPsqlWriteEndpoint].OutputValue, 5432),
 				Database: resourceID,
 				Username: "ftluser",
 			},
@@ -118,7 +118,7 @@ func updatePostgresOutputs(_ context.Context, to *schemapb.DatabaseRuntime, reso
 	to.ReadConnector = &schemapb.DatabaseConnector{
 		Value: &schemapb.DatabaseConnector_AwsiamAuthDatabaseConnector{
 			AwsiamAuthDatabaseConnector: &schemapb.AWSIAMAuthDatabaseConnector{
-				Endpoint: *byName[PropertyPsqlReadEndpoint].OutputValue,
+				Endpoint: fmt.Sprintf("%s:%d", *byName[PropertyPsqlReadEndpoint].OutputValue, 5432),
 				Database: resourceID,
 				Username: "ftluser",
 			},
