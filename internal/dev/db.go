@@ -33,7 +33,7 @@ func SetupPostgres(ctx context.Context, image optional.Option[string], port int,
 		envars = append(envars, "POSTGRES_PORT="+strconv.Itoa(port))
 	}
 	if imaneName, ok := image.Get(); ok {
-		envars = append(envars, "POSTGRES_IMAGE="+imaneName)
+		envars = append(envars, "FTL_DATABASE_IMAGE="+imaneName)
 	}
 	err := container.ComposeUp(ctx, "postgres", postgresDockerCompose, envars...)
 	if err != nil {

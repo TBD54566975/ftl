@@ -1,0 +1,5 @@
+services:
+  registry:
+    image: ${FTL_REGISTRY_IMAGE:-registry:2}
+    ports:
+      -  "${FTL_REGISTRY_PORT:-15000}:5000"

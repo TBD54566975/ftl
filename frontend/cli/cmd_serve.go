@@ -49,9 +49,9 @@ type serveCmd struct {
 
 type serveCommonConfig struct {
 	Bind                *url.URL             `help:"Starting endpoint to bind to and advertise to. Each controller, ingress, runner and language plugin will increment the port by 1" default:"http://127.0.0.1:8891"`
-	DBPort              int                  `help:"Port to use for the database." default:"15432"`
-	MysqlPort           int                  `help:"Port to use for the MySQL database, if one is required." default:"13306"`
-	RegistryPort        int                  `help:"Port to use for the registry." default:"15000"`
+	DBPort              int                  `help:"Port to use for the database." env:"FTL_DB_PORT" default:"15432"`
+	MysqlPort           int                  `help:"Port to use for the MySQL database, if one is required." env:"FTL_MYSQL_PORT" default:"13306"`
+	RegistryPort        int                  `help:"Port to use for the registry." env:"FTL_REGISTRY_PORT" default:"15000"`
 	Controllers         int                  `short:"c" help:"Number of controllers to start." default:"1"`
 	Provisioners        int                  `short:"p" help:"Number of provisioners to start." default:"1"`
 	Background          bool                 `help:"Run in the background." default:"false"`

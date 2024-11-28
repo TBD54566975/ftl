@@ -305,7 +305,8 @@ compose-up:
   -f internal/dev/docker-compose.grafana.yml
   -f internal/dev/docker-compose.mysql.yml
   -f internal/dev/docker-compose.postgres.yml
-  -f internal/dev/docker-compose.redpanda.yml"
+  -f internal/dev/docker-compose.redpanda.yml
+  -f internal/dev/docker-compose.registry.yml"
     docker compose -p "ftl" $docker_compose_files up -d --wait
 
 # Run a Just command in the Helm charts directory
