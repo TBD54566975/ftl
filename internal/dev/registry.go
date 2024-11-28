@@ -2,12 +2,11 @@ package dev
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
-
-	_ "embed"
 
 	"github.com/TBD54566975/ftl/internal/container"
 )
