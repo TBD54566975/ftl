@@ -3,6 +3,7 @@ package dsn
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/rds/auth"
@@ -63,7 +64,11 @@ func ResolvePostgresDSN(ctx context.Context, connector schema.DatabaseConnector)
 		if err != nil {
 			return "", fmt.Errorf("failed to create authentication token: %w", err)
 		}
-		return fmt.Sprintf("postgres://%s:%s@%s/%s", c.Username, authenticationToken, c.Endpoint, c.Database), nil
+		host, port, err := net.SplitHostPort(c.Endpoint)
+		if err != nil {
+			return "", fmt.Errorf("failed to split host and port: %w", err)
+		}
+		return fmt.Sprintf("host=%s port=%s dbname=%s user=%s password=%s", host, port, c.Database, c.Username, authenticationToken), nil
 	default:
 		return "", fmt.Errorf("unexpected database connector type: %T", connector)
 	}
