@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/alecthomas/atomic"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
@@ -20,15 +21,7 @@ type task struct {
 	outputs atomic.Value[[]types.Output]
 }
 
-func (t *task) updateStack(ctx context.Context, client *cloudformation.Client, changeSetID string) ([]types.Output, error) {
-	_, err := client.ExecuteChangeSet(ctx, &cloudformation.ExecuteChangeSetInput{
-		ChangeSetName: &changeSetID,
-		StackName:     &t.stackID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute change-set: %w", err)
-	}
-
+func (t *task) waitForStackReady(ctx context.Context, client *cloudformation.Client) ([]types.Output, error) {
 	retry := backoff.Backoff{
 		Min:    100 * time.Millisecond,
 		Max:    5 * time.Second,
@@ -101,16 +94,34 @@ func (t *task) postUpdate(ctx context.Context, secrets *secretsmanager.Client, o
 
 func (t *task) Start(oldCtx context.Context, client *cloudformation.Client, secrets *secretsmanager.Client, changeSetID string) {
 	ctx := context.WithoutCancel(oldCtx)
+	logger := log.FromContext(ctx)
 	go func() {
-		outputs, err := t.updateStack(ctx, client, changeSetID)
+		if changeSetID != "" {
+			logger.Debugf("Executing change-set: %s", changeSetID)
+			_, err := client.ExecuteChangeSet(ctx, &cloudformation.ExecuteChangeSetInput{
+				ChangeSetName: &changeSetID,
+				StackName:     &t.stackID,
+			})
+			if err != nil {
+				logger.Errorf(err, "failed to execute change-set")
+				t.err.Store(fmt.Errorf("failed to execute change-set: %w", err))
+				return
+			}
+		}
+		logger.Debugf("Waiting for stack to be ready: %s", t.stackID)
+		outputs, err := t.waitForStackReady(ctx, client)
 		if err != nil {
+			logger.Errorf(err, "failed to wait for stack to be ready")
 			t.err.Store(err)
 			return
 		}
+		logger.Debugf("Stack ready: %s", t.stackID)
 		if err := t.postUpdate(ctx, secrets, outputs); err != nil {
+			logger.Errorf(err, "failed to post-update")
 			t.err.Store(err)
 			return
 		}
+		logger.Debugf("Post-update complete: %s", t.stackID)
 		t.outputs.Store(outputs)
 	}()
 }

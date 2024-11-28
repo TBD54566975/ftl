@@ -91,7 +91,7 @@ func PostgresPostUpdate(ctx context.Context, secrets *secretsmanager.Client, byN
 					return fmt.Errorf("failed to create database: %w", err)
 				}
 			}
-			if _, err := db.ExecContext(ctx, fmt.Sprintf("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA %s TO ftluser;", resourceID)); err != nil {
+			if _, err := db.ExecContext(ctx, "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ftluser;"); err != nil {
 				return fmt.Errorf("failed to grant FTL user privileges: %w", err)
 			}
 		}

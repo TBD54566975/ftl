@@ -17,7 +17,10 @@ func (c *CloudformationProvisioner) Status(ctx context.Context, req *connect.Req
 	token := req.Msg.ProvisioningToken
 	// if the task is not in the map, it means that the provisioner has crashed since starting the task
 	// in that case, we start a new task to query the existing stack
-	task, _ := c.running.LoadOrStore(token, &task{stackID: token})
+	task, loaded := c.running.LoadOrStore(token, &task{stackID: token})
+	if !loaded {
+		task.Start(ctx, c.client, c.secrets, "")
+	}
 
 	if task.err.Load() != nil {
 		c.running.Delete(token)
