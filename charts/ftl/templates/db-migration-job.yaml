@@ -19,7 +19,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: dbmig
-          image: "{{ .Values.controller.image.repository | replace "controller" "runner" }}:{{ .Values.controller.image.tag | default $version }}"
+          image: "{{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag | default $version }}"
           env:
             {{- if not .Values.postgresql.enabled }}
             - name: FTL_CONTROLLER_DSN
