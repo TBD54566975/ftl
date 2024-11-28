@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/alecthomas/atomic"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/jpillora/backoff"
+
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 type task struct {

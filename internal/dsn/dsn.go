@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/rds/auth"
+
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type dsnOptions struct {
