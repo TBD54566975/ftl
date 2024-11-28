@@ -43,6 +43,61 @@ proto3.util.setEnumType(FromOffset, "xyz.block.ftl.v1.schema.FromOffset", [
 ]);
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.AWSIAMAuthDatabaseConnector
+ */
+export class AWSIAMAuthDatabaseConnector extends Message<AWSIAMAuthDatabaseConnector> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string username = 2;
+   */
+  username = "";
+
+  /**
+   * @generated from field: string endpoint = 3;
+   */
+  endpoint = "";
+
+  /**
+   * @generated from field: string database = 4;
+   */
+  database = "";
+
+  constructor(data?: PartialMessage<AWSIAMAuthDatabaseConnector>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.AWSIAMAuthDatabaseConnector";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "username", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "database", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AWSIAMAuthDatabaseConnector {
+    return new AWSIAMAuthDatabaseConnector().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AWSIAMAuthDatabaseConnector {
+    return new AWSIAMAuthDatabaseConnector().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AWSIAMAuthDatabaseConnector {
+    return new AWSIAMAuthDatabaseConnector().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AWSIAMAuthDatabaseConnector | PlainMessage<AWSIAMAuthDatabaseConnector> | undefined, b: AWSIAMAuthDatabaseConnector | PlainMessage<AWSIAMAuthDatabaseConnector> | undefined): boolean {
+    return proto3.util.equals(AWSIAMAuthDatabaseConnector, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Any
  */
 export class Any extends Message<Any> {
@@ -443,6 +498,12 @@ export class DatabaseConnector extends Message<DatabaseConnector> {
    */
   value: {
     /**
+     * @generated from field: xyz.block.ftl.v1.schema.AWSIAMAuthDatabaseConnector awsiam_auth_database_connector = 2;
+     */
+    value: AWSIAMAuthDatabaseConnector;
+    case: "awsiamAuthDatabaseConnector";
+  } | {
+    /**
      * @generated from field: xyz.block.ftl.v1.schema.DSNDatabaseConnector dsn_database_connector = 1;
      */
     value: DSNDatabaseConnector;
@@ -457,6 +518,7 @@ export class DatabaseConnector extends Message<DatabaseConnector> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.schema.DatabaseConnector";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 2, name: "awsiam_auth_database_connector", kind: "message", T: AWSIAMAuthDatabaseConnector, oneof: "value" },
     { no: 1, name: "dsn_database_connector", kind: "message", T: DSNDatabaseConnector, oneof: "value" },
   ]);
 

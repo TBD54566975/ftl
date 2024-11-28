@@ -138,7 +138,7 @@ func (reg *ProvisionerRegistry) CreateDeployment(ctx context.Context, module str
 			logger.Debugf("Adding task for module %s: %s", module, binding)
 			deployment.Tasks = append(deployment.Tasks, &Task{
 				module:     module,
-				handler:    binding.Provisioner,
+				binding:    binding,
 				deployment: deployment,
 				desired:    desiredResources.WithDirectDependencies(desired),
 			})

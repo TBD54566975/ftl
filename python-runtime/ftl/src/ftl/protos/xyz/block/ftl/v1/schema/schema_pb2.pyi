@@ -19,6 +19,18 @@ ALIAS_KIND_JSON: AliasKind
 FROM_OFFSET_BEGINNING: FromOffset
 FROM_OFFSET_LATEST: FromOffset
 
+class AWSIAMAuthDatabaseConnector(_message.Message):
+    __slots__ = ("pos", "username", "endpoint", "database")
+    POS_FIELD_NUMBER: _ClassVar[int]
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
+    ENDPOINT_FIELD_NUMBER: _ClassVar[int]
+    DATABASE_FIELD_NUMBER: _ClassVar[int]
+    pos: Position
+    username: str
+    endpoint: str
+    database: str
+    def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., username: _Optional[str] = ..., endpoint: _Optional[str] = ..., database: _Optional[str] = ...) -> None: ...
+
 class Any(_message.Message):
     __slots__ = ("pos",)
     POS_FIELD_NUMBER: _ClassVar[int]
@@ -100,10 +112,12 @@ class Database(_message.Message):
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., runtime: _Optional[_Union[DatabaseRuntime, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., type: _Optional[str] = ..., name: _Optional[str] = ..., metadata: _Optional[_Iterable[_Union[Metadata, _Mapping]]] = ...) -> None: ...
 
 class DatabaseConnector(_message.Message):
-    __slots__ = ("dsn_database_connector",)
+    __slots__ = ("awsiam_auth_database_connector", "dsn_database_connector")
+    AWSIAM_AUTH_DATABASE_CONNECTOR_FIELD_NUMBER: _ClassVar[int]
     DSN_DATABASE_CONNECTOR_FIELD_NUMBER: _ClassVar[int]
+    awsiam_auth_database_connector: AWSIAMAuthDatabaseConnector
     dsn_database_connector: DSNDatabaseConnector
-    def __init__(self, dsn_database_connector: _Optional[_Union[DSNDatabaseConnector, _Mapping]] = ...) -> None: ...
+    def __init__(self, awsiam_auth_database_connector: _Optional[_Union[AWSIAMAuthDatabaseConnector, _Mapping]] = ..., dsn_database_connector: _Optional[_Union[DSNDatabaseConnector, _Mapping]] = ...) -> None: ...
 
 class DatabaseRuntime(_message.Message):
     __slots__ = ("read_connector", "write_connector")

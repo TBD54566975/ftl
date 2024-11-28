@@ -8,6 +8,13 @@ import "google/protobuf/timestamp.proto";
 option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb";
 option java_multiple_files = true;
 
+message AWSIAMAuthDatabaseConnector {
+  optional Position pos = 1;
+  string username = 2;
+  string endpoint = 3;
+  string database = 4;
+}
+
 enum AliasKind {
   ALIAS_KIND_JSON = 0;
 }
@@ -62,6 +69,7 @@ message Database {
 
 message DatabaseConnector {
   oneof value {
+    AWSIAMAuthDatabaseConnector awsiam_auth_database_connector = 2;
     DSNDatabaseConnector dsn_database_connector = 1;
   }
 }

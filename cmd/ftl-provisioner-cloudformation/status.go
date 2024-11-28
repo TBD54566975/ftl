@@ -17,7 +17,10 @@ func (c *CloudformationProvisioner) Status(ctx context.Context, req *connect.Req
 	token := req.Msg.ProvisioningToken
 	// if the task is not in the map, it means that the provisioner has crashed since starting the task
 	// in that case, we start a new task to query the existing stack
-	task, _ := c.running.LoadOrStore(token, &task{stackID: token})
+	task, loaded := c.running.LoadOrStore(token, &task{stackID: token})
+	if !loaded {
+		task.Start(ctx, c.client, c.secrets, "")
+	}
 
 	if task.err.Load() != nil {
 		c.running.Delete(token)
@@ -86,44 +89,13 @@ func (c *CloudformationProvisioner) updateResources(ctx context.Context, outputs
 				postgres.Postgres.Output = &schemapb.DatabaseRuntime{}
 			}
 
-			if err := c.updatePostgresOutputs(ctx, postgres.Postgres.Output, resource.ResourceId, byResourceID[resource.ResourceId]); err != nil {
+			if err := updatePostgresOutputs(ctx, postgres.Postgres.Output, resource.ResourceId, byResourceID[resource.ResourceId]); err != nil {
 				return fmt.Errorf("failed to update postgres outputs: %w", err)
 			}
 		} else if _, ok := resource.Resource.(*provisioner.Resource_Mysql); ok {
 			panic("mysql not implemented")
 		}
 	}
-	return nil
-}
-
-func (c *CloudformationProvisioner) updatePostgresOutputs(ctx context.Context, to *schemapb.DatabaseRuntime, resourceID string, outputs []types.Output) error {
-	byName, err := outputsByPropertyName(outputs)
-	if err != nil {
-		return fmt.Errorf("failed to group outputs by property name: %w", err)
-	}
-
-	// TODO: mind the secret rotation
-	secretARN := *byName[PropertyPsqlMasterUserARN].OutputValue
-	username, password, err := secretARNToUsernamePassword(ctx, c.secrets, secretARN)
-	if err != nil {
-		return fmt.Errorf("failed to get username and password from secret ARN: %w", err)
-	}
-
-	to.WriteConnector = &schemapb.DatabaseConnector{
-		Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
-			DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
-				Dsn: endpointToDSN(byName[PropertyMySQLWriteEndpoint].OutputValue, resourceID, 5432, username, password),
-			},
-		},
-	}
-	to.ReadConnector = &schemapb.DatabaseConnector{
-		Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
-			DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
-				Dsn: endpointToDSN(byName[PropertyMySQLReadEndpoint].OutputValue, resourceID, 5432, username, password),
-			},
-		},
-	}
-
 	return nil
 }
 

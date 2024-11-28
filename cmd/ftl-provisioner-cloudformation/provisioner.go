@@ -21,6 +21,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/common/plugin"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 const (
@@ -71,6 +72,8 @@ func (c *CloudformationProvisioner) Ping(context.Context, *connect.Request[ftlv1
 }
 
 func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
+	logger := log.FromContext(ctx)
+
 	res, updated, err := c.createChangeSet(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -90,6 +93,7 @@ func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.
 	if _, ok := c.running.LoadOrStore(token, task); ok {
 		return nil, fmt.Errorf("provisioner already running: %s", token)
 	}
+	logger.Debugf("Starting task for module %s: %s (%s)", req.Msg.Module, token, changeSetID)
 	task.Start(ctx, c.client, c.secrets, changeSetID)
 	return connect.NewResponse(&provisioner.ProvisionResponse{
 		Status:            provisioner.ProvisionResponse_SUBMITTED,
