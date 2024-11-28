@@ -145,6 +145,12 @@ build-all-images: setup-registry setup-istio-cluster
     docker push {{registry_local}}/ftl-$image:latest
   done
 
+delete-all-images:
+  #!/bin/bash
+  for image in $(just -f ../Justfile list-docker-images); do
+    docker image rm {{registry_local}}/ftl-$image:latest ftl0/ftl-$image:latest || true
+  done
+
 # Build and push single FTL image to local registry
 build-image image: setup-registry setup-istio-cluster
   just -f ../Justfile build-docker $image

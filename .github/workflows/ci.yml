@@ -377,7 +377,7 @@ jobs:
         run: just teardown-cluster
       - name: Delete Images
         if: always() # We don't want to cache these images, delete them before the cache action
-        run: docker image rm localhost:5000/ftl-runner:latest ftl-runner:latest ftl-controller:latest localhost:5000/ftl-controller:latest
+        run: just k8s delete-all-images
   integration-success:
     name: Integration Success
     needs: [integration-run]
