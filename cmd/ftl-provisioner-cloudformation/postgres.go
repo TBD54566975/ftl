@@ -27,13 +27,14 @@ func (p *PostgresTemplater) AddToTemplate(template *goformation.Template) error 
 	clusterID := cloudformationResourceID(p.resourceID, "cluster")
 	instanceID := cloudformationResourceID(p.resourceID, "instance")
 	template.Resources[clusterID] = &rds.DBCluster{
-		Engine:                   ptr("aurora-postgresql"),
-		MasterUsername:           ptr("root"),
-		ManageMasterUserPassword: ptr(true),
-		DBSubnetGroupName:        ptr(p.config.DatabaseSubnetGroupARN),
-		VpcSecurityGroupIds:      []string{p.config.DatabaseSecurityGroup},
-		EngineMode:               ptr("provisioned"),
-		Port:                     ptr(5432),
+		Engine:                          ptr("aurora-postgresql"),
+		MasterUsername:                  ptr("root"),
+		ManageMasterUserPassword:        ptr(true),
+		DBSubnetGroupName:               ptr(p.config.DatabaseSubnetGroupARN),
+		VpcSecurityGroupIds:             []string{p.config.DatabaseSecurityGroup},
+		EngineMode:                      ptr("provisioned"),
+		Port:                            ptr(5432),
+		EnableIAMDatabaseAuthentication: ptr(true),
 		ServerlessV2ScalingConfiguration: &rds.DBCluster_ServerlessV2ScalingConfiguration{
 			MinCapacity: ptr(0.5),
 			MaxCapacity: ptr(10.0),
