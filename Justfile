@@ -296,6 +296,18 @@ build-docker name:
     -t ftl0/ftl-{{name}}:latest \
     -f Dockerfile.{{name}} .
 
+# Run docker compose up with all docker compose files
+compose-up:
+  #!/bin/bash
+  set -eo pipefail
+  docker_compose_files="
+  -f docker-compose.yml
+  -f internal/dev/docker-compose.grafana.yml
+  -f internal/dev/docker-compose.mysql.yml
+  -f internal/dev/docker-compose.postgres.yml
+  -f internal/dev/docker-compose.redpanda.yml"
+    docker compose -p "ftl" $docker_compose_files up -d --wait
+
 # Run a Just command in the Helm charts directory
 chart *args:
     @cd charts && just {{args}}

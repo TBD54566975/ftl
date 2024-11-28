@@ -1,53 +1,4 @@
 services:
-  db:
-    image: postgres:15.10
-    command: postgres
-    user: postgres
-    # For local debugging
-    # -c logging_collector=on -c log_destination=stderr -c log_directory=/logs -c log_statement=all
-    # volumes:
-    #   - ./logs:/logs
-    restart: always
-    environment:
-      POSTGRES_PASSWORD: secret
-    ports:
-      - 15432:5432
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
-      interval: 1s
-      timeout: 60s
-      retries: 60
-      start_period: 80s
-  mysql:
-    profiles:
-      - mysql
-    image: mysql:8.4.3
-    environment:
-      MYSQL_ROOT_PASSWORD: secret
-      MYSQL_USER: mysql
-      MYSQL_PASSWORD: secret
-      MYSQL_DATABASE: ftl
-    ports:
-      - "13306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=secret"]
-      interval: 1s
-      timeout: 60s
-      retries: 60
-      start_period: 80s
-  otel-lgtm:
-    image: grafana/otel-lgtm
-    platform: linux/amd64
-    ports:
-      - 3000:3000 # Portal Endpoint
-      - 9090:9090 # Prometheus
-      - ${OTEL_GRPC_PORT:-4317}:4317 # OTLP GRPC Collector
-      - ${OTEL_HTTP_PORT:-4317}:4318 # OTLP HTTP Collector
-    environment:
-      - ENABLE_LOGS_ALL=true
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_AUTH_DISABLE_LOGIN_FORM=true
   localstack:
     image: localstack/localstack
     profiles:
@@ -61,6 +12,3 @@ services:
     image: registry:2
     ports:
       -  "15000:5000"
-
-volumes:
-  grafana-storage: {}

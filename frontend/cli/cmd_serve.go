@@ -163,7 +163,8 @@ func (s *serveCommonConfig) run(
 	registry.AllowInsecure = true
 	registry.Registry = fmt.Sprintf("127.0.0.1:%d/ftl", s.RegistryPort)
 	// Bring up the DB and DAL.
-	dsn, err := dev.SetupPostgres(ctx, s.DatabaseImage, s.DBPort, recreate)
+	dsn := dev.PostgresDSN(ctx, s.DBPort)
+	err = dev.SetupPostgres(ctx, optional.Some(s.DatabaseImage), s.DBPort, recreate)
 	if err != nil {
 		return err
 	}
