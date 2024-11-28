@@ -354,6 +354,8 @@ func PollContainerHealth(ctx context.Context, containerName string, timeout time
 // Make sure you obtain the compose yaml from a string literal or an embedded file, rather than
 // reading from disk. The project file will not be included in the release build.
 func ComposeUp(ctx context.Context, name, composeYAML string, envars ...string) error {
+	logger := log.FromContext(ctx)
+
 	// A flock is used to provent Docker compose getting confused, which happens when we call `docker compose up`
 	// multiple times simultaneously for the same services.
 	projCfg, ok := projectconfig.DefaultConfigPath().Get()
@@ -370,6 +372,8 @@ func ComposeUp(ctx context.Context, name, composeYAML string, envars ...string) 
 		return fmt.Errorf("failed to acquire lock: %w", err)
 	}
 	defer release() //nolint:errcheck
+
+	logger.Debugf("Running docker compose up for %s", name)
 
 	envars = append(envars, "COMPOSE_IGNORE_ORPHANS=True")
 
