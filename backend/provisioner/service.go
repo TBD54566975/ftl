@@ -41,7 +41,6 @@ func (c *Config) SetDefaults() {
 
 type Service struct {
 	controllerClient ftlv1connect.ControllerServiceClient
-	schemaClient     ftlv1connect.SchemaServiceClient
 	currentResources *xsync.MapOf[string, *ResourceGraph]
 	registry         *ProvisionerRegistry
 }
@@ -52,13 +51,11 @@ func New(
 	ctx context.Context,
 	config Config,
 	controllerClient ftlv1connect.ControllerServiceClient,
-	schemaClient ftlv1connect.SchemaServiceClient,
 	registry *ProvisionerRegistry,
 ) (*Service, error) {
 	resourceMap := xsync.NewMapOf[string, *ResourceGraph]()
 	return &Service{
 		controllerClient: controllerClient,
-		schemaClient:     schemaClient,
 		currentResources: resourceMap,
 		registry:         registry,
 	}, nil
@@ -165,14 +162,13 @@ func Start(
 	config Config,
 	registry *ProvisionerRegistry,
 	controllerClient ftlv1connect.ControllerServiceClient,
-	schemaClient ftlv1connect.SchemaServiceClient,
 ) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
 	logger.Debugf("Starting FTL provisioner")
 
-	svc, err := New(ctx, config, controllerClient, schemaClient, registry)
+	svc, err := New(ctx, config, controllerClient, registry)
 	if err != nil {
 		return err
 	}
@@ -251,33 +247,4 @@ func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1
 		return nil, fmt.Errorf("call to ftl-controller failed: %w", err)
 	}
 	return connect.NewResponse(resp.Msg), nil
-}
-
-func (s *Service) GetSchema(ctx context.Context, req *connect.Request[ftlv1.GetSchemaRequest]) (*connect.Response[ftlv1.GetSchemaResponse], error) {
-	resp, err := s.schemaClient.GetSchema(ctx, req)
-	if err != nil {
-		logger := log.FromContext(ctx)
-		logger.Errorf(err, "get schema failed")
-		return nil, fmt.Errorf("call to ftl-controller failed: %w", err)
-	}
-	return connect.NewResponse(resp.Msg), nil
-}
-
-func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], to *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
-	logger := log.FromContext(ctx)
-	stream, err := s.schemaClient.PullSchema(ctx, req)
-	if err != nil {
-		logger.Errorf(err, "pull schema failed")
-		return fmt.Errorf("call to ftl-controller failed: %w", err)
-	}
-	defer stream.Close()
-	for stream.Receive() {
-		if err := stream.Err(); err != nil {
-			return fmt.Errorf("call to ftl-controller failed: %w", err)
-		}
-		if err := to.Send(stream.Msg()); err != nil {
-			return fmt.Errorf("call to ftl-controller failed: %w", err)
-		}
-	}
-	return nil
 }
