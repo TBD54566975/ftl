@@ -1,8 +1,6 @@
 on:
-  pull_request:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+
 name: SmokeTest
 concurrency:
   group: ${{ github.ref }}-smoketest
@@ -10,7 +8,6 @@ concurrency:
 jobs:
   smoke-test-upgrade-path:
     name: Smoke Test Upgrade Path
-    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     steps:
       - name: Free Disk Space (Ubuntu)
