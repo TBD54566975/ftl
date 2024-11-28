@@ -63,7 +63,6 @@ func SetupRegistry(ctx context.Context, image string, port int) error {
 }
 
 func WaitForPortReady(ctx context.Context, port int) error {
-
 	timeout := time.After(10 * time.Minute)
 	retry := time.NewTicker(5 * time.Millisecond)
 	for {

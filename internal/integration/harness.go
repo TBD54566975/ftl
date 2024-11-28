@@ -226,8 +226,8 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 	assert.True(t, ok)
 
 	// Build FTL binary
-	logger := log.Configure(&logWriter{logger: t}, log.Config{Level: log.Debug})
-	ctx := log.ContextWithLogger(context.Background(), logger)
+	// logger := log.Configure(&logWriter{logger: t}, log.Config{Level: log.Debug})
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	binDir := filepath.Join(rootDir, "build", "release")
 
 	var kubeClient *kubernetes.Clientset
