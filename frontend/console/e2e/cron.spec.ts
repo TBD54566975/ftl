@@ -36,19 +36,16 @@ test('submit cron form using ⌘+⏎ shortcut', async ({ page }) => {
       await page.keyboard.press('ControlOrMeta+Enter')
       const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
       await expect(responseEditor).toBeVisible()
+
+      const responseText = await responseEditor.textContent()
+      const responseJson = JSON.parse(responseText?.trim() || '{}')
+
+      expect(responseJson).toEqual({})
       break
     } catch (error) {
       if (attempt === 2) throw error
     }
   }
-
-  const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
-  await expect(responseEditor).toBeVisible()
-
-  const responseText = await responseEditor.textContent()
-  const responseJson = JSON.parse(responseText?.trim() || '{}')
-
-  expect(responseJson).toEqual({})
 })
 
 test('submit cron form using ⌘+⏎ shortcut without focusing first', async ({ page }) => {
@@ -60,17 +57,13 @@ test('submit cron form using ⌘+⏎ shortcut without focusing first', async ({ 
       await page.keyboard.press('ControlOrMeta+Enter')
       const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
       await expect(responseEditor).toBeVisible()
+      const responseText = await responseEditor.textContent()
+      const responseJson = JSON.parse(responseText?.trim() || '{}')
+
+      expect(responseJson).toEqual({})
       break
     } catch (error) {
       if (attempt === 2) throw error
     }
   }
-
-  const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
-  await expect(responseEditor).toBeVisible()
-
-  const responseText = await responseEditor.textContent()
-  const responseJson = JSON.parse(responseText?.trim() || '{}')
-
-  expect(responseJson).toEqual({})
 })
