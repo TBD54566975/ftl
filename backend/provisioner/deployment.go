@@ -10,7 +10,7 @@ import (
 	"github.com/jpillora/backoff"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 type TaskState string
@@ -24,7 +24,7 @@ const (
 
 // Task is a unit of work for a deployment
 type Task struct {
-	handler provisionerconnect.ProvisionerPluginServiceClient
+	binding *ProvisionerBinding
 	module  string
 	state   TaskState
 	desired *ResourceGraph
@@ -46,7 +46,7 @@ func (t *Task) Start(ctx context.Context) error {
 		ids[res.ResourceId] = true
 	}
 
-	resp, err := t.handler.Provision(ctx, connect.NewRequest(&provisioner.ProvisionRequest{
+	resp, err := t.binding.Provisioner.Provision(ctx, connect.NewRequest(&provisioner.ProvisionRequest{
 		Module: t.module,
 		// TODO: We need a proper cluster specific ID here
 		FtlClusterId:      "ftl",
@@ -84,7 +84,7 @@ func (t *Task) Progress(ctx context.Context) error {
 	}
 
 	for {
-		resp, err := t.handler.Status(ctx, connect.NewRequest(&provisioner.StatusRequest{
+		resp, err := t.binding.Provisioner.Status(ctx, connect.NewRequest(&provisioner.StatusRequest{
 			ProvisioningToken: t.runningToken,
 			DesiredResources:  t.desired.Resources(),
 		}))
@@ -121,23 +121,28 @@ func (d *Deployment) next() optional.Option[*Task] {
 
 // Progress the deployment. Returns true if there are still tasks running or pending.
 func (d *Deployment) Progress(ctx context.Context) (bool, error) {
+	logger := log.FromContext(ctx)
+
 	next, ok := d.next().Get()
 	if !ok {
 		return false, nil
 	}
 
 	if next.state == TaskStatePending {
+		logger.Debugf("Starting task %s: %s", next.module, next.binding.ID)
 		err := next.Start(ctx)
 		if err != nil {
 			return true, err
 		}
 	}
 	if next.state != TaskStateDone {
+		logger.Tracef("Progressing task %s: %s", next.module, next.binding.ID)
 		err := next.Progress(ctx)
 		if err != nil {
 			return true, err
 		}
 	}
+	logger.Debugf("Finished task %s: %s", next.module, next.binding.ID)
 	return d.next().Ok(), nil
 }
 
