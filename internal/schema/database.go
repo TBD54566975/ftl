@@ -187,6 +187,12 @@ func DatabaseConnectorFromProto(s *schemapb.DatabaseConnector) DatabaseConnector
 	switch s := s.Value.(type) {
 	case *schemapb.DatabaseConnector_DsnDatabaseConnector:
 		return &DSNDatabaseConnector{DSN: s.DsnDatabaseConnector.Dsn}
+	case *schemapb.DatabaseConnector_AwsiamAuthDatabaseConnector:
+		return &AWSIAMAuthDatabaseConnector{
+			Username: s.AwsiamAuthDatabaseConnector.Username,
+			Endpoint: s.AwsiamAuthDatabaseConnector.Endpoint,
+			Database: s.AwsiamAuthDatabaseConnector.Database,
+		}
 	default:
 		panic(fmt.Sprintf("unknown database connector type: %T", s))
 	}
