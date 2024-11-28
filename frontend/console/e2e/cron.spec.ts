@@ -30,9 +30,17 @@ test('submit cron form using ⌘+⏎ shortcut', async ({ page }) => {
 
   await page.locator('input#request-path').focus()
 
-  const isMac = process.platform === 'darwin'
-  const commandKey = isMac ? 'Meta' : 'Control'
-  await page.keyboard.press(`${commandKey}+Enter`)
+  // The keypress is sometimes flakey in playwright, so try 3 times. Ideally we'd find a better way to do this.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await page.keyboard.press('ControlOrMeta+Enter')
+      const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
+      await expect(responseEditor).toBeVisible()
+      break
+    } catch (error) {
+      if (attempt === 2) throw error
+    }
+  }
 
   const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
   await expect(responseEditor).toBeVisible()
@@ -46,9 +54,17 @@ test('submit cron form using ⌘+⏎ shortcut', async ({ page }) => {
 test('submit cron form using ⌘+⏎ shortcut without focusing first', async ({ page }) => {
   await navigateToDecl(page, 'cron', 'thirtySeconds')
 
-  const isMac = process.platform === 'darwin'
-  const commandKey = isMac ? 'Meta' : 'Control'
-  await page.keyboard.press(`${commandKey}+Enter`)
+  // The keypress is sometimes flakey in playwright, so try 3 times. Ideally we'd find a better way to do this.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await page.keyboard.press('ControlOrMeta+Enter')
+      const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
+      await expect(responseEditor).toBeVisible()
+      break
+    } catch (error) {
+      if (attempt === 2) throw error
+    }
+  }
 
   const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
   await expect(responseEditor).toBeVisible()
