@@ -1,6 +1,6 @@
 services:
   db:
-    image: ${FTL_DATABASE_IMAGE:-postgres:15.8}
+    image: ${FTL_DATABASE_IMAGE:-postgres:15.10}
     command: postgres
     user: postgres
     # For local debugging
