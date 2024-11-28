@@ -240,9 +240,10 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "setup-istio-cluster").RunBuffered(ctx)
 			assert.NoError(t, err)
 
-			skipKubeFullDeploy := os.Getenv("SKIP_KUBE_FULL_DEPLOY") == "true"
+			// On CI we always skip the full deploy, as the build is done in the CI pipeline
+			skipKubeFullDeploy := os.Getenv("CI") != ""
 			if skipKubeFullDeploy {
-				Infof("Skipping full deploy since SKIP_KUBE_FULL_DEPLOY is set")
+				Infof("Skipping full deploy since CI is set")
 			} else {
 				err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "full-deploy").RunBuffered(ctx)
 				assert.NoError(t, err)

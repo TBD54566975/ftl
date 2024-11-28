@@ -78,10 +78,10 @@ type CommonConfig struct {
 }
 
 type Config struct {
-	Bind                         *url.URL                 `help:"Socket to bind to." default:"http://127.0.0.1:8892" env:"FTL_CONTROLLER_BIND"`
+	Bind                         *url.URL                 `help:"Socket to bind to." default:"http://127.0.0.1:8892" env:"FTL_BIND"`
 	Key                          model.ControllerKey      `help:"Controller key (auto)." placeholder:"KEY"`
 	DSN                          string                   `help:"DAL DSN." default:"${dsn}" env:"FTL_CONTROLLER_DSN"`
-	Advertise                    *url.URL                 `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_CONTROLLER_ADVERTISE"`
+	Advertise                    *url.URL                 `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_ADVERTISE"`
 	ConsoleURL                   *url.URL                 `help:"The public URL of the console (for CORS)." env:"FTL_CONTROLLER_CONSOLE_URL"`
 	ContentTime                  time.Time                `help:"Time to use for console resource timestamps." default:"${timestamp=1970-01-01T00:00:00Z}"`
 	RunnerTimeout                time.Duration            `help:"Runner heartbeat timeout." default:"10s"`

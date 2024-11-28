@@ -40,9 +40,9 @@ controller:
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
-    - name: FTL_CONTROLLER_BIND
+    - name: FTL_BIND
       value: "http://$(MY_POD_IP):8892"
-    - name: FTL_CONTROLLER_ADVERTISE
+    - name: FTL_ADVERTISE
       value: "http://$(MY_POD_IP):8892"
     - name: LOG_LEVEL
       value: "debug"
@@ -107,7 +107,7 @@ provisioner:
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
-    - name: FTL_PROVISIONER_BIND
+    - name: FTL_BIND
       value: "http://$(MY_POD_IP):8893"
     - name: FTL_ENDPOINT
       value: "http://ftl-controller:8892"
@@ -163,9 +163,9 @@ runner:
           fieldPath: status.podIP
     - name: FTL_ENDPOINT
       value: "http://ftl-controller"
-    - name: FTL_RUNNER_BIND
+    - name: FTL_BIND
       value: "http://$(MY_POD_IP):8893"
-    - name: FTL_RUNNER_ADVERTISE
+    - name: FTL_ADVERTISE
       value: ""
     - name: FTL_RUNNER_START_DELAY
       value: "3s"
@@ -254,7 +254,7 @@ ingress:
           fieldPath: status.podIP
     - name: FTL_ENDPOINT
       value: "http://ftl-controller:8892"
-    - name: FTL_INGRESS_BIND
+    - name: FTL_BIND
       value: "http://$(MY_POD_IP):8891"
     - name: FTL_INGRESS_ALLOW_ORIGIN
       value: "*"
