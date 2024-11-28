@@ -26,8 +26,8 @@ func PostgresDSN(ctx context.Context, port int) string {
 
 func SetupPostgres(ctx context.Context, image optional.Option[string], port int, recreate bool) error {
 	envars := []string{"POSTGRES_PORT=" + strconv.Itoa(port)}
-	if i, ok := image.Get(); ok {
-		envars = append(envars, "POSTGRES_IMAGE="+i)
+	if imaneName, ok := image.Get(); ok {
+		envars = append(envars, "POSTGRES_IMAGE="+imaneName)
 	}
 	err := container.ComposeUp(ctx, "postgres", postgresDockerCompose, envars...)
 	if err != nil {
