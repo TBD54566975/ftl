@@ -152,7 +152,7 @@ func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provision
 		dbName := strcase.ToLowerSnake(module) + "_" + strcase.ToLowerSnake(id)
 
 		// We assume that the DB has already been started when running in dev mode
-		postgresDSN := dsn.PostgresDSN(dbName, dsn.Port(postgresPort))
+		postgresDSN := dsn.PostgresDSN("ftl", dsn.Port(postgresPort))
 
 		conn, err := otelsql.Open("pgx", postgresDSN)
 		if err != nil {
