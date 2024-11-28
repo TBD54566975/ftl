@@ -374,7 +374,7 @@ func ComposeUp(ctx context.Context, name, composeYAML string, envars ...string) 
 	}
 	defer release() //nolint:errcheck
 
-	logger.Debugf("Running docker compose up for %s", name)
+	logger.Debugf("Running docker compose up")
 
 	envars = append(envars, "COMPOSE_IGNORE_ORPHANS=True")
 

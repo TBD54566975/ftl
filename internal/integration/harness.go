@@ -226,8 +226,8 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 	assert.True(t, ok)
 
 	// Build FTL binary
-	// logger := log.Configure(&logWriter{logger: t}, log.Config{Level: log.Debug})
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	logger := log.Configure(&logWriter{logger: t}, log.Config{Level: log.Debug})
+	ctx := log.ContextWithLogger(context.Background(), logger)
 	binDir := filepath.Join(rootDir, "build", "release")
 
 	var kubeClient *kubernetes.Clientset
@@ -303,7 +303,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			if opts.startController {
 				Infof("Starting ftl cluster")
 
-				command := []string{"serve", "--recreate", "--log-level=debug"}
+				command := []string{"serve", "--recreate"}
 				if opts.devMode {
 					command = []string{"dev"}
 				}
