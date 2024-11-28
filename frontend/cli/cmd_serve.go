@@ -84,7 +84,7 @@ func (s *serveCmd) Run(
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
-	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, controllerClient, schemaClient, provisionerClient, schemaEventSourceFactory, verbClient, s.Recreate, nil)
+	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, controllerClient, provisionerClient, schemaEventSourceFactory, verbClient, s.Recreate, nil)
 }
 
 //nolint:maintidx
@@ -97,7 +97,6 @@ func (s *serveCommonConfig) run(
 	devMode bool,
 	bindAllocator *bind.BindAllocator,
 	controllerClient ftlv1connect.ControllerServiceClient,
-	schemaServiceClient ftlv1connect.SchemaServiceClient,
 	provisionerClient provisionerconnect.ProvisionerServiceClient,
 	schemaEventSourceFactory func() schemaeventsource.EventSource,
 	verbClient ftlv1connect.VerbServiceClient,
@@ -285,7 +284,7 @@ func (s *serveCommonConfig) run(
 		}
 
 		wg.Go(func() error {
-			if err := provisioner.Start(provisionerCtx, config, provisionerRegistry, controllerClient, schemaServiceClient); err != nil {
+			if err := provisioner.Start(provisionerCtx, config, provisionerRegistry, controllerClient); err != nil {
 				logger.Errorf(err, "provisioner%d failed: %v", i, err)
 				return fmt.Errorf("provisioner%d failed: %w", i, err)
 			}
