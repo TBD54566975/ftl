@@ -4,27 +4,26 @@ import io.quarkus.logging.Log;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.FromOffset;
 import xyz.block.ftl.Subscription;
-import xyz.block.ftl.SubscriptionOptions;
 import xyz.block.ftl.Topic;
-import xyz.block.ftl.TopicDefinition;
 import xyz.block.ftl.Verb;
+import xyz.block.ftl.WriteableTopic;
 
 public class Publisher {
 
     @Export
-    @TopicDefinition("testTopic")
-    interface TestTopic extends Topic<PubSubEvent> {
+    @Topic("testTopic")
+    interface TestTopic extends WriteableTopic<PubSubEvent> {
 
     }
 
-    @TopicDefinition("localTopic")
-    interface LocalTopic extends Topic<PubSubEvent> {
+    @Topic("localTopic")
+    interface LocalTopic extends WriteableTopic<PubSubEvent> {
 
     }
 
     @Export
-    @TopicDefinition("topic2")
-    interface Topic2 extends Topic<PubSubEvent> {
+    @Topic("topic2")
+    interface Topic2 extends WriteableTopic<PubSubEvent> {
 
     }
 
@@ -51,8 +50,7 @@ public class Publisher {
         topic2.publish(new PubSubEvent().setTime(t));
     }
 
-    @Subscription(topicClass = LocalTopic.class)
-    @SubscriptionOptions(from = FromOffset.LATEST)
+    @Subscription(topic = LocalTopic.class, from = FromOffset.LATEST)
     public void local(TestTopic testTopic, PubSubEvent event) {
         testTopic.publish(event);
     }

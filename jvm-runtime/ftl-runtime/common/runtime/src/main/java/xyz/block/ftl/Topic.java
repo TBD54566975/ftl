@@ -1,12 +1,23 @@
 package xyz.block.ftl;
 
-/**
- * A concrete definition of a topic. Extend this interface and annotate with {@code @TopicDefinition} to define a topic,
- * then inject this into verb methods to publish to the topic.
- *
- * @param <T>
- */
-public interface Topic<T> {
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-    void publish(T object);
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface Topic {
+    /**
+     *
+     * @return The name of the topic
+     */
+    String value();
+
+    /**
+     *
+     * @return The module that the topic is defined in. If not specified, the current module is assumed.
+     */
+    String module() default "";
+
 }

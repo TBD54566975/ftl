@@ -1,7 +1,6 @@
 package xyz.block.ftl.javalang.deployment;
 
 import java.io.IOException;
-import java.lang.annotation.Retention;
 import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -28,9 +27,9 @@ import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 import com.squareup.javapoet.WildcardTypeName;
 
+import xyz.block.ftl.ConsumableTopic;
 import xyz.block.ftl.EnumHolder;
 import xyz.block.ftl.GeneratedRef;
-import xyz.block.ftl.Subscription;
 import xyz.block.ftl.TypeAlias;
 import xyz.block.ftl.TypeAliasMapper;
 import xyz.block.ftl.VerbClient;
@@ -75,20 +74,19 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
         javaFile.writeTo(outputDir);
     }
 
-    protected void generateTopicSubscription(Module module, Topic data, String packageName, Map<DeclRef, Type> typeAliasMap,
+    protected void generateTopicConsumer(Module module, Topic data, String packageName, Map<DeclRef, Type> typeAliasMap,
             Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException {
-        String thisType = className(data.getName() + "Subscription");
+        String thisType = className(data.getName() + "Topic");
 
-        TypeSpec.Builder dataBuilder = TypeSpec.annotationBuilder(thisType)
+        TypeSpec.Builder dataBuilder = TypeSpec.interfaceBuilder(thisType)
                 .addModifiers(Modifier.PUBLIC);
+        dataBuilder.addSuperinterface(ConsumableTopic.class);
         if (data.getEvent().hasRef()) {
-            dataBuilder.addJavadoc("Subscription to the topic of type {@link $L}",
+            dataBuilder.addJavadoc("Topic {@link $L}",
                     data.getEvent().getRef().getName());
         }
-        dataBuilder.addAnnotation(AnnotationSpec.builder(Retention.class)
-                .addMember("value", "java.lang.annotation.RetentionPolicy.RUNTIME").build());
-        dataBuilder.addAnnotation(AnnotationSpec.builder(Subscription.class)
-                .addMember("topic", "\"" + data.getName() + "\"")
+        dataBuilder.addAnnotation(AnnotationSpec.builder(xyz.block.ftl.Topic.class)
+                .addMember("value", "\"" + data.getName() + "\"")
                 .addMember("module", "\"" + module.getName() + "\"")
                 .build());
 

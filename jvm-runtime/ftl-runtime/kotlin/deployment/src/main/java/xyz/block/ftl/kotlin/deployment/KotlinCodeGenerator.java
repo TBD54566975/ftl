@@ -28,9 +28,9 @@ import com.squareup.kotlinpoet.TypeSpec;
 import com.squareup.kotlinpoet.TypeVariableName;
 import com.squareup.kotlinpoet.WildcardTypeName;
 
+import xyz.block.ftl.ConsumableTopic;
 import xyz.block.ftl.EnumHolder;
 import xyz.block.ftl.GeneratedRef;
-import xyz.block.ftl.Subscription;
 import xyz.block.ftl.TypeAlias;
 import xyz.block.ftl.TypeAliasMapper;
 import xyz.block.ftl.VerbClient;
@@ -78,18 +78,19 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
         javaFile.writeTo(outputDir);
     }
 
-    protected void generateTopicSubscription(Module module, Topic data, String packageName, Map<DeclRef, Type> typeAliasMap,
+    protected void generateTopicConsumer(Module module, Topic data, String packageName, Map<DeclRef, Type> typeAliasMap,
             Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException {
-        String thisType = className(data.getName() + "Subscription");
+        String thisType = className(data.getName() + "Topic");
 
-        TypeSpec.Builder dataBuilder = TypeSpec.annotationBuilder(ClassName.bestGuess(thisType));
+        TypeSpec.Builder dataBuilder = TypeSpec.interfaceBuilder(ClassName.bestGuess(thisType));
+        dataBuilder.addSuperinterface(ClassName.bestGuess(ConsumableTopic.class.getName()), CodeBlock.of(""));
         dataBuilder.addModifiers(KModifier.PUBLIC);
         if (data.getEvent().hasRef()) {
             dataBuilder.addKdoc("Subscription to the topic of type {@link $L}",
                     data.getEvent().getRef().getName());
         }
-        dataBuilder.addAnnotation(AnnotationSpec.builder(Subscription.class)
-                .addMember("topic=\"" + data.getName() + "\"")
+        dataBuilder.addAnnotation(AnnotationSpec.builder(xyz.block.ftl.Topic.class)
+                .addMember("value=\"" + data.getName() + "\"")
                 .addMember("module=\"" + module.getName() + "\"")
                 .build());
 

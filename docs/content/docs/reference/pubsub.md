@@ -47,8 +47,8 @@ First, declare a new topic :
 
 ```kotlin
 @Export
-@TopicDefinition("invoices")
-internal interface InvoiceTopic : Topic<Invoice>
+@Topic("invoices")
+internal interface InvoiceTopic : WriteableTopic<Invoice>
 ```
 
 Events can be published to a topic by injecting it into an `@Verb` method:
@@ -60,37 +60,22 @@ fun publishInvoice(request: InvoiceRequest, topic: InvoiceTopic) {
 }
 ```
 
-There are two ways to subscribe to a topic. The first is to declare a method with the `@Subscription` annotation, this is generally used when
-subscribing to a topic inside the same module:
+To subscribe to a topic use the `@Subscription` annotation, referencing the topic class and providing a method to consume the event:
 
 ```kotlin
-@Subscription(topic = "invoices", name = "invoicesSubscription")
-@SubscriptionOptions(from = FromOffset.LATEST)
+@Subscription(topic = InvoiceTopic::class, from = FromOffset.LATEST)
 fun consumeInvoice(event: Invoice) {
     // ...
 }
 ```
 
-This is ok, but it requires the use of string constants for the topic name, which can be error-prone. If you are subscribing to a topic from
-another module, FTL will generate a type-safe subscription meta annotation you can use to subscribe to the topic:
+If you are subscribing to a topic from another module, FTL will generate a topic class for you so you can subscribe to it. This generated
+topic cannot be published to, only subscribed to:
 
 ```kotlin
-@Subscription(topic = "invoices", module = "publisher", name = "invoicesSubscription")
-@SubscriptionOptions(from = FromOffset.LATEST)
-annotation class InvoicesSubscription 
+@Topic(name="invoices", module="publisher")
+internal interface InvoiceTopic : ConsumableTopic<Invoice>
 ```
-
-This annotation can then be used to subscribe to the topic:
-
-```kotlin
-@InvoicesSubscription
-@SubscriptionOptions(from = FromOffset.LATEST)
-fun consumeInvoice(event: Invoice) {
-    // ...
-}
-```
-
-Note that if you want multiple subscriptions or control over the subscription name you will need to use the `@Subscription` annotation.
 
 <!-- java -->
 
@@ -98,8 +83,8 @@ First, declare a new topic:
 
 ```java
 @Export
-@TopicDefinition("invoices")
-interface InvoiceTopic extends Topic<Invoice> {}
+@Topic("invoices")
+interface InvoiceTopic extends WriteableTopc<Invoice> {}
 ```
 
 Events can be published to a topic by injecting it into an `@Verb` method:
@@ -111,41 +96,22 @@ void publishInvoice(InvoiceRequest request, InvoiceTopic topic) throws Exception
 }
 ```
 
-There are two ways to subscribe to a topic. The first is to declare a method with the `@Subscription` annotation, this is generally used when
-subscribing to a topic inside the same module:
+To subscribe to a topic use the `@Subscription` annotation, referencing the topic class and providing a method to consume the event:
 
 ```java
-@Subscription(topicClass = InvoiceTopic.class, name = "invoicesSubscription")
-@SubscriptionOptions(from = FromOffset.LATEST)
+@Subscription(topic = InvoiceTopic.class, from = FromOffset.LATEST)
 public void consumeInvoice(Invoice event) {
     // ...
 }
 ```
 
-If you are subscribing to a topic from another module, FTL will generate a type-safe subscription meta annotation you can use to subscribe to the topic:
+If you are subscribing to a topic from another module, FTL will generate a topic class for you so you can subscribe to it. This generated
+topic cannot be published to, only subscribed to:
 
 ```java
-@Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
-@Subscription(
-        topic = "invoices",
-        module = "publisher",
-        name = "invoicesSubscription"
-)
-public @interface InvoicesSubscription {
-}
+@Topic(name="invoices", module="publisher")
+ interface InvoiceTopic extends ConsumableTopic<Invoice> {}
 ```
-
-This annotation can then be used to subscribe to the topic:
-
-```java
-@InvoicesSubscription
-@SubscriptionOptions(from = FromOffset.LATEST)
-public void consumeInvoice(Invoice event) {
-    // ...
-}
-```
-
-Note that if you want multiple subscriptions or control over the subscription name you will need to use the `@Subscription` annotation.
 
 {% end %}
 > **NOTE!**
