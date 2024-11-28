@@ -1,6 +1,6 @@
 services:
   db:
-    image: ${POSTGRES_IMAGE:-postgres:15.10}
+    image: ${POSTGRES_IMAGE:-postgres:15.8}
     command: postgres
     user: postgres
     # For local debugging
