@@ -27,13 +27,14 @@ func (p *PostgresTemplater) AddToTemplate(template *goformation.Template) error 
 	clusterID := cloudformationResourceID(p.resourceID, "cluster")
 	instanceID := cloudformationResourceID(p.resourceID, "instance")
 	template.Resources[clusterID] = &rds.DBCluster{
-		Engine:                   ptr("aurora-postgresql"),
-		MasterUsername:           ptr("root"),
-		ManageMasterUserPassword: ptr(true),
-		DBSubnetGroupName:        ptr(p.config.DatabaseSubnetGroupARN),
-		VpcSecurityGroupIds:      []string{p.config.DatabaseSecurityGroup},
-		EngineMode:               ptr("provisioned"),
-		Port:                     ptr(5432),
+		Engine:                          ptr("aurora-postgresql"),
+		MasterUsername:                  ptr("root"),
+		ManageMasterUserPassword:        ptr(true),
+		DBSubnetGroupName:               ptr(p.config.DatabaseSubnetGroupARN),
+		VpcSecurityGroupIds:             []string{p.config.DatabaseSecurityGroup},
+		EngineMode:                      ptr("provisioned"),
+		Port:                            ptr(5432),
+		EnableIAMDatabaseAuthentication: ptr(true),
 		ServerlessV2ScalingConfiguration: &rds.DBCluster_ServerlessV2ScalingConfiguration{
 			MinCapacity: ptr(0.5),
 			MaxCapacity: ptr(10.0),
@@ -92,7 +93,7 @@ func PostgresPostUpdate(ctx context.Context, secrets *secretsmanager.Client, byN
 					return fmt.Errorf("failed to create database: %w", err)
 				}
 			}
-			if _, err := db.ExecContext(ctx, "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ftluser;"); err != nil {
+			if _, err := db.ExecContext(ctx, "GRANT ALL ON SCHEMA public TO ftluser; GRANT ALL PRIVILEGES ON DATABASE "+resourceID+" TO ftluser;"); err != nil {
 				return fmt.Errorf("failed to grant FTL user privileges: %w", err)
 			}
 		}
