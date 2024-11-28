@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/rds/auth"
@@ -58,9 +59,12 @@ func ResolvePostgresDSN(ctx context.Context, connector schema.DatabaseConnector)
 			return "", fmt.Errorf("configuration error: %w", err)
 		}
 
-		authenticationToken, err := auth.BuildAuthToken(
-			// TODO: proper region
-			ctx, c.Endpoint, "us-west-2", c.Username, cfg.Credentials)
+		region, err := parseRegionFromEndpoint(c.Endpoint)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse region from endpoint: %w", err)
+		}
+
+		authenticationToken, err := auth.BuildAuthToken(ctx, c.Endpoint, region, c.Username, cfg.Credentials)
 		if err != nil {
 			return "", fmt.Errorf("failed to create authentication token: %w", err)
 		}
@@ -72,6 +76,16 @@ func ResolvePostgresDSN(ctx context.Context, connector schema.DatabaseConnector)
 	default:
 		return "", fmt.Errorf("unexpected database connector type: %T", connector)
 	}
+}
+
+func parseRegionFromEndpoint(endpoint string) (string, error) {
+	host, _, err := net.SplitHostPort(endpoint)
+	if err != nil {
+		return "", fmt.Errorf("failed to split host and port: %w", err)
+	}
+	host = strings.TrimSuffix(host, ".rds.amazonaws.com")
+	parts := strings.Split(host, ".")
+	return parts[len(parts)-1], nil
 }
 
 func ResolveMySQLDSN(ctx context.Context, connector schema.DatabaseConnector) (string, error) {
