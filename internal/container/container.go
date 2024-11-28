@@ -354,7 +354,8 @@ func PollContainerHealth(ctx context.Context, containerName string, timeout time
 // Make sure you obtain the compose yaml from a string literal or an embedded file, rather than
 // reading from disk. The project file will not be included in the release build.
 func ComposeUp(ctx context.Context, name, composeYAML string, envars ...string) error {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx).Scope(name)
+	ctx = log.ContextWithLogger(ctx, logger)
 
 	// A flock is used to provent Docker compose getting confused, which happens when we call `docker compose up`
 	// multiple times simultaneously for the same services.
