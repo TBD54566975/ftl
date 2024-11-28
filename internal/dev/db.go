@@ -21,11 +21,17 @@ var mysqlDockerCompose string
 var postgresDockerCompose string
 
 func PostgresDSN(ctx context.Context, port int) string {
+	if port == 0 {
+		port = 15432
+	}
 	return dsn.PostgresDSN("ftl", dsn.Port(port))
 }
 
 func SetupPostgres(ctx context.Context, image optional.Option[string], port int, recreate bool) error {
-	envars := []string{"POSTGRES_PORT=" + strconv.Itoa(port)}
+	envars := []string{}
+	if port != 0 {
+		envars = append(envars, "POSTGRES_PORT="+strconv.Itoa(port))
+	}
 	if imaneName, ok := image.Get(); ok {
 		envars = append(envars, "POSTGRES_IMAGE="+imaneName)
 	}
@@ -42,7 +48,11 @@ func SetupPostgres(ctx context.Context, image optional.Option[string], port int,
 }
 
 func SetupMySQL(ctx context.Context, port int) (string, error) {
-	err := container.ComposeUp(ctx, "mysql", mysqlDockerCompose, "MYSQL_PORT="+strconv.Itoa(port))
+	envars := []string{}
+	if port != 0 {
+		envars = append(envars, "MYSQL_PORT="+strconv.Itoa(port))
+	}
+	err := container.ComposeUp(ctx, "mysql", mysqlDockerCompose, envars...)
 	if err != nil {
 		return "", fmt.Errorf("could not start mysql: %w", err)
 	}
