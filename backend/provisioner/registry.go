@@ -18,6 +18,7 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
@@ -276,8 +277,21 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 			to:   dep.ResourceId,
 		})
 	}
+	digests := ""
+	orderedDigests := []string{}
+	for _, d := range msg.Artefacts {
+		orderedDigests = append(orderedDigests, d.Digest)
+	}
+	slices.Sort(orderedDigests)
+	for _, d := range orderedDigests {
+		digests += d
+	}
+
+	// Hack, we just use the artifact digests to create a unique runner resource
+	hash := sha256.Sum([]byte(digests))
+
 	runnerResource := &provisioner.Resource{
-		ResourceId: module.GetName() + "-runner",
+		ResourceId: module.GetName() + "-" + hash.String() + "-runner",
 		Resource: &provisioner.Resource_Runner{
 			Runner: &provisioner.RunnerResource{},
 		},

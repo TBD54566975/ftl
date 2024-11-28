@@ -62,7 +62,9 @@ func provisionRunner(scaling scaling.RunnerScaling, client ftlv1connect.Controll
 			RunnerUri:     endpointURI,
 			DeploymentKey: deployment,
 		}
+		logger.Infof("previous deployment: %v", previous)
 		if previous != nil && previous.GetRunner().GetOutput().GetDeploymentKey() != deployment {
+			logger.Infof("terminating previous deployment: %s", previous.GetRunner().GetOutput().GetDeploymentKey())
 			err := scaling.TerminateDeployment(ctx, module, previous.GetRunner().GetOutput().GetDeploymentKey())
 			if err != nil {
 				logger.Errorf(err, "failed to terminate previous deployment")
