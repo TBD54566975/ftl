@@ -32,10 +32,10 @@ class ProvisionResponse(_message.Message):
     __slots__ = ("provisioning_token", "status")
     class ProvisionResponseStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
-        UNKNOWN: _ClassVar[ProvisionResponse.ProvisionResponseStatus]
-        SUBMITTED: _ClassVar[ProvisionResponse.ProvisionResponseStatus]
-    UNKNOWN: ProvisionResponse.ProvisionResponseStatus
-    SUBMITTED: ProvisionResponse.ProvisionResponseStatus
+        PROVISION_RESPONSE_STATUS_UNSPECIFIED: _ClassVar[ProvisionResponse.ProvisionResponseStatus]
+        PROVISION_RESPONSE_STATUS_SUBMITTED: _ClassVar[ProvisionResponse.ProvisionResponseStatus]
+    PROVISION_RESPONSE_STATUS_UNSPECIFIED: ProvisionResponse.ProvisionResponseStatus
+    PROVISION_RESPONSE_STATUS_SUBMITTED: ProvisionResponse.ProvisionResponseStatus
     PROVISIONING_TOKEN_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     provisioning_token: str

@@ -12,9 +12,9 @@ import { Config as Config$1, Data as Data$1, Database as Database$1, Enum as Enu
  */
 export enum EventType {
   /**
-   * @generated from enum value: EVENT_TYPE_UNKNOWN = 0;
+   * @generated from enum value: EVENT_TYPE_UNSPECIFIED = 0;
    */
-  UNKNOWN = 0,
+  UNSPECIFIED = 0,
 
   /**
    * @generated from enum value: EVENT_TYPE_LOG = 1;
@@ -63,7 +63,7 @@ export enum EventType {
 }
 // Retrieve enum metadata with: proto3.getEnumType(EventType)
 proto3.util.setEnumType(EventType, "xyz.block.ftl.v1.console.EventType", [
-  { no: 0, name: "EVENT_TYPE_UNKNOWN" },
+  { no: 0, name: "EVENT_TYPE_UNSPECIFIED" },
   { no: 1, name: "EVENT_TYPE_LOG" },
   { no: 2, name: "EVENT_TYPE_CALL" },
   { no: 3, name: "EVENT_TYPE_DEPLOYMENT_CREATED" },
@@ -80,9 +80,9 @@ proto3.util.setEnumType(EventType, "xyz.block.ftl.v1.console.EventType", [
  */
 export enum AsyncExecuteEventType {
   /**
-   * @generated from enum value: ASYNC_EXECUTE_EVENT_TYPE_UNKNOWN = 0;
+   * @generated from enum value: ASYNC_EXECUTE_EVENT_TYPE_UNSPECIFIED = 0;
    */
-  UNKNOWN = 0,
+  UNSPECIFIED = 0,
 
   /**
    * @generated from enum value: ASYNC_EXECUTE_EVENT_TYPE_CRON = 1;
@@ -96,7 +96,7 @@ export enum AsyncExecuteEventType {
 }
 // Retrieve enum metadata with: proto3.getEnumType(AsyncExecuteEventType)
 proto3.util.setEnumType(AsyncExecuteEventType, "xyz.block.ftl.v1.console.AsyncExecuteEventType", [
-  { no: 0, name: "ASYNC_EXECUTE_EVENT_TYPE_UNKNOWN" },
+  { no: 0, name: "ASYNC_EXECUTE_EVENT_TYPE_UNSPECIFIED" },
   { no: 1, name: "ASYNC_EXECUTE_EVENT_TYPE_CRON" },
   { no: 2, name: "ASYNC_EXECUTE_EVENT_TYPE_PUBSUB" },
 ]);
@@ -106,9 +106,9 @@ proto3.util.setEnumType(AsyncExecuteEventType, "xyz.block.ftl.v1.console.AsyncEx
  */
 export enum LogLevel {
   /**
-   * @generated from enum value: LOG_LEVEL_UNKNOWN = 0;
+   * @generated from enum value: LOG_LEVEL_UNSPECIFIED = 0;
    */
-  UNKNOWN = 0,
+  UNSPECIFIED = 0,
 
   /**
    * @generated from enum value: LOG_LEVEL_TRACE = 1;
@@ -137,7 +137,7 @@ export enum LogLevel {
 }
 // Retrieve enum metadata with: proto3.getEnumType(LogLevel)
 proto3.util.setEnumType(LogLevel, "xyz.block.ftl.v1.console.LogLevel", [
-  { no: 0, name: "LOG_LEVEL_UNKNOWN" },
+  { no: 0, name: "LOG_LEVEL_UNSPECIFIED" },
   { no: 1, name: "LOG_LEVEL_TRACE" },
   { no: 5, name: "LOG_LEVEL_DEBUG" },
   { no: 9, name: "LOG_LEVEL_INFO" },
@@ -639,7 +639,7 @@ export class AsyncExecuteEvent extends Message<AsyncExecuteEvent> {
   /**
    * @generated from field: xyz.block.ftl.v1.console.AsyncExecuteEventType async_event_type = 6;
    */
-  asyncEventType = AsyncExecuteEventType.UNKNOWN;
+  asyncEventType = AsyncExecuteEventType.UNSPECIFIED;
 
   /**
    * @generated from field: optional string error = 7;
@@ -1644,7 +1644,7 @@ export class EventsQuery_LogLevelFilter extends Message<EventsQuery_LogLevelFilt
   /**
    * @generated from field: xyz.block.ftl.v1.console.LogLevel log_level = 1;
    */
-  logLevel = LogLevel.UNKNOWN;
+  logLevel = LogLevel.UNSPECIFIED;
 
   constructor(data?: PartialMessage<EventsQuery_LogLevelFilter>) {
     super();

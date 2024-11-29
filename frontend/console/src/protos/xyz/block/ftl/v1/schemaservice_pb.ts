@@ -12,9 +12,9 @@ import { Module, Schema } from "./schema/schema_pb.js";
  */
 export enum DeploymentChangeType {
   /**
-   * @generated from enum value: DEPLOYMENT_UNKNOWN = 0;
+   * @generated from enum value: DEPLOYMENT_UNSPECIFIED = 0;
    */
-  DEPLOYMENT_UNKNOWN = 0,
+  DEPLOYMENT_UNSPECIFIED = 0,
 
   /**
    * @generated from enum value: DEPLOYMENT_ADDED = 1;
@@ -33,7 +33,7 @@ export enum DeploymentChangeType {
 }
 // Retrieve enum metadata with: proto3.getEnumType(DeploymentChangeType)
 proto3.util.setEnumType(DeploymentChangeType, "xyz.block.ftl.v1.DeploymentChangeType", [
-  { no: 0, name: "DEPLOYMENT_UNKNOWN" },
+  { no: 0, name: "DEPLOYMENT_UNSPECIFIED" },
   { no: 1, name: "DEPLOYMENT_ADDED" },
   { no: 2, name: "DEPLOYMENT_REMOVED" },
   { no: 3, name: "DEPLOYMENT_CHANGED" },
@@ -172,7 +172,7 @@ export class PullSchemaResponse extends Message<PullSchemaResponse> {
   /**
    * @generated from field: xyz.block.ftl.v1.DeploymentChangeType change_type = 5;
    */
-  changeType = DeploymentChangeType.DEPLOYMENT_UNKNOWN;
+  changeType = DeploymentChangeType.DEPLOYMENT_UNSPECIFIED;
 
   /**
    * If this is true then the module was removed as well as the deployment. This is only set for DEPLOYMENT_REMOVED.

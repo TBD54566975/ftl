@@ -26,7 +26,7 @@ from xyz.block.ftl.v1 import ftl_pb2 as xyz_dot_block_dot_ftl_dot_v1_dot_ftl__pb
 from xyz.block.ftl.v1.schema import schema_pb2 as xyz_dot_block_dot_ftl_dot_v1_dot_schema_dot_schema__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n$xyz/block/ftl/v1/schemaservice.proto\x12\x10xyz.block.ftl.v1\x1a\x1axyz/block/ftl/v1/ftl.proto\x1a$xyz/block/ftl/v1/schema/schema.proto\"\x12\n\x10GetSchemaRequest\"L\n\x11GetSchemaResponse\x12\x37\n\x06schema\x18\x01 \x01(\x0b\x32\x1f.xyz.block.ftl.v1.schema.SchemaR\x06schema\"\x13\n\x11PullSchemaRequest\"\xc1\x02\n\x12PullSchemaResponse\x12*\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tH\x00R\rdeploymentKey\x88\x01\x01\x12\x1f\n\x0bmodule_name\x18\x02 \x01(\tR\nmoduleName\x12<\n\x06schema\x18\x04 \x01(\x0b\x32\x1f.xyz.block.ftl.v1.schema.ModuleH\x01R\x06schema\x88\x01\x01\x12\x12\n\x04more\x18\x03 \x01(\x08R\x04more\x12G\n\x0b\x63hange_type\x18\x05 \x01(\x0e\x32&.xyz.block.ftl.v1.DeploymentChangeTypeR\nchangeType\x12%\n\x0emodule_removed\x18\x06 \x01(\x08R\rmoduleRemovedB\x11\n\x0f_deployment_keyB\t\n\x07_schema*t\n\x14\x44\x65ploymentChangeType\x12\x16\n\x12\x44\x45PLOYMENT_UNKNOWN\x10\x00\x12\x14\n\x10\x44\x45PLOYMENT_ADDED\x10\x01\x12\x16\n\x12\x44\x45PLOYMENT_REMOVED\x10\x02\x12\x16\n\x12\x44\x45PLOYMENT_CHANGED\x10\x03\x32\x96\x02\n\rSchemaService\x12J\n\x04Ping\x12\x1d.xyz.block.ftl.v1.PingRequest\x1a\x1e.xyz.block.ftl.v1.PingResponse\"\x03\x90\x02\x01\x12Y\n\tGetSchema\x12\".xyz.block.ftl.v1.GetSchemaRequest\x1a#.xyz.block.ftl.v1.GetSchemaResponse\"\x03\x90\x02\x01\x12^\n\nPullSchema\x12#.xyz.block.ftl.v1.PullSchemaRequest\x1a$.xyz.block.ftl.v1.PullSchemaResponse\"\x03\x90\x02\x01\x30\x01\x42\x44P\x01Z@github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1;ftlv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n$xyz/block/ftl/v1/schemaservice.proto\x12\x10xyz.block.ftl.v1\x1a\x1axyz/block/ftl/v1/ftl.proto\x1a$xyz/block/ftl/v1/schema/schema.proto\"\x12\n\x10GetSchemaRequest\"L\n\x11GetSchemaResponse\x12\x37\n\x06schema\x18\x01 \x01(\x0b\x32\x1f.xyz.block.ftl.v1.schema.SchemaR\x06schema\"\x13\n\x11PullSchemaRequest\"\xc1\x02\n\x12PullSchemaResponse\x12*\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tH\x00R\rdeploymentKey\x88\x01\x01\x12\x1f\n\x0bmodule_name\x18\x02 \x01(\tR\nmoduleName\x12<\n\x06schema\x18\x04 \x01(\x0b\x32\x1f.xyz.block.ftl.v1.schema.ModuleH\x01R\x06schema\x88\x01\x01\x12\x12\n\x04more\x18\x03 \x01(\x08R\x04more\x12G\n\x0b\x63hange_type\x18\x05 \x01(\x0e\x32&.xyz.block.ftl.v1.DeploymentChangeTypeR\nchangeType\x12%\n\x0emodule_removed\x18\x06 \x01(\x08R\rmoduleRemovedB\x11\n\x0f_deployment_keyB\t\n\x07_schema*x\n\x14\x44\x65ploymentChangeType\x12\x1a\n\x16\x44\x45PLOYMENT_UNSPECIFIED\x10\x00\x12\x14\n\x10\x44\x45PLOYMENT_ADDED\x10\x01\x12\x16\n\x12\x44\x45PLOYMENT_REMOVED\x10\x02\x12\x16\n\x12\x44\x45PLOYMENT_CHANGED\x10\x03\x32\x96\x02\n\rSchemaService\x12J\n\x04Ping\x12\x1d.xyz.block.ftl.v1.PingRequest\x1a\x1e.xyz.block.ftl.v1.PingResponse\"\x03\x90\x02\x01\x12Y\n\tGetSchema\x12\".xyz.block.ftl.v1.GetSchemaRequest\x1a#.xyz.block.ftl.v1.GetSchemaResponse\"\x03\x90\x02\x01\x12^\n\nPullSchema\x12#.xyz.block.ftl.v1.PullSchemaRequest\x1a$.xyz.block.ftl.v1.PullSchemaResponse\"\x03\x90\x02\x01\x30\x01\x42\x44P\x01Z@github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1;ftlv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -41,7 +41,7 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_SCHEMASERVICE'].methods_by_name['PullSchema']._loaded_options = None
   _globals['_SCHEMASERVICE'].methods_by_name['PullSchema']._serialized_options = b'\220\002\001'
   _globals['_DEPLOYMENTCHANGETYPE']._serialized_start=567
-  _globals['_DEPLOYMENTCHANGETYPE']._serialized_end=683
+  _globals['_DEPLOYMENTCHANGETYPE']._serialized_end=687
   _globals['_GETSCHEMAREQUEST']._serialized_start=124
   _globals['_GETSCHEMAREQUEST']._serialized_end=142
   _globals['_GETSCHEMARESPONSE']._serialized_start=144
@@ -50,6 +50,6 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_PULLSCHEMAREQUEST']._serialized_end=241
   _globals['_PULLSCHEMARESPONSE']._serialized_start=244
   _globals['_PULLSCHEMARESPONSE']._serialized_end=565
-  _globals['_SCHEMASERVICE']._serialized_start=686
-  _globals['_SCHEMASERVICE']._serialized_end=964
+  _globals['_SCHEMASERVICE']._serialized_start=690
+  _globals['_SCHEMASERVICE']._serialized_end=968
 # @@protoc_insertion_point(module_scope)

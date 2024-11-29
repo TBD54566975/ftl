@@ -126,7 +126,7 @@ export class ProvisionResponse extends Message<ProvisionResponse> {
   /**
    * @generated from field: xyz.block.ftl.v1beta1.provisioner.ProvisionResponse.ProvisionResponseStatus status = 2;
    */
-  status = ProvisionResponse_ProvisionResponseStatus.UNKNOWN;
+  status = ProvisionResponse_ProvisionResponseStatus.UNSPECIFIED;
 
   constructor(data?: PartialMessage<ProvisionResponse>) {
     super();
@@ -162,19 +162,19 @@ export class ProvisionResponse extends Message<ProvisionResponse> {
  */
 export enum ProvisionResponse_ProvisionResponseStatus {
   /**
-   * @generated from enum value: UNKNOWN = 0;
+   * @generated from enum value: PROVISION_RESPONSE_STATUS_UNSPECIFIED = 0;
    */
-  UNKNOWN = 0,
+  UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: SUBMITTED = 1;
+   * @generated from enum value: PROVISION_RESPONSE_STATUS_SUBMITTED = 1;
    */
   SUBMITTED = 1,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ProvisionResponse_ProvisionResponseStatus)
 proto3.util.setEnumType(ProvisionResponse_ProvisionResponseStatus, "xyz.block.ftl.v1beta1.provisioner.ProvisionResponse.ProvisionResponseStatus", [
-  { no: 0, name: "UNKNOWN" },
-  { no: 1, name: "SUBMITTED" },
+  { no: 0, name: "PROVISION_RESPONSE_STATUS_UNSPECIFIED" },
+  { no: 1, name: "PROVISION_RESPONSE_STATUS_SUBMITTED" },
 ]);
 
 /**

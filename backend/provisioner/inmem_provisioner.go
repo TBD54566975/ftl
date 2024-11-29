@@ -103,7 +103,7 @@ func (d *InMemProvisioner) Provision(ctx context.Context, req *connect.Request[p
 
 	return connect.NewResponse(&provisioner.ProvisionResponse{
 		ProvisioningToken: token,
-		Status:            provisioner.ProvisionResponse_SUBMITTED,
+		Status:            provisioner.ProvisionResponse_PROVISION_RESPONSE_STATUS_SUBMITTED,
 	}), nil
 }
 

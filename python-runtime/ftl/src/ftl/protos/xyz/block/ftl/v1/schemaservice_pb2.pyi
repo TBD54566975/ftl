@@ -9,11 +9,11 @@ DESCRIPTOR: _descriptor.FileDescriptor
 
 class DeploymentChangeType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
-    DEPLOYMENT_UNKNOWN: _ClassVar[DeploymentChangeType]
+    DEPLOYMENT_UNSPECIFIED: _ClassVar[DeploymentChangeType]
     DEPLOYMENT_ADDED: _ClassVar[DeploymentChangeType]
     DEPLOYMENT_REMOVED: _ClassVar[DeploymentChangeType]
     DEPLOYMENT_CHANGED: _ClassVar[DeploymentChangeType]
-DEPLOYMENT_UNKNOWN: DeploymentChangeType
+DEPLOYMENT_UNSPECIFIED: DeploymentChangeType
 DEPLOYMENT_ADDED: DeploymentChangeType
 DEPLOYMENT_REMOVED: DeploymentChangeType
 DEPLOYMENT_CHANGED: DeploymentChangeType
