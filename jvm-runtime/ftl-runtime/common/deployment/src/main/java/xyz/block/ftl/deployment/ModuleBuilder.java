@@ -43,37 +43,37 @@ import xyz.block.ftl.Config;
 import xyz.block.ftl.LeaseClient;
 import xyz.block.ftl.Secret;
 import xyz.block.ftl.VerbName;
+import xyz.block.ftl.language.v1.Error;
+import xyz.block.ftl.language.v1.ErrorList;
 import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.builtin.HttpRequest;
 import xyz.block.ftl.runtime.builtin.HttpResponse;
+import xyz.block.ftl.schema.v1.AliasKind;
+import xyz.block.ftl.schema.v1.Any;
+import xyz.block.ftl.schema.v1.Array;
+import xyz.block.ftl.schema.v1.Bool;
+import xyz.block.ftl.schema.v1.Bytes;
+import xyz.block.ftl.schema.v1.Data;
+import xyz.block.ftl.schema.v1.Decl;
+import xyz.block.ftl.schema.v1.Field;
+import xyz.block.ftl.schema.v1.Float;
+import xyz.block.ftl.schema.v1.Int;
+import xyz.block.ftl.schema.v1.Metadata;
+import xyz.block.ftl.schema.v1.MetadataAlias;
+import xyz.block.ftl.schema.v1.MetadataCalls;
+import xyz.block.ftl.schema.v1.MetadataConfig;
+import xyz.block.ftl.schema.v1.MetadataSecrets;
+import xyz.block.ftl.schema.v1.MetadataTypeMap;
+import xyz.block.ftl.schema.v1.Module;
+import xyz.block.ftl.schema.v1.Position;
+import xyz.block.ftl.schema.v1.Ref;
+import xyz.block.ftl.schema.v1.Time;
+import xyz.block.ftl.schema.v1.Type;
+import xyz.block.ftl.schema.v1.TypeAlias;
+import xyz.block.ftl.schema.v1.Unit;
+import xyz.block.ftl.schema.v1.Verb;
 import xyz.block.ftl.v1.CallRequest;
-import xyz.block.ftl.v1.language.Error;
-import xyz.block.ftl.v1.language.ErrorList;
-import xyz.block.ftl.v1.schema.AliasKind;
-import xyz.block.ftl.v1.schema.Any;
-import xyz.block.ftl.v1.schema.Array;
-import xyz.block.ftl.v1.schema.Bool;
-import xyz.block.ftl.v1.schema.Bytes;
-import xyz.block.ftl.v1.schema.Data;
-import xyz.block.ftl.v1.schema.Decl;
-import xyz.block.ftl.v1.schema.Field;
-import xyz.block.ftl.v1.schema.Float;
-import xyz.block.ftl.v1.schema.Int;
-import xyz.block.ftl.v1.schema.Metadata;
-import xyz.block.ftl.v1.schema.MetadataAlias;
-import xyz.block.ftl.v1.schema.MetadataCalls;
-import xyz.block.ftl.v1.schema.MetadataConfig;
-import xyz.block.ftl.v1.schema.MetadataSecrets;
-import xyz.block.ftl.v1.schema.MetadataTypeMap;
-import xyz.block.ftl.v1.schema.Module;
-import xyz.block.ftl.v1.schema.Position;
-import xyz.block.ftl.v1.schema.Ref;
-import xyz.block.ftl.v1.schema.Time;
-import xyz.block.ftl.v1.schema.Type;
-import xyz.block.ftl.v1.schema.TypeAlias;
-import xyz.block.ftl.v1.schema.Unit;
-import xyz.block.ftl.v1.schema.Verb;
 
 public class ModuleBuilder {
 
@@ -194,7 +194,7 @@ public class ModuleBuilder {
             org.jboss.jandex.Type bodyParamType = null;
             Nullability bodyParamNullability = Nullability.MISSING;
 
-            xyz.block.ftl.v1.schema.Verb.Builder verbBuilder = xyz.block.ftl.v1.schema.Verb.newBuilder();
+            xyz.block.ftl.schema.v1.Verb.Builder verbBuilder = xyz.block.ftl.schema.v1.Verb.newBuilder();
             String verbName = validateName(className, ModuleBuilder.methodToName(method));
             MetadataCalls.Builder callsMetadata = MetadataCalls.newBuilder();
             MetadataConfig.Builder configMetadata = MetadataConfig.newBuilder();
@@ -206,7 +206,7 @@ public class ModuleBuilder {
                     String name = param.annotation(Secret.class).value().asString();
                     paramMappers.add(new VerbRegistry.SecretSupplier(name, paramType));
                     if (!knownSecrets.contains(name)) {
-                        xyz.block.ftl.v1.schema.Secret.Builder secretBuilder = xyz.block.ftl.v1.schema.Secret.newBuilder()
+                        xyz.block.ftl.schema.v1.Secret.Builder secretBuilder = xyz.block.ftl.schema.v1.Secret.newBuilder()
                                 .setType(buildType(param.type(), false, param))
                                 .setName(name)
                                 .addAllComments(comments.getComments(name));
@@ -220,7 +220,7 @@ public class ModuleBuilder {
                     String name = param.annotation(Config.class).value().asString();
                     paramMappers.add(new VerbRegistry.ConfigSupplier(name, paramType));
                     if (!knownConfig.contains(name)) {
-                        xyz.block.ftl.v1.schema.Config.Builder configBuilder = xyz.block.ftl.v1.schema.Config.newBuilder()
+                        xyz.block.ftl.schema.v1.Config.Builder configBuilder = xyz.block.ftl.schema.v1.Config.newBuilder()
                                 .setType(buildType(param.type(), false, param))
                                 .setName(name)
                                 .addAllComments(comments.getComments(name));
@@ -305,7 +305,7 @@ public class ModuleBuilder {
         if (nullability == Nullability.NOT_NULL) {
             return res;
         } else if (nullability == Nullability.NULLABLE || defaultToOptional) {
-            return Type.newBuilder().setOptional(xyz.block.ftl.v1.schema.Optional.newBuilder()
+            return Type.newBuilder().setOptional(xyz.block.ftl.schema.v1.Optional.newBuilder()
                     .setType(res))
                     .build();
         }
@@ -331,7 +331,7 @@ public class ModuleBuilder {
                         return Type.newBuilder().setBool(Bool.newBuilder().build()).build();
                     }
                     case CHAR -> {
-                        return Type.newBuilder().setString(xyz.block.ftl.v1.schema.String.newBuilder().build()).build();
+                        return Type.newBuilder().setString(xyz.block.ftl.schema.v1.String.newBuilder().build()).build();
                     }
                     default -> throw new RuntimeException("unknown primitive type: " + prim.primitive());
                 }
@@ -366,7 +366,7 @@ public class ModuleBuilder {
                     if (nullability == Nullability.NOT_NULL) {
                         return primitive;
                     }
-                    return Type.newBuilder().setOptional(xyz.block.ftl.v1.schema.Optional.newBuilder()
+                    return Type.newBuilder().setOptional(xyz.block.ftl.schema.v1.Optional.newBuilder()
                             .setType(primitive))
                             .build();
                 }
@@ -379,7 +379,7 @@ public class ModuleBuilder {
                 }
                 if (clazz.name().equals(DotName.STRING_NAME)) {
                     return handleNullabilityAnnotations(
-                            Type.newBuilder().setString(xyz.block.ftl.v1.schema.String.newBuilder().build()).build(),
+                            Type.newBuilder().setString(xyz.block.ftl.schema.v1.String.newBuilder().build()).build(),
                             nullability);
                 }
                 if (clazz.name().equals(DotName.OBJECT_NAME) || clazz.name().equals(JSON_NODE)) {
@@ -402,7 +402,7 @@ public class ModuleBuilder {
 
                 if (info.isEnum() || info.hasAnnotation(ENUM)) {
                     // Set only the name and export here. EnumProcessor will fill in the rest
-                    xyz.block.ftl.v1.schema.Enum.Builder ennum = xyz.block.ftl.v1.schema.Enum.newBuilder()
+                    xyz.block.ftl.schema.v1.Enum.Builder ennum = xyz.block.ftl.schema.v1.Enum.newBuilder()
                             .setName(name)
                             .setExport(type.hasAnnotation(EXPORT) || export);
                     addDecls(Decl.newBuilder().setEnum(ennum.build()).build());
@@ -430,13 +430,13 @@ public class ModuleBuilder {
                                     .setElement(buildType(paramType.arguments().get(0), export, Nullability.NOT_NULL)))
                             .build(), nullability);
                 } else if (paramType.name().equals(DotName.createSimple(Map.class))) {
-                    return handleNullabilityAnnotations(Type.newBuilder().setMap(xyz.block.ftl.v1.schema.Map.newBuilder()
+                    return handleNullabilityAnnotations(Type.newBuilder().setMap(xyz.block.ftl.schema.v1.Map.newBuilder()
                             .setKey(buildType(paramType.arguments().get(0), export, Nullability.NOT_NULL))
                             .setValue(buildType(paramType.arguments().get(1), export, Nullability.NOT_NULL)))
                             .build(), nullability);
                 } else if (paramType.name().equals(DotNames.OPTIONAL)) {
                     //TODO: optional kinda sucks
-                    return Type.newBuilder().setOptional(xyz.block.ftl.v1.schema.Optional.newBuilder()
+                    return Type.newBuilder().setOptional(xyz.block.ftl.schema.v1.Optional.newBuilder()
                             .setType(buildType(paramType.arguments().get(0), export, Nullability.NOT_NULL)))
                             .build();
                 } else if (paramType.name().equals(DotName.createSimple(HttpRequest.class))) {
@@ -507,7 +507,7 @@ public class ModuleBuilder {
                 addDecl(decl, data.getPos(), data.getName());
             }
         } else if (decl.hasEnum()) {
-            xyz.block.ftl.v1.schema.Enum enuum = decl.getEnum();
+            xyz.block.ftl.schema.v1.Enum enuum = decl.getEnum();
             if (!updateEnum(enuum.getName(), decl)) {
                 addDecl(decl, enuum.getPos(), enuum.getName());
             }

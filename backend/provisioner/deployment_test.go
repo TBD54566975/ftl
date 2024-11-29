@@ -6,14 +6,15 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	proto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
-	"github.com/TBD54566975/ftl/backend/provisioner"
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/alecthomas/assert/v2"
 	"github.com/google/uuid"
+
+	proto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
+	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/provisioner"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 // MockProvisioner is a mock implementation of the Provisioner interface

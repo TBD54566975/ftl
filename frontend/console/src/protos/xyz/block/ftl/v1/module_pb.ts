@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Duration, Message, proto3 } from "@bufbuild/protobuf";
-import { Ref } from "./schema/schema_pb.js";
+import { Ref } from "../schema/v1/schema_pb.js";
 
 /**
  * @generated from message xyz.block.ftl.v1.AcquireLeaseRequest
@@ -92,7 +92,7 @@ export class AcquireLeaseResponse extends Message<AcquireLeaseResponse> {
  */
 export class PublishEventRequest extends Message<PublishEventRequest> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Ref topic = 1;
+   * @generated from field: xyz.block.ftl.schema.v1.Ref topic = 1;
    */
   topic?: Ref;
 

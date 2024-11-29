@@ -25,16 +25,16 @@ import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.builtin.HttpRequest;
 import xyz.block.ftl.runtime.builtin.HttpResponse;
-import xyz.block.ftl.v1.schema.Array;
-import xyz.block.ftl.v1.schema.Decl;
-import xyz.block.ftl.v1.schema.IngressPathComponent;
-import xyz.block.ftl.v1.schema.IngressPathLiteral;
-import xyz.block.ftl.v1.schema.IngressPathParameter;
-import xyz.block.ftl.v1.schema.Metadata;
-import xyz.block.ftl.v1.schema.MetadataIngress;
-import xyz.block.ftl.v1.schema.Ref;
-import xyz.block.ftl.v1.schema.Type;
-import xyz.block.ftl.v1.schema.Unit;
+import xyz.block.ftl.schema.v1.Array;
+import xyz.block.ftl.schema.v1.Decl;
+import xyz.block.ftl.schema.v1.IngressPathComponent;
+import xyz.block.ftl.schema.v1.IngressPathLiteral;
+import xyz.block.ftl.schema.v1.IngressPathParameter;
+import xyz.block.ftl.schema.v1.Metadata;
+import xyz.block.ftl.schema.v1.MetadataIngress;
+import xyz.block.ftl.schema.v1.Ref;
+import xyz.block.ftl.schema.v1.Type;
+import xyz.block.ftl.schema.v1.Unit;
 
 public class HTTPProcessor {
 
@@ -160,13 +160,13 @@ public class HTTPProcessor {
                     Type requestTypeParam = moduleBuilder.buildType(bodyParamType, true, Nullability.NOT_NULL);
                     Type responseTypeParam = moduleBuilder.buildType(endpoint.getMethodInfo().returnType(), true,
                             Nullability.NOT_NULL);
-                    Type stringType = Type.newBuilder().setString(xyz.block.ftl.v1.schema.String.newBuilder().build()).build();
+                    Type stringType = Type.newBuilder().setString(xyz.block.ftl.schema.v1.String.newBuilder().build()).build();
                     Type pathParamType = Type.newBuilder()
-                            .setMap(xyz.block.ftl.v1.schema.Map.newBuilder().setKey(stringType)
+                            .setMap(xyz.block.ftl.schema.v1.Map.newBuilder().setKey(stringType)
                                     .setValue(stringType))
                             .build();
                     moduleBuilder
-                            .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
+                            .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.schema.v1.Verb.newBuilder()
                                     .addMetadata(ingressMetadata)
                                     .setName(verbName)
                                     .setPos(PositionUtils.forMethod(endpoint.getMethodInfo()))
@@ -177,7 +177,7 @@ public class HTTPProcessor {
                                                     .addTypeParameters(requestTypeParam)
                                                     .addTypeParameters(pathParamType)
                                                     .addTypeParameters(Type.newBuilder()
-                                                            .setMap(xyz.block.ftl.v1.schema.Map.newBuilder().setKey(stringType)
+                                                            .setMap(xyz.block.ftl.schema.v1.Map.newBuilder().setKey(stringType)
                                                                     .setValue(Type.newBuilder()
                                                                             .setArray(
                                                                                     Array.newBuilder().setElement(stringType)))

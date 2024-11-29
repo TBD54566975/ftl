@@ -1,4 +1,4 @@
-import { EventType, type GetEventsRequest_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
+import { EventType, type GetEventsRequest_Filter } from '../../protos/xyz/block/ftl/console/v1/console_pb.ts'
 import { eventTypesFilter } from './timeline-filters.ts'
 import { useTimeline } from './use-timeline.ts'
 

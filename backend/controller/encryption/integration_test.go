@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
-	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console"
+	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"

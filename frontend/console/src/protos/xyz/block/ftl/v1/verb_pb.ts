@@ -6,7 +6,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
 import { Metadata } from "./ftl_pb.js";
-import { Ref } from "./schema/schema_pb.js";
+import { Ref } from "../schema/v1/schema_pb.js";
 
 /**
  * @generated from message xyz.block.ftl.v1.CallRequest
@@ -18,7 +18,7 @@ export class CallRequest extends Message<CallRequest> {
   metadata?: Metadata;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Ref verb = 2;
+   * @generated from field: xyz.block.ftl.schema.v1.Ref verb = 2;
    */
   verb?: Ref;
 

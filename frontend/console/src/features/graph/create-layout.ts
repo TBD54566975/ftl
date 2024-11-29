@@ -1,5 +1,5 @@
 import type { Edge, Node } from 'reactflow'
-import type { Module, Topology } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Module, Topology } from '../../protos/xyz/block/ftl/console/v1/console_pb'
 import { verbCalls } from '../modules/decls/verb/verb.utils'
 import { declIcon } from '../modules/module.utils'
 import { declHeight } from './DeclNode'

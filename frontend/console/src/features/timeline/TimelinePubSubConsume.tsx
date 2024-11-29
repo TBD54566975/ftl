@@ -1,4 +1,4 @@
-import type { PubSubConsumeEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { PubSubConsumeEvent } from '../../protos/xyz/block/ftl/console/v1/console_pb'
 
 export const TimelinePubSubConsume = ({ pubSubConsume }: { pubSubConsume: PubSubConsumeEvent }) => {
   let title = `Topic ${pubSubConsume.topic} propagated by controller`

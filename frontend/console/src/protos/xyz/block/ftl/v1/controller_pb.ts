@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Struct, Timestamp } from "@bufbuild/protobuf";
-import { Module, Ref } from "./schema/schema_pb.js";
+import { Module, Ref } from "../schema/v1/schema_pb.js";
 
 /**
  * @generated from message xyz.block.ftl.v1.GetCertificationRequest
@@ -385,7 +385,7 @@ export class DeploymentArtefact extends Message<DeploymentArtefact> {
  */
 export class CreateDeploymentRequest extends Message<CreateDeploymentRequest> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 1;
+   * @generated from field: xyz.block.ftl.schema.v1.Module schema = 1;
    */
   schema?: Module;
 
@@ -596,7 +596,7 @@ export class GetDeploymentRequest extends Message<GetDeploymentRequest> {
  */
 export class GetDeploymentResponse extends Message<GetDeploymentResponse> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 1;
+   * @generated from field: xyz.block.ftl.schema.v1.Module schema = 1;
    */
   schema?: Module;
 
@@ -1203,7 +1203,7 @@ export class StatusResponse_Deployment extends Message<StatusResponse_Deployment
   labels?: Struct;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 6;
+   * @generated from field: xyz.block.ftl.schema.v1.Module schema = 6;
    */
   schema?: Module;
 
@@ -1467,7 +1467,7 @@ export class ProcessListResponse_Process extends Message<ProcessListResponse_Pro
  */
 export class ResetSubscriptionRequest extends Message<ResetSubscriptionRequest> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Ref subscription = 1;
+   * @generated from field: xyz.block.ftl.schema.v1.Ref subscription = 1;
    */
   subscription?: Ref;
 

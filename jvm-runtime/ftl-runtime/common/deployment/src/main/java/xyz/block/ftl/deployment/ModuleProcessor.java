@@ -41,6 +41,8 @@ import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
 import io.quarkus.grpc.deployment.BindableServiceBuildItem;
 import io.quarkus.vertx.http.deployment.RequireSocketHttpBuildItem;
 import io.quarkus.vertx.http.deployment.RequireVirtualHttpBuildItem;
+import xyz.block.ftl.language.v1.Error;
+import xyz.block.ftl.language.v1.ErrorList;
 import xyz.block.ftl.runtime.FTLDatasourceCredentials;
 import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.JsonSerializationConfig;
@@ -50,8 +52,6 @@ import xyz.block.ftl.runtime.VerbHandler;
 import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.config.FTLConfigSourceFactoryBuilder;
 import xyz.block.ftl.runtime.http.FTLHttpHandler;
-import xyz.block.ftl.v1.language.Error;
-import xyz.block.ftl.v1.language.ErrorList;
 
 public class ModuleProcessor {
 

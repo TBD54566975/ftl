@@ -10,5 +10,3 @@ lint:
     - STANDARD
   except:
     - RPC_REQUEST_RESPONSE_UNIQUE
-    # Remove these exceptions once they're fixed
-    - PACKAGE_VERSION_SUFFIX

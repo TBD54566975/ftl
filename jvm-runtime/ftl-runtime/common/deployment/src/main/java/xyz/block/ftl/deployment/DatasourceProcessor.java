@@ -16,9 +16,9 @@ import io.quarkus.deployment.builditem.SystemPropertyBuildItem;
 import xyz.block.ftl.runtime.FTLDatasourceCredentials;
 import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.config.FTLConfigSource;
+import xyz.block.ftl.schema.v1.Database;
+import xyz.block.ftl.schema.v1.Decl;
 import xyz.block.ftl.v1.GetModuleContextResponse;
-import xyz.block.ftl.v1.schema.Database;
-import xyz.block.ftl.v1.schema.Decl;
 
 public class DatasourceProcessor {
 

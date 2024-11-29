@@ -3,9 +3,10 @@ package provisioner_test
 import (
 	"testing"
 
-	proto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
-	"github.com/TBD54566975/ftl/backend/provisioner"
 	"github.com/alecthomas/assert/v2"
+
+	proto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
+	"github.com/TBD54566975/ftl/backend/provisioner"
 )
 
 func TestSubGraphWithDirectDependencies(t *testing.T) {

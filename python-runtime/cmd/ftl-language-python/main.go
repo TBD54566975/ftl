@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language/languagepbconnect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
 	"github.com/TBD54566975/ftl/common/plugin"
 	pythonplugin "github.com/TBD54566975/ftl/python-runtime/python-plugin"
 )

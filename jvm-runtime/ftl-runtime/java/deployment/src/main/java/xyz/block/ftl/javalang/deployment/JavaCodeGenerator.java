@@ -35,14 +35,14 @@ import xyz.block.ftl.TypeAliasMapper;
 import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.deployment.JVMCodeGenerator;
 import xyz.block.ftl.deployment.VerbType;
-import xyz.block.ftl.v1.schema.Data;
-import xyz.block.ftl.v1.schema.Enum;
-import xyz.block.ftl.v1.schema.EnumVariant;
-import xyz.block.ftl.v1.schema.Module;
-import xyz.block.ftl.v1.schema.Topic;
-import xyz.block.ftl.v1.schema.Type;
-import xyz.block.ftl.v1.schema.Value;
-import xyz.block.ftl.v1.schema.Verb;
+import xyz.block.ftl.schema.v1.Data;
+import xyz.block.ftl.schema.v1.Enum;
+import xyz.block.ftl.schema.v1.EnumVariant;
+import xyz.block.ftl.schema.v1.Module;
+import xyz.block.ftl.schema.v1.Topic;
+import xyz.block.ftl.schema.v1.Type;
+import xyz.block.ftl.schema.v1.Value;
+import xyz.block.ftl.schema.v1.Verb;
 
 public class JavaCodeGenerator extends JVMCodeGenerator {
 
@@ -50,7 +50,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
     public static final String PACKAGE_PREFIX = "ftl.";
 
     @Override
-    protected void generateTypeAliasMapper(String module, xyz.block.ftl.v1.schema.TypeAlias typeAlias,
+    protected void generateTypeAliasMapper(String module, xyz.block.ftl.schema.v1.TypeAlias typeAlias,
             String packageName, Optional<String> nativeTypeAlias, Path outputDir) throws IOException {
         TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(className(typeAlias.getName()) + TYPE_MAPPER)
                 .addAnnotation(AnnotationSpec.builder(TypeAlias.class)
