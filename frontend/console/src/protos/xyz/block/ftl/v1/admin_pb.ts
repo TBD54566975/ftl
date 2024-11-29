@@ -11,31 +11,37 @@ import { Message, proto3 } from "@bufbuild/protobuf";
  */
 export enum ConfigProvider {
   /**
+   * @generated from enum value: CONFIG_PROVIDER_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
    * Write values inline in the configuration file.
    *
-   * @generated from enum value: CONFIG_INLINE = 0;
+   * @generated from enum value: CONFIG_PROVIDER_INLINE = 1;
    */
-  CONFIG_INLINE = 0,
+  INLINE = 1,
 
   /**
    * Print configuration as environment variables.
    *
-   * @generated from enum value: CONFIG_ENVAR = 1;
+   * @generated from enum value: CONFIG_PROVIDER_ENVAR = 2;
    */
-  CONFIG_ENVAR = 1,
+  ENVAR = 2,
 
   /**
    * Use the database as a configuration store.
    *
-   * @generated from enum value: CONFIG_DB = 2;
+   * @generated from enum value: CONFIG_PROVIDER_DB = 3;
    */
-  CONFIG_DB = 2,
+  DB = 3,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ConfigProvider)
 proto3.util.setEnumType(ConfigProvider, "xyz.block.ftl.v1.ConfigProvider", [
-  { no: 0, name: "CONFIG_INLINE" },
-  { no: 1, name: "CONFIG_ENVAR" },
-  { no: 2, name: "CONFIG_DB" },
+  { no: 0, name: "CONFIG_PROVIDER_UNSPECIFIED" },
+  { no: 1, name: "CONFIG_PROVIDER_INLINE" },
+  { no: 2, name: "CONFIG_PROVIDER_ENVAR" },
+  { no: 3, name: "CONFIG_PROVIDER_DB" },
 ]);
 
 /**
@@ -43,47 +49,53 @@ proto3.util.setEnumType(ConfigProvider, "xyz.block.ftl.v1.ConfigProvider", [
  */
 export enum SecretProvider {
   /**
+   * @generated from enum value: SECRET_PROVIDER_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
    * Write values inline in the configuration file.
    *
-   * @generated from enum value: SECRET_INLINE = 0;
+   * @generated from enum value: SECRET_PROVIDER_INLINE = 1;
    */
-  SECRET_INLINE = 0,
+  INLINE = 1,
 
   /**
    * Print configuration as environment variables.
    *
-   * @generated from enum value: SECRET_ENVAR = 1;
+   * @generated from enum value: SECRET_PROVIDER_ENVAR = 2;
    */
-  SECRET_ENVAR = 1,
+  ENVAR = 2,
 
   /**
    * Write to the system keychain.
    *
-   * @generated from enum value: SECRET_KEYCHAIN = 2;
+   * @generated from enum value: SECRET_PROVIDER_KEYCHAIN = 3;
    */
-  SECRET_KEYCHAIN = 2,
+  KEYCHAIN = 3,
 
   /**
    * Store a secret in the 1Password vault.
    *
-   * @generated from enum value: SECRET_OP = 3;
+   * @generated from enum value: SECRET_PROVIDER_OP = 4;
    */
-  SECRET_OP = 3,
+  OP = 4,
 
   /**
    * Store a secret in the AWS Secrets Manager.
    *
-   * @generated from enum value: SECRET_ASM = 4;
+   * @generated from enum value: SECRET_PROVIDER_ASM = 5;
    */
-  SECRET_ASM = 4,
+  ASM = 5,
 }
 // Retrieve enum metadata with: proto3.getEnumType(SecretProvider)
 proto3.util.setEnumType(SecretProvider, "xyz.block.ftl.v1.SecretProvider", [
-  { no: 0, name: "SECRET_INLINE" },
-  { no: 1, name: "SECRET_ENVAR" },
-  { no: 2, name: "SECRET_KEYCHAIN" },
-  { no: 3, name: "SECRET_OP" },
-  { no: 4, name: "SECRET_ASM" },
+  { no: 0, name: "SECRET_PROVIDER_UNSPECIFIED" },
+  { no: 1, name: "SECRET_PROVIDER_INLINE" },
+  { no: 2, name: "SECRET_PROVIDER_ENVAR" },
+  { no: 3, name: "SECRET_PROVIDER_KEYCHAIN" },
+  { no: 4, name: "SECRET_PROVIDER_OP" },
+  { no: 5, name: "SECRET_PROVIDER_ASM" },
 ]);
 
 /**

@@ -103,11 +103,11 @@ func configProviderKey(p *ftlv1.ConfigProvider) configuration.ProviderKey {
 		return ""
 	}
 	switch *p {
-	case ftlv1.ConfigProvider_CONFIG_INLINE:
+	case ftlv1.ConfigProvider_CONFIG_PROVIDER_INLINE:
 		return providers.InlineProviderKey
-	case ftlv1.ConfigProvider_CONFIG_ENVAR:
+	case ftlv1.ConfigProvider_CONFIG_PROVIDER_ENVAR:
 		return providers.EnvarProviderKey
-	case ftlv1.ConfigProvider_CONFIG_DB:
+	case ftlv1.ConfigProvider_CONFIG_PROVIDER_DB:
 		return providers.DatabaseConfigProviderKey
 	}
 	return ""
