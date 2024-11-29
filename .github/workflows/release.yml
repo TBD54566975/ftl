@@ -58,7 +58,7 @@ jobs:
           pattern: docker-*-artifact
       - name: Load Docker images
         run: |
-          for tar in artifacts/ftl-*/ftl-*.tar; do
+          for tar in artifacts/docker-*/ftl-*.tar; do
             docker load -i "$tar"
           done
       - name: Log in to Container registry
