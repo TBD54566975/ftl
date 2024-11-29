@@ -34,7 +34,7 @@ func Extract(pass *analysis.Pass, obj types.Object, node *ast.TypeSpec) optional
 		return optional.None[*schema.Topic]()
 	}
 
-	//extract name
+	// extract name
 	name := strcase.ToLowerCamel(node.Name.Name)
 	if !schema.ValidateName(name) {
 		common.Errorf(pass, node, "topic names must be valid identifiers")

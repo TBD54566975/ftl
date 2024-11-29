@@ -134,7 +134,7 @@ type IncludeTopicMapper struct {
 
 	// The object for the partition mapper type.
 	MapperObject types.Object
-	// The objects for each assocaited type for the partition mapper.
+	// The objects for each associated type for the partition mapper.
 	AssociatedObjects []types.Object
 }
 
