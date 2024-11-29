@@ -25,10 +25,10 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/TBD54566975/ftl"
+	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
+	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
-	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language/languagepbconnect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"

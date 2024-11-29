@@ -3,7 +3,7 @@ package xyz.block.ftl.deployment;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.Type;
 
-import xyz.block.ftl.v1.schema.Verb;
+import xyz.block.ftl.schema.v1.Verb;
 
 public enum VerbType {
     VERB,

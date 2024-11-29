@@ -27,14 +27,14 @@ import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import xyz.block.ftl.runtime.FTLRecorder;
-import xyz.block.ftl.v1.schema.Decl;
-import xyz.block.ftl.v1.schema.Enum;
-import xyz.block.ftl.v1.schema.EnumVariant;
-import xyz.block.ftl.v1.schema.Int;
-import xyz.block.ftl.v1.schema.IntValue;
-import xyz.block.ftl.v1.schema.StringValue;
-import xyz.block.ftl.v1.schema.TypeValue;
-import xyz.block.ftl.v1.schema.Value;
+import xyz.block.ftl.schema.v1.Decl;
+import xyz.block.ftl.schema.v1.Enum;
+import xyz.block.ftl.schema.v1.EnumVariant;
+import xyz.block.ftl.schema.v1.Int;
+import xyz.block.ftl.schema.v1.IntValue;
+import xyz.block.ftl.schema.v1.StringValue;
+import xyz.block.ftl.schema.v1.TypeValue;
+import xyz.block.ftl.schema.v1.Value;
 
 public class EnumProcessor {
 
@@ -110,11 +110,11 @@ public class EnumProcessor {
             throw new RuntimeException("Enum must have a 'value' field: " + classInfo.name());
         }
         Type type = valueField.type();
-        xyz.block.ftl.v1.schema.Type.Builder typeBuilder = xyz.block.ftl.v1.schema.Type.newBuilder();
+        xyz.block.ftl.schema.v1.Type.Builder typeBuilder = xyz.block.ftl.schema.v1.Type.newBuilder();
         if (isInt(type)) {
             typeBuilder.setInt(Int.newBuilder().build()).build();
         } else if (type.name().equals(DotName.STRING_NAME)) {
-            typeBuilder.setString(xyz.block.ftl.v1.schema.String.newBuilder().build());
+            typeBuilder.setString(xyz.block.ftl.schema.v1.String.newBuilder().build());
         } else {
             throw new RuntimeException(
                     "Enum value type must be String, int, long, short, or byte: " + classInfo.name());
@@ -179,7 +179,7 @@ public class EnumProcessor {
                         Thread.currentThread().getContextClassLoader());
                 variantClasses.add(variantClazz);
             }
-            xyz.block.ftl.v1.schema.Type declType = moduleBuilder.buildType(variantType, exported,
+            xyz.block.ftl.schema.v1.Type declType = moduleBuilder.buildType(variantType, exported,
                     Nullability.NOT_NULL);
             TypeValue typeValue = TypeValue.newBuilder().setValue(declType).build();
 

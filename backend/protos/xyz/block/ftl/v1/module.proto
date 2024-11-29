@@ -3,8 +3,8 @@ syntax = "proto3";
 package xyz.block.ftl.v1;
 
 import "google/protobuf/duration.proto";
+import "xyz/block/ftl/schema/v1/schema.proto";
 import "xyz/block/ftl/v1/ftl.proto";
-import "xyz/block/ftl/v1/schema/schema.proto";
 
 option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1;ftlv1";
 option java_multiple_files = true;
@@ -18,7 +18,7 @@ message AcquireLeaseRequest {
 message AcquireLeaseResponse {}
 
 message PublishEventRequest {
-  schema.Ref topic = 1;
+  ftl.schema.v1.Ref topic = 1;
   bytes body = 2;
   // Only verb name is included because this verb will be in the same module as topic
   string caller = 3;

@@ -1,7 +1,7 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 import { useQuery } from '@tanstack/react-query'
 import { useClient } from '../../hooks/use-client'
-import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect'
+import { ConsoleService } from '../../protos/xyz/block/ftl/console/v1/console_connect'
 import { useSchema } from '../schema/use-schema'
 
 const useModulesKey = 'modules'

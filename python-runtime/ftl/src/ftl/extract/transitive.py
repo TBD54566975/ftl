@@ -3,7 +3,7 @@ from typing import Any, Optional, Type
 
 from ftl.extract.common import extract_type
 from ftl.extract.context import LocalExtractionContext
-from ftl.protos.xyz.block.ftl.v1.schema import schema_pb2 as schemapb
+from ftl.protos.xyz.block.ftl.schema.v1 import schema_pb2 as schemapb
 
 class TransitiveExtractor(ast.NodeVisitor):
     def __init__(self, context: LocalExtractionContext, module_name: str, file_path: str):

@@ -16,14 +16,14 @@ import org.jboss.logging.Logger;
 import io.quarkus.bootstrap.prebuild.CodeGenException;
 import io.quarkus.deployment.CodeGenContext;
 import io.quarkus.deployment.CodeGenProvider;
-import xyz.block.ftl.v1.schema.Data;
-import xyz.block.ftl.v1.schema.Enum;
-import xyz.block.ftl.v1.schema.EnumVariant;
-import xyz.block.ftl.v1.schema.Module;
-import xyz.block.ftl.v1.schema.Topic;
-import xyz.block.ftl.v1.schema.Type;
-import xyz.block.ftl.v1.schema.TypeAlias;
-import xyz.block.ftl.v1.schema.Verb;
+import xyz.block.ftl.schema.v1.Data;
+import xyz.block.ftl.schema.v1.Enum;
+import xyz.block.ftl.schema.v1.EnumVariant;
+import xyz.block.ftl.schema.v1.Module;
+import xyz.block.ftl.schema.v1.Topic;
+import xyz.block.ftl.schema.v1.Type;
+import xyz.block.ftl.schema.v1.TypeAlias;
+import xyz.block.ftl.schema.v1.Verb;
 
 public abstract class JVMCodeGenerator implements CodeGenProvider {
 

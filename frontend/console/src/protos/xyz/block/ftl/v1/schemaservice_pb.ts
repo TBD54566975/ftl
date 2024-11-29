@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
-import { Module, Schema } from "./schema/schema_pb.js";
+import { Module, Schema } from "../schema/v1/schema_pb.js";
 
 /**
  * @generated from enum xyz.block.ftl.v1.DeploymentChangeType
@@ -75,7 +75,7 @@ export class GetSchemaRequest extends Message<GetSchemaRequest> {
  */
 export class GetSchemaResponse extends Message<GetSchemaResponse> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Schema schema = 1;
+   * @generated from field: xyz.block.ftl.schema.v1.Schema schema = 1;
    */
   schema?: Schema;
 
@@ -157,7 +157,7 @@ export class PullSchemaResponse extends Message<PullSchemaResponse> {
   /**
    * For deletes this will not be present.
    *
-   * @generated from field: optional xyz.block.ftl.v1.schema.Module schema = 4;
+   * @generated from field: optional xyz.block.ftl.schema.v1.Module schema = 4;
    */
   schema?: Module;
 

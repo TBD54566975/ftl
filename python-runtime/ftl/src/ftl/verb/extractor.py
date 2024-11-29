@@ -2,7 +2,7 @@ import ast
 from typing import Optional
 
 from ftl.extract import LocalExtractionContext, extract_type
-from ftl.protos.xyz.block.ftl.v1.schema import schema_pb2 as schemapb
+from ftl.protos.xyz.block.ftl.schema.v1 import schema_pb2 as schemapb
 
 from ftl.verb.model import Verb
 

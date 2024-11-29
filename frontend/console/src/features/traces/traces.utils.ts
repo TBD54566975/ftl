@@ -1,5 +1,5 @@
 import type { TraceEvent } from '../../api/timeline/use-request-trace-events'
-import type { Event } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Event } from '../../protos/xyz/block/ftl/console/v1/console_pb'
 import { compareTimestamps, durationToMillis } from '../../utils'
 
 export const eventBarLeftOffsetPercentage = (event: Event, requestStartTime: number, requestDurationMs: number) => {

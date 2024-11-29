@@ -1,4 +1,4 @@
-import type { CronScheduledEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { CronScheduledEvent } from '../../protos/xyz/block/ftl/console/v1/console_pb'
 import { formatTimestampShort } from '../../utils/date.utils.ts'
 import { refString } from '../modules/decls/verb/verb.utils.ts'
 

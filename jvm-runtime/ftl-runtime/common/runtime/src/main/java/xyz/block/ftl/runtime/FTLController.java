@@ -21,8 +21,8 @@ import io.grpc.stub.StreamObserver;
 import xyz.block.ftl.LeaseClient;
 import xyz.block.ftl.LeaseFailedException;
 import xyz.block.ftl.LeaseHandle;
+import xyz.block.ftl.schema.v1.Ref;
 import xyz.block.ftl.v1.*;
-import xyz.block.ftl.v1.schema.Ref;
 
 public class FTLController implements LeaseClient {
     private static final Logger log = Logger.getLogger(FTLController.class);

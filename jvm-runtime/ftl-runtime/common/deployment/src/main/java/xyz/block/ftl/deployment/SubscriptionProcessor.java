@@ -13,10 +13,10 @@ import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import xyz.block.ftl.FromOffset;
 import xyz.block.ftl.Retry;
-import xyz.block.ftl.v1.schema.Metadata;
-import xyz.block.ftl.v1.schema.MetadataRetry;
-import xyz.block.ftl.v1.schema.MetadataSubscriber;
-import xyz.block.ftl.v1.schema.Ref;
+import xyz.block.ftl.schema.v1.Metadata;
+import xyz.block.ftl.schema.v1.MetadataRetry;
+import xyz.block.ftl.schema.v1.MetadataSubscriber;
+import xyz.block.ftl.schema.v1.Ref;
 
 public class SubscriptionProcessor {
 
@@ -50,8 +50,8 @@ public class SubscriptionProcessor {
                         .setTopic(Ref.newBuilder().setName(info.topic()).setModule(info.module()).build())
                         .setFromOffset(
                                 info.from() == FromOffset.BEGINNING
-                                        ? xyz.block.ftl.v1.schema.FromOffset.FROM_OFFSET_BEGINNING
-                                        : xyz.block.ftl.v1.schema.FromOffset.FROM_OFFSET_LATEST)
+                                        ? xyz.block.ftl.schema.v1.FromOffset.FROM_OFFSET_BEGINNING
+                                        : xyz.block.ftl.schema.v1.FromOffset.FROM_OFFSET_LATEST)
                         .setDeadLetter(info.deadLetter())));
 
                 if (method.hasAnnotation(Retry.class)) {
