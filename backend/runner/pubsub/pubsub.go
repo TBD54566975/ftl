@@ -9,7 +9,6 @@ import (
 	pb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1"
 	pbconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/schema"
 	sl "github.com/TBD54566975/ftl/internal/slices"
 )
@@ -20,7 +19,7 @@ type Service struct {
 
 var _ pbconnect.PublishServiceHandler = (*Service)(nil)
 
-func New(ctx context.Context, module *schema.Module, client ftlv1connect.VerbServiceClient) (*Service, error) {
+func New(module *schema.Module) (*Service, error) {
 	publishers := map[string]*publisher{}
 	for t := range sl.FilterVariants[*schema.Topic](module.Decls) {
 		publisher, err := newPublisher(t)
