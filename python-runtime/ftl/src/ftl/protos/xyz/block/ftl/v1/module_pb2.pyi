@@ -37,7 +37,7 @@ class PublishEventResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
-class ModuleContextRequest(_message.Message):
+class GetModuleContextRequest(_message.Message):
     __slots__ = ("module",)
     MODULE_FIELD_NUMBER: _ClassVar[int]
     module: str

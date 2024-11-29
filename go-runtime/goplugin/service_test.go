@@ -49,7 +49,7 @@ func TestExtractModuleDepsGo(t *testing.T) {
 
 	configProto, err := langpb.ModuleConfigToProto(config.Abs())
 	assert.NoError(t, err)
-	depsResp, err := service.GetDependencies(ctx, connect.NewRequest(&langpb.DependenciesRequest{
+	depsResp, err := service.GetDependencies(ctx, connect.NewRequest(&langpb.GetDependenciesRequest{
 		ModuleConfig: configProto,
 	}))
 	assert.NoError(t, err)

@@ -170,39 +170,39 @@ export class PublishEventResponse extends Message<PublishEventResponse> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.ModuleContextRequest
+ * @generated from message xyz.block.ftl.v1.GetModuleContextRequest
  */
-export class ModuleContextRequest extends Message<ModuleContextRequest> {
+export class GetModuleContextRequest extends Message<GetModuleContextRequest> {
   /**
    * @generated from field: string module = 1;
    */
   module = "";
 
-  constructor(data?: PartialMessage<ModuleContextRequest>) {
+  constructor(data?: PartialMessage<GetModuleContextRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ModuleContextRequest";
+  static readonly typeName = "xyz.block.ftl.v1.GetModuleContextRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleContextRequest {
-    return new ModuleContextRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetModuleContextRequest {
+    return new GetModuleContextRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleContextRequest {
-    return new ModuleContextRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetModuleContextRequest {
+    return new GetModuleContextRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleContextRequest {
-    return new ModuleContextRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetModuleContextRequest {
+    return new GetModuleContextRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ModuleContextRequest | PlainMessage<ModuleContextRequest> | undefined, b: ModuleContextRequest | PlainMessage<ModuleContextRequest> | undefined): boolean {
-    return proto3.util.equals(ModuleContextRequest, a, b);
+  static equals(a: GetModuleContextRequest | PlainMessage<GetModuleContextRequest> | undefined, b: GetModuleContextRequest | PlainMessage<GetModuleContextRequest> | undefined): boolean {
+    return proto3.util.equals(GetModuleContextRequest, a, b);
   }
 }
 

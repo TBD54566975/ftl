@@ -71,7 +71,7 @@ public class FTLController implements LeaseClient {
         }
         var channel = channelBuilder.build();
         moduleService = ModuleServiceGrpc.newStub(channel);
-        moduleService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
+        moduleService.getModuleContext(GetModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
         verbService = VerbServiceGrpc.newStub(channel);
     }
 
@@ -263,7 +263,8 @@ public class FTLController implements LeaseClient {
                 }
             }
             if (failCount.incrementAndGet() < 5) {
-                moduleService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
+                moduleService.getModuleContext(GetModuleContextRequest.newBuilder().setModule(moduleName).build(),
+                        moduleObserver);
             }
         }
 

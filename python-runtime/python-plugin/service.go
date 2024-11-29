@@ -92,7 +92,7 @@ func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request
 	}), nil
 }
 
-func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.GetDependenciesResponse], error) {
+func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[langpb.GetDependenciesRequest]) (*connect.Response[langpb.GetDependenciesResponse], error) {
 	return connect.NewResponse(&langpb.GetDependenciesResponse{}), nil
 }
 

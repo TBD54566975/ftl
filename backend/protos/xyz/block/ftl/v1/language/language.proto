@@ -119,7 +119,7 @@ message ModuleConfigDefaultsResponse {
   string sql_migration_dir = 8;
 }
 
-message DependenciesRequest {
+message GetDependenciesRequest {
   ModuleConfig module_config = 1;
 }
 
@@ -310,7 +310,7 @@ service LanguageService {
 
   // Extract dependencies for a module
   // FTL will ensure that these dependencies are built before requesting a build for this module.
-  rpc GetDependencies(DependenciesRequest) returns (GetDependenciesResponse);
+  rpc GetDependencies(GetDependenciesRequest) returns (GetDependenciesResponse);
 
   // Build the module and stream back build events.
   //

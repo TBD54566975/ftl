@@ -372,16 +372,16 @@ class StreamModulesResponse(_message.Message):
     topology: Topology
     def __init__(self, modules: _Optional[_Iterable[_Union[Module, _Mapping]]] = ..., topology: _Optional[_Union[Topology, _Mapping]] = ...) -> None: ...
 
-class EventsQuery(_message.Message):
+class GetEventsRequest(_message.Message):
     __slots__ = ("filters", "limit", "order")
     class Order(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
-        ORDER_UNSPECIFIED: _ClassVar[EventsQuery.Order]
-        ORDER_ASC: _ClassVar[EventsQuery.Order]
-        ORDER_DESC: _ClassVar[EventsQuery.Order]
-    ORDER_UNSPECIFIED: EventsQuery.Order
-    ORDER_ASC: EventsQuery.Order
-    ORDER_DESC: EventsQuery.Order
+        ORDER_UNSPECIFIED: _ClassVar[GetEventsRequest.Order]
+        ORDER_ASC: _ClassVar[GetEventsRequest.Order]
+        ORDER_DESC: _ClassVar[GetEventsRequest.Order]
+    ORDER_UNSPECIFIED: GetEventsRequest.Order
+    ORDER_ASC: GetEventsRequest.Order
+    ORDER_DESC: GetEventsRequest.Order
     class LimitFilter(_message.Message):
         __slots__ = ("limit",)
         LIMIT_FIELD_NUMBER: _ClassVar[int]
@@ -448,63 +448,23 @@ class EventsQuery(_message.Message):
         ID_FIELD_NUMBER: _ClassVar[int]
         CALL_FIELD_NUMBER: _ClassVar[int]
         MODULE_FIELD_NUMBER: _ClassVar[int]
-        limit: EventsQuery.LimitFilter
-        log_level: EventsQuery.LogLevelFilter
-        deployments: EventsQuery.DeploymentFilter
-        requests: EventsQuery.RequestFilter
-        event_types: EventsQuery.EventTypeFilter
-        time: EventsQuery.TimeFilter
-        id: EventsQuery.IDFilter
-        call: EventsQuery.CallFilter
-        module: EventsQuery.ModuleFilter
-        def __init__(self, limit: _Optional[_Union[EventsQuery.LimitFilter, _Mapping]] = ..., log_level: _Optional[_Union[EventsQuery.LogLevelFilter, _Mapping]] = ..., deployments: _Optional[_Union[EventsQuery.DeploymentFilter, _Mapping]] = ..., requests: _Optional[_Union[EventsQuery.RequestFilter, _Mapping]] = ..., event_types: _Optional[_Union[EventsQuery.EventTypeFilter, _Mapping]] = ..., time: _Optional[_Union[EventsQuery.TimeFilter, _Mapping]] = ..., id: _Optional[_Union[EventsQuery.IDFilter, _Mapping]] = ..., call: _Optional[_Union[EventsQuery.CallFilter, _Mapping]] = ..., module: _Optional[_Union[EventsQuery.ModuleFilter, _Mapping]] = ...) -> None: ...
+        limit: GetEventsRequest.LimitFilter
+        log_level: GetEventsRequest.LogLevelFilter
+        deployments: GetEventsRequest.DeploymentFilter
+        requests: GetEventsRequest.RequestFilter
+        event_types: GetEventsRequest.EventTypeFilter
+        time: GetEventsRequest.TimeFilter
+        id: GetEventsRequest.IDFilter
+        call: GetEventsRequest.CallFilter
+        module: GetEventsRequest.ModuleFilter
+        def __init__(self, limit: _Optional[_Union[GetEventsRequest.LimitFilter, _Mapping]] = ..., log_level: _Optional[_Union[GetEventsRequest.LogLevelFilter, _Mapping]] = ..., deployments: _Optional[_Union[GetEventsRequest.DeploymentFilter, _Mapping]] = ..., requests: _Optional[_Union[GetEventsRequest.RequestFilter, _Mapping]] = ..., event_types: _Optional[_Union[GetEventsRequest.EventTypeFilter, _Mapping]] = ..., time: _Optional[_Union[GetEventsRequest.TimeFilter, _Mapping]] = ..., id: _Optional[_Union[GetEventsRequest.IDFilter, _Mapping]] = ..., call: _Optional[_Union[GetEventsRequest.CallFilter, _Mapping]] = ..., module: _Optional[_Union[GetEventsRequest.ModuleFilter, _Mapping]] = ...) -> None: ...
     FILTERS_FIELD_NUMBER: _ClassVar[int]
     LIMIT_FIELD_NUMBER: _ClassVar[int]
     ORDER_FIELD_NUMBER: _ClassVar[int]
-    filters: _containers.RepeatedCompositeFieldContainer[EventsQuery.Filter]
+    filters: _containers.RepeatedCompositeFieldContainer[GetEventsRequest.Filter]
     limit: int
-    order: EventsQuery.Order
-    def __init__(self, filters: _Optional[_Iterable[_Union[EventsQuery.Filter, _Mapping]]] = ..., limit: _Optional[int] = ..., order: _Optional[_Union[EventsQuery.Order, str]] = ...) -> None: ...
-
-class StreamEventsRequest(_message.Message):
-    __slots__ = ("update_interval", "query")
-    UPDATE_INTERVAL_FIELD_NUMBER: _ClassVar[int]
-    QUERY_FIELD_NUMBER: _ClassVar[int]
-    update_interval: _duration_pb2.Duration
-    query: EventsQuery
-    def __init__(self, update_interval: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., query: _Optional[_Union[EventsQuery, _Mapping]] = ...) -> None: ...
-
-class StreamEventsResponse(_message.Message):
-    __slots__ = ("events",)
-    EVENTS_FIELD_NUMBER: _ClassVar[int]
-    events: _containers.RepeatedCompositeFieldContainer[Event]
-    def __init__(self, events: _Optional[_Iterable[_Union[Event, _Mapping]]] = ...) -> None: ...
-
-class Event(_message.Message):
-    __slots__ = ("time_stamp", "id", "log", "call", "deployment_created", "deployment_updated", "ingress", "cron_scheduled", "async_execute", "pubsub_publish", "pubsub_consume")
-    TIME_STAMP_FIELD_NUMBER: _ClassVar[int]
-    ID_FIELD_NUMBER: _ClassVar[int]
-    LOG_FIELD_NUMBER: _ClassVar[int]
-    CALL_FIELD_NUMBER: _ClassVar[int]
-    DEPLOYMENT_CREATED_FIELD_NUMBER: _ClassVar[int]
-    DEPLOYMENT_UPDATED_FIELD_NUMBER: _ClassVar[int]
-    INGRESS_FIELD_NUMBER: _ClassVar[int]
-    CRON_SCHEDULED_FIELD_NUMBER: _ClassVar[int]
-    ASYNC_EXECUTE_FIELD_NUMBER: _ClassVar[int]
-    PUBSUB_PUBLISH_FIELD_NUMBER: _ClassVar[int]
-    PUBSUB_CONSUME_FIELD_NUMBER: _ClassVar[int]
-    time_stamp: _timestamp_pb2.Timestamp
-    id: int
-    log: LogEvent
-    call: CallEvent
-    deployment_created: DeploymentCreatedEvent
-    deployment_updated: DeploymentUpdatedEvent
-    ingress: IngressEvent
-    cron_scheduled: CronScheduledEvent
-    async_execute: AsyncExecuteEvent
-    pubsub_publish: PubSubPublishEvent
-    pubsub_consume: PubSubConsumeEvent
-    def __init__(self, time_stamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., id: _Optional[int] = ..., log: _Optional[_Union[LogEvent, _Mapping]] = ..., call: _Optional[_Union[CallEvent, _Mapping]] = ..., deployment_created: _Optional[_Union[DeploymentCreatedEvent, _Mapping]] = ..., deployment_updated: _Optional[_Union[DeploymentUpdatedEvent, _Mapping]] = ..., ingress: _Optional[_Union[IngressEvent, _Mapping]] = ..., cron_scheduled: _Optional[_Union[CronScheduledEvent, _Mapping]] = ..., async_execute: _Optional[_Union[AsyncExecuteEvent, _Mapping]] = ..., pubsub_publish: _Optional[_Union[PubSubPublishEvent, _Mapping]] = ..., pubsub_consume: _Optional[_Union[PubSubConsumeEvent, _Mapping]] = ...) -> None: ...
+    order: GetEventsRequest.Order
+    def __init__(self, filters: _Optional[_Iterable[_Union[GetEventsRequest.Filter, _Mapping]]] = ..., limit: _Optional[int] = ..., order: _Optional[_Union[GetEventsRequest.Order, str]] = ...) -> None: ...
 
 class GetEventsResponse(_message.Message):
     __slots__ = ("events", "cursor")
@@ -573,3 +533,43 @@ class SetSecretResponse(_message.Message):
     VALUE_FIELD_NUMBER: _ClassVar[int]
     value: bytes
     def __init__(self, value: _Optional[bytes] = ...) -> None: ...
+
+class StreamEventsRequest(_message.Message):
+    __slots__ = ("update_interval", "query")
+    UPDATE_INTERVAL_FIELD_NUMBER: _ClassVar[int]
+    QUERY_FIELD_NUMBER: _ClassVar[int]
+    update_interval: _duration_pb2.Duration
+    query: GetEventsRequest
+    def __init__(self, update_interval: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., query: _Optional[_Union[GetEventsRequest, _Mapping]] = ...) -> None: ...
+
+class StreamEventsResponse(_message.Message):
+    __slots__ = ("events",)
+    EVENTS_FIELD_NUMBER: _ClassVar[int]
+    events: _containers.RepeatedCompositeFieldContainer[Event]
+    def __init__(self, events: _Optional[_Iterable[_Union[Event, _Mapping]]] = ...) -> None: ...
+
+class Event(_message.Message):
+    __slots__ = ("time_stamp", "id", "log", "call", "deployment_created", "deployment_updated", "ingress", "cron_scheduled", "async_execute", "pubsub_publish", "pubsub_consume")
+    TIME_STAMP_FIELD_NUMBER: _ClassVar[int]
+    ID_FIELD_NUMBER: _ClassVar[int]
+    LOG_FIELD_NUMBER: _ClassVar[int]
+    CALL_FIELD_NUMBER: _ClassVar[int]
+    DEPLOYMENT_CREATED_FIELD_NUMBER: _ClassVar[int]
+    DEPLOYMENT_UPDATED_FIELD_NUMBER: _ClassVar[int]
+    INGRESS_FIELD_NUMBER: _ClassVar[int]
+    CRON_SCHEDULED_FIELD_NUMBER: _ClassVar[int]
+    ASYNC_EXECUTE_FIELD_NUMBER: _ClassVar[int]
+    PUBSUB_PUBLISH_FIELD_NUMBER: _ClassVar[int]
+    PUBSUB_CONSUME_FIELD_NUMBER: _ClassVar[int]
+    time_stamp: _timestamp_pb2.Timestamp
+    id: int
+    log: LogEvent
+    call: CallEvent
+    deployment_created: DeploymentCreatedEvent
+    deployment_updated: DeploymentUpdatedEvent
+    ingress: IngressEvent
+    cron_scheduled: CronScheduledEvent
+    async_execute: AsyncExecuteEvent
+    pubsub_publish: PubSubPublishEvent
+    pubsub_consume: PubSubConsumeEvent
+    def __init__(self, time_stamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., id: _Optional[int] = ..., log: _Optional[_Union[LogEvent, _Mapping]] = ..., call: _Optional[_Union[CallEvent, _Mapping]] = ..., deployment_created: _Optional[_Union[DeploymentCreatedEvent, _Mapping]] = ..., deployment_updated: _Optional[_Union[DeploymentUpdatedEvent, _Mapping]] = ..., ingress: _Optional[_Union[IngressEvent, _Mapping]] = ..., cron_scheduled: _Optional[_Union[CronScheduledEvent, _Mapping]] = ..., async_execute: _Optional[_Union[AsyncExecuteEvent, _Mapping]] = ..., pubsub_publish: _Optional[_Union[PubSubPublishEvent, _Mapping]] = ..., pubsub_consume: _Optional[_Union[PubSubConsumeEvent, _Mapping]] = ...) -> None: ...

@@ -1528,13 +1528,13 @@ export class StreamModulesResponse extends Message<StreamModulesResponse> {
 /**
  * Query for events.
  *
- * @generated from message xyz.block.ftl.v1.console.EventsQuery
+ * @generated from message xyz.block.ftl.v1.console.GetEventsRequest
  */
-export class EventsQuery extends Message<EventsQuery> {
+export class GetEventsRequest extends Message<GetEventsRequest> {
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.EventsQuery.Filter filters = 1;
+   * @generated from field: repeated xyz.block.ftl.v1.console.GetEventsRequest.Filter filters = 1;
    */
-  filters: EventsQuery_Filter[] = [];
+  filters: GetEventsRequest_Filter[] = [];
 
   /**
    * @generated from field: int32 limit = 2;
@@ -1542,44 +1542,44 @@ export class EventsQuery extends Message<EventsQuery> {
   limit = 0;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.console.EventsQuery.Order order = 3;
+   * @generated from field: xyz.block.ftl.v1.console.GetEventsRequest.Order order = 3;
    */
-  order = EventsQuery_Order.UNSPECIFIED;
+  order = GetEventsRequest_Order.UNSPECIFIED;
 
-  constructor(data?: PartialMessage<EventsQuery>) {
+  constructor(data?: PartialMessage<GetEventsRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery";
+  static readonly typeName = "xyz.block.ftl.v1.console.GetEventsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "filters", kind: "message", T: EventsQuery_Filter, repeated: true },
+    { no: 1, name: "filters", kind: "message", T: GetEventsRequest_Filter, repeated: true },
     { no: 2, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 3, name: "order", kind: "enum", T: proto3.getEnumType(EventsQuery_Order) },
+    { no: 3, name: "order", kind: "enum", T: proto3.getEnumType(GetEventsRequest_Order) },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery {
-    return new EventsQuery().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventsRequest {
+    return new GetEventsRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery {
-    return new EventsQuery().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventsRequest {
+    return new GetEventsRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery {
-    return new EventsQuery().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventsRequest {
+    return new GetEventsRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EventsQuery | PlainMessage<EventsQuery> | undefined, b: EventsQuery | PlainMessage<EventsQuery> | undefined): boolean {
-    return proto3.util.equals(EventsQuery, a, b);
+  static equals(a: GetEventsRequest | PlainMessage<GetEventsRequest> | undefined, b: GetEventsRequest | PlainMessage<GetEventsRequest> | undefined): boolean {
+    return proto3.util.equals(GetEventsRequest, a, b);
   }
 }
 
 /**
- * @generated from enum xyz.block.ftl.v1.console.EventsQuery.Order
+ * @generated from enum xyz.block.ftl.v1.console.GetEventsRequest.Order
  */
-export enum EventsQuery_Order {
+export enum GetEventsRequest_Order {
   /**
    * @generated from enum value: ORDER_UNSPECIFIED = 0;
    */
@@ -1595,8 +1595,8 @@ export enum EventsQuery_Order {
    */
   DESC = 2,
 }
-// Retrieve enum metadata with: proto3.getEnumType(EventsQuery_Order)
-proto3.util.setEnumType(EventsQuery_Order, "xyz.block.ftl.v1.console.EventsQuery.Order", [
+// Retrieve enum metadata with: proto3.getEnumType(GetEventsRequest_Order)
+proto3.util.setEnumType(GetEventsRequest_Order, "xyz.block.ftl.v1.console.GetEventsRequest.Order", [
   { no: 0, name: "ORDER_UNSPECIFIED" },
   { no: 1, name: "ORDER_ASC" },
   { no: 2, name: "ORDER_DESC" },
@@ -1605,195 +1605,195 @@ proto3.util.setEnumType(EventsQuery_Order, "xyz.block.ftl.v1.console.EventsQuery
 /**
  * Limit the number of events returned.
  *
- * @generated from message xyz.block.ftl.v1.console.EventsQuery.LimitFilter
+ * @generated from message xyz.block.ftl.v1.console.GetEventsRequest.LimitFilter
  */
-export class EventsQuery_LimitFilter extends Message<EventsQuery_LimitFilter> {
+export class GetEventsRequest_LimitFilter extends Message<GetEventsRequest_LimitFilter> {
   /**
    * @generated from field: int32 limit = 1;
    */
   limit = 0;
 
-  constructor(data?: PartialMessage<EventsQuery_LimitFilter>) {
+  constructor(data?: PartialMessage<GetEventsRequest_LimitFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.LimitFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.GetEventsRequest.LimitFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_LimitFilter {
-    return new EventsQuery_LimitFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventsRequest_LimitFilter {
+    return new GetEventsRequest_LimitFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_LimitFilter {
-    return new EventsQuery_LimitFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventsRequest_LimitFilter {
+    return new GetEventsRequest_LimitFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_LimitFilter {
-    return new EventsQuery_LimitFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventsRequest_LimitFilter {
+    return new GetEventsRequest_LimitFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EventsQuery_LimitFilter | PlainMessage<EventsQuery_LimitFilter> | undefined, b: EventsQuery_LimitFilter | PlainMessage<EventsQuery_LimitFilter> | undefined): boolean {
-    return proto3.util.equals(EventsQuery_LimitFilter, a, b);
+  static equals(a: GetEventsRequest_LimitFilter | PlainMessage<GetEventsRequest_LimitFilter> | undefined, b: GetEventsRequest_LimitFilter | PlainMessage<GetEventsRequest_LimitFilter> | undefined): boolean {
+    return proto3.util.equals(GetEventsRequest_LimitFilter, a, b);
   }
 }
 
 /**
  * Filters events by log level.
  *
- * @generated from message xyz.block.ftl.v1.console.EventsQuery.LogLevelFilter
+ * @generated from message xyz.block.ftl.v1.console.GetEventsRequest.LogLevelFilter
  */
-export class EventsQuery_LogLevelFilter extends Message<EventsQuery_LogLevelFilter> {
+export class GetEventsRequest_LogLevelFilter extends Message<GetEventsRequest_LogLevelFilter> {
   /**
    * @generated from field: xyz.block.ftl.v1.console.LogLevel log_level = 1;
    */
   logLevel = LogLevel.UNSPECIFIED;
 
-  constructor(data?: PartialMessage<EventsQuery_LogLevelFilter>) {
+  constructor(data?: PartialMessage<GetEventsRequest_LogLevelFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.LogLevelFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.GetEventsRequest.LogLevelFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "log_level", kind: "enum", T: proto3.getEnumType(LogLevel) },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_LogLevelFilter {
-    return new EventsQuery_LogLevelFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventsRequest_LogLevelFilter {
+    return new GetEventsRequest_LogLevelFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_LogLevelFilter {
-    return new EventsQuery_LogLevelFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventsRequest_LogLevelFilter {
+    return new GetEventsRequest_LogLevelFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_LogLevelFilter {
-    return new EventsQuery_LogLevelFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventsRequest_LogLevelFilter {
+    return new GetEventsRequest_LogLevelFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EventsQuery_LogLevelFilter | PlainMessage<EventsQuery_LogLevelFilter> | undefined, b: EventsQuery_LogLevelFilter | PlainMessage<EventsQuery_LogLevelFilter> | undefined): boolean {
-    return proto3.util.equals(EventsQuery_LogLevelFilter, a, b);
+  static equals(a: GetEventsRequest_LogLevelFilter | PlainMessage<GetEventsRequest_LogLevelFilter> | undefined, b: GetEventsRequest_LogLevelFilter | PlainMessage<GetEventsRequest_LogLevelFilter> | undefined): boolean {
+    return proto3.util.equals(GetEventsRequest_LogLevelFilter, a, b);
   }
 }
 
 /**
  * Filters events by deployment key.
  *
- * @generated from message xyz.block.ftl.v1.console.EventsQuery.DeploymentFilter
+ * @generated from message xyz.block.ftl.v1.console.GetEventsRequest.DeploymentFilter
  */
-export class EventsQuery_DeploymentFilter extends Message<EventsQuery_DeploymentFilter> {
+export class GetEventsRequest_DeploymentFilter extends Message<GetEventsRequest_DeploymentFilter> {
   /**
    * @generated from field: repeated string deployments = 1;
    */
   deployments: string[] = [];
 
-  constructor(data?: PartialMessage<EventsQuery_DeploymentFilter>) {
+  constructor(data?: PartialMessage<GetEventsRequest_DeploymentFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.DeploymentFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.GetEventsRequest.DeploymentFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_DeploymentFilter {
-    return new EventsQuery_DeploymentFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventsRequest_DeploymentFilter {
+    return new GetEventsRequest_DeploymentFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_DeploymentFilter {
-    return new EventsQuery_DeploymentFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventsRequest_DeploymentFilter {
+    return new GetEventsRequest_DeploymentFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_DeploymentFilter {
-    return new EventsQuery_DeploymentFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventsRequest_DeploymentFilter {
+    return new GetEventsRequest_DeploymentFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EventsQuery_DeploymentFilter | PlainMessage<EventsQuery_DeploymentFilter> | undefined, b: EventsQuery_DeploymentFilter | PlainMessage<EventsQuery_DeploymentFilter> | undefined): boolean {
-    return proto3.util.equals(EventsQuery_DeploymentFilter, a, b);
+  static equals(a: GetEventsRequest_DeploymentFilter | PlainMessage<GetEventsRequest_DeploymentFilter> | undefined, b: GetEventsRequest_DeploymentFilter | PlainMessage<GetEventsRequest_DeploymentFilter> | undefined): boolean {
+    return proto3.util.equals(GetEventsRequest_DeploymentFilter, a, b);
   }
 }
 
 /**
  * Filters events by request key.
  *
- * @generated from message xyz.block.ftl.v1.console.EventsQuery.RequestFilter
+ * @generated from message xyz.block.ftl.v1.console.GetEventsRequest.RequestFilter
  */
-export class EventsQuery_RequestFilter extends Message<EventsQuery_RequestFilter> {
+export class GetEventsRequest_RequestFilter extends Message<GetEventsRequest_RequestFilter> {
   /**
    * @generated from field: repeated string requests = 1;
    */
   requests: string[] = [];
 
-  constructor(data?: PartialMessage<EventsQuery_RequestFilter>) {
+  constructor(data?: PartialMessage<GetEventsRequest_RequestFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.RequestFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.GetEventsRequest.RequestFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "requests", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_RequestFilter {
-    return new EventsQuery_RequestFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventsRequest_RequestFilter {
+    return new GetEventsRequest_RequestFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_RequestFilter {
-    return new EventsQuery_RequestFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventsRequest_RequestFilter {
+    return new GetEventsRequest_RequestFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_RequestFilter {
-    return new EventsQuery_RequestFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventsRequest_RequestFilter {
+    return new GetEventsRequest_RequestFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EventsQuery_RequestFilter | PlainMessage<EventsQuery_RequestFilter> | undefined, b: EventsQuery_RequestFilter | PlainMessage<EventsQuery_RequestFilter> | undefined): boolean {
-    return proto3.util.equals(EventsQuery_RequestFilter, a, b);
+  static equals(a: GetEventsRequest_RequestFilter | PlainMessage<GetEventsRequest_RequestFilter> | undefined, b: GetEventsRequest_RequestFilter | PlainMessage<GetEventsRequest_RequestFilter> | undefined): boolean {
+    return proto3.util.equals(GetEventsRequest_RequestFilter, a, b);
   }
 }
 
 /**
  * Filters events by event type.
  *
- * @generated from message xyz.block.ftl.v1.console.EventsQuery.EventTypeFilter
+ * @generated from message xyz.block.ftl.v1.console.GetEventsRequest.EventTypeFilter
  */
-export class EventsQuery_EventTypeFilter extends Message<EventsQuery_EventTypeFilter> {
+export class GetEventsRequest_EventTypeFilter extends Message<GetEventsRequest_EventTypeFilter> {
   /**
    * @generated from field: repeated xyz.block.ftl.v1.console.EventType event_types = 1;
    */
   eventTypes: EventType[] = [];
 
-  constructor(data?: PartialMessage<EventsQuery_EventTypeFilter>) {
+  constructor(data?: PartialMessage<GetEventsRequest_EventTypeFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.EventTypeFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.GetEventsRequest.EventTypeFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "event_types", kind: "enum", T: proto3.getEnumType(EventType), repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_EventTypeFilter {
-    return new EventsQuery_EventTypeFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventsRequest_EventTypeFilter {
+    return new GetEventsRequest_EventTypeFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_EventTypeFilter {
-    return new EventsQuery_EventTypeFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventsRequest_EventTypeFilter {
+    return new GetEventsRequest_EventTypeFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_EventTypeFilter {
-    return new EventsQuery_EventTypeFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventsRequest_EventTypeFilter {
+    return new GetEventsRequest_EventTypeFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EventsQuery_EventTypeFilter | PlainMessage<EventsQuery_EventTypeFilter> | undefined, b: EventsQuery_EventTypeFilter | PlainMessage<EventsQuery_EventTypeFilter> | undefined): boolean {
-    return proto3.util.equals(EventsQuery_EventTypeFilter, a, b);
+  static equals(a: GetEventsRequest_EventTypeFilter | PlainMessage<GetEventsRequest_EventTypeFilter> | undefined, b: GetEventsRequest_EventTypeFilter | PlainMessage<GetEventsRequest_EventTypeFilter> | undefined): boolean {
+    return proto3.util.equals(GetEventsRequest_EventTypeFilter, a, b);
   }
 }
 
@@ -1802,9 +1802,9 @@ export class EventsQuery_EventTypeFilter extends Message<EventsQuery_EventTypeFi
  *
  * Either end of the time range can be omitted to indicate no bound.
  *
- * @generated from message xyz.block.ftl.v1.console.EventsQuery.TimeFilter
+ * @generated from message xyz.block.ftl.v1.console.GetEventsRequest.TimeFilter
  */
-export class EventsQuery_TimeFilter extends Message<EventsQuery_TimeFilter> {
+export class GetEventsRequest_TimeFilter extends Message<GetEventsRequest_TimeFilter> {
   /**
    * @generated from field: optional google.protobuf.Timestamp older_than = 1;
    */
@@ -1815,32 +1815,32 @@ export class EventsQuery_TimeFilter extends Message<EventsQuery_TimeFilter> {
    */
   newerThan?: Timestamp;
 
-  constructor(data?: PartialMessage<EventsQuery_TimeFilter>) {
+  constructor(data?: PartialMessage<GetEventsRequest_TimeFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.TimeFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.GetEventsRequest.TimeFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "older_than", kind: "message", T: Timestamp, opt: true },
     { no: 2, name: "newer_than", kind: "message", T: Timestamp, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_TimeFilter {
-    return new EventsQuery_TimeFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventsRequest_TimeFilter {
+    return new GetEventsRequest_TimeFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_TimeFilter {
-    return new EventsQuery_TimeFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventsRequest_TimeFilter {
+    return new GetEventsRequest_TimeFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_TimeFilter {
-    return new EventsQuery_TimeFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventsRequest_TimeFilter {
+    return new GetEventsRequest_TimeFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EventsQuery_TimeFilter | PlainMessage<EventsQuery_TimeFilter> | undefined, b: EventsQuery_TimeFilter | PlainMessage<EventsQuery_TimeFilter> | undefined): boolean {
-    return proto3.util.equals(EventsQuery_TimeFilter, a, b);
+  static equals(a: GetEventsRequest_TimeFilter | PlainMessage<GetEventsRequest_TimeFilter> | undefined, b: GetEventsRequest_TimeFilter | PlainMessage<GetEventsRequest_TimeFilter> | undefined): boolean {
+    return proto3.util.equals(GetEventsRequest_TimeFilter, a, b);
   }
 }
 
@@ -1849,9 +1849,9 @@ export class EventsQuery_TimeFilter extends Message<EventsQuery_TimeFilter> {
  *
  * Either end of the ID range can be omitted to indicate no bound.
  *
- * @generated from message xyz.block.ftl.v1.console.EventsQuery.IDFilter
+ * @generated from message xyz.block.ftl.v1.console.GetEventsRequest.IDFilter
  */
-export class EventsQuery_IDFilter extends Message<EventsQuery_IDFilter> {
+export class GetEventsRequest_IDFilter extends Message<GetEventsRequest_IDFilter> {
   /**
    * @generated from field: optional int64 lower_than = 1;
    */
@@ -1862,41 +1862,41 @@ export class EventsQuery_IDFilter extends Message<EventsQuery_IDFilter> {
    */
   higherThan?: bigint;
 
-  constructor(data?: PartialMessage<EventsQuery_IDFilter>) {
+  constructor(data?: PartialMessage<GetEventsRequest_IDFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.IDFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.GetEventsRequest.IDFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "lower_than", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 2, name: "higher_than", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_IDFilter {
-    return new EventsQuery_IDFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventsRequest_IDFilter {
+    return new GetEventsRequest_IDFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_IDFilter {
-    return new EventsQuery_IDFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventsRequest_IDFilter {
+    return new GetEventsRequest_IDFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_IDFilter {
-    return new EventsQuery_IDFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventsRequest_IDFilter {
+    return new GetEventsRequest_IDFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EventsQuery_IDFilter | PlainMessage<EventsQuery_IDFilter> | undefined, b: EventsQuery_IDFilter | PlainMessage<EventsQuery_IDFilter> | undefined): boolean {
-    return proto3.util.equals(EventsQuery_IDFilter, a, b);
+  static equals(a: GetEventsRequest_IDFilter | PlainMessage<GetEventsRequest_IDFilter> | undefined, b: GetEventsRequest_IDFilter | PlainMessage<GetEventsRequest_IDFilter> | undefined): boolean {
+    return proto3.util.equals(GetEventsRequest_IDFilter, a, b);
   }
 }
 
 /**
  * Filters events by call.
  *
- * @generated from message xyz.block.ftl.v1.console.EventsQuery.CallFilter
+ * @generated from message xyz.block.ftl.v1.console.GetEventsRequest.CallFilter
  */
-export class EventsQuery_CallFilter extends Message<EventsQuery_CallFilter> {
+export class GetEventsRequest_CallFilter extends Message<GetEventsRequest_CallFilter> {
   /**
    * @generated from field: string dest_module = 1;
    */
@@ -1912,40 +1912,40 @@ export class EventsQuery_CallFilter extends Message<EventsQuery_CallFilter> {
    */
   sourceModule?: string;
 
-  constructor(data?: PartialMessage<EventsQuery_CallFilter>) {
+  constructor(data?: PartialMessage<GetEventsRequest_CallFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.CallFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.GetEventsRequest.CallFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "dest_module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "dest_verb", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "source_module", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_CallFilter {
-    return new EventsQuery_CallFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventsRequest_CallFilter {
+    return new GetEventsRequest_CallFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_CallFilter {
-    return new EventsQuery_CallFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventsRequest_CallFilter {
+    return new GetEventsRequest_CallFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_CallFilter {
-    return new EventsQuery_CallFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventsRequest_CallFilter {
+    return new GetEventsRequest_CallFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EventsQuery_CallFilter | PlainMessage<EventsQuery_CallFilter> | undefined, b: EventsQuery_CallFilter | PlainMessage<EventsQuery_CallFilter> | undefined): boolean {
-    return proto3.util.equals(EventsQuery_CallFilter, a, b);
+  static equals(a: GetEventsRequest_CallFilter | PlainMessage<GetEventsRequest_CallFilter> | undefined, b: GetEventsRequest_CallFilter | PlainMessage<GetEventsRequest_CallFilter> | undefined): boolean {
+    return proto3.util.equals(GetEventsRequest_CallFilter, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.EventsQuery.ModuleFilter
+ * @generated from message xyz.block.ftl.v1.console.GetEventsRequest.ModuleFilter
  */
-export class EventsQuery_ModuleFilter extends Message<EventsQuery_ModuleFilter> {
+export class GetEventsRequest_ModuleFilter extends Message<GetEventsRequest_ModuleFilter> {
   /**
    * @generated from field: string module = 1;
    */
@@ -1956,326 +1956,133 @@ export class EventsQuery_ModuleFilter extends Message<EventsQuery_ModuleFilter> 
    */
   verb?: string;
 
-  constructor(data?: PartialMessage<EventsQuery_ModuleFilter>) {
+  constructor(data?: PartialMessage<GetEventsRequest_ModuleFilter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.ModuleFilter";
+  static readonly typeName = "xyz.block.ftl.v1.console.GetEventsRequest.ModuleFilter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "verb", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_ModuleFilter {
-    return new EventsQuery_ModuleFilter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventsRequest_ModuleFilter {
+    return new GetEventsRequest_ModuleFilter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_ModuleFilter {
-    return new EventsQuery_ModuleFilter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventsRequest_ModuleFilter {
+    return new GetEventsRequest_ModuleFilter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_ModuleFilter {
-    return new EventsQuery_ModuleFilter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventsRequest_ModuleFilter {
+    return new GetEventsRequest_ModuleFilter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EventsQuery_ModuleFilter | PlainMessage<EventsQuery_ModuleFilter> | undefined, b: EventsQuery_ModuleFilter | PlainMessage<EventsQuery_ModuleFilter> | undefined): boolean {
-    return proto3.util.equals(EventsQuery_ModuleFilter, a, b);
+  static equals(a: GetEventsRequest_ModuleFilter | PlainMessage<GetEventsRequest_ModuleFilter> | undefined, b: GetEventsRequest_ModuleFilter | PlainMessage<GetEventsRequest_ModuleFilter> | undefined): boolean {
+    return proto3.util.equals(GetEventsRequest_ModuleFilter, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.EventsQuery.Filter
+ * @generated from message xyz.block.ftl.v1.console.GetEventsRequest.Filter
  */
-export class EventsQuery_Filter extends Message<EventsQuery_Filter> {
+export class GetEventsRequest_Filter extends Message<GetEventsRequest_Filter> {
   /**
    * These map 1:1 with filters in backend/controller/internal/dal/events.go
    *
-   * @generated from oneof xyz.block.ftl.v1.console.EventsQuery.Filter.filter
+   * @generated from oneof xyz.block.ftl.v1.console.GetEventsRequest.Filter.filter
    */
   filter: {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.LimitFilter limit = 1;
+     * @generated from field: xyz.block.ftl.v1.console.GetEventsRequest.LimitFilter limit = 1;
      */
-    value: EventsQuery_LimitFilter;
+    value: GetEventsRequest_LimitFilter;
     case: "limit";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.LogLevelFilter log_level = 2;
+     * @generated from field: xyz.block.ftl.v1.console.GetEventsRequest.LogLevelFilter log_level = 2;
      */
-    value: EventsQuery_LogLevelFilter;
+    value: GetEventsRequest_LogLevelFilter;
     case: "logLevel";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.DeploymentFilter deployments = 3;
+     * @generated from field: xyz.block.ftl.v1.console.GetEventsRequest.DeploymentFilter deployments = 3;
      */
-    value: EventsQuery_DeploymentFilter;
+    value: GetEventsRequest_DeploymentFilter;
     case: "deployments";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.RequestFilter requests = 4;
+     * @generated from field: xyz.block.ftl.v1.console.GetEventsRequest.RequestFilter requests = 4;
      */
-    value: EventsQuery_RequestFilter;
+    value: GetEventsRequest_RequestFilter;
     case: "requests";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.EventTypeFilter event_types = 5;
+     * @generated from field: xyz.block.ftl.v1.console.GetEventsRequest.EventTypeFilter event_types = 5;
      */
-    value: EventsQuery_EventTypeFilter;
+    value: GetEventsRequest_EventTypeFilter;
     case: "eventTypes";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.TimeFilter time = 6;
+     * @generated from field: xyz.block.ftl.v1.console.GetEventsRequest.TimeFilter time = 6;
      */
-    value: EventsQuery_TimeFilter;
+    value: GetEventsRequest_TimeFilter;
     case: "time";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.IDFilter id = 7;
+     * @generated from field: xyz.block.ftl.v1.console.GetEventsRequest.IDFilter id = 7;
      */
-    value: EventsQuery_IDFilter;
+    value: GetEventsRequest_IDFilter;
     case: "id";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.CallFilter call = 8;
+     * @generated from field: xyz.block.ftl.v1.console.GetEventsRequest.CallFilter call = 8;
      */
-    value: EventsQuery_CallFilter;
+    value: GetEventsRequest_CallFilter;
     case: "call";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.ModuleFilter module = 9;
+     * @generated from field: xyz.block.ftl.v1.console.GetEventsRequest.ModuleFilter module = 9;
      */
-    value: EventsQuery_ModuleFilter;
+    value: GetEventsRequest_ModuleFilter;
     case: "module";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
-  constructor(data?: PartialMessage<EventsQuery_Filter>) {
+  constructor(data?: PartialMessage<GetEventsRequest_Filter>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.Filter";
+  static readonly typeName = "xyz.block.ftl.v1.console.GetEventsRequest.Filter";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "limit", kind: "message", T: EventsQuery_LimitFilter, oneof: "filter" },
-    { no: 2, name: "log_level", kind: "message", T: EventsQuery_LogLevelFilter, oneof: "filter" },
-    { no: 3, name: "deployments", kind: "message", T: EventsQuery_DeploymentFilter, oneof: "filter" },
-    { no: 4, name: "requests", kind: "message", T: EventsQuery_RequestFilter, oneof: "filter" },
-    { no: 5, name: "event_types", kind: "message", T: EventsQuery_EventTypeFilter, oneof: "filter" },
-    { no: 6, name: "time", kind: "message", T: EventsQuery_TimeFilter, oneof: "filter" },
-    { no: 7, name: "id", kind: "message", T: EventsQuery_IDFilter, oneof: "filter" },
-    { no: 8, name: "call", kind: "message", T: EventsQuery_CallFilter, oneof: "filter" },
-    { no: 9, name: "module", kind: "message", T: EventsQuery_ModuleFilter, oneof: "filter" },
+    { no: 1, name: "limit", kind: "message", T: GetEventsRequest_LimitFilter, oneof: "filter" },
+    { no: 2, name: "log_level", kind: "message", T: GetEventsRequest_LogLevelFilter, oneof: "filter" },
+    { no: 3, name: "deployments", kind: "message", T: GetEventsRequest_DeploymentFilter, oneof: "filter" },
+    { no: 4, name: "requests", kind: "message", T: GetEventsRequest_RequestFilter, oneof: "filter" },
+    { no: 5, name: "event_types", kind: "message", T: GetEventsRequest_EventTypeFilter, oneof: "filter" },
+    { no: 6, name: "time", kind: "message", T: GetEventsRequest_TimeFilter, oneof: "filter" },
+    { no: 7, name: "id", kind: "message", T: GetEventsRequest_IDFilter, oneof: "filter" },
+    { no: 8, name: "call", kind: "message", T: GetEventsRequest_CallFilter, oneof: "filter" },
+    { no: 9, name: "module", kind: "message", T: GetEventsRequest_ModuleFilter, oneof: "filter" },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_Filter {
-    return new EventsQuery_Filter().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetEventsRequest_Filter {
+    return new GetEventsRequest_Filter().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_Filter {
-    return new EventsQuery_Filter().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetEventsRequest_Filter {
+    return new GetEventsRequest_Filter().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_Filter {
-    return new EventsQuery_Filter().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetEventsRequest_Filter {
+    return new GetEventsRequest_Filter().fromJsonString(jsonString, options);
   }
 
-  static equals(a: EventsQuery_Filter | PlainMessage<EventsQuery_Filter> | undefined, b: EventsQuery_Filter | PlainMessage<EventsQuery_Filter> | undefined): boolean {
-    return proto3.util.equals(EventsQuery_Filter, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.console.StreamEventsRequest
- */
-export class StreamEventsRequest extends Message<StreamEventsRequest> {
-  /**
-   * @generated from field: optional google.protobuf.Duration update_interval = 1;
-   */
-  updateInterval?: Duration;
-
-  /**
-   * @generated from field: xyz.block.ftl.v1.console.EventsQuery query = 2;
-   */
-  query?: EventsQuery;
-
-  constructor(data?: PartialMessage<StreamEventsRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.StreamEventsRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "update_interval", kind: "message", T: Duration, opt: true },
-    { no: 2, name: "query", kind: "message", T: EventsQuery },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamEventsRequest {
-    return new StreamEventsRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamEventsRequest {
-    return new StreamEventsRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamEventsRequest {
-    return new StreamEventsRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: StreamEventsRequest | PlainMessage<StreamEventsRequest> | undefined, b: StreamEventsRequest | PlainMessage<StreamEventsRequest> | undefined): boolean {
-    return proto3.util.equals(StreamEventsRequest, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.console.StreamEventsResponse
- */
-export class StreamEventsResponse extends Message<StreamEventsResponse> {
-  /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.Event events = 1;
-   */
-  events: Event[] = [];
-
-  constructor(data?: PartialMessage<StreamEventsResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.StreamEventsResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "events", kind: "message", T: Event, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamEventsResponse {
-    return new StreamEventsResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamEventsResponse {
-    return new StreamEventsResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamEventsResponse {
-    return new StreamEventsResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: StreamEventsResponse | PlainMessage<StreamEventsResponse> | undefined, b: StreamEventsResponse | PlainMessage<StreamEventsResponse> | undefined): boolean {
-    return proto3.util.equals(StreamEventsResponse, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.console.Event
- */
-export class Event extends Message<Event> {
-  /**
-   * @generated from field: google.protobuf.Timestamp time_stamp = 1;
-   */
-  timeStamp?: Timestamp;
-
-  /**
-   * Unique ID for event.
-   *
-   * @generated from field: int64 id = 2;
-   */
-  id = protoInt64.zero;
-
-  /**
-   * @generated from oneof xyz.block.ftl.v1.console.Event.entry
-   */
-  entry: {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.LogEvent log = 3;
-     */
-    value: LogEvent;
-    case: "log";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.CallEvent call = 4;
-     */
-    value: CallEvent;
-    case: "call";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.DeploymentCreatedEvent deployment_created = 5;
-     */
-    value: DeploymentCreatedEvent;
-    case: "deploymentCreated";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.DeploymentUpdatedEvent deployment_updated = 6;
-     */
-    value: DeploymentUpdatedEvent;
-    case: "deploymentUpdated";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.IngressEvent ingress = 7;
-     */
-    value: IngressEvent;
-    case: "ingress";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.CronScheduledEvent cron_scheduled = 8;
-     */
-    value: CronScheduledEvent;
-    case: "cronScheduled";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.AsyncExecuteEvent async_execute = 9;
-     */
-    value: AsyncExecuteEvent;
-    case: "asyncExecute";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.PubSubPublishEvent pubsub_publish = 10;
-     */
-    value: PubSubPublishEvent;
-    case: "pubsubPublish";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.console.PubSubConsumeEvent pubsub_consume = 11;
-     */
-    value: PubSubConsumeEvent;
-    case: "pubsubConsume";
-  } | { case: undefined; value?: undefined } = { case: undefined };
-
-  constructor(data?: PartialMessage<Event>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.Event";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "time_stamp", kind: "message", T: Timestamp },
-    { no: 2, name: "id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 3, name: "log", kind: "message", T: LogEvent, oneof: "entry" },
-    { no: 4, name: "call", kind: "message", T: CallEvent, oneof: "entry" },
-    { no: 5, name: "deployment_created", kind: "message", T: DeploymentCreatedEvent, oneof: "entry" },
-    { no: 6, name: "deployment_updated", kind: "message", T: DeploymentUpdatedEvent, oneof: "entry" },
-    { no: 7, name: "ingress", kind: "message", T: IngressEvent, oneof: "entry" },
-    { no: 8, name: "cron_scheduled", kind: "message", T: CronScheduledEvent, oneof: "entry" },
-    { no: 9, name: "async_execute", kind: "message", T: AsyncExecuteEvent, oneof: "entry" },
-    { no: 10, name: "pubsub_publish", kind: "message", T: PubSubPublishEvent, oneof: "entry" },
-    { no: 11, name: "pubsub_consume", kind: "message", T: PubSubConsumeEvent, oneof: "entry" },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Event {
-    return new Event().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Event {
-    return new Event().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Event {
-    return new Event().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Event | PlainMessage<Event> | undefined, b: Event | PlainMessage<Event> | undefined): boolean {
-    return proto3.util.equals(Event, a, b);
+  static equals(a: GetEventsRequest_Filter | PlainMessage<GetEventsRequest_Filter> | undefined, b: GetEventsRequest_Filter | PlainMessage<GetEventsRequest_Filter> | undefined): boolean {
+    return proto3.util.equals(GetEventsRequest_Filter, a, b);
   }
 }
 
@@ -2653,6 +2460,199 @@ export class SetSecretResponse extends Message<SetSecretResponse> {
 
   static equals(a: SetSecretResponse | PlainMessage<SetSecretResponse> | undefined, b: SetSecretResponse | PlainMessage<SetSecretResponse> | undefined): boolean {
     return proto3.util.equals(SetSecretResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.StreamEventsRequest
+ */
+export class StreamEventsRequest extends Message<StreamEventsRequest> {
+  /**
+   * @generated from field: optional google.protobuf.Duration update_interval = 1;
+   */
+  updateInterval?: Duration;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.console.GetEventsRequest query = 2;
+   */
+  query?: GetEventsRequest;
+
+  constructor(data?: PartialMessage<StreamEventsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.StreamEventsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "update_interval", kind: "message", T: Duration, opt: true },
+    { no: 2, name: "query", kind: "message", T: GetEventsRequest },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamEventsRequest {
+    return new StreamEventsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamEventsRequest {
+    return new StreamEventsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamEventsRequest {
+    return new StreamEventsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamEventsRequest | PlainMessage<StreamEventsRequest> | undefined, b: StreamEventsRequest | PlainMessage<StreamEventsRequest> | undefined): boolean {
+    return proto3.util.equals(StreamEventsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.StreamEventsResponse
+ */
+export class StreamEventsResponse extends Message<StreamEventsResponse> {
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Event events = 1;
+   */
+  events: Event[] = [];
+
+  constructor(data?: PartialMessage<StreamEventsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.StreamEventsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "events", kind: "message", T: Event, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamEventsResponse {
+    return new StreamEventsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamEventsResponse {
+    return new StreamEventsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamEventsResponse {
+    return new StreamEventsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamEventsResponse | PlainMessage<StreamEventsResponse> | undefined, b: StreamEventsResponse | PlainMessage<StreamEventsResponse> | undefined): boolean {
+    return proto3.util.equals(StreamEventsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.Event
+ */
+export class Event extends Message<Event> {
+  /**
+   * @generated from field: google.protobuf.Timestamp time_stamp = 1;
+   */
+  timeStamp?: Timestamp;
+
+  /**
+   * Unique ID for event.
+   *
+   * @generated from field: int64 id = 2;
+   */
+  id = protoInt64.zero;
+
+  /**
+   * @generated from oneof xyz.block.ftl.v1.console.Event.entry
+   */
+  entry: {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.LogEvent log = 3;
+     */
+    value: LogEvent;
+    case: "log";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.CallEvent call = 4;
+     */
+    value: CallEvent;
+    case: "call";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.DeploymentCreatedEvent deployment_created = 5;
+     */
+    value: DeploymentCreatedEvent;
+    case: "deploymentCreated";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.DeploymentUpdatedEvent deployment_updated = 6;
+     */
+    value: DeploymentUpdatedEvent;
+    case: "deploymentUpdated";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.IngressEvent ingress = 7;
+     */
+    value: IngressEvent;
+    case: "ingress";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.CronScheduledEvent cron_scheduled = 8;
+     */
+    value: CronScheduledEvent;
+    case: "cronScheduled";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.AsyncExecuteEvent async_execute = 9;
+     */
+    value: AsyncExecuteEvent;
+    case: "asyncExecute";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.PubSubPublishEvent pubsub_publish = 10;
+     */
+    value: PubSubPublishEvent;
+    case: "pubsubPublish";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.PubSubConsumeEvent pubsub_consume = 11;
+     */
+    value: PubSubConsumeEvent;
+    case: "pubsubConsume";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<Event>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.Event";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 2, name: "id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "log", kind: "message", T: LogEvent, oneof: "entry" },
+    { no: 4, name: "call", kind: "message", T: CallEvent, oneof: "entry" },
+    { no: 5, name: "deployment_created", kind: "message", T: DeploymentCreatedEvent, oneof: "entry" },
+    { no: 6, name: "deployment_updated", kind: "message", T: DeploymentUpdatedEvent, oneof: "entry" },
+    { no: 7, name: "ingress", kind: "message", T: IngressEvent, oneof: "entry" },
+    { no: 8, name: "cron_scheduled", kind: "message", T: CronScheduledEvent, oneof: "entry" },
+    { no: 9, name: "async_execute", kind: "message", T: AsyncExecuteEvent, oneof: "entry" },
+    { no: 10, name: "pubsub_publish", kind: "message", T: PubSubPublishEvent, oneof: "entry" },
+    { no: 11, name: "pubsub_consume", kind: "message", T: PubSubConsumeEvent, oneof: "entry" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Event {
+    return new Event().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Event {
+    return new Event().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Event {
+    return new Event().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Event | PlainMessage<Event> | undefined, b: Event | PlainMessage<Event> | undefined): boolean {
+    return proto3.util.equals(Event, a, b);
   }
 }
 

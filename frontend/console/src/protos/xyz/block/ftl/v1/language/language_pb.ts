@@ -568,39 +568,39 @@ export class ModuleConfigDefaultsResponse extends Message<ModuleConfigDefaultsRe
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.language.DependenciesRequest
+ * @generated from message xyz.block.ftl.v1.language.GetDependenciesRequest
  */
-export class DependenciesRequest extends Message<DependenciesRequest> {
+export class GetDependenciesRequest extends Message<GetDependenciesRequest> {
   /**
    * @generated from field: xyz.block.ftl.v1.language.ModuleConfig module_config = 1;
    */
   moduleConfig?: ModuleConfig;
 
-  constructor(data?: PartialMessage<DependenciesRequest>) {
+  constructor(data?: PartialMessage<GetDependenciesRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.language.DependenciesRequest";
+  static readonly typeName = "xyz.block.ftl.v1.language.GetDependenciesRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "module_config", kind: "message", T: ModuleConfig },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DependenciesRequest {
-    return new DependenciesRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetDependenciesRequest {
+    return new GetDependenciesRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DependenciesRequest {
-    return new DependenciesRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetDependenciesRequest {
+    return new GetDependenciesRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DependenciesRequest {
-    return new DependenciesRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetDependenciesRequest {
+    return new GetDependenciesRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: DependenciesRequest | PlainMessage<DependenciesRequest> | undefined, b: DependenciesRequest | PlainMessage<DependenciesRequest> | undefined): boolean {
-    return proto3.util.equals(DependenciesRequest, a, b);
+  static equals(a: GetDependenciesRequest | PlainMessage<GetDependenciesRequest> | undefined, b: GetDependenciesRequest | PlainMessage<GetDependenciesRequest> | undefined): boolean {
+    return proto3.util.equals(GetDependenciesRequest, a, b);
   }
 }
 

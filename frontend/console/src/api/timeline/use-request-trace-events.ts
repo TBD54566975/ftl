@@ -2,7 +2,7 @@ import {
   type AsyncExecuteEvent,
   type CallEvent,
   EventType,
-  type EventsQuery_Filter,
+  type GetEventsRequest_Filter,
   type IngressEvent,
   type PubSubConsumeEvent,
   type PubSubPublishEvent,
@@ -12,7 +12,7 @@ import { useTimeline } from './use-timeline.ts'
 
 export type TraceEvent = CallEvent | IngressEvent | AsyncExecuteEvent | PubSubPublishEvent | PubSubConsumeEvent
 
-export const useRequestTraceEvents = (requestKey?: string, filters: EventsQuery_Filter[] = []) => {
+export const useRequestTraceEvents = (requestKey?: string, filters: GetEventsRequest_Filter[] = []) => {
   const eventTypes = [EventType.CALL, EventType.ASYNC_EXECUTE, EventType.INGRESS, EventType.PUBSUB_CONSUME, EventType.PUBSUB_PUBLISH]
 
   const allFilters = [...filters, requestKeysFilter([requestKey || '']), eventTypesFilter(eventTypes)]

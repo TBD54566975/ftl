@@ -26,7 +26,7 @@ message PublishEventRequest {
 
 message PublishEventResponse {}
 
-message ModuleContextRequest {
+message GetModuleContextRequest {
   string module = 1;
 }
 
@@ -62,7 +62,7 @@ service ModuleService {
   }
 
   // Get configuration state for the module
-  rpc GetModuleContext(ModuleContextRequest) returns (stream GetModuleContextResponse);
+  rpc GetModuleContext(GetModuleContextRequest) returns (stream GetModuleContextResponse);
 
   // Acquire (and renew) a lease for a deployment.
   //

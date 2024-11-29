@@ -69,7 +69,7 @@ type ConsoleServiceClient interface {
 	GetModules(context.Context, *connect.Request[console.GetModulesRequest]) (*connect.Response[console.GetModulesResponse], error)
 	StreamModules(context.Context, *connect.Request[console.StreamModulesRequest]) (*connect.ServerStreamForClient[console.StreamModulesResponse], error)
 	StreamEvents(context.Context, *connect.Request[console.StreamEventsRequest]) (*connect.ServerStreamForClient[console.StreamEventsResponse], error)
-	GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error)
+	GetEvents(context.Context, *connect.Request[console.GetEventsRequest]) (*connect.Response[console.GetEventsResponse], error)
 	GetConfig(context.Context, *connect.Request[console.GetConfigRequest]) (*connect.Response[console.GetConfigResponse], error)
 	SetConfig(context.Context, *connect.Request[console.SetConfigRequest]) (*connect.Response[console.SetConfigResponse], error)
 	GetSecret(context.Context, *connect.Request[console.GetSecretRequest]) (*connect.Response[console.GetSecretResponse], error)
@@ -107,7 +107,7 @@ func NewConsoleServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			baseURL+ConsoleServiceStreamEventsProcedure,
 			opts...,
 		),
-		getEvents: connect.NewClient[console.EventsQuery, console.GetEventsResponse](
+		getEvents: connect.NewClient[console.GetEventsRequest, console.GetEventsResponse](
 			httpClient,
 			baseURL+ConsoleServiceGetEventsProcedure,
 			opts...,
@@ -141,7 +141,7 @@ type consoleServiceClient struct {
 	getModules    *connect.Client[console.GetModulesRequest, console.GetModulesResponse]
 	streamModules *connect.Client[console.StreamModulesRequest, console.StreamModulesResponse]
 	streamEvents  *connect.Client[console.StreamEventsRequest, console.StreamEventsResponse]
-	getEvents     *connect.Client[console.EventsQuery, console.GetEventsResponse]
+	getEvents     *connect.Client[console.GetEventsRequest, console.GetEventsResponse]
 	getConfig     *connect.Client[console.GetConfigRequest, console.GetConfigResponse]
 	setConfig     *connect.Client[console.SetConfigRequest, console.SetConfigResponse]
 	getSecret     *connect.Client[console.GetSecretRequest, console.GetSecretResponse]
@@ -169,7 +169,7 @@ func (c *consoleServiceClient) StreamEvents(ctx context.Context, req *connect.Re
 }
 
 // GetEvents calls xyz.block.ftl.v1.console.ConsoleService.GetEvents.
-func (c *consoleServiceClient) GetEvents(ctx context.Context, req *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error) {
+func (c *consoleServiceClient) GetEvents(ctx context.Context, req *connect.Request[console.GetEventsRequest]) (*connect.Response[console.GetEventsResponse], error) {
 	return c.getEvents.CallUnary(ctx, req)
 }
 
@@ -201,7 +201,7 @@ type ConsoleServiceHandler interface {
 	GetModules(context.Context, *connect.Request[console.GetModulesRequest]) (*connect.Response[console.GetModulesResponse], error)
 	StreamModules(context.Context, *connect.Request[console.StreamModulesRequest], *connect.ServerStream[console.StreamModulesResponse]) error
 	StreamEvents(context.Context, *connect.Request[console.StreamEventsRequest], *connect.ServerStream[console.StreamEventsResponse]) error
-	GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error)
+	GetEvents(context.Context, *connect.Request[console.GetEventsRequest]) (*connect.Response[console.GetEventsResponse], error)
 	GetConfig(context.Context, *connect.Request[console.GetConfigRequest]) (*connect.Response[console.GetConfigResponse], error)
 	SetConfig(context.Context, *connect.Request[console.SetConfigRequest]) (*connect.Response[console.SetConfigResponse], error)
 	GetSecret(context.Context, *connect.Request[console.GetSecretRequest]) (*connect.Response[console.GetSecretResponse], error)
@@ -305,7 +305,7 @@ func (UnimplementedConsoleServiceHandler) StreamEvents(context.Context, *connect
 	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.StreamEvents is not implemented"))
 }
 
-func (UnimplementedConsoleServiceHandler) GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error) {
+func (UnimplementedConsoleServiceHandler) GetEvents(context.Context, *connect.Request[console.GetEventsRequest]) (*connect.Response[console.GetEventsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetEvents is not implemented"))
 }
 
