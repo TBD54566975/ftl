@@ -366,7 +366,7 @@ list-docker-images:
 # Run docker compose up with all docker compose files
 compose-up:
   #!/bin/bash
-  set -eo pipefail
+  set -o pipefail
   docker_compose_files="
   -f docker-compose.yml
   -f internal/dev/docker-compose.grafana.yml
