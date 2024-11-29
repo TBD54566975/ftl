@@ -38,7 +38,7 @@ public class FTLController implements LeaseClient {
 
     private static volatile FTLController controller;
 
-    private final Map<String, GetModuleContextResponse.DBType> databases = new ConcurrentHashMap<>();
+    private final Map<String, GetModuleContextResponse.DbType> databases = new ConcurrentHashMap<>();
 
     /**
      * TODO: look at how init should work, this is terrible and will break dev mode
@@ -75,7 +75,7 @@ public class FTLController implements LeaseClient {
         verbService = VerbServiceGrpc.newStub(channel);
     }
 
-    public void registerDatabase(String name, GetModuleContextResponse.DBType type) {
+    public void registerDatabase(String name, GetModuleContextResponse.DbType type) {
         databases.put(name, type);
     }
 
@@ -96,10 +96,10 @@ public class FTLController implements LeaseClient {
     }
 
     public Datasource getDatasource(String name) {
-        if (databases.get(name) == GetModuleContextResponse.DBType.POSTGRES) {
+        if (databases.get(name) == GetModuleContextResponse.DbType.DB_TYPE_POSTGRES) {
             var proxyAddress = System.getenv("FTL_PROXY_POSTGRES_ADDRESS");
             return new Datasource("jdbc:postgresql://" + proxyAddress + "/" + name, "ftl", "ftl");
-        } else if (databases.get(name) == GetModuleContextResponse.DBType.MYSQL) {
+        } else if (databases.get(name) == GetModuleContextResponse.DbType.DB_TYPE_MYSQL) {
             var proxyAddress = System.getenv("FTL_PROXY_MYSQL_ADDRESS_" + name.toUpperCase());
             return new Datasource("jdbc:mysql://" + proxyAddress + "/" + name, "ftl", "ftl");
         }
@@ -275,8 +275,8 @@ public class FTLController implements LeaseClient {
 
     public record Datasource(String connectionString, String username, String password) {
 
-        public static Datasource fromDSN(String dsn, GetModuleContextResponse.DBType type) {
-            String prefix = type.equals(GetModuleContextResponse.DBType.MYSQL) ? "jdbc:mysql" : "jdbc:postgresql";
+        public static Datasource fromDSN(String dsn, GetModuleContextResponse.DbType type) {
+            String prefix = type.equals(GetModuleContextResponse.DbType.DB_TYPE_MYSQL) ? "jdbc:mysql" : "jdbc:postgresql";
             try {
                 URI uri = new URI(dsn);
                 String username = "";

@@ -44,9 +44,9 @@ public class DatasourceProcessor {
                 dbKind = "postgres";
             }
             if (dbKind.equals("mysql")) {
-                recorder.registerDatabase(ds.getName(), GetModuleContextResponse.DBType.MYSQL);
+                recorder.registerDatabase(ds.getName(), GetModuleContextResponse.DbType.DB_TYPE_MYSQL);
             } else {
-                recorder.registerDatabase(ds.getName(), GetModuleContextResponse.DBType.POSTGRES);
+                recorder.registerDatabase(ds.getName(), GetModuleContextResponse.DbType.DB_TYPE_POSTGRES);
             }
             //default name is <default> which is not a valid name
             String sanitisedName = ds.getName().replace("<", "").replace(">", "");

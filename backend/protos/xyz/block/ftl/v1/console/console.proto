@@ -262,8 +262,9 @@ message EventsQuery {
   }
 
   enum Order {
-    ASC = 0;
-    DESC = 1;
+    ORDER_UNSPECIFIED = 0;
+    ORDER_ASC = 1;
+    ORDER_DESC = 2;
   }
 
   message Filter {

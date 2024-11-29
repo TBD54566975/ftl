@@ -557,7 +557,7 @@ func (c *ConsoleService) StreamEvents(ctx context.Context, req *connect.Request[
 func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]timeline.TimelineFilter, error) {
 	var query []timeline.TimelineFilter
 
-	if pb.Order == pbconsole.EventsQuery_DESC {
+	if pb.Order == pbconsole.EventsQuery_ORDER_DESC {
 		query = append(query, timeline.FilterDescending())
 	}
 

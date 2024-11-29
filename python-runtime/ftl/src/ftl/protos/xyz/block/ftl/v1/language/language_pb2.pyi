@@ -156,18 +156,22 @@ class Error(_message.Message):
     __slots__ = ("msg", "level", "pos", "type")
     class ErrorLevel(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
-        INFO: _ClassVar[Error.ErrorLevel]
-        WARN: _ClassVar[Error.ErrorLevel]
-        ERROR: _ClassVar[Error.ErrorLevel]
-    INFO: Error.ErrorLevel
-    WARN: Error.ErrorLevel
-    ERROR: Error.ErrorLevel
+        ERROR_LEVEL_UNSPECIFIED: _ClassVar[Error.ErrorLevel]
+        ERROR_LEVEL_INFO: _ClassVar[Error.ErrorLevel]
+        ERROR_LEVEL_WARN: _ClassVar[Error.ErrorLevel]
+        ERROR_LEVEL_ERROR: _ClassVar[Error.ErrorLevel]
+    ERROR_LEVEL_UNSPECIFIED: Error.ErrorLevel
+    ERROR_LEVEL_INFO: Error.ErrorLevel
+    ERROR_LEVEL_WARN: Error.ErrorLevel
+    ERROR_LEVEL_ERROR: Error.ErrorLevel
     class ErrorType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
-        FTL: _ClassVar[Error.ErrorType]
-        COMPILER: _ClassVar[Error.ErrorType]
-    FTL: Error.ErrorType
-    COMPILER: Error.ErrorType
+        ERROR_TYPE_UNSPECIFIED: _ClassVar[Error.ErrorType]
+        ERROR_TYPE_FTL: _ClassVar[Error.ErrorType]
+        ERROR_TYPE_COMPILER: _ClassVar[Error.ErrorType]
+    ERROR_TYPE_UNSPECIFIED: Error.ErrorType
+    ERROR_TYPE_FTL: Error.ErrorType
+    ERROR_TYPE_COMPILER: Error.ErrorType
     MSG_FIELD_NUMBER: _ClassVar[int]
     LEVEL_FIELD_NUMBER: _ClassVar[int]
     POS_FIELD_NUMBER: _ClassVar[int]

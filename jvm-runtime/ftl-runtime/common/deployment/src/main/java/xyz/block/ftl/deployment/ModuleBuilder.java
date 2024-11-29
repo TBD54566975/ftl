@@ -540,8 +540,11 @@ public class ModuleBuilder {
             for (var failure : validationFailures) {
                 errors.add("Validation failure: " + failure.className + ": " + failure.message);
             }
-            errors.forEach(error -> builder.addErrors(Error.newBuilder().setLevelValue(Error.ErrorLevel.ERROR_VALUE)
-                    .setMsg(error).setTypeValue(Error.ErrorType.FTL_VALUE)));
+            errors.forEach(error -> builder.addErrors(Error.newBuilder()
+                    .setLevel(Error.ErrorLevel.ERROR_LEVEL_ERROR)
+                    .setType(Error.ErrorType.ERROR_TYPE_FTL)
+                    .setMsg(error)
+                    .build()));
             errors.forEach(log::error);
         }
         builder.build().writeTo(errorOut);

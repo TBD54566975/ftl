@@ -36,11 +36,12 @@ func NewTestDatabase(dbType DBType, dsn string) (Database, error) {
 	return db, nil
 }
 
-type DBType ftlv1.GetModuleContextResponse_DBType
+type DBType ftlv1.GetModuleContextResponse_DbType
 
 const (
-	DBTypePostgres = DBType(ftlv1.GetModuleContextResponse_POSTGRES)
-	DBTypeMySQL    = DBType(ftlv1.GetModuleContextResponse_MYSQL)
+	DBTypeUnspecified DBType = DBType(ftlv1.GetModuleContextResponse_DB_TYPE_UNSPECIFIED)
+	DBTypePostgres    DBType = DBType(ftlv1.GetModuleContextResponse_DB_TYPE_POSTGRES)
+	DBTypeMySQL       DBType = DBType(ftlv1.GetModuleContextResponse_DB_TYPE_MYSQL)
 )
 
 func DBTypeFromString(dt string) (DBType, error) {
@@ -50,7 +51,7 @@ func DBTypeFromString(dt string) (DBType, error) {
 	} else if dt == "mysql" {
 		return DBTypeMySQL, nil
 	}
-	return 0, fmt.Errorf("unknown DB type: %s", dt)
+	return DBTypeUnspecified, fmt.Errorf("unknown DB type: %s", dt)
 }
 
 func (x DBType) String() string {
@@ -59,6 +60,8 @@ func (x DBType) String() string {
 		return "postgres"
 	case DBTypeMySQL:
 		return "mysql"
+	case DBTypeUnspecified:
+		return "unspecified"
 	default:
 		panic(fmt.Sprintf("unknown DB type: %s", strconv.Itoa(int(x))))
 	}

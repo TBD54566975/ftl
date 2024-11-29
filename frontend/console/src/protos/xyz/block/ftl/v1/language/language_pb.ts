@@ -798,7 +798,7 @@ export class Error extends Message<Error> {
   /**
    * @generated from field: xyz.block.ftl.v1.language.Error.ErrorLevel level = 4;
    */
-  level = Error_ErrorLevel.INFO;
+  level = Error_ErrorLevel.UNSPECIFIED;
 
   /**
    * @generated from field: optional xyz.block.ftl.v1.language.Position pos = 5;
@@ -808,7 +808,7 @@ export class Error extends Message<Error> {
   /**
    * @generated from field: xyz.block.ftl.v1.language.Error.ErrorType type = 6;
    */
-  type = Error_ErrorType.FTL;
+  type = Error_ErrorType.UNSPECIFIED;
 
   constructor(data?: PartialMessage<Error>) {
     super();
@@ -846,25 +846,31 @@ export class Error extends Message<Error> {
  */
 export enum Error_ErrorLevel {
   /**
-   * @generated from enum value: INFO = 0;
+   * @generated from enum value: ERROR_LEVEL_UNSPECIFIED = 0;
    */
-  INFO = 0,
+  UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: WARN = 1;
+   * @generated from enum value: ERROR_LEVEL_INFO = 1;
    */
-  WARN = 1,
+  INFO = 1,
 
   /**
-   * @generated from enum value: ERROR = 2;
+   * @generated from enum value: ERROR_LEVEL_WARN = 2;
    */
-  ERROR = 2,
+  WARN = 2,
+
+  /**
+   * @generated from enum value: ERROR_LEVEL_ERROR = 3;
+   */
+  ERROR = 3,
 }
 // Retrieve enum metadata with: proto3.getEnumType(Error_ErrorLevel)
 proto3.util.setEnumType(Error_ErrorLevel, "xyz.block.ftl.v1.language.Error.ErrorLevel", [
-  { no: 0, name: "INFO" },
-  { no: 1, name: "WARN" },
-  { no: 2, name: "ERROR" },
+  { no: 0, name: "ERROR_LEVEL_UNSPECIFIED" },
+  { no: 1, name: "ERROR_LEVEL_INFO" },
+  { no: 2, name: "ERROR_LEVEL_WARN" },
+  { no: 3, name: "ERROR_LEVEL_ERROR" },
 ]);
 
 /**
@@ -872,23 +878,29 @@ proto3.util.setEnumType(Error_ErrorLevel, "xyz.block.ftl.v1.language.Error.Error
  */
 export enum Error_ErrorType {
   /**
-   * @generated from enum value: FTL = 0;
+   * @generated from enum value: ERROR_TYPE_UNSPECIFIED = 0;
    */
-  FTL = 0,
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: ERROR_TYPE_FTL = 1;
+   */
+  FTL = 1,
 
   /**
    * Compiler errors are errors that are from the compiler. This is useful to avoid duplicate errors
    * being shown to the user when combining errors from multiple sources (eg: an IDE showing compiler
    * errors and FTL errors via LSP).
    *
-   * @generated from enum value: COMPILER = 1;
+   * @generated from enum value: ERROR_TYPE_COMPILER = 2;
    */
-  COMPILER = 1,
+  COMPILER = 2,
 }
 // Retrieve enum metadata with: proto3.getEnumType(Error_ErrorType)
 proto3.util.setEnumType(Error_ErrorType, "xyz.block.ftl.v1.language.Error.ErrorType", [
-  { no: 0, name: "FTL" },
-  { no: 1, name: "COMPILER" },
+  { no: 0, name: "ERROR_TYPE_UNSPECIFIED" },
+  { no: 1, name: "ERROR_TYPE_FTL" },
+  { no: 2, name: "ERROR_TYPE_COMPILER" },
 ]);
 
 /**

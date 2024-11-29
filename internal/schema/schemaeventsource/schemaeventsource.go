@@ -190,7 +190,7 @@ func New(ctx context.Context, client ftlv1connect.SchemaServiceClient) EventSour
 		// care about a new initial sync restarting.
 		more = more && resp.More
 		switch resp.ChangeType {
-		case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
+		case ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED:
 			logger.Debugf("Module %s removed", sch.Name)
 			event := EventRemove{
 				Deployment: someDeploymentKey,
@@ -200,7 +200,7 @@ func New(ctx context.Context, client ftlv1connect.SchemaServiceClient) EventSour
 			}
 			out.Publish(event)
 
-		case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
+		case ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_CHANGED:
 			logger.Debugf("Module %s upserted", sch.Name)
 			event := EventUpsert{
 				Deployment: someDeploymentKey,

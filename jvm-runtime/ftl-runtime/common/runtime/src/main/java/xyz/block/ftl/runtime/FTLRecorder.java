@@ -173,7 +173,7 @@ public class FTLRecorder {
         });
     }
 
-    public void registerDatabase(String dbKind, GetModuleContextResponse.DBType name) {
+    public void registerDatabase(String dbKind, GetModuleContextResponse.DbType name) {
         FTLController.instance().registerDatabase(dbKind, name);
     }
 }
