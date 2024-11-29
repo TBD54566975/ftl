@@ -12,7 +12,8 @@ import (
 type FromOffset int
 
 const (
-	FromOffsetBeginning FromOffset = iota
+	FromOffsetUnspecified FromOffset = iota
+	FromOffsetBeginning
 	FromOffsetLatest
 )
 
@@ -35,7 +36,7 @@ func (o FromOffset) String() string {
 	case FromOffsetLatest:
 		return "latest"
 	default:
-		panic("unexpected value")
+		panic(fmt.Sprintf("unexpected value %d", o))
 	}
 }
 

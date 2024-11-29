@@ -9,13 +9,17 @@ DESCRIPTOR: _descriptor.FileDescriptor
 
 class AliasKind(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
+    ALIAS_KIND_UNSPECIFIED: _ClassVar[AliasKind]
     ALIAS_KIND_JSON: _ClassVar[AliasKind]
 
 class FromOffset(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
+    FROM_OFFSET_UNSPECIFIED: _ClassVar[FromOffset]
     FROM_OFFSET_BEGINNING: _ClassVar[FromOffset]
     FROM_OFFSET_LATEST: _ClassVar[FromOffset]
+ALIAS_KIND_UNSPECIFIED: AliasKind
 ALIAS_KIND_JSON: AliasKind
+FROM_OFFSET_UNSPECIFIED: FromOffset
 FROM_OFFSET_BEGINNING: FromOffset
 FROM_OFFSET_LATEST: FromOffset
 
