@@ -51,8 +51,6 @@ jobs:
         run: git checkout "$CURRENT_COMMIT"
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
-      - name: Build Test Images
-        run: just k8s full-deploy
       - name: Build Language Plugins
         run: just build-language-plugins
       - name: Smoke test HEAD with a full deploy to test upgrade path

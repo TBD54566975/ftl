@@ -27,23 +27,6 @@ PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
-# Configuration for building Docker images
-DOCKER_IMAGES := '''
-{
-  "controller": {
-    "extra_binaries": ["ftl"],
-    "extra_files": ["ftl-provisioner-config.toml"]
-  },
-  "provisioner": {
-    "extra_binaries": ["ftl-provisioner-cloudformation"],
-    "extra_files": ["ftl-provisioner-config.toml"]
-  },
-  "cron": {},
-  "http-ingress": {},
-  "runner": {},
-  "runner-jvm": {}
-}
-'''
 
 _help:
   @just -l
@@ -305,62 +288,13 @@ localstack-stop:
 storybook:
   @cd {{CONSOLE_ROOT}} && pnpm run storybook
 
-# Build an FTL Docker image
+# Build an FTL Docker image.
 build-docker name:
-  #!/bin/bash
-  set -euo pipefail
-
-  rm -rf build/release
-
-  config="$(echo '{{DOCKER_IMAGES}}' | jq -r '."{{name}}"')"
-  if [ "$config" = "null" ]; then
-    echo "FATAL: No configuration found for {{name}}, update DOCKER_IMAGES"
-    exit 1
-  fi
-
-  # Determine if this is a runner variant
-  if [[ "{{name}}" =~ ^runner-(.+)$ ]]; then
-    runtime="${BASH_REMATCH[1]}"
-    # Build base runner first
-    just build-docker runner
-    # Build the language-specific runner
-    docker build \
-      --platform linux/amd64 \
-      -t ftl0/ftl-{{name}}:latest \
-      -t ftl0/ftl-{{name}}:"${GITHUB_SHA:-$(git rev-parse HEAD)}" \
-      -f Dockerfile.runner-${runtime} .
-  else
-    # First build the binary on host
-    extra_binaries="$(echo "$config" | jq -r '.extra_binaries // [] | join(" ")')"
-    GOARCH=amd64 GOOS=linux CGO_ENABLED=0 just build ftl-{{name}} ${extra_binaries}
-    # The main binary in the container must be named "svc"
-    (cd build/release && mv ftl-{{name}} svc)
-
-    extra_files="$(echo "$config" | jq -r '.extra_files // [] | join(" ")')"
-    for file in $extra_files; do
-      echo "Copying $file to build/release"
-      cp "$file" build/release
-    done
-
-    # Build regular service
-    docker build \
-      --platform linux/amd64 \
-      -t ftl0/ftl-{{name}}:latest \
-      -t ftl0/ftl-{{name}}:"${GITHUB_SHA:-$(git rev-parse HEAD)}" \
-      --build-arg SERVICE={{name}} \
-      --build-arg PORT=8891 \
-      --build-arg RUNTIME=$([ "{{name}}" = "runner" ] && echo "ubuntu-runtime" || echo "scratch-runtime") \
-      --build-arg EXTRA_FILES="$(echo "$config" | jq -r '((.extra_files // []) + (.extra_binaries // [])) | join(" ")')" \
-      -f Dockerfile build/release
-  fi
-
-# Build all Docker images
-build-all-docker:
-  @for image in $(just list-docker-images); do just build-docker $image; done
-
-# List available Docker images
-list-docker-images:
-  @echo '{{DOCKER_IMAGES}}' | jq -r 'keys | join(" ")'
+  docker build \
+    --platform linux/amd64 \
+    -t ftl0/ftl-{{name}}:"${GITHUB_SHA:-$(git rev-parse HEAD)}" \
+    -t ftl0/ftl-{{name}}:latest \
+    -f Dockerfile.{{name}} .
 
 # Run docker compose up with all docker compose files
 compose-up:
@@ -377,4 +311,4 @@ compose-up:
 
 # Run a Just command in the Helm charts directory
 chart *args:
-  @cd charts && just {{args}}
+    @cd charts && just {{args}}

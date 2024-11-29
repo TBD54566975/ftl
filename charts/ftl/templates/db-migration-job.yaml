@@ -19,18 +19,22 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: dbmig
-          image: "{{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag | default $version }}"
+          image: "{{ .Values.controller.image.repository | replace "controller" "runner" }}:{{ .Values.controller.image.tag | default $version }}"
           env:
             {{- if not .Values.postgresql.enabled }}
-            - name: DATABASE_URL
+            - name: FTL_CONTROLLER_DSN
               value: "{{ .Values.controller.dbConnectionString }}"
             {{- else }}
-            - name: DATABASE_URL
+            - name: FTL_CONTROLLER_DSN
               value: "postgres://{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.global.postgresql.auth.database }}?sslmode=disable&user={{ .Values.postgresql.global.postgresql.auth.username }}&password={{ .Values.postgresql.global.postgresql.auth.password }}"
             {{- end }}
           command:
-            - /root/ftl
-            - migrate
+            - bash
+            - -c
+            - |
+              set -x
+              set -e
+              /root/ftl migrate --dsn="${FTL_CONTROLLER_DSN}"
   backoffLimit: 4
 ---
 apiVersion: v1

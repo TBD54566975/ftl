@@ -29,7 +29,7 @@ type CallClient interface {
 }
 
 type Config struct {
-	Bind         *url.URL   `help:"Socket to bind to for ingress." default:"http://127.0.0.1:8891" env:"FTL_BIND"`
+	Bind         *url.URL   `help:"Socket to bind to for ingress." default:"http://127.0.0.1:8891" env:"FTL_INGRESS_BIND"`
 	AllowOrigins []*url.URL `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_INGRESS_ALLOW_ORIGIN"`
 	AllowHeaders []string   `help:"Allow these headers in CORS requests. (Requires AllowOrigins)" env:"FTL_INGRESS_ALLOW_HEADERS"`
 }
