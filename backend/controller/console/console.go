@@ -897,7 +897,7 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 }
 
 func (c *ConsoleService) GetConfig(ctx context.Context, req *connect.Request[pbconsole.GetConfigRequest]) (*connect.Response[pbconsole.GetConfigResponse], error) {
-	resp, err := c.admin.ConfigGet(ctx, connect.NewRequest(&ftlv1.GetConfigRequest{
+	resp, err := c.admin.ConfigGet(ctx, connect.NewRequest(&ftlv1.ConfigGetRequest{
 		Ref: &ftlv1.ConfigRef{
 			Module: req.Msg.Module,
 			Name:   req.Msg.Name,
@@ -912,7 +912,7 @@ func (c *ConsoleService) GetConfig(ctx context.Context, req *connect.Request[pbc
 }
 
 func (c *ConsoleService) SetConfig(ctx context.Context, req *connect.Request[pbconsole.SetConfigRequest]) (*connect.Response[pbconsole.SetConfigResponse], error) {
-	_, err := c.admin.ConfigSet(ctx, connect.NewRequest(&ftlv1.SetConfigRequest{
+	_, err := c.admin.ConfigSet(ctx, connect.NewRequest(&ftlv1.ConfigSetRequest{
 		Ref: &ftlv1.ConfigRef{
 			Module: req.Msg.Module,
 			Name:   req.Msg.Name,
@@ -926,7 +926,7 @@ func (c *ConsoleService) SetConfig(ctx context.Context, req *connect.Request[pbc
 }
 
 func (c *ConsoleService) GetSecret(ctx context.Context, req *connect.Request[pbconsole.GetSecretRequest]) (*connect.Response[pbconsole.GetSecretResponse], error) {
-	resp, err := c.admin.SecretGet(ctx, connect.NewRequest(&ftlv1.GetSecretRequest{
+	resp, err := c.admin.SecretGet(ctx, connect.NewRequest(&ftlv1.SecretGetRequest{
 		Ref: &ftlv1.ConfigRef{
 			Name:   req.Msg.Name,
 			Module: req.Msg.Module,
@@ -941,7 +941,7 @@ func (c *ConsoleService) GetSecret(ctx context.Context, req *connect.Request[pbc
 }
 
 func (c *ConsoleService) SetSecret(ctx context.Context, req *connect.Request[pbconsole.SetSecretRequest]) (*connect.Response[pbconsole.SetSecretResponse], error) {
-	_, err := c.admin.SecretSet(ctx, connect.NewRequest(&ftlv1.SetSecretRequest{
+	_, err := c.admin.SecretSet(ctx, connect.NewRequest(&ftlv1.SecretSetRequest{
 		Ref: &ftlv1.ConfigRef{
 			Name:   req.Msg.Name,
 			Module: req.Msg.Module,

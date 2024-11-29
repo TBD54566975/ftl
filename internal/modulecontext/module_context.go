@@ -224,7 +224,7 @@ func NewModuleContextSupplier(client ftlv1connect.ModuleServiceClient) ModuleCon
 
 func (g grpcModuleContextSupplier) Subscribe(ctx context.Context, moduleName string, sink func(ctx context.Context, moduleContext ModuleContext), errorRetryCallback func(err error) bool) {
 	request := &ftlv1.ModuleContextRequest{Module: moduleName}
-	callback := func(_ context.Context, resp *ftlv1.ModuleContextResponse) error {
+	callback := func(_ context.Context, resp *ftlv1.GetModuleContextResponse) error {
 		mc, err := FromProto(resp)
 		if err != nil {
 			return err

@@ -45,13 +45,13 @@ func (s *AdminService) Ping(ctx context.Context, req *connect.Request[ftlv1.Ping
 }
 
 // ConfigList returns the list of configuration values, optionally filtered by module.
-func (s *AdminService) ConfigList(ctx context.Context, req *connect.Request[ftlv1.ListConfigRequest]) (*connect.Response[ftlv1.ListConfigResponse], error) {
+func (s *AdminService) ConfigList(ctx context.Context, req *connect.Request[ftlv1.ConfigListRequest]) (*connect.Response[ftlv1.ConfigListResponse], error) {
 	listing, err := s.cm.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list configs: %w", err)
 	}
 
-	configs := []*ftlv1.ListConfigResponse_Config{}
+	configs := []*ftlv1.ConfigListResponse_Config{}
 	for _, config := range listing {
 		module, ok := config.Module.Get()
 		if req.Msg.Module != nil && *req.Msg.Module != "" && module != *req.Msg.Module {
@@ -76,16 +76,16 @@ func (s *AdminService) ConfigList(ctx context.Context, req *connect.Request[ftlv
 			}
 		}
 
-		configs = append(configs, &ftlv1.ListConfigResponse_Config{
+		configs = append(configs, &ftlv1.ConfigListResponse_Config{
 			RefPath: ref,
 			Value:   cv,
 		})
 	}
-	return connect.NewResponse(&ftlv1.ListConfigResponse{Configs: configs}), nil
+	return connect.NewResponse(&ftlv1.ConfigListResponse{Configs: configs}), nil
 }
 
 // ConfigGet returns the configuration value for a given ref string.
-func (s *AdminService) ConfigGet(ctx context.Context, req *connect.Request[ftlv1.GetConfigRequest]) (*connect.Response[ftlv1.GetConfigResponse], error) {
+func (s *AdminService) ConfigGet(ctx context.Context, req *connect.Request[ftlv1.ConfigGetRequest]) (*connect.Response[ftlv1.ConfigGetResponse], error) {
 	var value any
 	err := s.cm.Get(ctx, refFromConfigRef(req.Msg.GetRef()), &value)
 	if err != nil {
@@ -95,7 +95,7 @@ func (s *AdminService) ConfigGet(ctx context.Context, req *connect.Request[ftlv1
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal value: %w", err)
 	}
-	return connect.NewResponse(&ftlv1.GetConfigResponse{Value: vb}), nil
+	return connect.NewResponse(&ftlv1.ConfigGetResponse{Value: vb}), nil
 }
 
 func configProviderKey(p *ftlv1.ConfigProvider) configuration.ProviderKey {
@@ -114,7 +114,7 @@ func configProviderKey(p *ftlv1.ConfigProvider) configuration.ProviderKey {
 }
 
 // ConfigSet sets the configuration at the given ref to the provided value.
-func (s *AdminService) ConfigSet(ctx context.Context, req *connect.Request[ftlv1.SetConfigRequest]) (*connect.Response[ftlv1.SetConfigResponse], error) {
+func (s *AdminService) ConfigSet(ctx context.Context, req *connect.Request[ftlv1.ConfigSetRequest]) (*connect.Response[ftlv1.ConfigSetResponse], error) {
 	err := s.validateAgainstSchema(ctx, false, refFromConfigRef(req.Msg.GetRef()), req.Msg.Value)
 	if err != nil {
 		return nil, err
@@ -124,25 +124,25 @@ func (s *AdminService) ConfigSet(ctx context.Context, req *connect.Request[ftlv1
 	if err != nil {
 		return nil, fmt.Errorf("failed to set config: %w", err)
 	}
-	return connect.NewResponse(&ftlv1.SetConfigResponse{}), nil
+	return connect.NewResponse(&ftlv1.ConfigSetResponse{}), nil
 }
 
 // ConfigUnset unsets the config value at the given ref.
-func (s *AdminService) ConfigUnset(ctx context.Context, req *connect.Request[ftlv1.UnsetConfigRequest]) (*connect.Response[ftlv1.UnsetConfigResponse], error) {
+func (s *AdminService) ConfigUnset(ctx context.Context, req *connect.Request[ftlv1.ConfigUnsetRequest]) (*connect.Response[ftlv1.ConfigUnsetResponse], error) {
 	err := s.cm.Unset(ctx, refFromConfigRef(req.Msg.GetRef()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to unset config: %w", err)
 	}
-	return connect.NewResponse(&ftlv1.UnsetConfigResponse{}), nil
+	return connect.NewResponse(&ftlv1.ConfigUnsetResponse{}), nil
 }
 
 // SecretsList returns the list of secrets, optionally filtered by module.
-func (s *AdminService) SecretsList(ctx context.Context, req *connect.Request[ftlv1.ListSecretsRequest]) (*connect.Response[ftlv1.ListSecretsResponse], error) {
+func (s *AdminService) SecretsList(ctx context.Context, req *connect.Request[ftlv1.SecretsListRequest]) (*connect.Response[ftlv1.SecretsListResponse], error) {
 	listing, err := s.sm.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list secrets: %w", err)
 	}
-	secrets := []*ftlv1.ListSecretsResponse_Secret{}
+	secrets := []*ftlv1.SecretsListResponse_Secret{}
 	for _, secret := range listing {
 		module, ok := secret.Module.Get()
 		if req.Msg.Module != nil && *req.Msg.Module != "" && module != *req.Msg.Module {
@@ -164,16 +164,16 @@ func (s *AdminService) SecretsList(ctx context.Context, req *connect.Request[ftl
 				return nil, fmt.Errorf("failed to marshal value for %s: %w", ref, err)
 			}
 		}
-		secrets = append(secrets, &ftlv1.ListSecretsResponse_Secret{
+		secrets = append(secrets, &ftlv1.SecretsListResponse_Secret{
 			RefPath: ref,
 			Value:   sv,
 		})
 	}
-	return connect.NewResponse(&ftlv1.ListSecretsResponse{Secrets: secrets}), nil
+	return connect.NewResponse(&ftlv1.SecretsListResponse{Secrets: secrets}), nil
 }
 
 // SecretGet returns the secret value for a given ref string.
-func (s *AdminService) SecretGet(ctx context.Context, req *connect.Request[ftlv1.GetSecretRequest]) (*connect.Response[ftlv1.GetSecretResponse], error) {
+func (s *AdminService) SecretGet(ctx context.Context, req *connect.Request[ftlv1.SecretGetRequest]) (*connect.Response[ftlv1.SecretGetResponse], error) {
 	var value any
 	err := s.sm.Get(ctx, refFromConfigRef(req.Msg.GetRef()), &value)
 	if err != nil {
@@ -183,11 +183,11 @@ func (s *AdminService) SecretGet(ctx context.Context, req *connect.Request[ftlv1
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal value: %w", err)
 	}
-	return connect.NewResponse(&ftlv1.GetSecretResponse{Value: vb}), nil
+	return connect.NewResponse(&ftlv1.SecretGetResponse{Value: vb}), nil
 }
 
 // SecretSet sets the secret at the given ref to the provided value.
-func (s *AdminService) SecretSet(ctx context.Context, req *connect.Request[ftlv1.SetSecretRequest]) (*connect.Response[ftlv1.SetSecretResponse], error) {
+func (s *AdminService) SecretSet(ctx context.Context, req *connect.Request[ftlv1.SecretSetRequest]) (*connect.Response[ftlv1.SecretSetResponse], error) {
 	err := s.validateAgainstSchema(ctx, true, refFromConfigRef(req.Msg.GetRef()), req.Msg.Value)
 	if err != nil {
 		return nil, err
@@ -197,16 +197,16 @@ func (s *AdminService) SecretSet(ctx context.Context, req *connect.Request[ftlv1
 	if err != nil {
 		return nil, fmt.Errorf("failed to set secret: %w", err)
 	}
-	return connect.NewResponse(&ftlv1.SetSecretResponse{}), nil
+	return connect.NewResponse(&ftlv1.SecretSetResponse{}), nil
 }
 
 // SecretUnset unsets the secret value at the given ref.
-func (s *AdminService) SecretUnset(ctx context.Context, req *connect.Request[ftlv1.UnsetSecretRequest]) (*connect.Response[ftlv1.UnsetSecretResponse], error) {
+func (s *AdminService) SecretUnset(ctx context.Context, req *connect.Request[ftlv1.SecretUnsetRequest]) (*connect.Response[ftlv1.SecretUnsetResponse], error) {
 	err := s.sm.Unset(ctx, refFromConfigRef(req.Msg.GetRef()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to unset secret: %w", err)
 	}
-	return connect.NewResponse(&ftlv1.UnsetSecretResponse{}), nil
+	return connect.NewResponse(&ftlv1.SecretUnsetResponse{}), nil
 }
 
 func refFromConfigRef(cr *ftlv1.ConfigRef) configuration.Ref {

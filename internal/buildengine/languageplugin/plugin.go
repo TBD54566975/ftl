@@ -364,7 +364,7 @@ func (p *LanguagePlugin) run(ctx context.Context) {
 
 	// if a current build stream is active, this is non-nil
 	// this does not indicate if the stream is listening to automatic rebuilds
-	var streamChan chan result.Result[*langpb.BuildEvent]
+	var streamChan chan result.Result[*langpb.BuildResponse]
 	var streamCancel streamCancelFunc
 
 	// if an explicit build command is active, this is non-nil
@@ -463,7 +463,7 @@ func (p *LanguagePlugin) run(ctx context.Context) {
 			}
 
 			switch e.Event.(type) {
-			case *langpb.BuildEvent_AutoRebuildStarted:
+			case *langpb.BuildResponse_AutoRebuildStarted:
 				if _, ok := activeBuildCmd.Get(); ok {
 					logger.Debugf("ignoring automatic rebuild started during explicit build")
 					continue
@@ -472,7 +472,7 @@ func (p *LanguagePlugin) run(ctx context.Context) {
 				p.updates.Publish(AutoRebuildStartedEvent{
 					Module: bctx.Config.Module,
 				})
-			case *langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure:
+			case *langpb.BuildResponse_BuildSuccess, *langpb.BuildResponse_BuildFailure:
 				streamEnded := false
 				cmdEnded := false
 				result, eventContextID, isAutomaticRebuild := getBuildSuccessOrFailure(e)
@@ -520,19 +520,19 @@ func (p *LanguagePlugin) run(ctx context.Context) {
 
 // getBuildSuccessOrFailure takes a BuildFailure or BuildSuccess event and returns the shared fields and an either wrapped result.
 // This makes it easier to have some shared logic for both event types.
-func getBuildSuccessOrFailure(e *langpb.BuildEvent) (result either.Either[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure], contextID string, isAutomaticRebuild bool) {
+func getBuildSuccessOrFailure(e *langpb.BuildResponse) (result either.Either[*langpb.BuildResponse_BuildSuccess, *langpb.BuildResponse_BuildFailure], contextID string, isAutomaticRebuild bool) {
 	switch e := e.Event.(type) {
-	case *langpb.BuildEvent_BuildSuccess:
-		return either.LeftOf[*langpb.BuildEvent_BuildFailure](e), e.BuildSuccess.ContextId, e.BuildSuccess.IsAutomaticRebuild
-	case *langpb.BuildEvent_BuildFailure:
-		return either.RightOf[*langpb.BuildEvent_BuildSuccess](e), e.BuildFailure.ContextId, e.BuildFailure.IsAutomaticRebuild
+	case *langpb.BuildResponse_BuildSuccess:
+		return either.LeftOf[*langpb.BuildResponse_BuildFailure](e), e.BuildSuccess.ContextId, e.BuildSuccess.IsAutomaticRebuild
+	case *langpb.BuildResponse_BuildFailure:
+		return either.RightOf[*langpb.BuildResponse_BuildSuccess](e), e.BuildFailure.ContextId, e.BuildFailure.IsAutomaticRebuild
 	default:
 		panic(fmt.Sprintf("unexpected event type %T", e))
 	}
 }
 
 // handleBuildResult processes the result of a build and publishes the appropriate events.
-func (p *LanguagePlugin) handleBuildResult(module string, r either.Either[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure],
+func (p *LanguagePlugin) handleBuildResult(module string, r either.Either[*langpb.BuildResponse_BuildSuccess, *langpb.BuildResponse_BuildFailure],
 	activeBuildCmd optional.Option[buildCommand], startTime time.Time) (streamEnded, cmdEnded bool) {
 	buildResult, err := buildResultFromProto(r, startTime)
 	if cmd, ok := activeBuildCmd.Get(); ok {
@@ -553,9 +553,9 @@ func (p *LanguagePlugin) handleBuildResult(module string, r either.Either[*langp
 	return
 }
 
-func buildResultFromProto(result either.Either[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure], startTime time.Time) (buildResult BuildResult, err error) {
+func buildResultFromProto(result either.Either[*langpb.BuildResponse_BuildSuccess, *langpb.BuildResponse_BuildFailure], startTime time.Time) (buildResult BuildResult, err error) {
 	switch result := result.(type) {
-	case either.Left[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure]:
+	case either.Left[*langpb.BuildResponse_BuildSuccess, *langpb.BuildResponse_BuildFailure]:
 		buildSuccess := result.Get().BuildSuccess
 
 		moduleSch, err := schema.ModuleFromProto(buildSuccess.Module)
@@ -580,7 +580,7 @@ func buildResultFromProto(result either.Either[*langpb.BuildEvent_BuildSuccess, 
 			DevEndpoint: optional.Ptr(buildSuccess.DevEndpoint),
 			DebugPort:   port,
 		}, nil
-	case either.Right[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure]:
+	case either.Right[*langpb.BuildResponse_BuildSuccess, *langpb.BuildResponse_BuildFailure]:
 		buildFailure := result.Get().BuildFailure
 
 		errs := langpb.ErrorsFromProto(buildFailure.Errors)

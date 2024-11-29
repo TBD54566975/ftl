@@ -693,7 +693,7 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 }
 
 // GetModuleContext retrieves config, secrets and DSNs for a module.
-func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest], resp *connect.ServerStream[ftlv1.ModuleContextResponse]) error {
+func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest], resp *connect.ServerStream[ftlv1.GetModuleContextResponse]) error {
 	name := req.Msg.Module
 
 	// Initialize checksum to -1; a zero checksum does occur when the context contains no settings

@@ -29,16 +29,16 @@ public class FTLController implements LeaseClient {
     final String moduleName;
 
     private Throwable currentError;
-    private volatile ModuleContextResponse moduleContextResponse;
+    private volatile GetModuleContextResponse moduleContextResponse;
     private boolean waiters = false;
 
     final VerbServiceGrpc.VerbServiceStub verbService;
     final ModuleServiceGrpc.ModuleServiceStub moduleService;
-    final StreamObserver<ModuleContextResponse> moduleObserver = new ModuleObserver();
+    final StreamObserver<GetModuleContextResponse> moduleObserver = new ModuleObserver();
 
     private static volatile FTLController controller;
 
-    private final Map<String, ModuleContextResponse.DBType> databases = new ConcurrentHashMap<>();
+    private final Map<String, GetModuleContextResponse.DBType> databases = new ConcurrentHashMap<>();
 
     /**
      * TODO: look at how init should work, this is terrible and will break dev mode
@@ -75,7 +75,7 @@ public class FTLController implements LeaseClient {
         verbService = VerbServiceGrpc.newStub(channel);
     }
 
-    public void registerDatabase(String name, ModuleContextResponse.DBType type) {
+    public void registerDatabase(String name, GetModuleContextResponse.DBType type) {
         databases.put(name, type);
     }
 
@@ -96,14 +96,14 @@ public class FTLController implements LeaseClient {
     }
 
     public Datasource getDatasource(String name) {
-        if (databases.get(name) == ModuleContextResponse.DBType.POSTGRES) {
+        if (databases.get(name) == GetModuleContextResponse.DBType.POSTGRES) {
             var proxyAddress = System.getenv("FTL_PROXY_POSTGRES_ADDRESS");
             return new Datasource("jdbc:postgresql://" + proxyAddress + "/" + name, "ftl", "ftl");
-        } else if (databases.get(name) == ModuleContextResponse.DBType.MYSQL) {
+        } else if (databases.get(name) == GetModuleContextResponse.DBType.MYSQL) {
             var proxyAddress = System.getenv("FTL_PROXY_MYSQL_ADDRESS_" + name.toUpperCase());
             return new Datasource("jdbc:mysql://" + proxyAddress + "/" + name, "ftl", "ftl");
         }
-        List<ModuleContextResponse.DSN> databasesList = getModuleContext().getDatabasesList();
+        List<GetModuleContextResponse.DSN> databasesList = getModuleContext().getDatabasesList();
         for (var i : databasesList) {
             if (i.getName().equals(name)) {
                 return Datasource.fromDSN(i.getDsn(), i.getType());
@@ -210,7 +210,7 @@ public class FTLController implements LeaseClient {
         };
     }
 
-    private ModuleContextResponse getModuleContext() {
+    private GetModuleContextResponse getModuleContext() {
         var moduleContext = moduleContextResponse;
         if (moduleContext != null) {
             return moduleContext;
@@ -235,12 +235,12 @@ public class FTLController implements LeaseClient {
         }
     }
 
-    private class ModuleObserver implements StreamObserver<ModuleContextResponse> {
+    private class ModuleObserver implements StreamObserver<GetModuleContextResponse> {
 
         final AtomicInteger failCount = new AtomicInteger();
 
         @Override
-        public void onNext(ModuleContextResponse moduleContextResponse) {
+        public void onNext(GetModuleContextResponse moduleContextResponse) {
             synchronized (this) {
                 currentError = null;
                 FTLController.this.moduleContextResponse = moduleContextResponse;
@@ -275,8 +275,8 @@ public class FTLController implements LeaseClient {
 
     public record Datasource(String connectionString, String username, String password) {
 
-        public static Datasource fromDSN(String dsn, ModuleContextResponse.DBType type) {
-            String prefix = type.equals(ModuleContextResponse.DBType.MYSQL) ? "jdbc:mysql" : "jdbc:postgresql";
+        public static Datasource fromDSN(String dsn, GetModuleContextResponse.DBType type) {
+            String prefix = type.equals(GetModuleContextResponse.DBType.MYSQL) ? "jdbc:mysql" : "jdbc:postgresql";
             try {
                 URI uri = new URI(dsn);
                 String username = "";

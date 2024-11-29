@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { GetConfigRequest, GetConfigResponse, GetSecretRequest, GetSecretResponse, ListConfigRequest, ListConfigResponse, ListSecretsRequest, ListSecretsResponse, SetConfigRequest, SetConfigResponse, SetSecretRequest, SetSecretResponse, UnsetConfigRequest, UnsetConfigResponse, UnsetSecretRequest, UnsetSecretResponse } from "./admin_pb.js";
+import { ConfigGetRequest, ConfigGetResponse, ConfigListRequest, ConfigListResponse, ConfigSetRequest, ConfigSetResponse, ConfigUnsetRequest, ConfigUnsetResponse, SecretGetRequest, SecretGetResponse, SecretSetRequest, SecretSetResponse, SecretsListRequest, SecretsListResponse, SecretUnsetRequest, SecretUnsetResponse } from "./admin_pb.js";
 
 /**
  * AdminService is the service that provides and updates admin data. For example,
@@ -33,8 +33,8 @@ export const AdminService = {
      */
     configList: {
       name: "ConfigList",
-      I: ListConfigRequest,
-      O: ListConfigResponse,
+      I: ConfigListRequest,
+      O: ConfigListResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -44,8 +44,8 @@ export const AdminService = {
      */
     configGet: {
       name: "ConfigGet",
-      I: GetConfigRequest,
-      O: GetConfigResponse,
+      I: ConfigGetRequest,
+      O: ConfigGetResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -55,8 +55,8 @@ export const AdminService = {
      */
     configSet: {
       name: "ConfigSet",
-      I: SetConfigRequest,
-      O: SetConfigResponse,
+      I: ConfigSetRequest,
+      O: ConfigSetResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -66,8 +66,8 @@ export const AdminService = {
      */
     configUnset: {
       name: "ConfigUnset",
-      I: UnsetConfigRequest,
-      O: UnsetConfigResponse,
+      I: ConfigUnsetRequest,
+      O: ConfigUnsetResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -77,8 +77,8 @@ export const AdminService = {
      */
     secretsList: {
       name: "SecretsList",
-      I: ListSecretsRequest,
-      O: ListSecretsResponse,
+      I: SecretsListRequest,
+      O: SecretsListResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -88,8 +88,8 @@ export const AdminService = {
      */
     secretGet: {
       name: "SecretGet",
-      I: GetSecretRequest,
-      O: GetSecretResponse,
+      I: SecretGetRequest,
+      O: SecretGetResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -99,8 +99,8 @@ export const AdminService = {
      */
     secretSet: {
       name: "SecretSet",
-      I: SetSecretRequest,
-      O: SetSecretResponse,
+      I: SecretSetRequest,
+      O: SecretSetResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -110,8 +110,8 @@ export const AdminService = {
      */
     secretUnset: {
       name: "SecretUnset",
-      I: UnsetSecretRequest,
-      O: UnsetSecretResponse,
+      I: SecretUnsetRequest,
+      O: SecretUnsetResponse,
       kind: MethodKind.Unary,
     },
   }
