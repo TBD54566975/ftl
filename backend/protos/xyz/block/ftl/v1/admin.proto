@@ -13,14 +13,16 @@ message ConfigRef {
 }
 
 enum ConfigProvider {
+  CONFIG_PROVIDER_UNSPECIFIED = 0;
+
   // Write values inline in the configuration file.
-  CONFIG_INLINE = 0;
+  CONFIG_PROVIDER_INLINE = 1;
 
   // Print configuration as environment variables.
-  CONFIG_ENVAR = 1;
+  CONFIG_PROVIDER_ENVAR = 2;
 
   // Use the database as a configuration store.
-  CONFIG_DB = 2;
+  CONFIG_PROVIDER_DB = 3;
 }
 
 message ListConfigRequest {
@@ -57,20 +59,22 @@ message UnsetConfigRequest {
 message UnsetConfigResponse {}
 
 enum SecretProvider {
+  SECRET_PROVIDER_UNSPECIFIED = 0;
+
   // Write values inline in the configuration file.
-  SECRET_INLINE = 0;
+  SECRET_PROVIDER_INLINE = 1;
 
   // Print configuration as environment variables.
-  SECRET_ENVAR = 1;
+  SECRET_PROVIDER_ENVAR = 2;
 
   // Write to the system keychain.
-  SECRET_KEYCHAIN = 2;
+  SECRET_PROVIDER_KEYCHAIN = 3;
 
   // Store a secret in the 1Password vault.
-  SECRET_OP = 3;
+  SECRET_PROVIDER_OP = 4;
 
   // Store a secret in the AWS Secrets Manager.
-  SECRET_ASM = 4;
+  SECRET_PROVIDER_ASM = 5;
 }
 
 message ListSecretsRequest {

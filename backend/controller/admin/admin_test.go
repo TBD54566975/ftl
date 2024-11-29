@@ -236,7 +236,7 @@ func testSetConfig(t testing.TB, ctx context.Context, admin *AdminService, modul
 	}
 
 	_, err = admin.ConfigSet(ctx, connect.NewRequest(&ftlv1.SetConfigRequest{
-		Provider: ftlv1.ConfigProvider_CONFIG_INLINE.Enum(),
+		Provider: ftlv1.ConfigProvider_CONFIG_PROVIDER_INLINE.Enum(),
 		Ref:      configRef,
 		Value:    buffer,
 	}))
@@ -255,7 +255,7 @@ func testSetSecret(t testing.TB, ctx context.Context, admin *AdminService, modul
 	}
 
 	_, err = admin.SecretSet(ctx, connect.NewRequest(&ftlv1.SetSecretRequest{
-		Provider: ftlv1.SecretProvider_SECRET_INLINE.Enum(),
+		Provider: ftlv1.SecretProvider_SECRET_PROVIDER_INLINE.Enum(),
 		Ref:      configRef,
 		Value:    buffer,
 	}))

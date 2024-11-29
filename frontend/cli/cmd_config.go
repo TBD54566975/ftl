@@ -45,11 +45,11 @@ func configRefFromRef(ref configuration.Ref) *ftlv1.ConfigRef {
 
 func (s *configCmd) provider() optional.Option[ftlv1.ConfigProvider] {
 	if s.Envar {
-		return optional.Some(ftlv1.ConfigProvider_CONFIG_ENVAR)
+		return optional.Some(ftlv1.ConfigProvider_CONFIG_PROVIDER_ENVAR)
 	} else if s.Inline {
-		return optional.Some(ftlv1.ConfigProvider_CONFIG_INLINE)
+		return optional.Some(ftlv1.ConfigProvider_CONFIG_PROVIDER_INLINE)
 	} else if s.DB {
-		return optional.Some(ftlv1.ConfigProvider_CONFIG_DB)
+		return optional.Some(ftlv1.ConfigProvider_CONFIG_PROVIDER_DB)
 	}
 	return optional.None[ftlv1.ConfigProvider]()
 }
