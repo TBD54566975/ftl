@@ -21,8 +21,8 @@ export const useSchema = (): UseQueryResult<PullSchemaResponse[], Error> => {
         const deploymentKey = response.deploymentKey ?? ''
         console.log(`schema changed: ${DeploymentChangeType[response.changeType]} ${deploymentKey}`)
         switch (response.changeType) {
-          case DeploymentChangeType.DEPLOYMENT_ADDED:
-          case DeploymentChangeType.DEPLOYMENT_CHANGED: {
+          case DeploymentChangeType.ADDED:
+          case DeploymentChangeType.CHANGED: {
             const previousDeploymentKey = currentDeployments[moduleName]
 
             currentDeployments[moduleName] = deploymentKey
@@ -35,7 +35,7 @@ export const useSchema = (): UseQueryResult<PullSchemaResponse[], Error> => {
             break
           }
 
-          case DeploymentChangeType.DEPLOYMENT_REMOVED:
+          case DeploymentChangeType.REMOVED:
             if (currentDeployments[moduleName] === deploymentKey) {
               delete schemaMap[deploymentKey]
               delete currentDeployments[moduleName]

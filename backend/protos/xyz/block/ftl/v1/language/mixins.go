@@ -26,11 +26,11 @@ func ErrorsToProto(errs []builderrors.Error) *ErrorList {
 
 func levelFromProto(level Error_ErrorLevel) builderrors.ErrorLevel {
 	switch level {
-	case Error_INFO:
+	case Error_ERROR_LEVEL_INFO:
 		return builderrors.INFO
-	case Error_WARN:
+	case Error_ERROR_LEVEL_WARN:
 		return builderrors.WARN
-	case Error_ERROR:
+	case Error_ERROR_LEVEL_ERROR:
 		return builderrors.ERROR
 	}
 	panic(fmt.Sprintf("unhandled ErrorLevel %v", level))
@@ -39,11 +39,11 @@ func levelFromProto(level Error_ErrorLevel) builderrors.ErrorLevel {
 func levelToProto(level builderrors.ErrorLevel) Error_ErrorLevel {
 	switch level {
 	case builderrors.INFO:
-		return Error_INFO
+		return Error_ERROR_LEVEL_INFO
 	case builderrors.WARN:
-		return Error_WARN
+		return Error_ERROR_LEVEL_WARN
 	case builderrors.ERROR:
-		return Error_ERROR
+		return Error_ERROR_LEVEL_ERROR
 	}
 	panic(fmt.Sprintf("unhandled ErrorLevel %v", level))
 }

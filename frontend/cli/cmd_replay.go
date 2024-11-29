@@ -77,7 +77,7 @@ func (c *replayCmd) Run(
 	}
 
 	events, err := consoleServiceClient.GetEvents(ctx, connect.NewRequest(&pbconsole.EventsQuery{
-		Order: pbconsole.EventsQuery_DESC,
+		Order: pbconsole.EventsQuery_ORDER_DESC,
 		Limit: 1,
 		Filters: []*pbconsole.EventsQuery_Filter{
 			{

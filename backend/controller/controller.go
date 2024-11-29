@@ -1510,7 +1510,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	builtinsResponse := &ftlv1.PullSchemaResponse{
 		ModuleName: builtins.Name,
 		Schema:     builtins,
-		ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+		ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 		More:       initialCount > 0,
 	}
 
@@ -1538,7 +1538,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				response = &ftlv1.PullSchemaResponse{
 					ModuleName:    name,
 					DeploymentKey: proto.String(deletion.String()),
-					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED,
+					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED,
 					ModuleRemoved: moduleRemoved,
 					Schema:        schema,
 				}
@@ -1570,11 +1570,11 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				}
 				if current, ok := moduleState[message.Schema.Name]; ok {
 					if !bytes.Equal(current.hash, newState.hash) || current.minReplicas != newState.minReplicas {
-						changeType := ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED
+						changeType := ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_CHANGED
 						// A deployment is considered removed if its minReplicas is set to 0.
 						moduleRemoved := false
 						if current.minReplicas > 0 && message.MinReplicas == 0 {
-							changeType = ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED
+							changeType = ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED
 							moduleRemoved = mostRecentDeploymentByModule[message.Schema.Name] == message.Key.String()
 						}
 						response = &ftlv1.PullSchemaResponse{
@@ -1591,7 +1591,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 						ModuleName:    moduleSchema.Name,
 						DeploymentKey: proto.String(message.Key.String()),
 						Schema:        moduleSchema,
-						ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+						ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 						More:          initialCount > 1,
 					}
 					if initialCount > 0 {

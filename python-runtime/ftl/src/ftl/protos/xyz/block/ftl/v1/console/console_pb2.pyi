@@ -376,10 +376,12 @@ class EventsQuery(_message.Message):
     __slots__ = ("filters", "limit", "order")
     class Order(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
-        ASC: _ClassVar[EventsQuery.Order]
-        DESC: _ClassVar[EventsQuery.Order]
-    ASC: EventsQuery.Order
-    DESC: EventsQuery.Order
+        ORDER_UNSPECIFIED: _ClassVar[EventsQuery.Order]
+        ORDER_ASC: _ClassVar[EventsQuery.Order]
+        ORDER_DESC: _ClassVar[EventsQuery.Order]
+    ORDER_UNSPECIFIED: EventsQuery.Order
+    ORDER_ASC: EventsQuery.Order
+    ORDER_DESC: EventsQuery.Order
     class LimitFilter(_message.Message):
         __slots__ = ("limit",)
         LIMIT_FIELD_NUMBER: _ClassVar[int]

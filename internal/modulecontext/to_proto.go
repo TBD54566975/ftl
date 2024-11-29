@@ -1,6 +1,9 @@
 package modulecontext
 
 import (
+	"fmt"
+	"strconv"
+
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 )
 
@@ -10,7 +13,7 @@ func (m ModuleContext) ToProto() *ftlv1.GetModuleContextResponse {
 	for name, entry := range m.databases {
 		databases = append(databases, &ftlv1.GetModuleContextResponse_DSN{
 			Name: name,
-			Type: ftlv1.GetModuleContextResponse_DBType(entry.DBType),
+			Type: entry.DBType.ToProto(),
 			Dsn:  entry.DSN,
 		})
 	}
@@ -19,5 +22,18 @@ func (m ModuleContext) ToProto() *ftlv1.GetModuleContextResponse {
 		Configs:   m.configs,
 		Secrets:   m.secrets,
 		Databases: databases,
+	}
+}
+
+func (x DBType) ToProto() ftlv1.GetModuleContextResponse_DbType {
+	switch x {
+	case DBTypeUnspecified:
+		return ftlv1.GetModuleContextResponse_DB_TYPE_UNSPECIFIED
+	case DBTypePostgres:
+		return ftlv1.GetModuleContextResponse_DB_TYPE_POSTGRES
+	case DBTypeMySQL:
+		return ftlv1.GetModuleContextResponse_DB_TYPE_MYSQL
+	default:
+		panic(fmt.Sprintf("unknown DB type: %s", strconv.Itoa(int(x))))
 	}
 }

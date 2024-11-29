@@ -45,12 +45,14 @@ class ModuleContextRequest(_message.Message):
 
 class GetModuleContextResponse(_message.Message):
     __slots__ = ("module", "configs", "secrets", "databases")
-    class DBType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    class DbType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
-        POSTGRES: _ClassVar[GetModuleContextResponse.DBType]
-        MYSQL: _ClassVar[GetModuleContextResponse.DBType]
-    POSTGRES: GetModuleContextResponse.DBType
-    MYSQL: GetModuleContextResponse.DBType
+        DB_TYPE_UNSPECIFIED: _ClassVar[GetModuleContextResponse.DbType]
+        DB_TYPE_POSTGRES: _ClassVar[GetModuleContextResponse.DbType]
+        DB_TYPE_MYSQL: _ClassVar[GetModuleContextResponse.DbType]
+    DB_TYPE_UNSPECIFIED: GetModuleContextResponse.DbType
+    DB_TYPE_POSTGRES: GetModuleContextResponse.DbType
+    DB_TYPE_MYSQL: GetModuleContextResponse.DbType
     class Ref(_message.Message):
         __slots__ = ("module", "name")
         MODULE_FIELD_NUMBER: _ClassVar[int]
@@ -64,9 +66,9 @@ class GetModuleContextResponse(_message.Message):
         TYPE_FIELD_NUMBER: _ClassVar[int]
         DSN_FIELD_NUMBER: _ClassVar[int]
         name: str
-        type: GetModuleContextResponse.DBType
+        type: GetModuleContextResponse.DbType
         dsn: str
-        def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[GetModuleContextResponse.DBType, str]] = ..., dsn: _Optional[str] = ...) -> None: ...
+        def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[GetModuleContextResponse.DbType, str]] = ..., dsn: _Optional[str] = ...) -> None: ...
     class ConfigsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]

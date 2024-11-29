@@ -262,23 +262,29 @@ export class GetModuleContextResponse extends Message<GetModuleContextResponse> 
 }
 
 /**
- * @generated from enum xyz.block.ftl.v1.GetModuleContextResponse.DBType
+ * @generated from enum xyz.block.ftl.v1.GetModuleContextResponse.DbType
  */
-export enum GetModuleContextResponse_DBType {
+export enum GetModuleContextResponse_DbType {
   /**
-   * @generated from enum value: POSTGRES = 0;
+   * @generated from enum value: DB_TYPE_UNSPECIFIED = 0;
    */
-  POSTGRES = 0,
+  UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: MYSQL = 1;
+   * @generated from enum value: DB_TYPE_POSTGRES = 1;
    */
-  MYSQL = 1,
+  POSTGRES = 1,
+
+  /**
+   * @generated from enum value: DB_TYPE_MYSQL = 2;
+   */
+  MYSQL = 2,
 }
-// Retrieve enum metadata with: proto3.getEnumType(GetModuleContextResponse_DBType)
-proto3.util.setEnumType(GetModuleContextResponse_DBType, "xyz.block.ftl.v1.GetModuleContextResponse.DBType", [
-  { no: 0, name: "POSTGRES" },
-  { no: 1, name: "MYSQL" },
+// Retrieve enum metadata with: proto3.getEnumType(GetModuleContextResponse_DbType)
+proto3.util.setEnumType(GetModuleContextResponse_DbType, "xyz.block.ftl.v1.GetModuleContextResponse.DbType", [
+  { no: 0, name: "DB_TYPE_UNSPECIFIED" },
+  { no: 1, name: "DB_TYPE_POSTGRES" },
+  { no: 2, name: "DB_TYPE_MYSQL" },
 ]);
 
 /**
@@ -334,9 +340,9 @@ export class GetModuleContextResponse_DSN extends Message<GetModuleContextRespon
   name = "";
 
   /**
-   * @generated from field: xyz.block.ftl.v1.GetModuleContextResponse.DBType type = 2;
+   * @generated from field: xyz.block.ftl.v1.GetModuleContextResponse.DbType type = 2;
    */
-  type = GetModuleContextResponse_DBType.POSTGRES;
+  type = GetModuleContextResponse_DbType.UNSPECIFIED;
 
   /**
    * @generated from field: string dsn = 3;
@@ -352,7 +358,7 @@ export class GetModuleContextResponse_DSN extends Message<GetModuleContextRespon
   static readonly typeName = "xyz.block.ftl.v1.GetModuleContextResponse.DSN";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "type", kind: "enum", T: proto3.getEnumType(GetModuleContextResponse_DBType) },
+    { no: 2, name: "type", kind: "enum", T: proto3.getEnumType(GetModuleContextResponse_DbType) },
     { no: 3, name: "dsn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 

@@ -153,17 +153,19 @@ message BuildContextUpdatedResponse {}
 // Errors do not always cause a build failure. Use lesser levels to help guide the user.
 message Error {
   enum ErrorLevel {
-    INFO = 0;
-    WARN = 1;
-    ERROR = 2;
+    ERROR_LEVEL_UNSPECIFIED = 0;
+    ERROR_LEVEL_INFO = 1;
+    ERROR_LEVEL_WARN = 2;
+    ERROR_LEVEL_ERROR = 3;
   }
 
   enum ErrorType {
-    FTL = 0;
+    ERROR_TYPE_UNSPECIFIED = 0;
+    ERROR_TYPE_FTL = 1;
     // Compiler errors are errors that are from the compiler. This is useful to avoid duplicate errors
     // being shown to the user when combining errors from multiple sources (eg: an IDE showing compiler
     // errors and FTL errors via LSP).
-    COMPILER = 1;
+    ERROR_TYPE_COMPILER = 2;
   }
 
   string msg = 1;

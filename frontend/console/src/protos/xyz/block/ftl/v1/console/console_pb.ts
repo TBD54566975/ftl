@@ -1544,7 +1544,7 @@ export class EventsQuery extends Message<EventsQuery> {
   /**
    * @generated from field: xyz.block.ftl.v1.console.EventsQuery.Order order = 3;
    */
-  order = EventsQuery_Order.ASC;
+  order = EventsQuery_Order.UNSPECIFIED;
 
   constructor(data?: PartialMessage<EventsQuery>) {
     super();
@@ -1581,19 +1581,25 @@ export class EventsQuery extends Message<EventsQuery> {
  */
 export enum EventsQuery_Order {
   /**
-   * @generated from enum value: ASC = 0;
+   * @generated from enum value: ORDER_UNSPECIFIED = 0;
    */
-  ASC = 0,
+  UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: DESC = 1;
+   * @generated from enum value: ORDER_ASC = 1;
    */
-  DESC = 1,
+  ASC = 1,
+
+  /**
+   * @generated from enum value: ORDER_DESC = 2;
+   */
+  DESC = 2,
 }
 // Retrieve enum metadata with: proto3.getEnumType(EventsQuery_Order)
 proto3.util.setEnumType(EventsQuery_Order, "xyz.block.ftl.v1.console.EventsQuery.Order", [
-  { no: 0, name: "ASC" },
-  { no: 1, name: "DESC" },
+  { no: 0, name: "ORDER_UNSPECIFIED" },
+  { no: 1, name: "ORDER_ASC" },
+  { no: 2, name: "ORDER_DESC" },
 ]);
 
 /**

@@ -96,14 +96,18 @@ public class ModuleProcessor {
                 if (compileProblem != null || deploymentProblems != null) {
                     ErrorList.Builder builder = ErrorList.newBuilder();
                     if (compileProblem != null) {
-                        builder.addErrors(
-                                Error.newBuilder().setLevel(Error.ErrorLevel.ERROR).setType(Error.ErrorType.COMPILER)
-                                        .setMsg(compileProblem.getMessage()).build());
+                        builder.addErrors(Error.newBuilder()
+                                .setLevel(Error.ErrorLevel.ERROR_LEVEL_ERROR)
+                                .setType(Error.ErrorType.ERROR_TYPE_COMPILER)
+                                .setMsg(compileProblem.getMessage())
+                                .build());
                     }
                     if (deploymentProblems != null) {
-                        builder.addErrors(
-                                Error.newBuilder().setLevel(Error.ErrorLevel.ERROR).setType(Error.ErrorType.FTL)
-                                        .setMsg(deploymentProblems.getMessage()).build());
+                        builder.addErrors(Error.newBuilder()
+                                .setLevel(Error.ErrorLevel.ERROR_LEVEL_ERROR)
+                                .setType(Error.ErrorType.ERROR_TYPE_FTL)
+                                .setMsg(deploymentProblems.getMessage())
+                                .build());
                     }
                     try (var out = Files.newOutputStream(errorOutput)) {
                         builder.build().writeTo(out);
