@@ -366,7 +366,7 @@ list-docker-images:
 # Run docker compose up with all docker compose files
 compose-up:
   #!/bin/bash
-  set -eo pipefail
+  set -o pipefail
   docker_compose_files="
   -f docker-compose.yml
   -f internal/dev/docker-compose.grafana.yml
@@ -374,7 +374,16 @@ compose-up:
   -f internal/dev/docker-compose.postgres.yml
   -f internal/dev/docker-compose.redpanda.yml
   -f internal/dev/docker-compose.registry.yml"
+
+  docker compose -p "ftl" $docker_compose_files up -d --wait
+  status=$?
+  if [ $status -ne 0 ] && [ -n "${CI-}" ]; then
+    # CI fails regularly due to network issues. Retry once.
+    echo "docker compose up failed, retrying in 3s..."
     docker compose -p "ftl" $docker_compose_files up -d --wait
+    docker compose -p "ftl" $docker_compose_files up -d --wait
+  fi
+
 
 # Run a Just command in the Helm charts directory
 chart *args:
