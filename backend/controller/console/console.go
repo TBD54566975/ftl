@@ -812,7 +812,7 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 		var asyncEventType pbconsole.AsyncExecuteEventType
 		switch event.EventType {
 		case timeline.AsyncExecuteEventTypeUnkown:
-			asyncEventType = pbconsole.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_UNKNOWN
+			asyncEventType = pbconsole.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_UNSPECIFIED
 		case timeline.AsyncExecuteEventTypeCron:
 			asyncEventType = pbconsole.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_CRON
 		case timeline.AsyncExecuteEventTypePubSub:

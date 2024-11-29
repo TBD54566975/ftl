@@ -30,8 +30,8 @@ message ProvisionRequest {
 
 message ProvisionResponse {
   enum ProvisionResponseStatus {
-    UNKNOWN = 0;
-    SUBMITTED = 1;
+    PROVISION_RESPONSE_STATUS_UNSPECIFIED = 0;
+    PROVISION_RESPONSE_STATUS_SUBMITTED = 1;
   }
 
   string provisioning_token = 1;

@@ -25,7 +25,7 @@ func (d *NoopProvisioner) Plan(context.Context, *connect.Request[provisioner.Pla
 
 func (d *NoopProvisioner) Provision(context.Context, *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
 	return connect.NewResponse(&provisioner.ProvisionResponse{
-		Status:            provisioner.ProvisionResponse_SUBMITTED,
+		Status:            provisioner.ProvisionResponse_PROVISION_RESPONSE_STATUS_SUBMITTED,
 		ProvisioningToken: "token",
 	}), nil
 }

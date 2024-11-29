@@ -84,7 +84,7 @@ func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.
 	if !updated {
 		return connect.NewResponse(&provisioner.ProvisionResponse{
 			// even if there are no changes, return the stack id so that any resource outputs can be populated
-			Status:            provisioner.ProvisionResponse_SUBMITTED,
+			Status:            provisioner.ProvisionResponse_PROVISION_RESPONSE_STATUS_SUBMITTED,
 			ProvisioningToken: token,
 		}), nil
 	}
@@ -96,7 +96,7 @@ func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.
 	logger.Debugf("Starting task for module %s: %s (%s)", req.Msg.Module, token, changeSetID)
 	task.Start(ctx, c.client, c.secrets, changeSetID)
 	return connect.NewResponse(&provisioner.ProvisionResponse{
-		Status:            provisioner.ProvisionResponse_SUBMITTED,
+		Status:            provisioner.ProvisionResponse_PROVISION_RESPONSE_STATUS_SUBMITTED,
 		ProvisioningToken: token,
 	}), nil
 }

@@ -11,7 +11,7 @@ option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/
 option java_multiple_files = true;
 
 enum EventType {
-  EVENT_TYPE_UNKNOWN = 0;
+  EVENT_TYPE_UNSPECIFIED = 0;
   EVENT_TYPE_LOG = 1;
   EVENT_TYPE_CALL = 2;
   EVENT_TYPE_DEPLOYMENT_CREATED = 3;
@@ -24,13 +24,13 @@ enum EventType {
 }
 
 enum AsyncExecuteEventType {
-  ASYNC_EXECUTE_EVENT_TYPE_UNKNOWN = 0;
+  ASYNC_EXECUTE_EVENT_TYPE_UNSPECIFIED = 0;
   ASYNC_EXECUTE_EVENT_TYPE_CRON = 1;
   ASYNC_EXECUTE_EVENT_TYPE_PUBSUB = 2;
 }
 
 enum LogLevel {
-  LOG_LEVEL_UNKNOWN = 0;
+  LOG_LEVEL_UNSPECIFIED = 0;
   LOG_LEVEL_TRACE = 1;
   LOG_LEVEL_DEBUG = 5;
   LOG_LEVEL_INFO = 9;
