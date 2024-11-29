@@ -16,7 +16,8 @@ message AWSIAMAuthDatabaseConnector {
 }
 
 enum AliasKind {
-  ALIAS_KIND_JSON = 0;
+  ALIAS_KIND_UNSPECIFIED = 0;
+  ALIAS_KIND_JSON = 1;
 }
 
 message Any {
@@ -121,8 +122,9 @@ message Float {
 }
 
 enum FromOffset {
-  FROM_OFFSET_BEGINNING = 0;
-  FROM_OFFSET_LATEST = 1;
+  FROM_OFFSET_UNSPECIFIED = 0;
+  FROM_OFFSET_BEGINNING = 1;
+  FROM_OFFSET_LATEST = 2;
 }
 
 message IngressPathComponent {

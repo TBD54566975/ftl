@@ -14,7 +14,8 @@ import (
 type AliasKind int
 
 const (
-	AliasKindJson AliasKind = iota //nolint
+	AliasKindUnspecified AliasKind = iota
+	AliasKindJson                  //nolint
 )
 
 //protobuf:5

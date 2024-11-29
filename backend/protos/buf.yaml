@@ -11,5 +11,4 @@ lint:
   except:
     - RPC_REQUEST_RESPONSE_UNIQUE
     # Remove these exceptions once they're fixed
-    - ENUM_ZERO_VALUE_SUFFIX
     - PACKAGE_VERSION_SUFFIX

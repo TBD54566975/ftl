@@ -13,13 +13,19 @@ import { Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
  */
 export enum AliasKind {
   /**
-   * @generated from enum value: ALIAS_KIND_JSON = 0;
+   * @generated from enum value: ALIAS_KIND_UNSPECIFIED = 0;
    */
-  JSON = 0,
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: ALIAS_KIND_JSON = 1;
+   */
+  JSON = 1,
 }
 // Retrieve enum metadata with: proto3.getEnumType(AliasKind)
 proto3.util.setEnumType(AliasKind, "xyz.block.ftl.v1.schema.AliasKind", [
-  { no: 0, name: "ALIAS_KIND_JSON" },
+  { no: 0, name: "ALIAS_KIND_UNSPECIFIED" },
+  { no: 1, name: "ALIAS_KIND_JSON" },
 ]);
 
 /**
@@ -27,19 +33,25 @@ proto3.util.setEnumType(AliasKind, "xyz.block.ftl.v1.schema.AliasKind", [
  */
 export enum FromOffset {
   /**
-   * @generated from enum value: FROM_OFFSET_BEGINNING = 0;
+   * @generated from enum value: FROM_OFFSET_UNSPECIFIED = 0;
    */
-  BEGINNING = 0,
+  UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: FROM_OFFSET_LATEST = 1;
+   * @generated from enum value: FROM_OFFSET_BEGINNING = 1;
    */
-  LATEST = 1,
+  BEGINNING = 1,
+
+  /**
+   * @generated from enum value: FROM_OFFSET_LATEST = 2;
+   */
+  LATEST = 2,
 }
 // Retrieve enum metadata with: proto3.getEnumType(FromOffset)
 proto3.util.setEnumType(FromOffset, "xyz.block.ftl.v1.schema.FromOffset", [
-  { no: 0, name: "FROM_OFFSET_BEGINNING" },
-  { no: 1, name: "FROM_OFFSET_LATEST" },
+  { no: 0, name: "FROM_OFFSET_UNSPECIFIED" },
+  { no: 1, name: "FROM_OFFSET_BEGINNING" },
+  { no: 2, name: "FROM_OFFSET_LATEST" },
 ]);
 
 /**
@@ -1298,7 +1310,7 @@ export class MetadataAlias extends Message<MetadataAlias> {
   /**
    * @generated from field: xyz.block.ftl.v1.schema.AliasKind kind = 2;
    */
-  kind = AliasKind.JSON;
+  kind = AliasKind.UNSPECIFIED;
 
   /**
    * @generated from field: string alias = 3;
@@ -1818,7 +1830,7 @@ export class MetadataSubscriber extends Message<MetadataSubscriber> {
   /**
    * @generated from field: xyz.block.ftl.v1.schema.FromOffset from_offset = 3;
    */
-  fromOffset = FromOffset.BEGINNING;
+  fromOffset = FromOffset.UNSPECIFIED;
 
   /**
    * @generated from field: bool dead_letter = 4;

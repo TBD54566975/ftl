@@ -8,11 +8,11 @@ import (
 	"strings"
 )
 
-const _AliasKindName = "json"
+const _AliasKindName = "unspecifiedjson"
 
-var _AliasKindIndex = [...]uint8{0, 4}
+var _AliasKindIndex = [...]uint8{0, 11, 15}
 
-const _AliasKindLowerName = "json"
+const _AliasKindLowerName = "unspecifiedjson"
 
 func (i AliasKind) String() string {
 	if i < 0 || i >= AliasKind(len(_AliasKindIndex)-1) {
@@ -25,18 +25,22 @@ func (i AliasKind) String() string {
 // Re-run the stringer command to generate them again.
 func _AliasKindNoOp() {
 	var x [1]struct{}
-	_ = x[AliasKindJson-(0)]
+	_ = x[AliasKindUnspecified-(0)]
+	_ = x[AliasKindJson-(1)]
 }
 
-var _AliasKindValues = []AliasKind{AliasKindJson}
+var _AliasKindValues = []AliasKind{AliasKindUnspecified, AliasKindJson}
 
 var _AliasKindNameToValueMap = map[string]AliasKind{
-	_AliasKindName[0:4]:      AliasKindJson,
-	_AliasKindLowerName[0:4]: AliasKindJson,
+	_AliasKindName[0:11]:       AliasKindUnspecified,
+	_AliasKindLowerName[0:11]:  AliasKindUnspecified,
+	_AliasKindName[11:15]:      AliasKindJson,
+	_AliasKindLowerName[11:15]: AliasKindJson,
 }
 
 var _AliasKindNames = []string{
-	_AliasKindName[0:4],
+	_AliasKindName[0:11],
+	_AliasKindName[11:15],
 }
 
 // AliasKindString retrieves an enum value from the enum constants string name.
