@@ -36,11 +36,11 @@ func NewTestDatabase(dbType DBType, dsn string) (Database, error) {
 	return db, nil
 }
 
-type DBType ftlv1.ModuleContextResponse_DBType
+type DBType ftlv1.GetModuleContextResponse_DBType
 
 const (
-	DBTypePostgres = DBType(ftlv1.ModuleContextResponse_POSTGRES)
-	DBTypeMySQL    = DBType(ftlv1.ModuleContextResponse_MYSQL)
+	DBTypePostgres = DBType(ftlv1.GetModuleContextResponse_POSTGRES)
+	DBTypeMySQL    = DBType(ftlv1.GetModuleContextResponse_MYSQL)
 )
 
 func DBTypeFromString(dt string) (DBType, error) {

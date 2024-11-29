@@ -16,7 +16,7 @@ import io.quarkus.deployment.builditem.SystemPropertyBuildItem;
 import xyz.block.ftl.runtime.FTLDatasourceCredentials;
 import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.config.FTLConfigSource;
-import xyz.block.ftl.v1.ModuleContextResponse;
+import xyz.block.ftl.v1.GetModuleContextResponse;
 import xyz.block.ftl.v1.schema.Database;
 import xyz.block.ftl.v1.schema.Decl;
 
@@ -44,9 +44,9 @@ public class DatasourceProcessor {
                 dbKind = "postgres";
             }
             if (dbKind.equals("mysql")) {
-                recorder.registerDatabase(ds.getName(), ModuleContextResponse.DBType.MYSQL);
+                recorder.registerDatabase(ds.getName(), GetModuleContextResponse.DBType.MYSQL);
             } else {
-                recorder.registerDatabase(ds.getName(), ModuleContextResponse.DBType.POSTGRES);
+                recorder.registerDatabase(ds.getName(), GetModuleContextResponse.DBType.POSTGRES);
             }
             //default name is <default> which is not a valid name
             String sanitisedName = ds.getName().replace("<", "").replace(">", "");

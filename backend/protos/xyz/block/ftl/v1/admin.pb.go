@@ -191,7 +191,7 @@ func (x *ConfigRef) GetName() string {
 	return ""
 }
 
-type ListConfigRequest struct {
+type ConfigListRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -201,20 +201,20 @@ type ListConfigRequest struct {
 	Provider      *ConfigProvider `protobuf:"varint,3,opt,name=provider,proto3,enum=xyz.block.ftl.v1.ConfigProvider,oneof" json:"provider,omitempty"`
 }
 
-func (x *ListConfigRequest) Reset() {
-	*x = ListConfigRequest{}
+func (x *ConfigListRequest) Reset() {
+	*x = ConfigListRequest{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListConfigRequest) String() string {
+func (x *ConfigListRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListConfigRequest) ProtoMessage() {}
+func (*ConfigListRequest) ProtoMessage() {}
 
-func (x *ListConfigRequest) ProtoReflect() protoreflect.Message {
+func (x *ConfigListRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -226,54 +226,54 @@ func (x *ListConfigRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListConfigRequest.ProtoReflect.Descriptor instead.
-func (*ListConfigRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ConfigListRequest.ProtoReflect.Descriptor instead.
+func (*ConfigListRequest) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *ListConfigRequest) GetModule() string {
+func (x *ConfigListRequest) GetModule() string {
 	if x != nil && x.Module != nil {
 		return *x.Module
 	}
 	return ""
 }
 
-func (x *ListConfigRequest) GetIncludeValues() bool {
+func (x *ConfigListRequest) GetIncludeValues() bool {
 	if x != nil && x.IncludeValues != nil {
 		return *x.IncludeValues
 	}
 	return false
 }
 
-func (x *ListConfigRequest) GetProvider() ConfigProvider {
+func (x *ConfigListRequest) GetProvider() ConfigProvider {
 	if x != nil && x.Provider != nil {
 		return *x.Provider
 	}
 	return ConfigProvider_CONFIG_PROVIDER_UNSPECIFIED
 }
 
-type ListConfigResponse struct {
+type ConfigListResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Configs []*ListConfigResponse_Config `protobuf:"bytes,1,rep,name=configs,proto3" json:"configs,omitempty"`
+	Configs []*ConfigListResponse_Config `protobuf:"bytes,1,rep,name=configs,proto3" json:"configs,omitempty"`
 }
 
-func (x *ListConfigResponse) Reset() {
-	*x = ListConfigResponse{}
+func (x *ConfigListResponse) Reset() {
+	*x = ConfigListResponse{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListConfigResponse) String() string {
+func (x *ConfigListResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListConfigResponse) ProtoMessage() {}
+func (*ConfigListResponse) ProtoMessage() {}
 
-func (x *ListConfigResponse) ProtoReflect() protoreflect.Message {
+func (x *ConfigListResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -285,19 +285,19 @@ func (x *ListConfigResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListConfigResponse.ProtoReflect.Descriptor instead.
-func (*ListConfigResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ConfigListResponse.ProtoReflect.Descriptor instead.
+func (*ConfigListResponse) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ListConfigResponse) GetConfigs() []*ListConfigResponse_Config {
+func (x *ConfigListResponse) GetConfigs() []*ConfigListResponse_Config {
 	if x != nil {
 		return x.Configs
 	}
 	return nil
 }
 
-type GetConfigRequest struct {
+type ConfigGetRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -305,20 +305,20 @@ type GetConfigRequest struct {
 	Ref *ConfigRef `protobuf:"bytes,1,opt,name=ref,proto3" json:"ref,omitempty"`
 }
 
-func (x *GetConfigRequest) Reset() {
-	*x = GetConfigRequest{}
+func (x *ConfigGetRequest) Reset() {
+	*x = ConfigGetRequest{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetConfigRequest) String() string {
+func (x *ConfigGetRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetConfigRequest) ProtoMessage() {}
+func (*ConfigGetRequest) ProtoMessage() {}
 
-func (x *GetConfigRequest) ProtoReflect() protoreflect.Message {
+func (x *ConfigGetRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -330,19 +330,19 @@ func (x *GetConfigRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetConfigRequest.ProtoReflect.Descriptor instead.
-func (*GetConfigRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ConfigGetRequest.ProtoReflect.Descriptor instead.
+func (*ConfigGetRequest) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *GetConfigRequest) GetRef() *ConfigRef {
+func (x *ConfigGetRequest) GetRef() *ConfigRef {
 	if x != nil {
 		return x.Ref
 	}
 	return nil
 }
 
-type GetConfigResponse struct {
+type ConfigGetResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -350,20 +350,20 @@ type GetConfigResponse struct {
 	Value []byte `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
 }
 
-func (x *GetConfigResponse) Reset() {
-	*x = GetConfigResponse{}
+func (x *ConfigGetResponse) Reset() {
+	*x = ConfigGetResponse{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetConfigResponse) String() string {
+func (x *ConfigGetResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetConfigResponse) ProtoMessage() {}
+func (*ConfigGetResponse) ProtoMessage() {}
 
-func (x *GetConfigResponse) ProtoReflect() protoreflect.Message {
+func (x *ConfigGetResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -375,19 +375,19 @@ func (x *GetConfigResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetConfigResponse.ProtoReflect.Descriptor instead.
-func (*GetConfigResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ConfigGetResponse.ProtoReflect.Descriptor instead.
+func (*ConfigGetResponse) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *GetConfigResponse) GetValue() []byte {
+func (x *ConfigGetResponse) GetValue() []byte {
 	if x != nil {
 		return x.Value
 	}
 	return nil
 }
 
-type SetConfigRequest struct {
+type ConfigSetRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -397,20 +397,20 @@ type SetConfigRequest struct {
 	Value    []byte          `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
 }
 
-func (x *SetConfigRequest) Reset() {
-	*x = SetConfigRequest{}
+func (x *ConfigSetRequest) Reset() {
+	*x = ConfigSetRequest{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SetConfigRequest) String() string {
+func (x *ConfigSetRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SetConfigRequest) ProtoMessage() {}
+func (*ConfigSetRequest) ProtoMessage() {}
 
-func (x *SetConfigRequest) ProtoReflect() protoreflect.Message {
+func (x *ConfigSetRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -422,52 +422,52 @@ func (x *SetConfigRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SetConfigRequest.ProtoReflect.Descriptor instead.
-func (*SetConfigRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ConfigSetRequest.ProtoReflect.Descriptor instead.
+func (*ConfigSetRequest) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *SetConfigRequest) GetProvider() ConfigProvider {
+func (x *ConfigSetRequest) GetProvider() ConfigProvider {
 	if x != nil && x.Provider != nil {
 		return *x.Provider
 	}
 	return ConfigProvider_CONFIG_PROVIDER_UNSPECIFIED
 }
 
-func (x *SetConfigRequest) GetRef() *ConfigRef {
+func (x *ConfigSetRequest) GetRef() *ConfigRef {
 	if x != nil {
 		return x.Ref
 	}
 	return nil
 }
 
-func (x *SetConfigRequest) GetValue() []byte {
+func (x *ConfigSetRequest) GetValue() []byte {
 	if x != nil {
 		return x.Value
 	}
 	return nil
 }
 
-type SetConfigResponse struct {
+type ConfigSetResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 }
 
-func (x *SetConfigResponse) Reset() {
-	*x = SetConfigResponse{}
+func (x *ConfigSetResponse) Reset() {
+	*x = ConfigSetResponse{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SetConfigResponse) String() string {
+func (x *ConfigSetResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SetConfigResponse) ProtoMessage() {}
+func (*ConfigSetResponse) ProtoMessage() {}
 
-func (x *SetConfigResponse) ProtoReflect() protoreflect.Message {
+func (x *ConfigSetResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -479,12 +479,12 @@ func (x *SetConfigResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SetConfigResponse.ProtoReflect.Descriptor instead.
-func (*SetConfigResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ConfigSetResponse.ProtoReflect.Descriptor instead.
+func (*ConfigSetResponse) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{6}
 }
 
-type UnsetConfigRequest struct {
+type ConfigUnsetRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -493,20 +493,20 @@ type UnsetConfigRequest struct {
 	Ref      *ConfigRef      `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
 }
 
-func (x *UnsetConfigRequest) Reset() {
-	*x = UnsetConfigRequest{}
+func (x *ConfigUnsetRequest) Reset() {
+	*x = ConfigUnsetRequest{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UnsetConfigRequest) String() string {
+func (x *ConfigUnsetRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UnsetConfigRequest) ProtoMessage() {}
+func (*ConfigUnsetRequest) ProtoMessage() {}
 
-func (x *UnsetConfigRequest) ProtoReflect() protoreflect.Message {
+func (x *ConfigUnsetRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -518,45 +518,45 @@ func (x *UnsetConfigRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UnsetConfigRequest.ProtoReflect.Descriptor instead.
-func (*UnsetConfigRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ConfigUnsetRequest.ProtoReflect.Descriptor instead.
+func (*ConfigUnsetRequest) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *UnsetConfigRequest) GetProvider() ConfigProvider {
+func (x *ConfigUnsetRequest) GetProvider() ConfigProvider {
 	if x != nil && x.Provider != nil {
 		return *x.Provider
 	}
 	return ConfigProvider_CONFIG_PROVIDER_UNSPECIFIED
 }
 
-func (x *UnsetConfigRequest) GetRef() *ConfigRef {
+func (x *ConfigUnsetRequest) GetRef() *ConfigRef {
 	if x != nil {
 		return x.Ref
 	}
 	return nil
 }
 
-type UnsetConfigResponse struct {
+type ConfigUnsetResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 }
 
-func (x *UnsetConfigResponse) Reset() {
-	*x = UnsetConfigResponse{}
+func (x *ConfigUnsetResponse) Reset() {
+	*x = ConfigUnsetResponse{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UnsetConfigResponse) String() string {
+func (x *ConfigUnsetResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UnsetConfigResponse) ProtoMessage() {}
+func (*ConfigUnsetResponse) ProtoMessage() {}
 
-func (x *UnsetConfigResponse) ProtoReflect() protoreflect.Message {
+func (x *ConfigUnsetResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -568,12 +568,12 @@ func (x *UnsetConfigResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UnsetConfigResponse.ProtoReflect.Descriptor instead.
-func (*UnsetConfigResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use ConfigUnsetResponse.ProtoReflect.Descriptor instead.
+func (*ConfigUnsetResponse) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{8}
 }
 
-type ListSecretsRequest struct {
+type SecretsListRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -583,20 +583,20 @@ type ListSecretsRequest struct {
 	Provider      *SecretProvider `protobuf:"varint,3,opt,name=provider,proto3,enum=xyz.block.ftl.v1.SecretProvider,oneof" json:"provider,omitempty"`
 }
 
-func (x *ListSecretsRequest) Reset() {
-	*x = ListSecretsRequest{}
+func (x *SecretsListRequest) Reset() {
+	*x = SecretsListRequest{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListSecretsRequest) String() string {
+func (x *SecretsListRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListSecretsRequest) ProtoMessage() {}
+func (*SecretsListRequest) ProtoMessage() {}
 
-func (x *ListSecretsRequest) ProtoReflect() protoreflect.Message {
+func (x *SecretsListRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -608,54 +608,54 @@ func (x *ListSecretsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListSecretsRequest.ProtoReflect.Descriptor instead.
-func (*ListSecretsRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use SecretsListRequest.ProtoReflect.Descriptor instead.
+func (*SecretsListRequest) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *ListSecretsRequest) GetModule() string {
+func (x *SecretsListRequest) GetModule() string {
 	if x != nil && x.Module != nil {
 		return *x.Module
 	}
 	return ""
 }
 
-func (x *ListSecretsRequest) GetIncludeValues() bool {
+func (x *SecretsListRequest) GetIncludeValues() bool {
 	if x != nil && x.IncludeValues != nil {
 		return *x.IncludeValues
 	}
 	return false
 }
 
-func (x *ListSecretsRequest) GetProvider() SecretProvider {
+func (x *SecretsListRequest) GetProvider() SecretProvider {
 	if x != nil && x.Provider != nil {
 		return *x.Provider
 	}
 	return SecretProvider_SECRET_PROVIDER_UNSPECIFIED
 }
 
-type ListSecretsResponse struct {
+type SecretsListResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Secrets []*ListSecretsResponse_Secret `protobuf:"bytes,1,rep,name=secrets,proto3" json:"secrets,omitempty"`
+	Secrets []*SecretsListResponse_Secret `protobuf:"bytes,1,rep,name=secrets,proto3" json:"secrets,omitempty"`
 }
 
-func (x *ListSecretsResponse) Reset() {
-	*x = ListSecretsResponse{}
+func (x *SecretsListResponse) Reset() {
+	*x = SecretsListResponse{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListSecretsResponse) String() string {
+func (x *SecretsListResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListSecretsResponse) ProtoMessage() {}
+func (*SecretsListResponse) ProtoMessage() {}
 
-func (x *ListSecretsResponse) ProtoReflect() protoreflect.Message {
+func (x *SecretsListResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -667,19 +667,19 @@ func (x *ListSecretsResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListSecretsResponse.ProtoReflect.Descriptor instead.
-func (*ListSecretsResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use SecretsListResponse.ProtoReflect.Descriptor instead.
+func (*SecretsListResponse) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *ListSecretsResponse) GetSecrets() []*ListSecretsResponse_Secret {
+func (x *SecretsListResponse) GetSecrets() []*SecretsListResponse_Secret {
 	if x != nil {
 		return x.Secrets
 	}
 	return nil
 }
 
-type GetSecretRequest struct {
+type SecretGetRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -687,20 +687,20 @@ type GetSecretRequest struct {
 	Ref *ConfigRef `protobuf:"bytes,1,opt,name=ref,proto3" json:"ref,omitempty"`
 }
 
-func (x *GetSecretRequest) Reset() {
-	*x = GetSecretRequest{}
+func (x *SecretGetRequest) Reset() {
+	*x = SecretGetRequest{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetSecretRequest) String() string {
+func (x *SecretGetRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetSecretRequest) ProtoMessage() {}
+func (*SecretGetRequest) ProtoMessage() {}
 
-func (x *GetSecretRequest) ProtoReflect() protoreflect.Message {
+func (x *SecretGetRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -712,19 +712,19 @@ func (x *GetSecretRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetSecretRequest.ProtoReflect.Descriptor instead.
-func (*GetSecretRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use SecretGetRequest.ProtoReflect.Descriptor instead.
+func (*SecretGetRequest) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{11}
 }
 
-func (x *GetSecretRequest) GetRef() *ConfigRef {
+func (x *SecretGetRequest) GetRef() *ConfigRef {
 	if x != nil {
 		return x.Ref
 	}
 	return nil
 }
 
-type GetSecretResponse struct {
+type SecretGetResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -732,20 +732,20 @@ type GetSecretResponse struct {
 	Value []byte `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
 }
 
-func (x *GetSecretResponse) Reset() {
-	*x = GetSecretResponse{}
+func (x *SecretGetResponse) Reset() {
+	*x = SecretGetResponse{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetSecretResponse) String() string {
+func (x *SecretGetResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetSecretResponse) ProtoMessage() {}
+func (*SecretGetResponse) ProtoMessage() {}
 
-func (x *GetSecretResponse) ProtoReflect() protoreflect.Message {
+func (x *SecretGetResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -757,19 +757,19 @@ func (x *GetSecretResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetSecretResponse.ProtoReflect.Descriptor instead.
-func (*GetSecretResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use SecretGetResponse.ProtoReflect.Descriptor instead.
+func (*SecretGetResponse) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *GetSecretResponse) GetValue() []byte {
+func (x *SecretGetResponse) GetValue() []byte {
 	if x != nil {
 		return x.Value
 	}
 	return nil
 }
 
-type SetSecretRequest struct {
+type SecretSetRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -779,20 +779,20 @@ type SetSecretRequest struct {
 	Value    []byte          `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
 }
 
-func (x *SetSecretRequest) Reset() {
-	*x = SetSecretRequest{}
+func (x *SecretSetRequest) Reset() {
+	*x = SecretSetRequest{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SetSecretRequest) String() string {
+func (x *SecretSetRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SetSecretRequest) ProtoMessage() {}
+func (*SecretSetRequest) ProtoMessage() {}
 
-func (x *SetSecretRequest) ProtoReflect() protoreflect.Message {
+func (x *SecretSetRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -804,52 +804,52 @@ func (x *SetSecretRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SetSecretRequest.ProtoReflect.Descriptor instead.
-func (*SetSecretRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use SecretSetRequest.ProtoReflect.Descriptor instead.
+func (*SecretSetRequest) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *SetSecretRequest) GetProvider() SecretProvider {
+func (x *SecretSetRequest) GetProvider() SecretProvider {
 	if x != nil && x.Provider != nil {
 		return *x.Provider
 	}
 	return SecretProvider_SECRET_PROVIDER_UNSPECIFIED
 }
 
-func (x *SetSecretRequest) GetRef() *ConfigRef {
+func (x *SecretSetRequest) GetRef() *ConfigRef {
 	if x != nil {
 		return x.Ref
 	}
 	return nil
 }
 
-func (x *SetSecretRequest) GetValue() []byte {
+func (x *SecretSetRequest) GetValue() []byte {
 	if x != nil {
 		return x.Value
 	}
 	return nil
 }
 
-type SetSecretResponse struct {
+type SecretSetResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 }
 
-func (x *SetSecretResponse) Reset() {
-	*x = SetSecretResponse{}
+func (x *SecretSetResponse) Reset() {
+	*x = SecretSetResponse{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SetSecretResponse) String() string {
+func (x *SecretSetResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SetSecretResponse) ProtoMessage() {}
+func (*SecretSetResponse) ProtoMessage() {}
 
-func (x *SetSecretResponse) ProtoReflect() protoreflect.Message {
+func (x *SecretSetResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -861,12 +861,12 @@ func (x *SetSecretResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SetSecretResponse.ProtoReflect.Descriptor instead.
-func (*SetSecretResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use SecretSetResponse.ProtoReflect.Descriptor instead.
+func (*SecretSetResponse) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{14}
 }
 
-type UnsetSecretRequest struct {
+type SecretUnsetRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -875,20 +875,20 @@ type UnsetSecretRequest struct {
 	Ref      *ConfigRef      `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
 }
 
-func (x *UnsetSecretRequest) Reset() {
-	*x = UnsetSecretRequest{}
+func (x *SecretUnsetRequest) Reset() {
+	*x = SecretUnsetRequest{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UnsetSecretRequest) String() string {
+func (x *SecretUnsetRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UnsetSecretRequest) ProtoMessage() {}
+func (*SecretUnsetRequest) ProtoMessage() {}
 
-func (x *UnsetSecretRequest) ProtoReflect() protoreflect.Message {
+func (x *SecretUnsetRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -900,45 +900,45 @@ func (x *UnsetSecretRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UnsetSecretRequest.ProtoReflect.Descriptor instead.
-func (*UnsetSecretRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use SecretUnsetRequest.ProtoReflect.Descriptor instead.
+func (*SecretUnsetRequest) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{15}
 }
 
-func (x *UnsetSecretRequest) GetProvider() SecretProvider {
+func (x *SecretUnsetRequest) GetProvider() SecretProvider {
 	if x != nil && x.Provider != nil {
 		return *x.Provider
 	}
 	return SecretProvider_SECRET_PROVIDER_UNSPECIFIED
 }
 
-func (x *UnsetSecretRequest) GetRef() *ConfigRef {
+func (x *SecretUnsetRequest) GetRef() *ConfigRef {
 	if x != nil {
 		return x.Ref
 	}
 	return nil
 }
 
-type UnsetSecretResponse struct {
+type SecretUnsetResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 }
 
-func (x *UnsetSecretResponse) Reset() {
-	*x = UnsetSecretResponse{}
+func (x *SecretUnsetResponse) Reset() {
+	*x = SecretUnsetResponse{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UnsetSecretResponse) String() string {
+func (x *SecretUnsetResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UnsetSecretResponse) ProtoMessage() {}
+func (*SecretUnsetResponse) ProtoMessage() {}
 
-func (x *UnsetSecretResponse) ProtoReflect() protoreflect.Message {
+func (x *SecretUnsetResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -950,12 +950,12 @@ func (x *UnsetSecretResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UnsetSecretResponse.ProtoReflect.Descriptor instead.
-func (*UnsetSecretResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use SecretUnsetResponse.ProtoReflect.Descriptor instead.
+func (*SecretUnsetResponse) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{16}
 }
 
-type ListConfigResponse_Config struct {
+type ConfigListResponse_Config struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -964,20 +964,20 @@ type ListConfigResponse_Config struct {
 	Value   []byte `protobuf:"bytes,2,opt,name=value,proto3,oneof" json:"value,omitempty"`
 }
 
-func (x *ListConfigResponse_Config) Reset() {
-	*x = ListConfigResponse_Config{}
+func (x *ConfigListResponse_Config) Reset() {
+	*x = ConfigListResponse_Config{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListConfigResponse_Config) String() string {
+func (x *ConfigListResponse_Config) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListConfigResponse_Config) ProtoMessage() {}
+func (*ConfigListResponse_Config) ProtoMessage() {}
 
-func (x *ListConfigResponse_Config) ProtoReflect() protoreflect.Message {
+func (x *ConfigListResponse_Config) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -989,26 +989,26 @@ func (x *ListConfigResponse_Config) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListConfigResponse_Config.ProtoReflect.Descriptor instead.
-func (*ListConfigResponse_Config) Descriptor() ([]byte, []int) {
+// Deprecated: Use ConfigListResponse_Config.ProtoReflect.Descriptor instead.
+func (*ConfigListResponse_Config) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{2, 0}
 }
 
-func (x *ListConfigResponse_Config) GetRefPath() string {
+func (x *ConfigListResponse_Config) GetRefPath() string {
 	if x != nil {
 		return x.RefPath
 	}
 	return ""
 }
 
-func (x *ListConfigResponse_Config) GetValue() []byte {
+func (x *ConfigListResponse_Config) GetValue() []byte {
 	if x != nil {
 		return x.Value
 	}
 	return nil
 }
 
-type ListSecretsResponse_Secret struct {
+type SecretsListResponse_Secret struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -1017,20 +1017,20 @@ type ListSecretsResponse_Secret struct {
 	Value   []byte `protobuf:"bytes,2,opt,name=value,proto3,oneof" json:"value,omitempty"`
 }
 
-func (x *ListSecretsResponse_Secret) Reset() {
-	*x = ListSecretsResponse_Secret{}
+func (x *SecretsListResponse_Secret) Reset() {
+	*x = SecretsListResponse_Secret{}
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListSecretsResponse_Secret) String() string {
+func (x *SecretsListResponse_Secret) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListSecretsResponse_Secret) ProtoMessage() {}
+func (*SecretsListResponse_Secret) ProtoMessage() {}
 
-func (x *ListSecretsResponse_Secret) ProtoReflect() protoreflect.Message {
+func (x *SecretsListResponse_Secret) ProtoReflect() protoreflect.Message {
 	mi := &file_xyz_block_ftl_v1_admin_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1042,19 +1042,19 @@ func (x *ListSecretsResponse_Secret) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListSecretsResponse_Secret.ProtoReflect.Descriptor instead.
-func (*ListSecretsResponse_Secret) Descriptor() ([]byte, []int) {
+// Deprecated: Use SecretsListResponse_Secret.ProtoReflect.Descriptor instead.
+func (*SecretsListResponse_Secret) Descriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_admin_proto_rawDescGZIP(), []int{10, 0}
 }
 
-func (x *ListSecretsResponse_Secret) GetRefPath() string {
+func (x *SecretsListResponse_Secret) GetRefPath() string {
 	if x != nil {
 		return x.RefPath
 	}
 	return ""
 }
 
-func (x *ListSecretsResponse_Secret) GetValue() []byte {
+func (x *SecretsListResponse_Secret) GetValue() []byte {
 	if x != nil {
 		return x.Value
 	}
@@ -1073,8 +1073,8 @@ var file_xyz_block_ftl_v1_admin_proto_rawDesc = []byte{
 	0x75, 0x6c, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x06, 0x6d, 0x6f, 0x64,
 	0x75, 0x6c, 0x65, 0x88, 0x01, 0x01, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x42, 0x09, 0x0a, 0x07, 0x5f, 0x6d,
-	0x6f, 0x64, 0x75, 0x6c, 0x65, 0x22, 0xca, 0x01, 0x0a, 0x11, 0x4c, 0x69, 0x73, 0x74, 0x43, 0x6f,
-	0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1b, 0x0a, 0x06, 0x6d,
+	0x6f, 0x64, 0x75, 0x6c, 0x65, 0x22, 0xca, 0x01, 0x0a, 0x11, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67,
+	0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1b, 0x0a, 0x06, 0x6d,
 	0x6f, 0x64, 0x75, 0x6c, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x06, 0x6d,
 	0x6f, 0x64, 0x75, 0x6c, 0x65, 0x88, 0x01, 0x01, 0x12, 0x2a, 0x0a, 0x0e, 0x69, 0x6e, 0x63, 0x6c,
 	0x75, 0x64, 0x65, 0x5f, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08,
@@ -1086,25 +1086,25 @@ var file_xyz_block_ftl_v1_admin_proto_rawDesc = []byte{
 	0x69, 0x64, 0x65, 0x72, 0x88, 0x01, 0x01, 0x42, 0x09, 0x0a, 0x07, 0x5f, 0x6d, 0x6f, 0x64, 0x75,
 	0x6c, 0x65, 0x42, 0x11, 0x0a, 0x0f, 0x5f, 0x69, 0x6e, 0x63, 0x6c, 0x75, 0x64, 0x65, 0x5f, 0x76,
 	0x61, 0x6c, 0x75, 0x65, 0x73, 0x42, 0x0b, 0x0a, 0x09, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64,
-	0x65, 0x72, 0x22, 0xa5, 0x01, 0x0a, 0x12, 0x4c, 0x69, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69,
-	0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x45, 0x0a, 0x07, 0x63, 0x6f, 0x6e,
+	0x65, 0x72, 0x22, 0xa5, 0x01, 0x0a, 0x12, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x4c, 0x69, 0x73,
+	0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x45, 0x0a, 0x07, 0x63, 0x6f, 0x6e,
 	0x66, 0x69, 0x67, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x2b, 0x2e, 0x78, 0x79, 0x7a,
-	0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x4c, 0x69,
-	0x73, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x6f,
+	0x6e, 0x66, 0x69, 0x67, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
 	0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x07, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x73,
 	0x1a, 0x48, 0x0a, 0x06, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x19, 0x0a, 0x08, 0x72, 0x65,
 	0x66, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x72, 0x65,
 	0x66, 0x50, 0x61, 0x74, 0x68, 0x12, 0x19, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02,
 	0x20, 0x01, 0x28, 0x0c, 0x48, 0x00, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x88, 0x01, 0x01,
-	0x42, 0x08, 0x0a, 0x06, 0x5f, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x41, 0x0a, 0x10, 0x47, 0x65,
-	0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x2d,
+	0x42, 0x08, 0x0a, 0x06, 0x5f, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x41, 0x0a, 0x10, 0x43, 0x6f,
+	0x6e, 0x66, 0x69, 0x67, 0x47, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x2d,
 	0x0a, 0x03, 0x72, 0x65, 0x66, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1b, 0x2e, 0x78, 0x79,
 	0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x43,
 	0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x66, 0x52, 0x03, 0x72, 0x65, 0x66, 0x22, 0x29, 0x0a,
-	0x11, 0x47, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x11, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x47, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
 	0x73, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x0c, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0xa7, 0x01, 0x0a, 0x10, 0x53, 0x65, 0x74,
-	0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x41, 0x0a,
+	0x0c, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0xa7, 0x01, 0x0a, 0x10, 0x43, 0x6f, 0x6e,
+	0x66, 0x69, 0x67, 0x53, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x41, 0x0a,
 	0x08, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32,
 	0x20, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e,
 	0x76, 0x31, 0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65,
@@ -1114,9 +1114,9 @@ var file_xyz_block_ftl_v1_admin_proto_rawDesc = []byte{
 	0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x66, 0x52, 0x03, 0x72, 0x65, 0x66, 0x12,
 	0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05,
 	0x76, 0x61, 0x6c, 0x75, 0x65, 0x42, 0x0b, 0x0a, 0x09, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64,
-	0x65, 0x72, 0x22, 0x13, 0x0a, 0x11, 0x53, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x93, 0x01, 0x0a, 0x12, 0x55, 0x6e, 0x73, 0x65,
-	0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x41,
+	0x65, 0x72, 0x22, 0x13, 0x0a, 0x11, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x53, 0x65, 0x74, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x93, 0x01, 0x0a, 0x12, 0x43, 0x6f, 0x6e, 0x66,
+	0x69, 0x67, 0x55, 0x6e, 0x73, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x41,
 	0x0a, 0x08, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e,
 	0x32, 0x20, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c,
 	0x2e, 0x76, 0x31, 0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64,
@@ -1125,9 +1125,9 @@ var file_xyz_block_ftl_v1_admin_proto_rawDesc = []byte{
 	0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76,
 	0x31, 0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x66, 0x52, 0x03, 0x72, 0x65, 0x66,
 	0x42, 0x0b, 0x0a, 0x09, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x22, 0x15, 0x0a,
-	0x13, 0x55, 0x6e, 0x73, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x22, 0xcb, 0x01, 0x0a, 0x12, 0x4c, 0x69, 0x73, 0x74, 0x53, 0x65, 0x63,
-	0x72, 0x65, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1b, 0x0a, 0x06, 0x6d,
+	0x13, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x55, 0x6e, 0x73, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x22, 0xcb, 0x01, 0x0a, 0x12, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x73,
+	0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x1b, 0x0a, 0x06, 0x6d,
 	0x6f, 0x64, 0x75, 0x6c, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x06, 0x6d,
 	0x6f, 0x64, 0x75, 0x6c, 0x65, 0x88, 0x01, 0x01, 0x12, 0x2a, 0x0a, 0x0e, 0x69, 0x6e, 0x63, 0x6c,
 	0x75, 0x64, 0x65, 0x5f, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x08,
@@ -1139,25 +1139,25 @@ var file_xyz_block_ftl_v1_admin_proto_rawDesc = []byte{
 	0x69, 0x64, 0x65, 0x72, 0x88, 0x01, 0x01, 0x42, 0x09, 0x0a, 0x07, 0x5f, 0x6d, 0x6f, 0x64, 0x75,
 	0x6c, 0x65, 0x42, 0x11, 0x0a, 0x0f, 0x5f, 0x69, 0x6e, 0x63, 0x6c, 0x75, 0x64, 0x65, 0x5f, 0x76,
 	0x61, 0x6c, 0x75, 0x65, 0x73, 0x42, 0x0b, 0x0a, 0x09, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64,
-	0x65, 0x72, 0x22, 0xa7, 0x01, 0x0a, 0x13, 0x4c, 0x69, 0x73, 0x74, 0x53, 0x65, 0x63, 0x72, 0x65,
-	0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x46, 0x0a, 0x07, 0x73, 0x65,
+	0x65, 0x72, 0x22, 0xa7, 0x01, 0x0a, 0x13, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x73, 0x4c, 0x69,
+	0x73, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x46, 0x0a, 0x07, 0x73, 0x65,
 	0x63, 0x72, 0x65, 0x74, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x78, 0x79,
-	0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x4c,
-	0x69, 0x73, 0x74, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x53,
+	0x65, 0x63, 0x72, 0x65, 0x74, 0x73, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
 	0x73, 0x65, 0x2e, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x07, 0x73, 0x65, 0x63, 0x72, 0x65,
 	0x74, 0x73, 0x1a, 0x48, 0x0a, 0x06, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x12, 0x19, 0x0a, 0x08,
 	0x72, 0x65, 0x66, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07,
 	0x72, 0x65, 0x66, 0x50, 0x61, 0x74, 0x68, 0x12, 0x19, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65,
 	0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x48, 0x00, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x88,
 	0x01, 0x01, 0x42, 0x08, 0x0a, 0x06, 0x5f, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x41, 0x0a, 0x10,
-	0x47, 0x65, 0x74, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x47, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
 	0x12, 0x2d, 0x0a, 0x03, 0x72, 0x65, 0x66, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1b, 0x2e,
 	0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31,
 	0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x66, 0x52, 0x03, 0x72, 0x65, 0x66, 0x22,
-	0x29, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70,
+	0x29, 0x0a, 0x11, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x47, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70,
 	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x0c, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0xa7, 0x01, 0x0a, 0x10, 0x53,
-	0x65, 0x74, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
+	0x65, 0x63, 0x72, 0x65, 0x74, 0x53, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
 	0x41, 0x0a, 0x08, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28,
 	0x0e, 0x32, 0x20, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74,
 	0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x76, 0x69,
@@ -1167,9 +1167,9 @@ var file_xyz_block_ftl_v1_admin_proto_rawDesc = []byte{
 	0x76, 0x31, 0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x66, 0x52, 0x03, 0x72, 0x65,
 	0x66, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c,
 	0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x42, 0x0b, 0x0a, 0x09, 0x5f, 0x70, 0x72, 0x6f, 0x76,
-	0x69, 0x64, 0x65, 0x72, 0x22, 0x13, 0x0a, 0x11, 0x53, 0x65, 0x74, 0x53, 0x65, 0x63, 0x72, 0x65,
-	0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x93, 0x01, 0x0a, 0x12, 0x55, 0x6e,
-	0x73, 0x65, 0x74, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x69, 0x64, 0x65, 0x72, 0x22, 0x13, 0x0a, 0x11, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x53, 0x65,
+	0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x93, 0x01, 0x0a, 0x12, 0x53, 0x65,
+	0x63, 0x72, 0x65, 0x74, 0x55, 0x6e, 0x73, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
 	0x12, 0x41, 0x0a, 0x08, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01,
 	0x28, 0x0e, 0x32, 0x20, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66,
 	0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x76,
@@ -1178,7 +1178,7 @@ var file_xyz_block_ftl_v1_admin_proto_rawDesc = []byte{
 	0x32, 0x1b, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c,
 	0x2e, 0x76, 0x31, 0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x66, 0x52, 0x03, 0x72,
 	0x65, 0x66, 0x42, 0x0b, 0x0a, 0x09, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x22,
-	0x15, 0x0a, 0x13, 0x55, 0x6e, 0x73, 0x65, 0x74, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65,
+	0x15, 0x0a, 0x13, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x55, 0x6e, 0x73, 0x65, 0x74, 0x52, 0x65,
 	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x2a, 0x80, 0x01, 0x0a, 0x0e, 0x43, 0x6f, 0x6e, 0x66, 0x69,
 	0x67, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x12, 0x1f, 0x0a, 0x1b, 0x43, 0x4f, 0x4e,
 	0x46, 0x49, 0x47, 0x5f, 0x50, 0x52, 0x4f, 0x56, 0x49, 0x44, 0x45, 0x52, 0x5f, 0x55, 0x4e, 0x53,
@@ -1207,48 +1207,48 @@ var file_xyz_block_ftl_v1_admin_proto_rawDesc = []byte{
 	0x69, 0x6e, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x03, 0x90, 0x02, 0x01,
 	0x12, 0x57, 0x0a, 0x0a, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x23,
 	0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76,
-	0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75,
+	0x31, 0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x71, 0x75,
 	0x65, 0x73, 0x74, 0x1a, 0x24, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e,
-	0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69,
-	0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x54, 0x0a, 0x09, 0x43, 0x6f, 0x6e,
+	0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x4c, 0x69, 0x73,
+	0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x54, 0x0a, 0x09, 0x43, 0x6f, 0x6e,
 	0x66, 0x69, 0x67, 0x47, 0x65, 0x74, 0x12, 0x22, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f,
-	0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x43, 0x6f, 0x6e,
-	0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23, 0x2e, 0x78, 0x79, 0x7a,
-	0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65,
-	0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
+	0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67,
+	0x47, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23, 0x2e, 0x78, 0x79, 0x7a,
+	0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x6f,
+	0x6e, 0x66, 0x69, 0x67, 0x47, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
 	0x54, 0x0a, 0x09, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x53, 0x65, 0x74, 0x12, 0x22, 0x2e, 0x78,
 	0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e,
-	0x53, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x53, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
 	0x1a, 0x23, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c,
-	0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73,
+	0x2e, 0x76, 0x31, 0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x53, 0x65, 0x74, 0x52, 0x65, 0x73,
 	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x5a, 0x0a, 0x0b, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x55,
 	0x6e, 0x73, 0x65, 0x74, 0x12, 0x24, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b,
-	0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x55, 0x6e, 0x73, 0x65, 0x74, 0x43, 0x6f, 0x6e,
-	0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x25, 0x2e, 0x78, 0x79, 0x7a,
-	0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x55, 0x6e,
-	0x73, 0x65, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x55, 0x6e,
+	0x73, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x25, 0x2e, 0x78, 0x79, 0x7a,
+	0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x43, 0x6f,
+	0x6e, 0x66, 0x69, 0x67, 0x55, 0x6e, 0x73, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
 	0x65, 0x12, 0x5a, 0x0a, 0x0b, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x73, 0x4c, 0x69, 0x73, 0x74,
 	0x12, 0x24, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c,
-	0x2e, 0x76, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x73, 0x52,
+	0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x73, 0x4c, 0x69, 0x73, 0x74, 0x52,
 	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x25, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f,
-	0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x53, 0x65,
-	0x63, 0x72, 0x65, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x54, 0x0a,
+	0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74,
+	0x73, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x54, 0x0a,
 	0x09, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x47, 0x65, 0x74, 0x12, 0x22, 0x2e, 0x78, 0x79, 0x7a,
-	0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65,
-	0x74, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23,
+	0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65,
+	0x63, 0x72, 0x65, 0x74, 0x47, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23,
 	0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76,
-	0x31, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x31, 0x2e, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x47, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f,
 	0x6e, 0x73, 0x65, 0x12, 0x54, 0x0a, 0x09, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x53, 0x65, 0x74,
 	0x12, 0x22, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c,
-	0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x74, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x71,
+	0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x53, 0x65, 0x74, 0x52, 0x65, 0x71,
 	0x75, 0x65, 0x73, 0x74, 0x1a, 0x23, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b,
-	0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x74, 0x53, 0x65, 0x63, 0x72, 0x65,
+	0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x53, 0x65,
 	0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x5a, 0x0a, 0x0b, 0x53, 0x65, 0x63,
 	0x72, 0x65, 0x74, 0x55, 0x6e, 0x73, 0x65, 0x74, 0x12, 0x24, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62,
-	0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x55, 0x6e, 0x73, 0x65,
-	0x74, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x25,
+	0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x63, 0x72,
+	0x65, 0x74, 0x55, 0x6e, 0x73, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x25,
 	0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76,
-	0x31, 0x2e, 0x55, 0x6e, 0x73, 0x65, 0x74, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x73,
+	0x31, 0x2e, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x55, 0x6e, 0x73, 0x65, 0x74, 0x52, 0x65, 0x73,
 	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x44, 0x50, 0x01, 0x5a, 0x40, 0x67, 0x69, 0x74, 0x68, 0x75,
 	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x54, 0x42, 0x44, 0x35, 0x34, 0x35, 0x36, 0x36, 0x39, 0x37,
 	0x35, 0x2f, 0x66, 0x74, 0x6c, 0x2f, 0x62, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x2f, 0x70, 0x72,
@@ -1275,60 +1275,60 @@ var file_xyz_block_ftl_v1_admin_proto_goTypes = []any{
 	(ConfigProvider)(0),                // 0: xyz.block.ftl.v1.ConfigProvider
 	(SecretProvider)(0),                // 1: xyz.block.ftl.v1.SecretProvider
 	(*ConfigRef)(nil),                  // 2: xyz.block.ftl.v1.ConfigRef
-	(*ListConfigRequest)(nil),          // 3: xyz.block.ftl.v1.ListConfigRequest
-	(*ListConfigResponse)(nil),         // 4: xyz.block.ftl.v1.ListConfigResponse
-	(*GetConfigRequest)(nil),           // 5: xyz.block.ftl.v1.GetConfigRequest
-	(*GetConfigResponse)(nil),          // 6: xyz.block.ftl.v1.GetConfigResponse
-	(*SetConfigRequest)(nil),           // 7: xyz.block.ftl.v1.SetConfigRequest
-	(*SetConfigResponse)(nil),          // 8: xyz.block.ftl.v1.SetConfigResponse
-	(*UnsetConfigRequest)(nil),         // 9: xyz.block.ftl.v1.UnsetConfigRequest
-	(*UnsetConfigResponse)(nil),        // 10: xyz.block.ftl.v1.UnsetConfigResponse
-	(*ListSecretsRequest)(nil),         // 11: xyz.block.ftl.v1.ListSecretsRequest
-	(*ListSecretsResponse)(nil),        // 12: xyz.block.ftl.v1.ListSecretsResponse
-	(*GetSecretRequest)(nil),           // 13: xyz.block.ftl.v1.GetSecretRequest
-	(*GetSecretResponse)(nil),          // 14: xyz.block.ftl.v1.GetSecretResponse
-	(*SetSecretRequest)(nil),           // 15: xyz.block.ftl.v1.SetSecretRequest
-	(*SetSecretResponse)(nil),          // 16: xyz.block.ftl.v1.SetSecretResponse
-	(*UnsetSecretRequest)(nil),         // 17: xyz.block.ftl.v1.UnsetSecretRequest
-	(*UnsetSecretResponse)(nil),        // 18: xyz.block.ftl.v1.UnsetSecretResponse
-	(*ListConfigResponse_Config)(nil),  // 19: xyz.block.ftl.v1.ListConfigResponse.Config
-	(*ListSecretsResponse_Secret)(nil), // 20: xyz.block.ftl.v1.ListSecretsResponse.Secret
+	(*ConfigListRequest)(nil),          // 3: xyz.block.ftl.v1.ConfigListRequest
+	(*ConfigListResponse)(nil),         // 4: xyz.block.ftl.v1.ConfigListResponse
+	(*ConfigGetRequest)(nil),           // 5: xyz.block.ftl.v1.ConfigGetRequest
+	(*ConfigGetResponse)(nil),          // 6: xyz.block.ftl.v1.ConfigGetResponse
+	(*ConfigSetRequest)(nil),           // 7: xyz.block.ftl.v1.ConfigSetRequest
+	(*ConfigSetResponse)(nil),          // 8: xyz.block.ftl.v1.ConfigSetResponse
+	(*ConfigUnsetRequest)(nil),         // 9: xyz.block.ftl.v1.ConfigUnsetRequest
+	(*ConfigUnsetResponse)(nil),        // 10: xyz.block.ftl.v1.ConfigUnsetResponse
+	(*SecretsListRequest)(nil),         // 11: xyz.block.ftl.v1.SecretsListRequest
+	(*SecretsListResponse)(nil),        // 12: xyz.block.ftl.v1.SecretsListResponse
+	(*SecretGetRequest)(nil),           // 13: xyz.block.ftl.v1.SecretGetRequest
+	(*SecretGetResponse)(nil),          // 14: xyz.block.ftl.v1.SecretGetResponse
+	(*SecretSetRequest)(nil),           // 15: xyz.block.ftl.v1.SecretSetRequest
+	(*SecretSetResponse)(nil),          // 16: xyz.block.ftl.v1.SecretSetResponse
+	(*SecretUnsetRequest)(nil),         // 17: xyz.block.ftl.v1.SecretUnsetRequest
+	(*SecretUnsetResponse)(nil),        // 18: xyz.block.ftl.v1.SecretUnsetResponse
+	(*ConfigListResponse_Config)(nil),  // 19: xyz.block.ftl.v1.ConfigListResponse.Config
+	(*SecretsListResponse_Secret)(nil), // 20: xyz.block.ftl.v1.SecretsListResponse.Secret
 	(*PingRequest)(nil),                // 21: xyz.block.ftl.v1.PingRequest
 	(*PingResponse)(nil),               // 22: xyz.block.ftl.v1.PingResponse
 }
 var file_xyz_block_ftl_v1_admin_proto_depIdxs = []int32{
-	0,  // 0: xyz.block.ftl.v1.ListConfigRequest.provider:type_name -> xyz.block.ftl.v1.ConfigProvider
-	19, // 1: xyz.block.ftl.v1.ListConfigResponse.configs:type_name -> xyz.block.ftl.v1.ListConfigResponse.Config
-	2,  // 2: xyz.block.ftl.v1.GetConfigRequest.ref:type_name -> xyz.block.ftl.v1.ConfigRef
-	0,  // 3: xyz.block.ftl.v1.SetConfigRequest.provider:type_name -> xyz.block.ftl.v1.ConfigProvider
-	2,  // 4: xyz.block.ftl.v1.SetConfigRequest.ref:type_name -> xyz.block.ftl.v1.ConfigRef
-	0,  // 5: xyz.block.ftl.v1.UnsetConfigRequest.provider:type_name -> xyz.block.ftl.v1.ConfigProvider
-	2,  // 6: xyz.block.ftl.v1.UnsetConfigRequest.ref:type_name -> xyz.block.ftl.v1.ConfigRef
-	1,  // 7: xyz.block.ftl.v1.ListSecretsRequest.provider:type_name -> xyz.block.ftl.v1.SecretProvider
-	20, // 8: xyz.block.ftl.v1.ListSecretsResponse.secrets:type_name -> xyz.block.ftl.v1.ListSecretsResponse.Secret
-	2,  // 9: xyz.block.ftl.v1.GetSecretRequest.ref:type_name -> xyz.block.ftl.v1.ConfigRef
-	1,  // 10: xyz.block.ftl.v1.SetSecretRequest.provider:type_name -> xyz.block.ftl.v1.SecretProvider
-	2,  // 11: xyz.block.ftl.v1.SetSecretRequest.ref:type_name -> xyz.block.ftl.v1.ConfigRef
-	1,  // 12: xyz.block.ftl.v1.UnsetSecretRequest.provider:type_name -> xyz.block.ftl.v1.SecretProvider
-	2,  // 13: xyz.block.ftl.v1.UnsetSecretRequest.ref:type_name -> xyz.block.ftl.v1.ConfigRef
+	0,  // 0: xyz.block.ftl.v1.ConfigListRequest.provider:type_name -> xyz.block.ftl.v1.ConfigProvider
+	19, // 1: xyz.block.ftl.v1.ConfigListResponse.configs:type_name -> xyz.block.ftl.v1.ConfigListResponse.Config
+	2,  // 2: xyz.block.ftl.v1.ConfigGetRequest.ref:type_name -> xyz.block.ftl.v1.ConfigRef
+	0,  // 3: xyz.block.ftl.v1.ConfigSetRequest.provider:type_name -> xyz.block.ftl.v1.ConfigProvider
+	2,  // 4: xyz.block.ftl.v1.ConfigSetRequest.ref:type_name -> xyz.block.ftl.v1.ConfigRef
+	0,  // 5: xyz.block.ftl.v1.ConfigUnsetRequest.provider:type_name -> xyz.block.ftl.v1.ConfigProvider
+	2,  // 6: xyz.block.ftl.v1.ConfigUnsetRequest.ref:type_name -> xyz.block.ftl.v1.ConfigRef
+	1,  // 7: xyz.block.ftl.v1.SecretsListRequest.provider:type_name -> xyz.block.ftl.v1.SecretProvider
+	20, // 8: xyz.block.ftl.v1.SecretsListResponse.secrets:type_name -> xyz.block.ftl.v1.SecretsListResponse.Secret
+	2,  // 9: xyz.block.ftl.v1.SecretGetRequest.ref:type_name -> xyz.block.ftl.v1.ConfigRef
+	1,  // 10: xyz.block.ftl.v1.SecretSetRequest.provider:type_name -> xyz.block.ftl.v1.SecretProvider
+	2,  // 11: xyz.block.ftl.v1.SecretSetRequest.ref:type_name -> xyz.block.ftl.v1.ConfigRef
+	1,  // 12: xyz.block.ftl.v1.SecretUnsetRequest.provider:type_name -> xyz.block.ftl.v1.SecretProvider
+	2,  // 13: xyz.block.ftl.v1.SecretUnsetRequest.ref:type_name -> xyz.block.ftl.v1.ConfigRef
 	21, // 14: xyz.block.ftl.v1.AdminService.Ping:input_type -> xyz.block.ftl.v1.PingRequest
-	3,  // 15: xyz.block.ftl.v1.AdminService.ConfigList:input_type -> xyz.block.ftl.v1.ListConfigRequest
-	5,  // 16: xyz.block.ftl.v1.AdminService.ConfigGet:input_type -> xyz.block.ftl.v1.GetConfigRequest
-	7,  // 17: xyz.block.ftl.v1.AdminService.ConfigSet:input_type -> xyz.block.ftl.v1.SetConfigRequest
-	9,  // 18: xyz.block.ftl.v1.AdminService.ConfigUnset:input_type -> xyz.block.ftl.v1.UnsetConfigRequest
-	11, // 19: xyz.block.ftl.v1.AdminService.SecretsList:input_type -> xyz.block.ftl.v1.ListSecretsRequest
-	13, // 20: xyz.block.ftl.v1.AdminService.SecretGet:input_type -> xyz.block.ftl.v1.GetSecretRequest
-	15, // 21: xyz.block.ftl.v1.AdminService.SecretSet:input_type -> xyz.block.ftl.v1.SetSecretRequest
-	17, // 22: xyz.block.ftl.v1.AdminService.SecretUnset:input_type -> xyz.block.ftl.v1.UnsetSecretRequest
+	3,  // 15: xyz.block.ftl.v1.AdminService.ConfigList:input_type -> xyz.block.ftl.v1.ConfigListRequest
+	5,  // 16: xyz.block.ftl.v1.AdminService.ConfigGet:input_type -> xyz.block.ftl.v1.ConfigGetRequest
+	7,  // 17: xyz.block.ftl.v1.AdminService.ConfigSet:input_type -> xyz.block.ftl.v1.ConfigSetRequest
+	9,  // 18: xyz.block.ftl.v1.AdminService.ConfigUnset:input_type -> xyz.block.ftl.v1.ConfigUnsetRequest
+	11, // 19: xyz.block.ftl.v1.AdminService.SecretsList:input_type -> xyz.block.ftl.v1.SecretsListRequest
+	13, // 20: xyz.block.ftl.v1.AdminService.SecretGet:input_type -> xyz.block.ftl.v1.SecretGetRequest
+	15, // 21: xyz.block.ftl.v1.AdminService.SecretSet:input_type -> xyz.block.ftl.v1.SecretSetRequest
+	17, // 22: xyz.block.ftl.v1.AdminService.SecretUnset:input_type -> xyz.block.ftl.v1.SecretUnsetRequest
 	22, // 23: xyz.block.ftl.v1.AdminService.Ping:output_type -> xyz.block.ftl.v1.PingResponse
-	4,  // 24: xyz.block.ftl.v1.AdminService.ConfigList:output_type -> xyz.block.ftl.v1.ListConfigResponse
-	6,  // 25: xyz.block.ftl.v1.AdminService.ConfigGet:output_type -> xyz.block.ftl.v1.GetConfigResponse
-	8,  // 26: xyz.block.ftl.v1.AdminService.ConfigSet:output_type -> xyz.block.ftl.v1.SetConfigResponse
-	10, // 27: xyz.block.ftl.v1.AdminService.ConfigUnset:output_type -> xyz.block.ftl.v1.UnsetConfigResponse
-	12, // 28: xyz.block.ftl.v1.AdminService.SecretsList:output_type -> xyz.block.ftl.v1.ListSecretsResponse
-	14, // 29: xyz.block.ftl.v1.AdminService.SecretGet:output_type -> xyz.block.ftl.v1.GetSecretResponse
-	16, // 30: xyz.block.ftl.v1.AdminService.SecretSet:output_type -> xyz.block.ftl.v1.SetSecretResponse
-	18, // 31: xyz.block.ftl.v1.AdminService.SecretUnset:output_type -> xyz.block.ftl.v1.UnsetSecretResponse
+	4,  // 24: xyz.block.ftl.v1.AdminService.ConfigList:output_type -> xyz.block.ftl.v1.ConfigListResponse
+	6,  // 25: xyz.block.ftl.v1.AdminService.ConfigGet:output_type -> xyz.block.ftl.v1.ConfigGetResponse
+	8,  // 26: xyz.block.ftl.v1.AdminService.ConfigSet:output_type -> xyz.block.ftl.v1.ConfigSetResponse
+	10, // 27: xyz.block.ftl.v1.AdminService.ConfigUnset:output_type -> xyz.block.ftl.v1.ConfigUnsetResponse
+	12, // 28: xyz.block.ftl.v1.AdminService.SecretsList:output_type -> xyz.block.ftl.v1.SecretsListResponse
+	14, // 29: xyz.block.ftl.v1.AdminService.SecretGet:output_type -> xyz.block.ftl.v1.SecretGetResponse
+	16, // 30: xyz.block.ftl.v1.AdminService.SecretSet:output_type -> xyz.block.ftl.v1.SecretSetResponse
+	18, // 31: xyz.block.ftl.v1.AdminService.SecretUnset:output_type -> xyz.block.ftl.v1.SecretUnsetResponse
 	23, // [23:32] is the sub-list for method output_type
 	14, // [14:23] is the sub-list for method input_type
 	14, // [14:14] is the sub-list for extension type_name

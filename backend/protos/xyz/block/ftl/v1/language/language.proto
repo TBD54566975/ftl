@@ -123,7 +123,7 @@ message DependenciesRequest {
   ModuleConfig module_config = 1;
 }
 
-message DependenciesResponse {
+message GetDependenciesResponse {
   repeated string modules = 1;
 }
 
@@ -254,7 +254,7 @@ message BuildFailure {
 }
 
 // Every type of message that can be streamed from the language plugin for a build.
-message BuildEvent {
+message BuildResponse {
   oneof event {
     AutoRebuildStarted auto_rebuild_started = 2;
     BuildSuccess build_success = 3;
@@ -308,7 +308,7 @@ service LanguageService {
 
   // Extract dependencies for a module
   // FTL will ensure that these dependencies are built before requesting a build for this module.
-  rpc GetDependencies(DependenciesRequest) returns (DependenciesResponse);
+  rpc GetDependencies(DependenciesRequest) returns (GetDependenciesResponse);
 
   // Build the module and stream back build events.
   //
@@ -319,7 +319,7 @@ service LanguageService {
   // file changes and automatically rebuild as needed as long as this build request is alive. Each automactic
   // rebuild must include the latest build context id provided by the request or subsequent BuildContextUpdated
   // calls.
-  rpc Build(BuildRequest) returns (stream BuildEvent);
+  rpc Build(BuildRequest) returns (stream BuildResponse);
 
   // While a Build call with "rebuild_automatically" set is active, BuildContextUpdated is called whenever the
   // build context is updated.

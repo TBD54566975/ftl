@@ -21,12 +21,12 @@ type pluginClient interface {
 	getCreateModuleFlags(ctx context.Context, req *connect.Request[langpb.GetCreateModuleFlagsRequest]) (*connect.Response[langpb.GetCreateModuleFlagsResponse], error)
 	createModule(ctx context.Context, req *connect.Request[langpb.CreateModuleRequest]) (*connect.Response[langpb.CreateModuleResponse], error)
 	moduleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error)
-	getDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error)
+	getDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.GetDependenciesResponse], error)
 
 	generateStubs(ctx context.Context, req *connect.Request[langpb.GenerateStubsRequest]) (*connect.Response[langpb.GenerateStubsResponse], error)
 	syncStubReferences(ctx context.Context, req *connect.Request[langpb.SyncStubReferencesRequest]) (*connect.Response[langpb.SyncStubReferencesResponse], error)
 
-	build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildEvent], streamCancelFunc, error)
+	build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildResponse], streamCancelFunc, error)
 	buildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error)
 
 	kill() error
@@ -130,7 +130,7 @@ func (p *pluginClientImpl) createModule(ctx context.Context, req *connect.Reques
 	return resp, nil
 }
 
-func (p *pluginClientImpl) getDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
+func (p *pluginClientImpl) getDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.GetDependenciesResponse], error) {
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (p *pluginClientImpl) syncStubReferences(ctx context.Context, req *connect.
 	return resp, nil
 }
 
-func (p *pluginClientImpl) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildEvent], streamCancelFunc, error) {
+func (p *pluginClientImpl) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildResponse], streamCancelFunc, error) {
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, nil, err
 	}
@@ -172,7 +172,7 @@ func (p *pluginClientImpl) build(ctx context.Context, req *connect.Request[langp
 		return nil, nil, err //nolint:wrapcheck
 	}
 
-	streamChan := make(chan result.Result[*langpb.BuildEvent], 64)
+	streamChan := make(chan result.Result[*langpb.BuildResponse], 64)
 	go streamToChan(stream, streamChan)
 
 	return streamChan, func() {
@@ -181,12 +181,12 @@ func (p *pluginClientImpl) build(ctx context.Context, req *connect.Request[langp
 	}, nil
 }
 
-func streamToChan(stream *connect.ServerStreamForClient[langpb.BuildEvent], ch chan result.Result[*langpb.BuildEvent]) {
+func streamToChan(stream *connect.ServerStreamForClient[langpb.BuildResponse], ch chan result.Result[*langpb.BuildResponse]) {
 	for stream.Receive() {
 		ch <- result.From(stream.Msg(), nil)
 	}
 	if err := stream.Err(); err != nil {
-		ch <- result.Err[*langpb.BuildEvent](err)
+		ch <- result.Err[*langpb.BuildResponse](err)
 	}
 	close(ch)
 }

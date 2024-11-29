@@ -30,7 +30,7 @@ message ModuleContextRequest {
   string module = 1;
 }
 
-message ModuleContextResponse {
+message GetModuleContextResponse {
   message Ref {
     optional string module = 1;
     string name = 2;
@@ -61,7 +61,7 @@ service ModuleService {
   }
 
   // Get configuration state for the module
-  rpc GetModuleContext(ModuleContextRequest) returns (stream ModuleContextResponse);
+  rpc GetModuleContext(ModuleContextRequest) returns (stream GetModuleContextResponse);
 
   // Acquire (and renew) a lease for a deployment.
   //

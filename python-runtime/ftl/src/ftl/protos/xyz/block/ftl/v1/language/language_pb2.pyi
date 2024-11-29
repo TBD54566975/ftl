@@ -122,7 +122,7 @@ class DependenciesRequest(_message.Message):
     module_config: ModuleConfig
     def __init__(self, module_config: _Optional[_Union[ModuleConfig, _Mapping]] = ...) -> None: ...
 
-class DependenciesResponse(_message.Message):
+class GetDependenciesResponse(_message.Message):
     __slots__ = ("modules",)
     MODULES_FIELD_NUMBER: _ClassVar[int]
     modules: _containers.RepeatedScalarFieldContainer[str]
@@ -246,7 +246,7 @@ class BuildFailure(_message.Message):
     invalidate_dependencies: bool
     def __init__(self, context_id: _Optional[str] = ..., is_automatic_rebuild: bool = ..., errors: _Optional[_Union[ErrorList, _Mapping]] = ..., invalidate_dependencies: bool = ...) -> None: ...
 
-class BuildEvent(_message.Message):
+class BuildResponse(_message.Message):
     __slots__ = ("auto_rebuild_started", "build_success", "build_failure")
     AUTO_REBUILD_STARTED_FIELD_NUMBER: _ClassVar[int]
     BUILD_SUCCESS_FIELD_NUMBER: _ClassVar[int]

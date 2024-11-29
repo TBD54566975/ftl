@@ -60,21 +60,21 @@ const (
 type AdminServiceClient interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	// List configuration.
-	ConfigList(context.Context, *connect.Request[v1.ListConfigRequest]) (*connect.Response[v1.ListConfigResponse], error)
+	ConfigList(context.Context, *connect.Request[v1.ConfigListRequest]) (*connect.Response[v1.ConfigListResponse], error)
 	// Get a config value.
-	ConfigGet(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error)
+	ConfigGet(context.Context, *connect.Request[v1.ConfigGetRequest]) (*connect.Response[v1.ConfigGetResponse], error)
 	// Set a config value.
-	ConfigSet(context.Context, *connect.Request[v1.SetConfigRequest]) (*connect.Response[v1.SetConfigResponse], error)
+	ConfigSet(context.Context, *connect.Request[v1.ConfigSetRequest]) (*connect.Response[v1.ConfigSetResponse], error)
 	// Unset a config value.
-	ConfigUnset(context.Context, *connect.Request[v1.UnsetConfigRequest]) (*connect.Response[v1.UnsetConfigResponse], error)
+	ConfigUnset(context.Context, *connect.Request[v1.ConfigUnsetRequest]) (*connect.Response[v1.ConfigUnsetResponse], error)
 	// List secrets.
-	SecretsList(context.Context, *connect.Request[v1.ListSecretsRequest]) (*connect.Response[v1.ListSecretsResponse], error)
+	SecretsList(context.Context, *connect.Request[v1.SecretsListRequest]) (*connect.Response[v1.SecretsListResponse], error)
 	// Get a secret.
-	SecretGet(context.Context, *connect.Request[v1.GetSecretRequest]) (*connect.Response[v1.GetSecretResponse], error)
+	SecretGet(context.Context, *connect.Request[v1.SecretGetRequest]) (*connect.Response[v1.SecretGetResponse], error)
 	// Set a secret.
-	SecretSet(context.Context, *connect.Request[v1.SetSecretRequest]) (*connect.Response[v1.SetSecretResponse], error)
+	SecretSet(context.Context, *connect.Request[v1.SecretSetRequest]) (*connect.Response[v1.SecretSetResponse], error)
 	// Unset a secret.
-	SecretUnset(context.Context, *connect.Request[v1.UnsetSecretRequest]) (*connect.Response[v1.UnsetSecretResponse], error)
+	SecretUnset(context.Context, *connect.Request[v1.SecretUnsetRequest]) (*connect.Response[v1.SecretUnsetResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the xyz.block.ftl.v1.AdminService service. By
@@ -93,42 +93,42 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
-		configList: connect.NewClient[v1.ListConfigRequest, v1.ListConfigResponse](
+		configList: connect.NewClient[v1.ConfigListRequest, v1.ConfigListResponse](
 			httpClient,
 			baseURL+AdminServiceConfigListProcedure,
 			opts...,
 		),
-		configGet: connect.NewClient[v1.GetConfigRequest, v1.GetConfigResponse](
+		configGet: connect.NewClient[v1.ConfigGetRequest, v1.ConfigGetResponse](
 			httpClient,
 			baseURL+AdminServiceConfigGetProcedure,
 			opts...,
 		),
-		configSet: connect.NewClient[v1.SetConfigRequest, v1.SetConfigResponse](
+		configSet: connect.NewClient[v1.ConfigSetRequest, v1.ConfigSetResponse](
 			httpClient,
 			baseURL+AdminServiceConfigSetProcedure,
 			opts...,
 		),
-		configUnset: connect.NewClient[v1.UnsetConfigRequest, v1.UnsetConfigResponse](
+		configUnset: connect.NewClient[v1.ConfigUnsetRequest, v1.ConfigUnsetResponse](
 			httpClient,
 			baseURL+AdminServiceConfigUnsetProcedure,
 			opts...,
 		),
-		secretsList: connect.NewClient[v1.ListSecretsRequest, v1.ListSecretsResponse](
+		secretsList: connect.NewClient[v1.SecretsListRequest, v1.SecretsListResponse](
 			httpClient,
 			baseURL+AdminServiceSecretsListProcedure,
 			opts...,
 		),
-		secretGet: connect.NewClient[v1.GetSecretRequest, v1.GetSecretResponse](
+		secretGet: connect.NewClient[v1.SecretGetRequest, v1.SecretGetResponse](
 			httpClient,
 			baseURL+AdminServiceSecretGetProcedure,
 			opts...,
 		),
-		secretSet: connect.NewClient[v1.SetSecretRequest, v1.SetSecretResponse](
+		secretSet: connect.NewClient[v1.SecretSetRequest, v1.SecretSetResponse](
 			httpClient,
 			baseURL+AdminServiceSecretSetProcedure,
 			opts...,
 		),
-		secretUnset: connect.NewClient[v1.UnsetSecretRequest, v1.UnsetSecretResponse](
+		secretUnset: connect.NewClient[v1.SecretUnsetRequest, v1.SecretUnsetResponse](
 			httpClient,
 			baseURL+AdminServiceSecretUnsetProcedure,
 			opts...,
@@ -139,14 +139,14 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 // adminServiceClient implements AdminServiceClient.
 type adminServiceClient struct {
 	ping        *connect.Client[v1.PingRequest, v1.PingResponse]
-	configList  *connect.Client[v1.ListConfigRequest, v1.ListConfigResponse]
-	configGet   *connect.Client[v1.GetConfigRequest, v1.GetConfigResponse]
-	configSet   *connect.Client[v1.SetConfigRequest, v1.SetConfigResponse]
-	configUnset *connect.Client[v1.UnsetConfigRequest, v1.UnsetConfigResponse]
-	secretsList *connect.Client[v1.ListSecretsRequest, v1.ListSecretsResponse]
-	secretGet   *connect.Client[v1.GetSecretRequest, v1.GetSecretResponse]
-	secretSet   *connect.Client[v1.SetSecretRequest, v1.SetSecretResponse]
-	secretUnset *connect.Client[v1.UnsetSecretRequest, v1.UnsetSecretResponse]
+	configList  *connect.Client[v1.ConfigListRequest, v1.ConfigListResponse]
+	configGet   *connect.Client[v1.ConfigGetRequest, v1.ConfigGetResponse]
+	configSet   *connect.Client[v1.ConfigSetRequest, v1.ConfigSetResponse]
+	configUnset *connect.Client[v1.ConfigUnsetRequest, v1.ConfigUnsetResponse]
+	secretsList *connect.Client[v1.SecretsListRequest, v1.SecretsListResponse]
+	secretGet   *connect.Client[v1.SecretGetRequest, v1.SecretGetResponse]
+	secretSet   *connect.Client[v1.SecretSetRequest, v1.SecretSetResponse]
+	secretUnset *connect.Client[v1.SecretUnsetRequest, v1.SecretUnsetResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.AdminService.Ping.
@@ -155,42 +155,42 @@ func (c *adminServiceClient) Ping(ctx context.Context, req *connect.Request[v1.P
 }
 
 // ConfigList calls xyz.block.ftl.v1.AdminService.ConfigList.
-func (c *adminServiceClient) ConfigList(ctx context.Context, req *connect.Request[v1.ListConfigRequest]) (*connect.Response[v1.ListConfigResponse], error) {
+func (c *adminServiceClient) ConfigList(ctx context.Context, req *connect.Request[v1.ConfigListRequest]) (*connect.Response[v1.ConfigListResponse], error) {
 	return c.configList.CallUnary(ctx, req)
 }
 
 // ConfigGet calls xyz.block.ftl.v1.AdminService.ConfigGet.
-func (c *adminServiceClient) ConfigGet(ctx context.Context, req *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error) {
+func (c *adminServiceClient) ConfigGet(ctx context.Context, req *connect.Request[v1.ConfigGetRequest]) (*connect.Response[v1.ConfigGetResponse], error) {
 	return c.configGet.CallUnary(ctx, req)
 }
 
 // ConfigSet calls xyz.block.ftl.v1.AdminService.ConfigSet.
-func (c *adminServiceClient) ConfigSet(ctx context.Context, req *connect.Request[v1.SetConfigRequest]) (*connect.Response[v1.SetConfigResponse], error) {
+func (c *adminServiceClient) ConfigSet(ctx context.Context, req *connect.Request[v1.ConfigSetRequest]) (*connect.Response[v1.ConfigSetResponse], error) {
 	return c.configSet.CallUnary(ctx, req)
 }
 
 // ConfigUnset calls xyz.block.ftl.v1.AdminService.ConfigUnset.
-func (c *adminServiceClient) ConfigUnset(ctx context.Context, req *connect.Request[v1.UnsetConfigRequest]) (*connect.Response[v1.UnsetConfigResponse], error) {
+func (c *adminServiceClient) ConfigUnset(ctx context.Context, req *connect.Request[v1.ConfigUnsetRequest]) (*connect.Response[v1.ConfigUnsetResponse], error) {
 	return c.configUnset.CallUnary(ctx, req)
 }
 
 // SecretsList calls xyz.block.ftl.v1.AdminService.SecretsList.
-func (c *adminServiceClient) SecretsList(ctx context.Context, req *connect.Request[v1.ListSecretsRequest]) (*connect.Response[v1.ListSecretsResponse], error) {
+func (c *adminServiceClient) SecretsList(ctx context.Context, req *connect.Request[v1.SecretsListRequest]) (*connect.Response[v1.SecretsListResponse], error) {
 	return c.secretsList.CallUnary(ctx, req)
 }
 
 // SecretGet calls xyz.block.ftl.v1.AdminService.SecretGet.
-func (c *adminServiceClient) SecretGet(ctx context.Context, req *connect.Request[v1.GetSecretRequest]) (*connect.Response[v1.GetSecretResponse], error) {
+func (c *adminServiceClient) SecretGet(ctx context.Context, req *connect.Request[v1.SecretGetRequest]) (*connect.Response[v1.SecretGetResponse], error) {
 	return c.secretGet.CallUnary(ctx, req)
 }
 
 // SecretSet calls xyz.block.ftl.v1.AdminService.SecretSet.
-func (c *adminServiceClient) SecretSet(ctx context.Context, req *connect.Request[v1.SetSecretRequest]) (*connect.Response[v1.SetSecretResponse], error) {
+func (c *adminServiceClient) SecretSet(ctx context.Context, req *connect.Request[v1.SecretSetRequest]) (*connect.Response[v1.SecretSetResponse], error) {
 	return c.secretSet.CallUnary(ctx, req)
 }
 
 // SecretUnset calls xyz.block.ftl.v1.AdminService.SecretUnset.
-func (c *adminServiceClient) SecretUnset(ctx context.Context, req *connect.Request[v1.UnsetSecretRequest]) (*connect.Response[v1.UnsetSecretResponse], error) {
+func (c *adminServiceClient) SecretUnset(ctx context.Context, req *connect.Request[v1.SecretUnsetRequest]) (*connect.Response[v1.SecretUnsetResponse], error) {
 	return c.secretUnset.CallUnary(ctx, req)
 }
 
@@ -198,21 +198,21 @@ func (c *adminServiceClient) SecretUnset(ctx context.Context, req *connect.Reque
 type AdminServiceHandler interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	// List configuration.
-	ConfigList(context.Context, *connect.Request[v1.ListConfigRequest]) (*connect.Response[v1.ListConfigResponse], error)
+	ConfigList(context.Context, *connect.Request[v1.ConfigListRequest]) (*connect.Response[v1.ConfigListResponse], error)
 	// Get a config value.
-	ConfigGet(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error)
+	ConfigGet(context.Context, *connect.Request[v1.ConfigGetRequest]) (*connect.Response[v1.ConfigGetResponse], error)
 	// Set a config value.
-	ConfigSet(context.Context, *connect.Request[v1.SetConfigRequest]) (*connect.Response[v1.SetConfigResponse], error)
+	ConfigSet(context.Context, *connect.Request[v1.ConfigSetRequest]) (*connect.Response[v1.ConfigSetResponse], error)
 	// Unset a config value.
-	ConfigUnset(context.Context, *connect.Request[v1.UnsetConfigRequest]) (*connect.Response[v1.UnsetConfigResponse], error)
+	ConfigUnset(context.Context, *connect.Request[v1.ConfigUnsetRequest]) (*connect.Response[v1.ConfigUnsetResponse], error)
 	// List secrets.
-	SecretsList(context.Context, *connect.Request[v1.ListSecretsRequest]) (*connect.Response[v1.ListSecretsResponse], error)
+	SecretsList(context.Context, *connect.Request[v1.SecretsListRequest]) (*connect.Response[v1.SecretsListResponse], error)
 	// Get a secret.
-	SecretGet(context.Context, *connect.Request[v1.GetSecretRequest]) (*connect.Response[v1.GetSecretResponse], error)
+	SecretGet(context.Context, *connect.Request[v1.SecretGetRequest]) (*connect.Response[v1.SecretGetResponse], error)
 	// Set a secret.
-	SecretSet(context.Context, *connect.Request[v1.SetSecretRequest]) (*connect.Response[v1.SetSecretResponse], error)
+	SecretSet(context.Context, *connect.Request[v1.SecretSetRequest]) (*connect.Response[v1.SecretSetResponse], error)
 	// Unset a secret.
-	SecretUnset(context.Context, *connect.Request[v1.UnsetSecretRequest]) (*connect.Response[v1.UnsetSecretResponse], error)
+	SecretUnset(context.Context, *connect.Request[v1.SecretUnsetRequest]) (*connect.Response[v1.SecretUnsetResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -300,34 +300,34 @@ func (UnimplementedAdminServiceHandler) Ping(context.Context, *connect.Request[v
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.Ping is not implemented"))
 }
 
-func (UnimplementedAdminServiceHandler) ConfigList(context.Context, *connect.Request[v1.ListConfigRequest]) (*connect.Response[v1.ListConfigResponse], error) {
+func (UnimplementedAdminServiceHandler) ConfigList(context.Context, *connect.Request[v1.ConfigListRequest]) (*connect.Response[v1.ConfigListResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.ConfigList is not implemented"))
 }
 
-func (UnimplementedAdminServiceHandler) ConfigGet(context.Context, *connect.Request[v1.GetConfigRequest]) (*connect.Response[v1.GetConfigResponse], error) {
+func (UnimplementedAdminServiceHandler) ConfigGet(context.Context, *connect.Request[v1.ConfigGetRequest]) (*connect.Response[v1.ConfigGetResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.ConfigGet is not implemented"))
 }
 
-func (UnimplementedAdminServiceHandler) ConfigSet(context.Context, *connect.Request[v1.SetConfigRequest]) (*connect.Response[v1.SetConfigResponse], error) {
+func (UnimplementedAdminServiceHandler) ConfigSet(context.Context, *connect.Request[v1.ConfigSetRequest]) (*connect.Response[v1.ConfigSetResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.ConfigSet is not implemented"))
 }
 
-func (UnimplementedAdminServiceHandler) ConfigUnset(context.Context, *connect.Request[v1.UnsetConfigRequest]) (*connect.Response[v1.UnsetConfigResponse], error) {
+func (UnimplementedAdminServiceHandler) ConfigUnset(context.Context, *connect.Request[v1.ConfigUnsetRequest]) (*connect.Response[v1.ConfigUnsetResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.ConfigUnset is not implemented"))
 }
 
-func (UnimplementedAdminServiceHandler) SecretsList(context.Context, *connect.Request[v1.ListSecretsRequest]) (*connect.Response[v1.ListSecretsResponse], error) {
+func (UnimplementedAdminServiceHandler) SecretsList(context.Context, *connect.Request[v1.SecretsListRequest]) (*connect.Response[v1.SecretsListResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.SecretsList is not implemented"))
 }
 
-func (UnimplementedAdminServiceHandler) SecretGet(context.Context, *connect.Request[v1.GetSecretRequest]) (*connect.Response[v1.GetSecretResponse], error) {
+func (UnimplementedAdminServiceHandler) SecretGet(context.Context, *connect.Request[v1.SecretGetRequest]) (*connect.Response[v1.SecretGetResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.SecretGet is not implemented"))
 }
 
-func (UnimplementedAdminServiceHandler) SecretSet(context.Context, *connect.Request[v1.SetSecretRequest]) (*connect.Response[v1.SetSecretResponse], error) {
+func (UnimplementedAdminServiceHandler) SecretSet(context.Context, *connect.Request[v1.SecretSetRequest]) (*connect.Response[v1.SecretSetResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.SecretSet is not implemented"))
 }
 
-func (UnimplementedAdminServiceHandler) SecretUnset(context.Context, *connect.Request[v1.UnsetSecretRequest]) (*connect.Response[v1.UnsetSecretResponse], error) {
+func (UnimplementedAdminServiceHandler) SecretUnset(context.Context, *connect.Request[v1.SecretUnsetRequest]) (*connect.Response[v1.SecretUnsetResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.SecretUnset is not implemented"))
 }

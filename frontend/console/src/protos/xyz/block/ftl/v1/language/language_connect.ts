@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "../ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { BuildContextUpdatedRequest, BuildContextUpdatedResponse, BuildEvent, BuildRequest, CreateModuleRequest, CreateModuleResponse, DependenciesRequest, DependenciesResponse, GenerateStubsRequest, GenerateStubsResponse, GetCreateModuleFlagsRequest, GetCreateModuleFlagsResponse, ModuleConfigDefaultsRequest, ModuleConfigDefaultsResponse, SyncStubReferencesRequest, SyncStubReferencesResponse } from "./language_pb.js";
+import { BuildContextUpdatedRequest, BuildContextUpdatedResponse, BuildRequest, BuildResponse, CreateModuleRequest, CreateModuleResponse, DependenciesRequest, GenerateStubsRequest, GenerateStubsResponse, GetCreateModuleFlagsRequest, GetCreateModuleFlagsResponse, GetDependenciesResponse, ModuleConfigDefaultsRequest, ModuleConfigDefaultsResponse, SyncStubReferencesRequest, SyncStubReferencesResponse } from "./language_pb.js";
 
 /**
  * LanguageService allows a plugin to add support for a programming language.
@@ -69,7 +69,7 @@ export const LanguageService = {
     getDependencies: {
       name: "GetDependencies",
       I: DependenciesRequest,
-      O: DependenciesResponse,
+      O: GetDependenciesResponse,
       kind: MethodKind.Unary,
     },
     /**
@@ -88,7 +88,7 @@ export const LanguageService = {
     build: {
       name: "Build",
       I: BuildRequest,
-      O: BuildEvent,
+      O: BuildResponse,
       kind: MethodKind.ServerStreaming,
     },
     /**

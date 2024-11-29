@@ -74,7 +74,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev --plain {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-backend build-frontend build-generate build-sqlc build-zips lsp-generate build-jvm build-language-plugins
+build-all: build-protos-unconditionally build-backend build-frontend build-backend-tests build-generate build-sqlc build-zips lsp-generate build-jvm build-language-plugins
 
 # Run "go generate" on all packages
 build-generate:
@@ -90,6 +90,7 @@ build +tools: build-protos build-zips build-frontend
 # But it will be included if it was already built
 build-without-frontend +tools: build-protos build-zips
   #!/bin/bash
+  set -euo pipefail
   mkdir -p frontend/console/dist
   touch frontend/console/dist/.phoney
   shopt -s extglob
@@ -108,7 +109,7 @@ build-backend:
 
 # Build all backend tests
 build-backend-tests:
-  go test -run ^NONE -tags integration,infrastructure ./...
+  go test -run ^NONE -tags integration,infrastructure ./... > /dev/null
 
 
 build-jvm *args:

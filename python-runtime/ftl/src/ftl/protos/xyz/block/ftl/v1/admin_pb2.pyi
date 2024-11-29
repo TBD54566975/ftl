@@ -41,7 +41,7 @@ class ConfigRef(_message.Message):
     name: str
     def __init__(self, module: _Optional[str] = ..., name: _Optional[str] = ...) -> None: ...
 
-class ListConfigRequest(_message.Message):
+class ConfigListRequest(_message.Message):
     __slots__ = ("module", "include_values", "provider")
     MODULE_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_VALUES_FIELD_NUMBER: _ClassVar[int]
@@ -51,7 +51,7 @@ class ListConfigRequest(_message.Message):
     provider: ConfigProvider
     def __init__(self, module: _Optional[str] = ..., include_values: bool = ..., provider: _Optional[_Union[ConfigProvider, str]] = ...) -> None: ...
 
-class ListConfigResponse(_message.Message):
+class ConfigListResponse(_message.Message):
     __slots__ = ("configs",)
     class Config(_message.Message):
         __slots__ = ("ref_path", "value")
@@ -61,22 +61,22 @@ class ListConfigResponse(_message.Message):
         value: bytes
         def __init__(self, ref_path: _Optional[str] = ..., value: _Optional[bytes] = ...) -> None: ...
     CONFIGS_FIELD_NUMBER: _ClassVar[int]
-    configs: _containers.RepeatedCompositeFieldContainer[ListConfigResponse.Config]
-    def __init__(self, configs: _Optional[_Iterable[_Union[ListConfigResponse.Config, _Mapping]]] = ...) -> None: ...
+    configs: _containers.RepeatedCompositeFieldContainer[ConfigListResponse.Config]
+    def __init__(self, configs: _Optional[_Iterable[_Union[ConfigListResponse.Config, _Mapping]]] = ...) -> None: ...
 
-class GetConfigRequest(_message.Message):
+class ConfigGetRequest(_message.Message):
     __slots__ = ("ref",)
     REF_FIELD_NUMBER: _ClassVar[int]
     ref: ConfigRef
     def __init__(self, ref: _Optional[_Union[ConfigRef, _Mapping]] = ...) -> None: ...
 
-class GetConfigResponse(_message.Message):
+class ConfigGetResponse(_message.Message):
     __slots__ = ("value",)
     VALUE_FIELD_NUMBER: _ClassVar[int]
     value: bytes
     def __init__(self, value: _Optional[bytes] = ...) -> None: ...
 
-class SetConfigRequest(_message.Message):
+class ConfigSetRequest(_message.Message):
     __slots__ = ("provider", "ref", "value")
     PROVIDER_FIELD_NUMBER: _ClassVar[int]
     REF_FIELD_NUMBER: _ClassVar[int]
@@ -86,11 +86,11 @@ class SetConfigRequest(_message.Message):
     value: bytes
     def __init__(self, provider: _Optional[_Union[ConfigProvider, str]] = ..., ref: _Optional[_Union[ConfigRef, _Mapping]] = ..., value: _Optional[bytes] = ...) -> None: ...
 
-class SetConfigResponse(_message.Message):
+class ConfigSetResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
-class UnsetConfigRequest(_message.Message):
+class ConfigUnsetRequest(_message.Message):
     __slots__ = ("provider", "ref")
     PROVIDER_FIELD_NUMBER: _ClassVar[int]
     REF_FIELD_NUMBER: _ClassVar[int]
@@ -98,11 +98,11 @@ class UnsetConfigRequest(_message.Message):
     ref: ConfigRef
     def __init__(self, provider: _Optional[_Union[ConfigProvider, str]] = ..., ref: _Optional[_Union[ConfigRef, _Mapping]] = ...) -> None: ...
 
-class UnsetConfigResponse(_message.Message):
+class ConfigUnsetResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
-class ListSecretsRequest(_message.Message):
+class SecretsListRequest(_message.Message):
     __slots__ = ("module", "include_values", "provider")
     MODULE_FIELD_NUMBER: _ClassVar[int]
     INCLUDE_VALUES_FIELD_NUMBER: _ClassVar[int]
@@ -112,7 +112,7 @@ class ListSecretsRequest(_message.Message):
     provider: SecretProvider
     def __init__(self, module: _Optional[str] = ..., include_values: bool = ..., provider: _Optional[_Union[SecretProvider, str]] = ...) -> None: ...
 
-class ListSecretsResponse(_message.Message):
+class SecretsListResponse(_message.Message):
     __slots__ = ("secrets",)
     class Secret(_message.Message):
         __slots__ = ("ref_path", "value")
@@ -122,22 +122,22 @@ class ListSecretsResponse(_message.Message):
         value: bytes
         def __init__(self, ref_path: _Optional[str] = ..., value: _Optional[bytes] = ...) -> None: ...
     SECRETS_FIELD_NUMBER: _ClassVar[int]
-    secrets: _containers.RepeatedCompositeFieldContainer[ListSecretsResponse.Secret]
-    def __init__(self, secrets: _Optional[_Iterable[_Union[ListSecretsResponse.Secret, _Mapping]]] = ...) -> None: ...
+    secrets: _containers.RepeatedCompositeFieldContainer[SecretsListResponse.Secret]
+    def __init__(self, secrets: _Optional[_Iterable[_Union[SecretsListResponse.Secret, _Mapping]]] = ...) -> None: ...
 
-class GetSecretRequest(_message.Message):
+class SecretGetRequest(_message.Message):
     __slots__ = ("ref",)
     REF_FIELD_NUMBER: _ClassVar[int]
     ref: ConfigRef
     def __init__(self, ref: _Optional[_Union[ConfigRef, _Mapping]] = ...) -> None: ...
 
-class GetSecretResponse(_message.Message):
+class SecretGetResponse(_message.Message):
     __slots__ = ("value",)
     VALUE_FIELD_NUMBER: _ClassVar[int]
     value: bytes
     def __init__(self, value: _Optional[bytes] = ...) -> None: ...
 
-class SetSecretRequest(_message.Message):
+class SecretSetRequest(_message.Message):
     __slots__ = ("provider", "ref", "value")
     PROVIDER_FIELD_NUMBER: _ClassVar[int]
     REF_FIELD_NUMBER: _ClassVar[int]
@@ -147,11 +147,11 @@ class SetSecretRequest(_message.Message):
     value: bytes
     def __init__(self, provider: _Optional[_Union[SecretProvider, str]] = ..., ref: _Optional[_Union[ConfigRef, _Mapping]] = ..., value: _Optional[bytes] = ...) -> None: ...
 
-class SetSecretResponse(_message.Message):
+class SecretSetResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 
-class UnsetSecretRequest(_message.Message):
+class SecretUnsetRequest(_message.Message):
     __slots__ = ("provider", "ref")
     PROVIDER_FIELD_NUMBER: _ClassVar[int]
     REF_FIELD_NUMBER: _ClassVar[int]
@@ -159,6 +159,6 @@ class UnsetSecretRequest(_message.Message):
     ref: ConfigRef
     def __init__(self, provider: _Optional[_Union[SecretProvider, str]] = ..., ref: _Optional[_Union[ConfigRef, _Mapping]] = ...) -> None: ...
 
-class UnsetSecretResponse(_message.Message):
+class SecretUnsetResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...

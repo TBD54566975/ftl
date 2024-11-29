@@ -43,14 +43,14 @@ class ModuleContextRequest(_message.Message):
     module: str
     def __init__(self, module: _Optional[str] = ...) -> None: ...
 
-class ModuleContextResponse(_message.Message):
+class GetModuleContextResponse(_message.Message):
     __slots__ = ("module", "configs", "secrets", "databases")
     class DBType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
-        POSTGRES: _ClassVar[ModuleContextResponse.DBType]
-        MYSQL: _ClassVar[ModuleContextResponse.DBType]
-    POSTGRES: ModuleContextResponse.DBType
-    MYSQL: ModuleContextResponse.DBType
+        POSTGRES: _ClassVar[GetModuleContextResponse.DBType]
+        MYSQL: _ClassVar[GetModuleContextResponse.DBType]
+    POSTGRES: GetModuleContextResponse.DBType
+    MYSQL: GetModuleContextResponse.DBType
     class Ref(_message.Message):
         __slots__ = ("module", "name")
         MODULE_FIELD_NUMBER: _ClassVar[int]
@@ -64,9 +64,9 @@ class ModuleContextResponse(_message.Message):
         TYPE_FIELD_NUMBER: _ClassVar[int]
         DSN_FIELD_NUMBER: _ClassVar[int]
         name: str
-        type: ModuleContextResponse.DBType
+        type: GetModuleContextResponse.DBType
         dsn: str
-        def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[ModuleContextResponse.DBType, str]] = ..., dsn: _Optional[str] = ...) -> None: ...
+        def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[GetModuleContextResponse.DBType, str]] = ..., dsn: _Optional[str] = ...) -> None: ...
     class ConfigsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -88,5 +88,5 @@ class ModuleContextResponse(_message.Message):
     module: str
     configs: _containers.ScalarMap[str, bytes]
     secrets: _containers.ScalarMap[str, bytes]
-    databases: _containers.RepeatedCompositeFieldContainer[ModuleContextResponse.DSN]
-    def __init__(self, module: _Optional[str] = ..., configs: _Optional[_Mapping[str, bytes]] = ..., secrets: _Optional[_Mapping[str, bytes]] = ..., databases: _Optional[_Iterable[_Union[ModuleContextResponse.DSN, _Mapping]]] = ...) -> None: ...
+    databases: _containers.RepeatedCompositeFieldContainer[GetModuleContextResponse.DSN]
+    def __init__(self, module: _Optional[str] = ..., configs: _Optional[_Mapping[str, bytes]] = ..., secrets: _Optional[_Mapping[str, bytes]] = ..., databases: _Optional[_Iterable[_Union[GetModuleContextResponse.DSN, _Mapping]]] = ...) -> None: ...

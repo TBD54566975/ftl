@@ -25,12 +25,12 @@ enum ConfigProvider {
   CONFIG_PROVIDER_DB = 3;
 }
 
-message ListConfigRequest {
+message ConfigListRequest {
   optional string module = 1;
   optional bool include_values = 2;
   optional ConfigProvider provider = 3;
 }
-message ListConfigResponse {
+message ConfigListResponse {
   message Config {
     string ref_path = 1;
     optional bytes value = 2;
@@ -38,25 +38,25 @@ message ListConfigResponse {
   repeated Config configs = 1;
 }
 
-message GetConfigRequest {
+message ConfigGetRequest {
   ConfigRef ref = 1;
 }
-message GetConfigResponse {
+message ConfigGetResponse {
   bytes value = 1;
 }
 
-message SetConfigRequest {
+message ConfigSetRequest {
   optional ConfigProvider provider = 1;
   ConfigRef ref = 2;
   bytes value = 3;
 }
-message SetConfigResponse {}
+message ConfigSetResponse {}
 
-message UnsetConfigRequest {
+message ConfigUnsetRequest {
   optional ConfigProvider provider = 1;
   ConfigRef ref = 2;
 }
-message UnsetConfigResponse {}
+message ConfigUnsetResponse {}
 
 enum SecretProvider {
   SECRET_PROVIDER_UNSPECIFIED = 0;
@@ -77,12 +77,12 @@ enum SecretProvider {
   SECRET_PROVIDER_ASM = 5;
 }
 
-message ListSecretsRequest {
+message SecretsListRequest {
   optional string module = 1;
   optional bool include_values = 2;
   optional SecretProvider provider = 3;
 }
-message ListSecretsResponse {
+message SecretsListResponse {
   message Secret {
     string ref_path = 1;
     optional bytes value = 2;
@@ -90,25 +90,25 @@ message ListSecretsResponse {
   repeated Secret secrets = 1;
 }
 
-message GetSecretRequest {
+message SecretGetRequest {
   ConfigRef ref = 1;
 }
-message GetSecretResponse {
+message SecretGetResponse {
   bytes value = 1;
 }
 
-message SetSecretRequest {
+message SecretSetRequest {
   optional SecretProvider provider = 1;
   ConfigRef ref = 2;
   bytes value = 3;
 }
-message SetSecretResponse {}
+message SecretSetResponse {}
 
-message UnsetSecretRequest {
+message SecretUnsetRequest {
   optional SecretProvider provider = 1;
   ConfigRef ref = 2;
 }
-message UnsetSecretResponse {}
+message SecretUnsetResponse {}
 
 // AdminService is the service that provides and updates admin data. For example,
 // it is used to encapsulate configuration and secrets.
@@ -118,26 +118,26 @@ service AdminService {
   }
 
   // List configuration.
-  rpc ConfigList(ListConfigRequest) returns (ListConfigResponse);
+  rpc ConfigList(ConfigListRequest) returns (ConfigListResponse);
 
   // Get a config value.
-  rpc ConfigGet(GetConfigRequest) returns (GetConfigResponse);
+  rpc ConfigGet(ConfigGetRequest) returns (ConfigGetResponse);
 
   // Set a config value.
-  rpc ConfigSet(SetConfigRequest) returns (SetConfigResponse);
+  rpc ConfigSet(ConfigSetRequest) returns (ConfigSetResponse);
 
   // Unset a config value.
-  rpc ConfigUnset(UnsetConfigRequest) returns (UnsetConfigResponse);
+  rpc ConfigUnset(ConfigUnsetRequest) returns (ConfigUnsetResponse);
 
   // List secrets.
-  rpc SecretsList(ListSecretsRequest) returns (ListSecretsResponse);
+  rpc SecretsList(SecretsListRequest) returns (SecretsListResponse);
 
   // Get a secret.
-  rpc SecretGet(GetSecretRequest) returns (GetSecretResponse);
+  rpc SecretGet(SecretGetRequest) returns (SecretGetResponse);
 
   // Set a secret.
-  rpc SecretSet(SetSecretRequest) returns (SetSecretResponse);
+  rpc SecretSet(SecretSetRequest) returns (SecretSetResponse);
 
   // Unset a secret.
-  rpc SecretUnset(UnsetSecretRequest) returns (UnsetSecretResponse);
+  rpc SecretUnset(SecretUnsetRequest) returns (SecretUnsetResponse);
 }

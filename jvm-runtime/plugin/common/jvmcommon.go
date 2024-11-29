@@ -161,7 +161,7 @@ func (s *Service) SyncStubReferences(ctx context.Context, req *connect.Request[l
 // file changes and automatically rebuild as needed as long as this build request is alive. Each automactic
 // rebuild must include the latest build context id provided by the request or subsequent BuildContextUpdated
 // calls.
-func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent]) error {
+func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildResponse]) error {
 	buildCtx, err := buildContextFromProto(req.Msg.BuildContext)
 	if err != nil {
 		return err
@@ -178,13 +178,13 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 	return nil
 }
 
-func (s *Service) runDevMode(ctx context.Context, req *connect.Request[langpb.BuildRequest], buildCtx buildContext, stream *connect.ServerStream[langpb.BuildEvent]) error {
+func (s *Service) runDevMode(ctx context.Context, req *connect.Request[langpb.BuildRequest], buildCtx buildContext, stream *connect.ServerStream[langpb.BuildResponse]) error {
 	s.acceptsContextUpdates.Store(true)
 	defer s.acceptsContextUpdates.Store(false)
 	first := true
 	for {
 		if !first {
-			err := stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_AutoRebuildStarted{AutoRebuildStarted: &langpb.AutoRebuildStarted{ContextId: buildCtx.ID}}})
+			err := stream.Send(&langpb.BuildResponse{Event: &langpb.BuildResponse_AutoRebuildStarted{AutoRebuildStarted: &langpb.AutoRebuildStarted{ContextId: buildCtx.ID}}})
 			if err != nil {
 				return fmt.Errorf("could not send build event: %w", err)
 			}
@@ -259,7 +259,7 @@ func watchFiles(ctx context.Context, watcher *watch.Watcher, buildCtx buildConte
 
 	return nil
 }
-func (s *Service) runQuarkusDev(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent], firstAttempt bool) error {
+func (s *Service) runQuarkusDev(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildResponse], firstAttempt bool) error {
 	logger := log.FromContext(ctx)
 	// cancel context when stream ends so that watcher can be stopped
 	ctx, cancel := context.WithCancel(ctx)
@@ -319,7 +319,7 @@ func (s *Service) runQuarkusDev(ctx context.Context, req *connect.Request[langpb
 			if firstAttempt {
 				// the context is done before we notified the build engine
 				// we need to send a build failure event
-				err = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
+				err = stream.Send(&langpb.BuildResponse{Event: &langpb.BuildResponse_BuildFailure{
 					BuildFailure: &langpb.BuildFailure{
 						IsAutomaticRebuild: !firstAttempt,
 						ContextId:          buildCtx.ID,
@@ -361,7 +361,7 @@ func (s *Service) runQuarkusDev(ctx context.Context, req *connect.Request[langpb
 				}
 				if builderrors.ContainsTerminalError(langpb.ErrorsFromProto(buildErrs)) {
 					// skip reading schema
-					err = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
+					err = stream.Send(&langpb.BuildResponse{Event: &langpb.BuildResponse_BuildFailure{
 						BuildFailure: &langpb.BuildFailure{
 							IsAutomaticRebuild: !firstAttempt,
 							ContextId:          buildCtx.ID,
@@ -381,8 +381,8 @@ func (s *Service) runQuarkusDev(ctx context.Context, req *connect.Request[langpb
 					continue
 				}
 
-				err = stream.Send(&langpb.BuildEvent{
-					Event: &langpb.BuildEvent_BuildSuccess{
+				err = stream.Send(&langpb.BuildResponse{
+					Event: &langpb.BuildResponse_BuildSuccess{
 						BuildSuccess: &langpb.BuildSuccess{
 							ContextId:          req.Msg.BuildContext.Id,
 							IsAutomaticRebuild: !firstAttempt,
@@ -403,7 +403,7 @@ func (s *Service) runQuarkusDev(ctx context.Context, req *connect.Request[langpb
 	}
 }
 
-func build(ctx context.Context, bctx buildContext, autoRebuild bool) (*langpb.BuildEvent, error) {
+func build(ctx context.Context, bctx buildContext, autoRebuild bool) (*langpb.BuildResponse, error) {
 	logger := log.FromContext(ctx)
 	release, err := flock.Acquire(ctx, bctx.Config.BuildLock, BuildLockTimeout)
 	if err != nil {
@@ -418,15 +418,13 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool) (*langpb.Bu
 
 	if !slices.Equal(islices.Sort(deps), islices.Sort(bctx.Dependencies)) {
 		// dependencies have changed
-		return &langpb.BuildEvent{
-			Event: &langpb.BuildEvent_BuildFailure{
-				BuildFailure: &langpb.BuildFailure{
-					ContextId:              bctx.ID,
-					IsAutomaticRebuild:     autoRebuild,
-					InvalidateDependencies: true,
-				},
+		return &langpb.BuildResponse{Event: &langpb.BuildResponse_BuildFailure{
+			BuildFailure: &langpb.BuildFailure{
+				ContextId:              bctx.ID,
+				IsAutomaticRebuild:     autoRebuild,
+				InvalidateDependencies: true,
 			},
-		}, nil
+		}}, nil
 	}
 	config := bctx.Config
 	javaConfig, err := loadJavaConfig(config.LanguageConfig, config.Language)
@@ -444,7 +442,7 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool) (*langpb.Bu
 	command := exec.Command(ctx, log.Debug, config.Dir, "bash", "-c", config.Build)
 	err = command.Run()
 	if err != nil {
-		return &langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{BuildFailure: &langpb.BuildFailure{
+		return &langpb.BuildResponse{Event: &langpb.BuildResponse_BuildFailure{&langpb.BuildFailure{
 			IsAutomaticRebuild: autoRebuild,
 			ContextId:          bctx.ID,
 			Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_COMPILER}}},
@@ -457,7 +455,7 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool) (*langpb.Bu
 	}
 	if builderrors.ContainsTerminalError(langpb.ErrorsFromProto(buildErrs)) {
 		// skip reading schema
-		return &langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
+		return &langpb.BuildResponse{Event: &langpb.BuildResponse_BuildFailure{
 			BuildFailure: &langpb.BuildFailure{
 				IsAutomaticRebuild: autoRebuild,
 				ContextId:          bctx.ID,
@@ -469,8 +467,8 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool) (*langpb.Bu
 	if err != nil {
 		return nil, err
 	}
-	return &langpb.BuildEvent{
-		Event: &langpb.BuildEvent_BuildSuccess{
+	return &langpb.BuildResponse{
+		Event: &langpb.BuildResponse_BuildSuccess{
 			BuildSuccess: &langpb.BuildSuccess{
 				IsAutomaticRebuild: autoRebuild,
 				ContextId:          bctx.ID,
@@ -524,7 +522,7 @@ func (s *Service) BuildContextUpdated(ctx context.Context, req *connect.Request[
 //
 // Build errors are sent over the stream as a BuildFailure event.
 // This function only returns an error if events could not be send over the stream.
-func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.BuildEvent], buildCtx buildContext, isAutomaticRebuild bool) error {
+func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.BuildResponse], buildCtx buildContext, isAutomaticRebuild bool) error {
 	buildEvent, err := build(ctx, buildCtx, isAutomaticRebuild)
 	if err != nil {
 		buildEvent = buildFailure(buildCtx, isAutomaticRebuild, builderrors.Error{
@@ -540,9 +538,9 @@ func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.Build
 }
 
 // buildFailure creates a BuildFailure event based on build errors.
-func buildFailure(buildCtx buildContext, isAutomaticRebuild bool, errs ...builderrors.Error) *langpb.BuildEvent {
-	return &langpb.BuildEvent{
-		Event: &langpb.BuildEvent_BuildFailure{
+func buildFailure(buildCtx buildContext, isAutomaticRebuild bool, errs ...builderrors.Error) *langpb.BuildResponse {
+	return &langpb.BuildResponse{
+		Event: &langpb.BuildResponse_BuildFailure{
 			BuildFailure: &langpb.BuildFailure{
 				ContextId:              buildCtx.ID,
 				IsAutomaticRebuild:     isAutomaticRebuild,
@@ -602,12 +600,12 @@ func fileExists(filename string) bool {
 	return err == nil
 }
 
-func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
+func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.GetDependenciesResponse], error) {
 	modules, err := extractDependencies(req.Msg.ModuleConfig.Name, req.Msg.ModuleConfig.Dir)
 	if err != nil {
 		return nil, err
 	}
-	return connect.NewResponse[langpb.DependenciesResponse](&langpb.DependenciesResponse{Modules: modules}), nil
+	return connect.NewResponse[langpb.GetDependenciesResponse](&langpb.GetDependenciesResponse{Modules: modules}), nil
 }
 
 func extractDependencies(moduleName string, dir string) ([]string, error) {

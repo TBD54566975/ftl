@@ -48,7 +48,7 @@ func (f *asmFollower) sync(ctx context.Context) (map[configuration.Ref]configura
 	logger := log.FromContext(ctx)
 	module := ""
 	includeValues := true
-	resp, err := f.client.SecretsList(ctx, connect.NewRequest(&ftlv1.ListSecretsRequest{
+	resp, err := f.client.SecretsList(ctx, connect.NewRequest(&ftlv1.SecretsListRequest{
 		Module:        &module,
 		IncludeValues: &includeValues,
 	}))
@@ -78,7 +78,7 @@ func (f *asmFollower) sync(ctx context.Context) (map[configuration.Ref]configura
 }
 
 func (f *asmFollower) store(ctx context.Context, ref configuration.Ref, value []byte) (*url.URL, error) {
-	_, err := f.client.SecretSet(ctx, connect.NewRequest(&ftlv1.SetSecretRequest{
+	_, err := f.client.SecretSet(ctx, connect.NewRequest(&ftlv1.SecretSetRequest{
 		Ref: &ftlv1.ConfigRef{
 			Module: ref.Module.Ptr(),
 			Name:   ref.Name,
@@ -92,7 +92,7 @@ func (f *asmFollower) store(ctx context.Context, ref configuration.Ref, value []
 }
 
 func (f *asmFollower) delete(ctx context.Context, ref configuration.Ref) error {
-	_, err := f.client.SecretUnset(ctx, connect.NewRequest(&ftlv1.UnsetSecretRequest{
+	_, err := f.client.SecretUnset(ctx, connect.NewRequest(&ftlv1.SecretUnsetRequest{
 		Ref: &ftlv1.ConfigRef{
 			Module: ref.Module.Ptr(),
 			Name:   ref.Name,

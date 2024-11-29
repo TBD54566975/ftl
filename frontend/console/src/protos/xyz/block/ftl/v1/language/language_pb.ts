@@ -605,39 +605,39 @@ export class DependenciesRequest extends Message<DependenciesRequest> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.language.DependenciesResponse
+ * @generated from message xyz.block.ftl.v1.language.GetDependenciesResponse
  */
-export class DependenciesResponse extends Message<DependenciesResponse> {
+export class GetDependenciesResponse extends Message<GetDependenciesResponse> {
   /**
    * @generated from field: repeated string modules = 1;
    */
   modules: string[] = [];
 
-  constructor(data?: PartialMessage<DependenciesResponse>) {
+  constructor(data?: PartialMessage<GetDependenciesResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.language.DependenciesResponse";
+  static readonly typeName = "xyz.block.ftl.v1.language.GetDependenciesResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "modules", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DependenciesResponse {
-    return new DependenciesResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetDependenciesResponse {
+    return new GetDependenciesResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DependenciesResponse {
-    return new DependenciesResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetDependenciesResponse {
+    return new GetDependenciesResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DependenciesResponse {
-    return new DependenciesResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetDependenciesResponse {
+    return new GetDependenciesResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: DependenciesResponse | PlainMessage<DependenciesResponse> | undefined, b: DependenciesResponse | PlainMessage<DependenciesResponse> | undefined): boolean {
-    return proto3.util.equals(DependenciesResponse, a, b);
+  static equals(a: GetDependenciesResponse | PlainMessage<GetDependenciesResponse> | undefined, b: GetDependenciesResponse | PlainMessage<GetDependenciesResponse> | undefined): boolean {
+    return proto3.util.equals(GetDependenciesResponse, a, b);
   }
 }
 
@@ -1264,11 +1264,11 @@ export class BuildFailure extends Message<BuildFailure> {
 /**
  * Every type of message that can be streamed from the language plugin for a build.
  *
- * @generated from message xyz.block.ftl.v1.language.BuildEvent
+ * @generated from message xyz.block.ftl.v1.language.BuildResponse
  */
-export class BuildEvent extends Message<BuildEvent> {
+export class BuildResponse extends Message<BuildResponse> {
   /**
-   * @generated from oneof xyz.block.ftl.v1.language.BuildEvent.event
+   * @generated from oneof xyz.block.ftl.v1.language.BuildResponse.event
    */
   event: {
     /**
@@ -1290,33 +1290,33 @@ export class BuildEvent extends Message<BuildEvent> {
     case: "buildFailure";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
-  constructor(data?: PartialMessage<BuildEvent>) {
+  constructor(data?: PartialMessage<BuildResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.language.BuildEvent";
+  static readonly typeName = "xyz.block.ftl.v1.language.BuildResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 2, name: "auto_rebuild_started", kind: "message", T: AutoRebuildStarted, oneof: "event" },
     { no: 3, name: "build_success", kind: "message", T: BuildSuccess, oneof: "event" },
     { no: 4, name: "build_failure", kind: "message", T: BuildFailure, oneof: "event" },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildEvent {
-    return new BuildEvent().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildResponse {
+    return new BuildResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BuildEvent {
-    return new BuildEvent().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BuildResponse {
+    return new BuildResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BuildEvent {
-    return new BuildEvent().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BuildResponse {
+    return new BuildResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: BuildEvent | PlainMessage<BuildEvent> | undefined, b: BuildEvent | PlainMessage<BuildEvent> | undefined): boolean {
-    return proto3.util.equals(BuildEvent, a, b);
+  static equals(a: BuildResponse | PlainMessage<BuildResponse> | undefined, b: BuildResponse | PlainMessage<BuildResponse> | undefined): boolean {
+    return proto3.util.equals(BuildResponse, a, b);
   }
 }
 

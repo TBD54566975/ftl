@@ -6,7 +6,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 )
 
-func FromProto(response *ftlv1.ModuleContextResponse) (ModuleContext, error) {
+func FromProto(response *ftlv1.GetModuleContextResponse) (ModuleContext, error) {
 	databases := map[string]Database{}
 	for name, entry := range response.Databases {
 		db, err := NewDatabase(DBType(entry.Type), entry.Dsn)
