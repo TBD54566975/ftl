@@ -172,7 +172,7 @@ func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request
 }
 
 // GetDependencies extracts dependencies for a module
-func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.GetDependenciesResponse], error) {
+func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[langpb.GetDependenciesRequest]) (*connect.Response[langpb.GetDependenciesResponse], error) {
 	config := langpb.ModuleConfigFromProto(req.Msg.ModuleConfig)
 	deps, err := compile.ExtractDependencies(config)
 	if err != nil {

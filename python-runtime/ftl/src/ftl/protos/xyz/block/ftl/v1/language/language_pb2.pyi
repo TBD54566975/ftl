@@ -116,7 +116,7 @@ class ModuleConfigDefaultsResponse(_message.Message):
     sql_migration_dir: str
     def __init__(self, deploy_dir: _Optional[str] = ..., build: _Optional[str] = ..., dev_mode_build: _Optional[str] = ..., build_lock: _Optional[str] = ..., generated_schema_dir: _Optional[str] = ..., watch: _Optional[_Iterable[str]] = ..., language_config: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., sql_migration_dir: _Optional[str] = ...) -> None: ...
 
-class DependenciesRequest(_message.Message):
+class GetDependenciesRequest(_message.Message):
     __slots__ = ("module_config",)
     MODULE_CONFIG_FIELD_NUMBER: _ClassVar[int]
     module_config: ModuleConfig

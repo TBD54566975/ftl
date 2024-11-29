@@ -76,21 +76,22 @@ func (c *replayCmd) Run(
 		return fmt.Errorf("verb not found: %s", c.Verb)
 	}
 
-	events, err := consoleServiceClient.GetEvents(ctx, connect.NewRequest(&pbconsole.EventsQuery{
-		Order: pbconsole.EventsQuery_ORDER_DESC,
-		Limit: 1,
-		Filters: []*pbconsole.EventsQuery_Filter{
+	events, err := consoleServiceClient.GetEvents(ctx, connect.NewRequest(&pbconsole.GetEventsRequest{
+		Order: pbconsole.GetEventsRequest_ORDER_DESC,
+		Filters: []*pbconsole.GetEventsRequest_Filter{
 			{
-				Filter: &pbconsole.EventsQuery_Filter_Call{
-					Call: &pbconsole.EventsQuery_CallFilter{
+				Filter: &pbconsole.GetEventsRequest_Filter_Call{
+					Call: &pbconsole.GetEventsRequest_CallFilter{
 						DestModule: c.Verb.Module,
 						DestVerb:   &c.Verb.Name,
 					},
 				},
 			},
 			{
-				Filter: &pbconsole.EventsQuery_Filter_EventTypes{
-					EventTypes: &pbconsole.EventsQuery_EventTypeFilter{EventTypes: []pbconsole.EventType{pbconsole.EventType_EVENT_TYPE_CALL}},
+				Filter: &pbconsole.GetEventsRequest_Filter_EventTypes{
+					EventTypes: &pbconsole.GetEventsRequest_EventTypeFilter{
+						EventTypes: []pbconsole.EventType{pbconsole.EventType_EVENT_TYPE_CALL},
+					},
 				},
 			},
 		},

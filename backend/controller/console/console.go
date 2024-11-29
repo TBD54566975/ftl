@@ -471,7 +471,7 @@ func addRefToSetMap(m map[schema.RefKey]map[schema.RefKey]bool, key schema.RefKe
 	m[key][value.ToRefKey()] = true
 }
 
-func (c *ConsoleService) GetEvents(ctx context.Context, req *connect.Request[pbconsole.EventsQuery]) (*connect.Response[pbconsole.GetEventsResponse], error) {
+func (c *ConsoleService) GetEvents(ctx context.Context, req *connect.Request[pbconsole.GetEventsRequest]) (*connect.Response[pbconsole.GetEventsResponse], error) {
 	query, err := eventsQueryProtoToDAL(req.Msg)
 	if err != nil {
 		return nil, err
@@ -554,113 +554,72 @@ func (c *ConsoleService) StreamEvents(ctx context.Context, req *connect.Request[
 	}
 }
 
-func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]timeline.TimelineFilter, error) {
-	var query []timeline.TimelineFilter
+func eventsQueryProtoToDAL(query *pbconsole.GetEventsRequest) ([]timeline.TimelineFilter, error) {
+	var result []timeline.TimelineFilter
 
-	if pb.Order == pbconsole.EventsQuery_ORDER_DESC {
-		query = append(query, timeline.FilterDescending())
+	if query.Order == pbconsole.GetEventsRequest_ORDER_DESC {
+		result = append(result, timeline.FilterDescending())
 	}
 
-	for _, filter := range pb.Filters {
-		switch filter := filter.Filter.(type) {
-		case *pbconsole.EventsQuery_Filter_Deployments:
-			deploymentKeys := make([]model.DeploymentKey, 0, len(filter.Deployments.Deployments))
-			for _, deployment := range filter.Deployments.Deployments {
+	for _, filter := range query.Filters {
+		switch f := filter.Filter.(type) {
+		case *pbconsole.GetEventsRequest_Filter_Deployments:
+			deploymentKeys := make([]model.DeploymentKey, 0, len(f.Deployments.Deployments))
+			for _, deployment := range f.Deployments.Deployments {
 				deploymentKey, err := model.ParseDeploymentKey(deployment)
 				if err != nil {
 					return nil, connect.NewError(connect.CodeInvalidArgument, err)
 				}
 				deploymentKeys = append(deploymentKeys, deploymentKey)
 			}
-			query = append(query, timeline.FilterDeployments(deploymentKeys...))
+			result = append(result, timeline.FilterDeployments(deploymentKeys...))
 
-		case *pbconsole.EventsQuery_Filter_Requests:
-			requestKeys := make([]model.RequestKey, 0, len(filter.Requests.Requests))
-			for _, request := range filter.Requests.Requests {
+		case *pbconsole.GetEventsRequest_Filter_Requests:
+			requestKeys := make([]model.RequestKey, 0, len(f.Requests.Requests))
+			for _, request := range f.Requests.Requests {
 				requestKey, err := model.ParseRequestKey(request)
 				if err != nil {
 					return nil, connect.NewError(connect.CodeInvalidArgument, err)
 				}
 				requestKeys = append(requestKeys, requestKey)
 			}
-			query = append(query, timeline.FilterRequests(requestKeys...))
+			result = append(result, timeline.FilterRequests(requestKeys...))
 
-		case *pbconsole.EventsQuery_Filter_EventTypes:
-			eventTypes := make([]timeline.EventType, 0, len(filter.EventTypes.EventTypes))
-			for _, eventType := range filter.EventTypes.EventTypes {
-				switch eventType {
-				case pbconsole.EventType_EVENT_TYPE_CALL:
-					eventTypes = append(eventTypes, timeline.EventTypeCall)
-				case pbconsole.EventType_EVENT_TYPE_LOG:
-					eventTypes = append(eventTypes, timeline.EventTypeLog)
-				case pbconsole.EventType_EVENT_TYPE_DEPLOYMENT_CREATED:
-					eventTypes = append(eventTypes, timeline.EventTypeDeploymentCreated)
-				case pbconsole.EventType_EVENT_TYPE_DEPLOYMENT_UPDATED:
-					eventTypes = append(eventTypes, timeline.EventTypeDeploymentUpdated)
-				case pbconsole.EventType_EVENT_TYPE_INGRESS:
-					eventTypes = append(eventTypes, timeline.EventTypeIngress)
-				case pbconsole.EventType_EVENT_TYPE_CRON_SCHEDULED:
-					eventTypes = append(eventTypes, timeline.EventTypeCronScheduled)
-				case pbconsole.EventType_EVENT_TYPE_ASYNC_EXECUTE:
-					eventTypes = append(eventTypes, timeline.EventTypeAsyncExecute)
-				case pbconsole.EventType_EVENT_TYPE_PUBSUB_PUBLISH:
-					eventTypes = append(eventTypes, timeline.EventTypePubSubPublish)
-				case pbconsole.EventType_EVENT_TYPE_PUBSUB_CONSUME:
-					eventTypes = append(eventTypes, timeline.EventTypePubSubConsume)
-				default:
-					return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown event type %v", eventType))
-				}
+		case *pbconsole.GetEventsRequest_Filter_EventTypes:
+			var types []timeline.EventType
+			for _, t := range f.EventTypes.EventTypes {
+				types = append(types, timeline.EventType(t))
 			}
-			query = append(query, timeline.FilterTypes(eventTypes...))
+			result = append(result, timeline.FilterTypes(types...))
 
-		case *pbconsole.EventsQuery_Filter_LogLevel:
-			level := log.Level(filter.LogLevel.LogLevel)
+		case *pbconsole.GetEventsRequest_Filter_LogLevel:
+			level := log.Level(f.LogLevel.LogLevel)
 			if level < log.Trace || level > log.Error {
-				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown log level %v", filter.LogLevel.LogLevel))
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown log level %v", f.LogLevel.LogLevel))
 			}
-			query = append(query, timeline.FilterLogLevel(level))
+			result = append(result, timeline.FilterLogLevel(level))
 
-		case *pbconsole.EventsQuery_Filter_Time:
-			var newerThan, olderThan time.Time
-			if filter.Time.NewerThan != nil {
-				newerThan = filter.Time.NewerThan.AsTime()
-			}
-			if filter.Time.OlderThan != nil {
-				olderThan = filter.Time.OlderThan.AsTime()
-			}
-			query = append(query, timeline.FilterTimeRange(olderThan, newerThan))
+		case *pbconsole.GetEventsRequest_Filter_Time:
+			newerThan := f.Time.GetNewerThan().AsTime()
+			olderThan := f.Time.GetOlderThan().AsTime()
+			result = append(result, timeline.FilterTimeRange(olderThan, newerThan))
 
-		case *pbconsole.EventsQuery_Filter_Id:
-			var lowerThan, higherThan int64
-			if filter.Id.LowerThan != nil {
-				lowerThan = *filter.Id.LowerThan
-			}
-			if filter.Id.HigherThan != nil {
-				higherThan = *filter.Id.HigherThan
-			}
-			query = append(query, timeline.FilterIDRange(lowerThan, higherThan))
-		case *pbconsole.EventsQuery_Filter_Call:
-			var sourceModule optional.Option[string]
-			if filter.Call.SourceModule != nil {
-				sourceModule = optional.Some(*filter.Call.SourceModule)
-			}
-			var destVerb optional.Option[string]
-			if filter.Call.DestVerb != nil {
-				destVerb = optional.Some(*filter.Call.DestVerb)
-			}
-			query = append(query, timeline.FilterCall(sourceModule, filter.Call.DestModule, destVerb))
-		case *pbconsole.EventsQuery_Filter_Module:
-			var verb optional.Option[string]
-			if filter.Module.Verb != nil {
-				verb = optional.Some(*filter.Module.Verb)
-			}
-			query = append(query, timeline.FilterModule(filter.Module.Module, verb))
+		case *pbconsole.GetEventsRequest_Filter_Id:
+			lowerThan := f.Id.GetLowerThan()
+			higherThan := f.Id.GetHigherThan()
+			result = append(result, timeline.FilterIDRange(lowerThan, higherThan))
+
+		case *pbconsole.GetEventsRequest_Filter_Call:
+			sourceModule := optional.Zero(f.Call.GetSourceModule())
+			destVerb := optional.Zero(f.Call.GetDestVerb())
+			result = append(result, timeline.FilterCall(sourceModule, f.Call.DestModule, destVerb))
 
 		default:
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown filter %T", filter))
+			return nil, fmt.Errorf("unknown filter type %T", f)
 		}
 	}
-	return query, nil
+
+	return result, nil
 }
 
 func eventDALToProto(event timeline.Event) *pbconsole.Event {

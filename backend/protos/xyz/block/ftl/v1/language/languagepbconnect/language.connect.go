@@ -73,7 +73,7 @@ type LanguageServiceClient interface {
 	ModuleConfigDefaults(context.Context, *connect.Request[language.ModuleConfigDefaultsRequest]) (*connect.Response[language.ModuleConfigDefaultsResponse], error)
 	// Extract dependencies for a module
 	// FTL will ensure that these dependencies are built before requesting a build for this module.
-	GetDependencies(context.Context, *connect.Request[language.DependenciesRequest]) (*connect.Response[language.GetDependenciesResponse], error)
+	GetDependencies(context.Context, *connect.Request[language.GetDependenciesRequest]) (*connect.Response[language.GetDependenciesResponse], error)
 	// Build the module and stream back build events.
 	//
 	// A BuildSuccess or BuildFailure event must be streamed back with the request's context id to indicate the
@@ -142,7 +142,7 @@ func NewLanguageServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			baseURL+LanguageServiceModuleConfigDefaultsProcedure,
 			opts...,
 		),
-		getDependencies: connect.NewClient[language.DependenciesRequest, language.GetDependenciesResponse](
+		getDependencies: connect.NewClient[language.GetDependenciesRequest, language.GetDependenciesResponse](
 			httpClient,
 			baseURL+LanguageServiceGetDependenciesProcedure,
 			opts...,
@@ -176,7 +176,7 @@ type languageServiceClient struct {
 	getCreateModuleFlags *connect.Client[language.GetCreateModuleFlagsRequest, language.GetCreateModuleFlagsResponse]
 	createModule         *connect.Client[language.CreateModuleRequest, language.CreateModuleResponse]
 	moduleConfigDefaults *connect.Client[language.ModuleConfigDefaultsRequest, language.ModuleConfigDefaultsResponse]
-	getDependencies      *connect.Client[language.DependenciesRequest, language.GetDependenciesResponse]
+	getDependencies      *connect.Client[language.GetDependenciesRequest, language.GetDependenciesResponse]
 	build                *connect.Client[language.BuildRequest, language.BuildResponse]
 	buildContextUpdated  *connect.Client[language.BuildContextUpdatedRequest, language.BuildContextUpdatedResponse]
 	generateStubs        *connect.Client[language.GenerateStubsRequest, language.GenerateStubsResponse]
@@ -204,7 +204,7 @@ func (c *languageServiceClient) ModuleConfigDefaults(ctx context.Context, req *c
 }
 
 // GetDependencies calls xyz.block.ftl.v1.language.LanguageService.GetDependencies.
-func (c *languageServiceClient) GetDependencies(ctx context.Context, req *connect.Request[language.DependenciesRequest]) (*connect.Response[language.GetDependenciesResponse], error) {
+func (c *languageServiceClient) GetDependencies(ctx context.Context, req *connect.Request[language.GetDependenciesRequest]) (*connect.Response[language.GetDependenciesResponse], error) {
 	return c.getDependencies.CallUnary(ctx, req)
 }
 
@@ -241,7 +241,7 @@ type LanguageServiceHandler interface {
 	ModuleConfigDefaults(context.Context, *connect.Request[language.ModuleConfigDefaultsRequest]) (*connect.Response[language.ModuleConfigDefaultsResponse], error)
 	// Extract dependencies for a module
 	// FTL will ensure that these dependencies are built before requesting a build for this module.
-	GetDependencies(context.Context, *connect.Request[language.DependenciesRequest]) (*connect.Response[language.GetDependenciesResponse], error)
+	GetDependencies(context.Context, *connect.Request[language.GetDependenciesRequest]) (*connect.Response[language.GetDependenciesResponse], error)
 	// Build the module and stream back build events.
 	//
 	// A BuildSuccess or BuildFailure event must be streamed back with the request's context id to indicate the
@@ -376,7 +376,7 @@ func (UnimplementedLanguageServiceHandler) ModuleConfigDefaults(context.Context,
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.language.LanguageService.ModuleConfigDefaults is not implemented"))
 }
 
-func (UnimplementedLanguageServiceHandler) GetDependencies(context.Context, *connect.Request[language.DependenciesRequest]) (*connect.Response[language.GetDependenciesResponse], error) {
+func (UnimplementedLanguageServiceHandler) GetDependencies(context.Context, *connect.Request[language.GetDependenciesRequest]) (*connect.Response[language.GetDependenciesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.language.LanguageService.GetDependencies is not implemented"))
 }
 

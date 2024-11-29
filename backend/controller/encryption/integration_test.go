@@ -39,7 +39,7 @@ func TestEncryptionForLogs(t *testing.T) {
 		// confirm that we can read an event for that call
 		func(t testing.TB, ic in.TestContext) {
 			in.Infof("Read Logs")
-			resp, err := ic.Console.GetEvents(ic.Context, connect.NewRequest(&pbconsole.EventsQuery{
+			resp, err := ic.Console.GetEvents(ic.Context, connect.NewRequest(&pbconsole.GetEventsRequest{
 				Limit: 10,
 			}))
 			assert.NoError(t, err, "could not get events")

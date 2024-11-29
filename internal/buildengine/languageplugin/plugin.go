@@ -256,7 +256,7 @@ func (p *LanguagePlugin) GetDependencies(ctx context.Context, config moduleconfi
 	if err != nil {
 		return nil, fmt.Errorf("could not convert module config to proto: %w", err)
 	}
-	resp, err := p.client.getDependencies(ctx, connect.NewRequest(&langpb.DependenciesRequest{
+	resp, err := p.client.getDependencies(ctx, connect.NewRequest(&langpb.GetDependenciesRequest{
 		ModuleConfig: configProto,
 	}))
 	if err != nil {

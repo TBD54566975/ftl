@@ -67,7 +67,7 @@ func (p *mockPluginClient) moduleConfigDefaults(ctx context.Context, req *connec
 	}), nil
 }
 
-func (p *mockPluginClient) getDependencies(context.Context, *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.GetDependenciesResponse], error) {
+func (p *mockPluginClient) getDependencies(context.Context, *connect.Request[langpb.GetDependenciesRequest]) (*connect.Response[langpb.GetDependenciesResponse], error) {
 	panic("not implemented")
 }
 

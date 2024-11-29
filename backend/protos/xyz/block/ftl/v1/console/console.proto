@@ -215,7 +215,7 @@ message StreamModulesResponse {
 }
 
 // Query for events.
-message EventsQuery {
+message GetEventsRequest {
   // Limit the number of events returned.
   message LimitFilter {
     int32 limit = 1;
@@ -287,32 +287,6 @@ message EventsQuery {
   Order order = 3;
 }
 
-message StreamEventsRequest {
-  optional google.protobuf.Duration update_interval = 1;
-  EventsQuery query = 2;
-}
-
-message StreamEventsResponse {
-  repeated Event events = 1;
-}
-
-message Event {
-  google.protobuf.Timestamp time_stamp = 1;
-  // Unique ID for event.
-  int64 id = 2;
-  oneof entry {
-    LogEvent log = 3;
-    CallEvent call = 4;
-    DeploymentCreatedEvent deployment_created = 5;
-    DeploymentUpdatedEvent deployment_updated = 6;
-    IngressEvent ingress = 7;
-    CronScheduledEvent cron_scheduled = 8;
-    AsyncExecuteEvent async_execute = 9;
-    PubSubPublishEvent pubsub_publish = 10;
-    PubSubConsumeEvent pubsub_consume = 11;
-  }
-}
-
 message GetEventsResponse {
   repeated Event events = 1;
 
@@ -358,6 +332,32 @@ message SetSecretResponse {
   bytes value = 1;
 }
 
+message StreamEventsRequest {
+  optional google.protobuf.Duration update_interval = 1;
+  GetEventsRequest query = 2;
+}
+
+message StreamEventsResponse {
+  repeated Event events = 1;
+}
+
+message Event {
+  google.protobuf.Timestamp time_stamp = 1;
+  // Unique ID for event.
+  int64 id = 2;
+  oneof entry {
+    LogEvent log = 3;
+    CallEvent call = 4;
+    DeploymentCreatedEvent deployment_created = 5;
+    DeploymentUpdatedEvent deployment_updated = 6;
+    IngressEvent ingress = 7;
+    CronScheduledEvent cron_scheduled = 8;
+    AsyncExecuteEvent async_execute = 9;
+    PubSubPublishEvent pubsub_publish = 10;
+    PubSubConsumeEvent pubsub_consume = 11;
+  }
+}
+
 service ConsoleService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
@@ -367,7 +367,7 @@ service ConsoleService {
   rpc GetModules(GetModulesRequest) returns (GetModulesResponse);
   rpc StreamModules(StreamModulesRequest) returns (stream StreamModulesResponse);
   rpc StreamEvents(StreamEventsRequest) returns (stream StreamEventsResponse);
-  rpc GetEvents(EventsQuery) returns (GetEventsResponse);
+  rpc GetEvents(GetEventsRequest) returns (GetEventsResponse);
 
   rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);

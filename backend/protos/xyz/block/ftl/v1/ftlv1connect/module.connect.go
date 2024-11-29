@@ -51,7 +51,7 @@ type ModuleServiceClient interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	// Get configuration state for the module
-	GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest]) (*connect.ServerStreamForClient[v1.GetModuleContextResponse], error)
+	GetModuleContext(context.Context, *connect.Request[v1.GetModuleContextRequest]) (*connect.ServerStreamForClient[v1.GetModuleContextResponse], error)
 	// Acquire (and renew) a lease for a deployment.
 	//
 	// Returns ResourceExhausted if the lease is held.
@@ -76,7 +76,7 @@ func NewModuleServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
-		getModuleContext: connect.NewClient[v1.ModuleContextRequest, v1.GetModuleContextResponse](
+		getModuleContext: connect.NewClient[v1.GetModuleContextRequest, v1.GetModuleContextResponse](
 			httpClient,
 			baseURL+ModuleServiceGetModuleContextProcedure,
 			opts...,
@@ -97,7 +97,7 @@ func NewModuleServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 // moduleServiceClient implements ModuleServiceClient.
 type moduleServiceClient struct {
 	ping             *connect.Client[v1.PingRequest, v1.PingResponse]
-	getModuleContext *connect.Client[v1.ModuleContextRequest, v1.GetModuleContextResponse]
+	getModuleContext *connect.Client[v1.GetModuleContextRequest, v1.GetModuleContextResponse]
 	acquireLease     *connect.Client[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]
 	publishEvent     *connect.Client[v1.PublishEventRequest, v1.PublishEventResponse]
 }
@@ -108,7 +108,7 @@ func (c *moduleServiceClient) Ping(ctx context.Context, req *connect.Request[v1.
 }
 
 // GetModuleContext calls xyz.block.ftl.v1.ModuleService.GetModuleContext.
-func (c *moduleServiceClient) GetModuleContext(ctx context.Context, req *connect.Request[v1.ModuleContextRequest]) (*connect.ServerStreamForClient[v1.GetModuleContextResponse], error) {
+func (c *moduleServiceClient) GetModuleContext(ctx context.Context, req *connect.Request[v1.GetModuleContextRequest]) (*connect.ServerStreamForClient[v1.GetModuleContextResponse], error) {
 	return c.getModuleContext.CallServerStream(ctx, req)
 }
 
@@ -127,7 +127,7 @@ type ModuleServiceHandler interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	// Get configuration state for the module
-	GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest], *connect.ServerStream[v1.GetModuleContextResponse]) error
+	GetModuleContext(context.Context, *connect.Request[v1.GetModuleContextRequest], *connect.ServerStream[v1.GetModuleContextResponse]) error
 	// Acquire (and renew) a lease for a deployment.
 	//
 	// Returns ResourceExhausted if the lease is held.
@@ -186,7 +186,7 @@ func (UnimplementedModuleServiceHandler) Ping(context.Context, *connect.Request[
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ModuleService.Ping is not implemented"))
 }
 
-func (UnimplementedModuleServiceHandler) GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest], *connect.ServerStream[v1.GetModuleContextResponse]) error {
+func (UnimplementedModuleServiceHandler) GetModuleContext(context.Context, *connect.Request[v1.GetModuleContextRequest], *connect.ServerStream[v1.GetModuleContextResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ModuleService.GetModuleContext is not implemented"))
 }
 

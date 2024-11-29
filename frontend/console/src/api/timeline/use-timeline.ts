@@ -3,17 +3,17 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useClient } from '../../hooks/use-client'
 import { useVisibility } from '../../hooks/use-visibility'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect'
-import { type Event, type EventsQuery_Filter, EventsQuery_Order } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { type Event, type GetEventsRequest_Filter, GetEventsRequest_Order } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
 const timelineKey = 'timeline'
 const maxTimelineEntries = 1000
 
-export const useTimeline = (isStreaming: boolean, filters: EventsQuery_Filter[], updateIntervalMs = 1000, enabled = true) => {
+export const useTimeline = (isStreaming: boolean, filters: GetEventsRequest_Filter[], updateIntervalMs = 1000, enabled = true) => {
   const client = useClient(ConsoleService)
   const queryClient = useQueryClient()
   const isVisible = useVisibility()
 
-  const order = EventsQuery_Order.DESC
+  const order = GetEventsRequest_Order.DESC
   const limit = isStreaming ? 200 : 1000
 
   const queryKey = [timelineKey, isStreaming, filters, order, limit]
