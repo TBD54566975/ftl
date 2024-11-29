@@ -13,6 +13,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/publish/publishpbconnect"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
@@ -28,6 +29,7 @@ import (
 
 type UserVerbConfig struct {
 	FTLEndpoint         *url.URL             `help:"FTL endpoint." env:"FTL_ENDPOINT" required:""`
+	RunnerEndpoint      *url.URL             `help:"Runner endpoint." env:"FTL_RUNNER_ENDPOINT" required:""`
 	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
 	Config              []string             `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
 }
@@ -41,6 +43,8 @@ func NewUserVerbServer(projectName string, moduleName string, handlers ...Handle
 		ctx = rpc.ContextWithClient(ctx, moduleServiceClient)
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
+		pubClient := rpc.Dial(pubconnect.NewPublishServiceClient, uc.RunnerEndpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, pubClient)
 
 		moduleContextSupplier := modulecontext.NewModuleContextSupplier(moduleServiceClient)
 		dynamicCtx, err := modulecontext.NewDynamicContext(ctx, moduleContextSupplier, moduleName)
