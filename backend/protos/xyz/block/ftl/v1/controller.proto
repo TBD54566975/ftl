@@ -55,8 +55,6 @@ message DeploymentArtefact {
 message CreateDeploymentRequest {
   schema.Module schema = 1;
   repeated DeploymentArtefact artefacts = 2;
-  // Runner labels required to run this deployment.
-  optional google.protobuf.Struct labels = 3;
 }
 message CreateDeploymentResponse {
   string deployment_key = 1;
@@ -92,7 +90,8 @@ message RegisterRunnerResponse {}
 
 message UpdateDeployRequest {
   string deployment_key = 1;
-  int32 min_replicas = 2;
+  optional int32 min_replicas = 2;
+  optional string endpoint = 3;
 }
 message UpdateDeployResponse {}
 

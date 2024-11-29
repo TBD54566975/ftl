@@ -40,7 +40,7 @@ type inMemProvisioningStep struct {
 }
 
 // InMemResourceProvisionerFn is a function that provisions a resource
-type InMemResourceProvisionerFn func(context.Context, *provisioner.ResourceContext, string, string) (*provisioner.Resource, error)
+type InMemResourceProvisionerFn func(context.Context, *provisioner.ResourceContext, string, string, *provisioner.Resource) (*provisioner.Resource, error)
 
 // InMemProvisioner for running an in memory provisioner, constructing all resources concurrently
 //
@@ -83,7 +83,7 @@ func (d *InMemProvisioner) Provision(ctx context.Context, req *connect.Request[p
 			task.steps = append(task.steps, step)
 			go func() {
 				defer step.Done.Store(true)
-				output, err := handler(ctx, r, req.Msg.Module, r.Resource.ResourceId)
+				output, err := handler(ctx, r, req.Msg.Module, r.Resource.ResourceId, previous[r.Resource.ResourceId])
 				if err != nil {
 					step.Err = err
 					logger.Errorf(err, "failed to provision resource %s", r.Resource.ResourceId)

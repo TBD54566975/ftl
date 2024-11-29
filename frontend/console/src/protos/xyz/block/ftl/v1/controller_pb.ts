@@ -394,13 +394,6 @@ export class CreateDeploymentRequest extends Message<CreateDeploymentRequest> {
    */
   artefacts: DeploymentArtefact[] = [];
 
-  /**
-   * Runner labels required to run this deployment.
-   *
-   * @generated from field: optional google.protobuf.Struct labels = 3;
-   */
-  labels?: Struct;
-
   constructor(data?: PartialMessage<CreateDeploymentRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -411,7 +404,6 @@ export class CreateDeploymentRequest extends Message<CreateDeploymentRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "schema", kind: "message", T: Module },
     { no: 2, name: "artefacts", kind: "message", T: DeploymentArtefact, repeated: true },
-    { no: 3, name: "labels", kind: "message", T: Struct, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateDeploymentRequest {
@@ -738,9 +730,14 @@ export class UpdateDeployRequest extends Message<UpdateDeployRequest> {
   deploymentKey = "";
 
   /**
-   * @generated from field: int32 min_replicas = 2;
+   * @generated from field: optional int32 min_replicas = 2;
    */
-  minReplicas = 0;
+  minReplicas?: number;
+
+  /**
+   * @generated from field: optional string endpoint = 3;
+   */
+  endpoint?: string;
 
   constructor(data?: PartialMessage<UpdateDeployRequest>) {
     super();
@@ -751,7 +748,8 @@ export class UpdateDeployRequest extends Message<UpdateDeployRequest> {
   static readonly typeName = "xyz.block.ftl.v1.UpdateDeployRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateDeployRequest {

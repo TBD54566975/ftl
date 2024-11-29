@@ -99,14 +99,15 @@ func TestKubeScaling(t *testing.T) {
 			depCount := 0
 			for _, dep := range deps.Items {
 				if strings.HasPrefix(dep.Name, "dpl-echo") {
+					t.Logf("Found deployment %s", dep.Name)
 					depCount++
 					service, err := client.CoreV1().Services(namespace).Get(ctx, dep.Name, v1.GetOptions{})
 					assert.NoError(t, err)
-					assert.Equal(t, 1, len(dep.OwnerReferences))
+					assert.Equal(t, 1, len(dep.OwnerReferences), "Expected 1 owner reference", dep.OwnerReferences)
 					assert.Equal(t, service.UID, dep.OwnerReferences[0].UID)
 				}
 			}
-			assert.Equal(t, 1, depCount)
+			assert.Equal(t, 1, depCount, "Expected 1 deployment, found %d", depCount)
 		}),
 	)
 }

@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3, Struct } from "@bufbuild/protobuf";
+import { Message, proto3 } from "@bufbuild/protobuf";
 import { DatabaseRuntime, Module, Ref } from "../../v1/schema/schema_pb.js";
 import { DeploymentArtefact } from "../../v1/controller_pb.js";
 
@@ -60,6 +60,12 @@ export class Resource extends Message<Resource> {
      */
     value: SubscriptionResource;
     case: "subscription";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1beta1.provisioner.RunnerResource runner = 108;
+     */
+    value: RunnerResource;
+    case: "runner";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Resource>) {
@@ -77,6 +83,7 @@ export class Resource extends Message<Resource> {
     { no: 105, name: "sql_migration", kind: "message", T: SqlMigrationResource, oneof: "resource" },
     { no: 106, name: "topic", kind: "message", T: TopicResource, oneof: "resource" },
     { no: 107, name: "subscription", kind: "message", T: SubscriptionResource, oneof: "resource" },
+    { no: 108, name: "runner", kind: "message", T: RunnerResource, oneof: "resource" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Resource {
@@ -263,13 +270,6 @@ export class ModuleResource extends Message<ModuleResource> {
    */
   artefacts: DeploymentArtefact[] = [];
 
-  /**
-   * Runner labels required to run this deployment.
-   *
-   * @generated from field: optional google.protobuf.Struct labels = 4;
-   */
-  labels?: Struct;
-
   constructor(data?: PartialMessage<ModuleResource>) {
     super();
     proto3.util.initPartial(data, this);
@@ -281,7 +281,6 @@ export class ModuleResource extends Message<ModuleResource> {
     { no: 1, name: "output", kind: "message", T: ModuleResource_ModuleResourceOutput },
     { no: 2, name: "schema", kind: "message", T: Module },
     { no: 3, name: "artefacts", kind: "message", T: DeploymentArtefact, repeated: true },
-    { no: 4, name: "labels", kind: "message", T: Struct, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleResource {
@@ -335,6 +334,86 @@ export class ModuleResource_ModuleResourceOutput extends Message<ModuleResource_
 
   static equals(a: ModuleResource_ModuleResourceOutput | PlainMessage<ModuleResource_ModuleResourceOutput> | undefined, b: ModuleResource_ModuleResourceOutput | PlainMessage<ModuleResource_ModuleResourceOutput> | undefined): boolean {
     return proto3.util.equals(ModuleResource_ModuleResourceOutput, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.RunnerResource
+ */
+export class RunnerResource extends Message<RunnerResource> {
+  /**
+   * @generated from field: xyz.block.ftl.v1beta1.provisioner.RunnerResource.RunnerResourceOutput output = 1;
+   */
+  output?: RunnerResource_RunnerResourceOutput;
+
+  constructor(data?: PartialMessage<RunnerResource>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.RunnerResource";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "output", kind: "message", T: RunnerResource_RunnerResourceOutput },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RunnerResource {
+    return new RunnerResource().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RunnerResource {
+    return new RunnerResource().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RunnerResource {
+    return new RunnerResource().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RunnerResource | PlainMessage<RunnerResource> | undefined, b: RunnerResource | PlainMessage<RunnerResource> | undefined): boolean {
+    return proto3.util.equals(RunnerResource, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.RunnerResource.RunnerResourceOutput
+ */
+export class RunnerResource_RunnerResourceOutput extends Message<RunnerResource_RunnerResourceOutput> {
+  /**
+   * @generated from field: string runner_uri = 1;
+   */
+  runnerUri = "";
+
+  /**
+   * @generated from field: string deployment_key = 2;
+   */
+  deploymentKey = "";
+
+  constructor(data?: PartialMessage<RunnerResource_RunnerResourceOutput>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.RunnerResource.RunnerResourceOutput";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "runner_uri", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RunnerResource_RunnerResourceOutput {
+    return new RunnerResource_RunnerResourceOutput().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RunnerResource_RunnerResourceOutput {
+    return new RunnerResource_RunnerResourceOutput().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RunnerResource_RunnerResourceOutput {
+    return new RunnerResource_RunnerResourceOutput().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RunnerResource_RunnerResourceOutput | PlainMessage<RunnerResource_RunnerResourceOutput> | undefined, b: RunnerResource_RunnerResourceOutput | PlainMessage<RunnerResource_RunnerResourceOutput> | undefined): boolean {
+    return proto3.util.equals(RunnerResource_RunnerResourceOutput, a, b);
   }
 }
 

@@ -9,5 +9,6 @@ data:
     plugins = [
         { id = "cloudformation", resources = ["postgres"] },
         { id = "controller", resources = ["module"] },
+        { id = "kubernetes", resources = ["runner"] },
     ]
 {{- end}}

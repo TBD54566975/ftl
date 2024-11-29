@@ -34,8 +34,8 @@ func NewSQLMigrationProvisioner(registryConfig artefacts.RegistryConfig) *InMemP
 	})
 }
 
-func provisionSQLMigration(registryConfig artefacts.RegistryConfig) func(ctx context.Context, rc *provisioner.ResourceContext, module, id string) (*provisioner.Resource, error) {
-	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string) (*provisioner.Resource, error) {
+func provisionSQLMigration(registryConfig artefacts.RegistryConfig) func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
+	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
 		migration, ok := rc.Resource.Resource.(*provisioner.Resource_SqlMigration)
 		if !ok {
 			return nil, fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource)

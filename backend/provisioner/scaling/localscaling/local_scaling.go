@@ -14,15 +14,15 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	"github.com/TBD54566975/ftl/backend/controller/leases"
-	"github.com/TBD54566975/ftl/backend/controller/scaling"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
 	"github.com/TBD54566975/ftl/backend/runner"
 	"github.com/TBD54566975/ftl/internal/bind"
+	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/localdebug"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/observability"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 var _ scaling.RunnerScaling = &localScaling{}
@@ -30,6 +30,7 @@ var _ scaling.RunnerScaling = &localScaling{}
 const maxExits = 10
 
 type localScaling struct {
+	ctx      context.Context
 	lock     sync.Mutex
 	cacheDir string
 	// Module -> Deployments -> info
@@ -45,8 +46,45 @@ type localScaling struct {
 	registryConfig   artefacts.RegistryConfig
 	enableOtel       bool
 
-	devModeEndpointsUpdates <-chan scaling.DevModeEndpoints
+	devModeEndpointsUpdates <-chan dev.LocalEndpoint
 	devModeEndpoints        map[string]*devModeRunner
+}
+
+func (l *localScaling) StartDeployment(ctx context.Context, module string, deployment string, sch *schema.Module) error {
+	if sch.Runtime == nil {
+		return nil
+	}
+	return l.setReplicas(module, deployment, sch.Runtime.Language, 1)
+}
+
+func (l *localScaling) setReplicas(module string, deployment string, language string, replicas int32) error {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	deploymentKey, err := model.ParseDeploymentKey(deployment)
+	if err != nil {
+		return fmt.Errorf("failed to parse deployment key: %w", err)
+	}
+	ctx := l.ctx
+	logger := log.FromContext(ctx).Scope("localScaling").Module(module)
+	ctx = log.ContextWithLogger(ctx, logger)
+	logger.Debugf("Starting deployment for %s", deployment)
+	moduleDeployments := l.runners[module]
+	if moduleDeployments == nil {
+		moduleDeployments = map[string]*deploymentInfo{}
+		l.runners[module] = moduleDeployments
+	}
+	deploymentRunners := moduleDeployments[deployment]
+	if deploymentRunners == nil {
+		deploymentRunners = &deploymentInfo{runner: optional.None[runnerInfo](), key: deploymentKey, module: module, language: language}
+		moduleDeployments[deployment] = deploymentRunners
+	}
+	deploymentRunners.replicas = replicas
+
+	return l.reconcileRunners(ctx, deploymentRunners)
+}
+
+func (l *localScaling) TerminateDeployment(ctx context.Context, module string, deployment string) error {
+	return l.setReplicas(module, deployment, "", 0)
 }
 
 type devModeRunner struct {
@@ -56,7 +94,7 @@ type devModeRunner struct {
 	debugPort     int
 }
 
-func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error {
+func (l *localScaling) Start(ctx context.Context) error {
 	go func() {
 		for {
 			select {
@@ -69,13 +107,12 @@ func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser lease
 			}
 		}
 	}()
-	scaling.BeginGrpcScaling(ctx, endpoint, leaser, l.handleSchemaChange)
 	return nil
 }
 
 // updateDevModeEndpoint updates the dev mode endpoint for a module
 // Must be called under lock
-func (l *localScaling) updateDevModeEndpoint(ctx context.Context, devEndpoints scaling.DevModeEndpoints) {
+func (l *localScaling) updateDevModeEndpoint(ctx context.Context, devEndpoints dev.LocalEndpoint) {
 	l.devModeEndpoints[devEndpoints.Module] = &devModeRunner{
 		uri:       devEndpoints.Endpoint,
 		debugPort: devEndpoints.DebugPort,
@@ -129,13 +166,14 @@ type runnerInfo struct {
 	port       string
 }
 
-func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string, enableIDEIntegration bool, registryConfig artefacts.RegistryConfig, enableOtel bool, devModeEndpoints <-chan scaling.DevModeEndpoints) (scaling.RunnerScaling, error) {
+func NewLocalScaling(ctx context.Context, portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string, enableIDEIntegration bool, registryConfig artefacts.RegistryConfig, enableOtel bool, devModeEndpoints <-chan dev.LocalEndpoint) (scaling.RunnerScaling, error) {
 
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return nil, err
 	}
 	local := localScaling{
+		ctx:                     ctx,
 		lock:                    sync.Mutex{},
 		cacheDir:                cacheDir,
 		runners:                 map[string]map[string]*deploymentInfo{},
@@ -153,41 +191,6 @@ func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*u
 	}
 
 	return &local, nil
-}
-
-func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
-	if msg.DeploymentKey == nil {
-		// Builtins don't have deployments
-		return nil
-	}
-	deploymentKey, err := model.ParseDeploymentKey(msg.GetDeploymentKey())
-	if err != nil {
-		return fmt.Errorf("failed to parse deployment key: %w", err)
-	}
-	l.lock.Lock()
-	defer l.lock.Unlock()
-	logger := log.FromContext(ctx).Scope("localScaling").Module(msg.ModuleName)
-	ctx = log.ContextWithLogger(ctx, logger)
-	logger.Debugf("Handling schema change for %s", deploymentKey)
-	moduleDeployments := l.runners[msg.ModuleName]
-	if moduleDeployments == nil {
-		moduleDeployments = map[string]*deploymentInfo{}
-		l.runners[msg.ModuleName] = moduleDeployments
-	}
-	deploymentRunners := moduleDeployments[deploymentKey.String()]
-	if deploymentRunners == nil {
-		deploymentRunners = &deploymentInfo{runner: optional.None[runnerInfo](), key: deploymentKey, module: msg.ModuleName, language: msg.Schema.Runtime.Language}
-		moduleDeployments[deploymentKey.String()] = deploymentRunners
-	}
-
-	switch msg.ChangeType {
-	case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
-		deploymentRunners.replicas = msg.Schema.Runtime.MinReplicas
-	case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
-		deploymentRunners.replicas = 0
-		delete(moduleDeployments, deploymentKey.String())
-	}
-	return l.reconcileRunners(ctx, deploymentRunners)
 }
 
 func (l *localScaling) reconcileRunners(ctx context.Context, deploymentRunners *deploymentInfo) error {
@@ -300,7 +303,6 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey model.Depl
 	info.runner = optional.Some(runnerInfo{cancelFunc: cancel, port: bind.Port()})
 
 	go func() {
-		logger.Debugf("Starting runner: %s", config.Key)
 		err := runner.Start(runnerCtx, config)
 		l.lock.Lock()
 		defer l.lock.Unlock()

@@ -1,4 +1,3 @@
-from google.protobuf import struct_pb2 as _struct_pb2
 from xyz.block.ftl.v1 import controller_pb2 as _controller_pb2
 from xyz.block.ftl.v1.schema import schema_pb2 as _schema_pb2
 from google.protobuf.internal import containers as _containers
@@ -9,7 +8,7 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Resource(_message.Message):
-    __slots__ = ("resource_id", "postgres", "mysql", "module", "sql_migration", "topic", "subscription")
+    __slots__ = ("resource_id", "postgres", "mysql", "module", "sql_migration", "topic", "subscription", "runner")
     RESOURCE_ID_FIELD_NUMBER: _ClassVar[int]
     POSTGRES_FIELD_NUMBER: _ClassVar[int]
     MYSQL_FIELD_NUMBER: _ClassVar[int]
@@ -17,6 +16,7 @@ class Resource(_message.Message):
     SQL_MIGRATION_FIELD_NUMBER: _ClassVar[int]
     TOPIC_FIELD_NUMBER: _ClassVar[int]
     SUBSCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    RUNNER_FIELD_NUMBER: _ClassVar[int]
     resource_id: str
     postgres: PostgresResource
     mysql: MysqlResource
@@ -24,7 +24,8 @@ class Resource(_message.Message):
     sql_migration: SqlMigrationResource
     topic: TopicResource
     subscription: SubscriptionResource
-    def __init__(self, resource_id: _Optional[str] = ..., postgres: _Optional[_Union[PostgresResource, _Mapping]] = ..., mysql: _Optional[_Union[MysqlResource, _Mapping]] = ..., module: _Optional[_Union[ModuleResource, _Mapping]] = ..., sql_migration: _Optional[_Union[SqlMigrationResource, _Mapping]] = ..., topic: _Optional[_Union[TopicResource, _Mapping]] = ..., subscription: _Optional[_Union[SubscriptionResource, _Mapping]] = ...) -> None: ...
+    runner: RunnerResource
+    def __init__(self, resource_id: _Optional[str] = ..., postgres: _Optional[_Union[PostgresResource, _Mapping]] = ..., mysql: _Optional[_Union[MysqlResource, _Mapping]] = ..., module: _Optional[_Union[ModuleResource, _Mapping]] = ..., sql_migration: _Optional[_Union[SqlMigrationResource, _Mapping]] = ..., topic: _Optional[_Union[TopicResource, _Mapping]] = ..., subscription: _Optional[_Union[SubscriptionResource, _Mapping]] = ..., runner: _Optional[_Union[RunnerResource, _Mapping]] = ...) -> None: ...
 
 class PostgresResource(_message.Message):
     __slots__ = ("output",)
@@ -50,7 +51,7 @@ class SqlMigrationResource(_message.Message):
     def __init__(self, output: _Optional[_Union[SqlMigrationResource.SqlMigrationResourceOutput, _Mapping]] = ..., digest: _Optional[str] = ...) -> None: ...
 
 class ModuleResource(_message.Message):
-    __slots__ = ("output", "schema", "artefacts", "labels")
+    __slots__ = ("output", "schema", "artefacts")
     class ModuleResourceOutput(_message.Message):
         __slots__ = ("deployment_key",)
         DEPLOYMENT_KEY_FIELD_NUMBER: _ClassVar[int]
@@ -59,12 +60,23 @@ class ModuleResource(_message.Message):
     OUTPUT_FIELD_NUMBER: _ClassVar[int]
     SCHEMA_FIELD_NUMBER: _ClassVar[int]
     ARTEFACTS_FIELD_NUMBER: _ClassVar[int]
-    LABELS_FIELD_NUMBER: _ClassVar[int]
     output: ModuleResource.ModuleResourceOutput
     schema: _schema_pb2.Module
     artefacts: _containers.RepeatedCompositeFieldContainer[_controller_pb2.DeploymentArtefact]
-    labels: _struct_pb2.Struct
-    def __init__(self, output: _Optional[_Union[ModuleResource.ModuleResourceOutput, _Mapping]] = ..., schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., artefacts: _Optional[_Iterable[_Union[_controller_pb2.DeploymentArtefact, _Mapping]]] = ..., labels: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+    def __init__(self, output: _Optional[_Union[ModuleResource.ModuleResourceOutput, _Mapping]] = ..., schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., artefacts: _Optional[_Iterable[_Union[_controller_pb2.DeploymentArtefact, _Mapping]]] = ...) -> None: ...
+
+class RunnerResource(_message.Message):
+    __slots__ = ("output",)
+    class RunnerResourceOutput(_message.Message):
+        __slots__ = ("runner_uri", "deployment_key")
+        RUNNER_URI_FIELD_NUMBER: _ClassVar[int]
+        DEPLOYMENT_KEY_FIELD_NUMBER: _ClassVar[int]
+        runner_uri: str
+        deployment_key: str
+        def __init__(self, runner_uri: _Optional[str] = ..., deployment_key: _Optional[str] = ...) -> None: ...
+    OUTPUT_FIELD_NUMBER: _ClassVar[int]
+    output: RunnerResource.RunnerResourceOutput
+    def __init__(self, output: _Optional[_Union[RunnerResource.RunnerResourceOutput, _Mapping]] = ...) -> None: ...
 
 class TopicResource(_message.Message):
     __slots__ = ("output",)
