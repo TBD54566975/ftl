@@ -50,6 +50,7 @@ func provisionRunner(scaling scaling.RunnerScaling, client ftlv1connect.Controll
 		logger.Debugf("provisioning runner: %s.%s for deployment %s", module, id, deployment)
 		err = scaling.StartDeployment(ctx, module, deployment, schema)
 		if err != nil {
+			logger.Infof("failed to start deployment: %v", err)
 			return nil, fmt.Errorf("failed to start deployment: %w", err)
 		}
 		endpoint, err := scaling.GetEndpointForDeployment(ctx, module, deployment)

@@ -322,8 +322,9 @@ func (r *k8sScaling) handleNewDeployment(ctx context.Context, module string, nam
 	// Now create a ServiceAccount, we mostly need this for Istio but we create it for all deployments
 	// To keep things consistent
 	serviceAccountClient := r.client.CoreV1().ServiceAccounts(r.namespace)
-	serviceAccount, err := serviceAccountClient.Get(ctx, name, v1.GetOptions{})
+	serviceAccount, err := serviceAccountClient.Get(ctx, module, v1.GetOptions{})
 	if err != nil {
+		//TODO: implement cleanup for Service Accounts of modules that are completly removed
 		if !errors.IsNotFound(err) {
 			return fmt.Errorf("failed to get service account %s: %w", name, err)
 		}
@@ -332,9 +333,11 @@ func (r *k8sScaling) handleNewDeployment(ctx context.Context, module string, nam
 		if err != nil {
 			return fmt.Errorf("failed to decode service account from configMap %s: %w", configMapName, err)
 		}
-		serviceAccount.Name = name
-		serviceAccount.OwnerReferences = []v1.OwnerReference{{APIVersion: "v1", Kind: "service", Name: name, UID: service.UID}}
-		addLabels(&serviceAccount.ObjectMeta, module, name)
+		serviceAccount.Name = module
+		if serviceAccount.Labels == nil {
+			serviceAccount.Labels = map[string]string{}
+		}
+		serviceAccount.Labels[moduleLabel] = module
 		_, err = serviceAccountClient.Create(ctx, serviceAccount, v1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to create service account%s: %w", name, err)
@@ -403,7 +406,7 @@ func (r *k8sScaling) handleNewDeployment(ctx context.Context, module string, nam
 		deployment.Spec.Template.ObjectMeta.Labels = map[string]string{}
 	}
 
-	deployment.Spec.Template.Spec.ServiceAccountName = name
+	deployment.Spec.Template.Spec.ServiceAccountName = module
 	changes, err := r.syncDeployment(ctx, thisImage, deployment, 1)
 
 	if err != nil {
