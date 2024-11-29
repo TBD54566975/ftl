@@ -5,13 +5,13 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/TBD54566975/ftl/internal/schema"
-	sl "github.com/TBD54566975/ftl/internal/slices"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	pb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/publish"
 	pbconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/publish/publishpbconnect"
+	"github.com/TBD54566975/ftl/internal/schema"
+	sl "github.com/TBD54566975/ftl/internal/slices"
 )
 
 type Service struct {

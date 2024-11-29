@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/IBM/sarama"
+
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 

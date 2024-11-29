@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/types"
 
-	imaps "github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
 	checker "github.com/TBD54566975/golang-tools/go/analysis/programmaticchecker"
@@ -33,6 +32,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/valueenumvariant"
 	"github.com/TBD54566975/ftl/go-runtime/schema/verb"
 	"github.com/TBD54566975/ftl/internal/builderrors"
+	imaps "github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
