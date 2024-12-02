@@ -398,6 +398,22 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 	return nil
 }
 
+// SetDeploymentEndpoint sets the deployment endpoint
+func (d *DAL) SetDeploymentEndpoint(ctx context.Context, key model.DeploymentKey, endpoint string) (err error) {
+	// Start the transaction
+	tx, err := d.Begin(ctx)
+	if err != nil {
+		return libdal.TranslatePGError(err)
+	}
+	defer tx.CommitOrRollback(ctx, &err)
+
+	err = tx.db.SetDeploymentEndpoint(ctx, key, optional.Some(endpoint))
+	if err != nil {
+		return libdal.TranslatePGError(err)
+	}
+	return nil
+}
+
 var ErrReplaceDeploymentAlreadyActive = errors.New("deployment already active")
 
 // ReplaceDeployment replaces an old deployment of a module with a new deployment.
@@ -520,6 +536,7 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]dalmodel.Deployment, 
 			Replicas:    optional.Some(int(in.Replicas)),
 			Schema:      in.Deployment.Schema,
 			CreatedAt:   in.Deployment.CreatedAt,
+			Endpoint:    in.Deployment.Endpoint,
 		}
 	}), nil
 }

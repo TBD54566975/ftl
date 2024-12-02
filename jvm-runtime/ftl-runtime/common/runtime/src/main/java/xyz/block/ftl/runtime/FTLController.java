@@ -21,24 +21,24 @@ import io.grpc.stub.StreamObserver;
 import xyz.block.ftl.LeaseClient;
 import xyz.block.ftl.LeaseFailedException;
 import xyz.block.ftl.LeaseHandle;
+import xyz.block.ftl.schema.v1.Ref;
 import xyz.block.ftl.v1.*;
-import xyz.block.ftl.v1.schema.Ref;
 
 public class FTLController implements LeaseClient {
     private static final Logger log = Logger.getLogger(FTLController.class);
     final String moduleName;
 
     private Throwable currentError;
-    private volatile ModuleContextResponse moduleContextResponse;
+    private volatile GetModuleContextResponse moduleContextResponse;
     private boolean waiters = false;
 
     final VerbServiceGrpc.VerbServiceStub verbService;
     final ModuleServiceGrpc.ModuleServiceStub moduleService;
-    final StreamObserver<ModuleContextResponse> moduleObserver = new ModuleObserver();
+    final StreamObserver<GetModuleContextResponse> moduleObserver = new ModuleObserver();
 
     private static volatile FTLController controller;
 
-    private final Map<String, ModuleContextResponse.DBType> databases = new ConcurrentHashMap<>();
+    private final Map<String, GetModuleContextResponse.DbType> databases = new ConcurrentHashMap<>();
 
     /**
      * TODO: look at how init should work, this is terrible and will break dev mode
@@ -71,11 +71,11 @@ public class FTLController implements LeaseClient {
         }
         var channel = channelBuilder.build();
         moduleService = ModuleServiceGrpc.newStub(channel);
-        moduleService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
+        moduleService.getModuleContext(GetModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
         verbService = VerbServiceGrpc.newStub(channel);
     }
 
-    public void registerDatabase(String name, ModuleContextResponse.DBType type) {
+    public void registerDatabase(String name, GetModuleContextResponse.DbType type) {
         databases.put(name, type);
     }
 
@@ -96,14 +96,14 @@ public class FTLController implements LeaseClient {
     }
 
     public Datasource getDatasource(String name) {
-        if (databases.get(name) == ModuleContextResponse.DBType.POSTGRES) {
+        if (databases.get(name) == GetModuleContextResponse.DbType.DB_TYPE_POSTGRES) {
             var proxyAddress = System.getenv("FTL_PROXY_POSTGRES_ADDRESS");
             return new Datasource("jdbc:postgresql://" + proxyAddress + "/" + name, "ftl", "ftl");
-        } else if (databases.get(name) == ModuleContextResponse.DBType.MYSQL) {
+        } else if (databases.get(name) == GetModuleContextResponse.DbType.DB_TYPE_MYSQL) {
             var proxyAddress = System.getenv("FTL_PROXY_MYSQL_ADDRESS_" + name.toUpperCase());
             return new Datasource("jdbc:mysql://" + proxyAddress + "/" + name, "ftl", "ftl");
         }
-        List<ModuleContextResponse.DSN> databasesList = getModuleContext().getDatabasesList();
+        List<GetModuleContextResponse.DSN> databasesList = getModuleContext().getDatabasesList();
         for (var i : databasesList) {
             if (i.getName().equals(name)) {
                 return Datasource.fromDSN(i.getDsn(), i.getType());
@@ -210,7 +210,7 @@ public class FTLController implements LeaseClient {
         };
     }
 
-    private ModuleContextResponse getModuleContext() {
+    private GetModuleContextResponse getModuleContext() {
         var moduleContext = moduleContextResponse;
         if (moduleContext != null) {
             return moduleContext;
@@ -235,12 +235,12 @@ public class FTLController implements LeaseClient {
         }
     }
 
-    private class ModuleObserver implements StreamObserver<ModuleContextResponse> {
+    private class ModuleObserver implements StreamObserver<GetModuleContextResponse> {
 
         final AtomicInteger failCount = new AtomicInteger();
 
         @Override
-        public void onNext(ModuleContextResponse moduleContextResponse) {
+        public void onNext(GetModuleContextResponse moduleContextResponse) {
             synchronized (this) {
                 currentError = null;
                 FTLController.this.moduleContextResponse = moduleContextResponse;
@@ -263,7 +263,8 @@ public class FTLController implements LeaseClient {
                 }
             }
             if (failCount.incrementAndGet() < 5) {
-                moduleService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
+                moduleService.getModuleContext(GetModuleContextRequest.newBuilder().setModule(moduleName).build(),
+                        moduleObserver);
             }
         }
 
@@ -275,8 +276,8 @@ public class FTLController implements LeaseClient {
 
     public record Datasource(String connectionString, String username, String password) {
 
-        public static Datasource fromDSN(String dsn, ModuleContextResponse.DBType type) {
-            String prefix = type.equals(ModuleContextResponse.DBType.MYSQL) ? "jdbc:mysql" : "jdbc:postgresql";
+        public static Datasource fromDSN(String dsn, GetModuleContextResponse.DbType type) {
+            String prefix = type.equals(GetModuleContextResponse.DbType.DB_TYPE_MYSQL) ? "jdbc:mysql" : "jdbc:postgresql";
             try {
                 URI uri = new URI(dsn);
                 String username = "";

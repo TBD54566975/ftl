@@ -5,7 +5,7 @@ import (
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 // AliasKind is the kind of alias.
@@ -14,7 +14,8 @@ import (
 type AliasKind int
 
 const (
-	AliasKindJson AliasKind = iota //nolint
+	AliasKindUnspecified AliasKind = iota
+	AliasKindJson                  //nolint
 )
 
 //protobuf:5

@@ -11,9 +11,9 @@ public class TestModuleServer extends ModuleServiceGrpc.ModuleServiceImplBase {
     }
 
     @Override
-    public void getModuleContext(ModuleContextRequest request, StreamObserver<ModuleContextResponse> responseObserver) {
+    public void getModuleContext(GetModuleContextRequest request, StreamObserver<GetModuleContextResponse> responseObserver) {
         //TODO: add a way to test secrets and other module context values
-        responseObserver.onNext(ModuleContextResponse.newBuilder().build());
+        responseObserver.onNext(GetModuleContextResponse.newBuilder().build());
     }
 
     @Override

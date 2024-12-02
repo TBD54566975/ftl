@@ -1,5 +1,5 @@
 import { ResizablePanels } from '../../../../components/ResizablePanels'
-import type { Topic } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Topic } from '../../../../protos/xyz/block/ftl/console/v1/console_pb'
 import { declIcon } from '../../module.utils'
 import { Schema } from '../../schema/Schema'
 import { PanelHeader } from '../PanelHeader'

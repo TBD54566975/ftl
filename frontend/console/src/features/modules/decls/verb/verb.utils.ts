@@ -1,7 +1,7 @@
 import { JSONSchemaFaker } from 'json-schema-faker'
 import type { JsonValue } from 'type-fest/source/basic'
-import type { Module, Verb } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
-import type { MetadataCalls, MetadataCronJob, MetadataIngress, MetadataSubscriber, Ref } from '../../../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import type { Module, Verb } from '../../../../protos/xyz/block/ftl/console/v1/console_pb'
+import type { MetadataCalls, MetadataCronJob, MetadataIngress, MetadataSubscriber, Ref } from '../../../../protos/xyz/block/ftl/schema/v1/schema_pb'
 
 const basePath = 'http://localhost:8891/'
 

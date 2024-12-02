@@ -84,7 +84,7 @@ func testAdminConfigs(
 
 	module := ""
 	includeValues := true
-	resp, err := admin.ConfigList(ctx, connect.NewRequest(&ftlv1.ListConfigRequest{
+	resp, err := admin.ConfigList(ctx, connect.NewRequest(&ftlv1.ConfigListRequest{
 		Module:        &module,
 		IncludeValues: &includeValues,
 	}))
@@ -100,7 +100,7 @@ func testAdminConfigs(
 			Module: &module,
 			Name:   entry.Ref.Name,
 		}
-		resp, err := admin.ConfigGet(ctx, connect.NewRequest(&ftlv1.GetConfigRequest{Ref: ref}))
+		resp, err := admin.ConfigGet(ctx, connect.NewRequest(&ftlv1.ConfigGetRequest{Ref: ref}))
 		assert.NoError(t, err)
 		assert.Equal(t, entry.Value, string(resp.Msg.Value))
 	}
@@ -119,7 +119,7 @@ func testAdminSecrets(
 
 	module := ""
 	includeValues := true
-	resp, err := admin.SecretsList(ctx, connect.NewRequest(&ftlv1.ListSecretsRequest{
+	resp, err := admin.SecretsList(ctx, connect.NewRequest(&ftlv1.SecretsListRequest{
 		Module:        &module,
 		IncludeValues: &includeValues,
 	}))
@@ -135,7 +135,7 @@ func testAdminSecrets(
 			Module: &module,
 			Name:   entry.Ref.Name,
 		}
-		resp, err := admin.SecretGet(ctx, connect.NewRequest(&ftlv1.GetSecretRequest{Ref: ref}))
+		resp, err := admin.SecretGet(ctx, connect.NewRequest(&ftlv1.SecretGetRequest{Ref: ref}))
 		assert.NoError(t, err)
 		assert.Equal(t, entry.Value, string(resp.Msg.Value))
 	}
@@ -235,8 +235,8 @@ func testSetConfig(t testing.TB, ctx context.Context, admin *AdminService, modul
 		configRef.Module = &module
 	}
 
-	_, err = admin.ConfigSet(ctx, connect.NewRequest(&ftlv1.SetConfigRequest{
-		Provider: ftlv1.ConfigProvider_CONFIG_INLINE.Enum(),
+	_, err = admin.ConfigSet(ctx, connect.NewRequest(&ftlv1.ConfigSetRequest{
+		Provider: ftlv1.ConfigProvider_CONFIG_PROVIDER_INLINE.Enum(),
 		Ref:      configRef,
 		Value:    buffer,
 	}))
@@ -254,8 +254,8 @@ func testSetSecret(t testing.TB, ctx context.Context, admin *AdminService, modul
 		configRef.Module = &module
 	}
 
-	_, err = admin.SecretSet(ctx, connect.NewRequest(&ftlv1.SetSecretRequest{
-		Provider: ftlv1.SecretProvider_SECRET_INLINE.Enum(),
+	_, err = admin.SecretSet(ctx, connect.NewRequest(&ftlv1.SecretSetRequest{
+		Provider: ftlv1.SecretProvider_SECRET_PROVIDER_INLINE.Enum(),
 		Ref:      configRef,
 		Value:    buffer,
 	}))

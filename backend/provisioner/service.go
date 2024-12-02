@@ -14,10 +14,11 @@ import (
 	"github.com/puzpuzpuz/xsync/v3"
 	"golang.org/x/sync/errgroup"
 
+	provproto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
+	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	provproto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	ftlv1connect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -149,6 +150,14 @@ func replaceOutputs(to []*provproto.Resource, from []*provproto.Resource) error 
 				}
 				r.Subscription.Output = subscriptionFrom.Subscription.Output
 			}
+		case *provproto.Resource_Runner:
+			if runnerFrom, ok := existing.Resource.(*provproto.Resource_Runner); ok && runnerFrom.Runner != nil {
+				if r.Runner == nil {
+					r.Runner = &provproto.RunnerResource{}
+				}
+				r.Runner.Output = runnerFrom.Runner.Output
+			}
+			// Ignore
 		default:
 			return fmt.Errorf("can not replace outputs for an unknown resource type %T", r)
 		}
@@ -188,7 +197,7 @@ func Start(
 	return nil
 }
 
-func RegistryFromConfigFile(ctx context.Context, file *os.File, controller ftlv1connect.ControllerServiceClient) (*ProvisionerRegistry, error) {
+func RegistryFromConfigFile(ctx context.Context, file *os.File, controller ftlv1connect.ControllerServiceClient, scaling scaling.RunnerScaling) (*ProvisionerRegistry, error) {
 	config := provisionerPluginConfig{}
 	bytes, err := io.ReadAll(bufio.NewReader(file))
 	if err != nil {
@@ -198,7 +207,7 @@ func RegistryFromConfigFile(ctx context.Context, file *os.File, controller ftlv1
 		return nil, fmt.Errorf("error parsing plugin configuration: %w", err)
 	}
 
-	registry, err := registryFromConfig(ctx, &config, controller)
+	registry, err := registryFromConfig(ctx, &config, controller, scaling)
 	if err != nil {
 		return nil, fmt.Errorf("error creating provisioner registry: %w", err)
 	}

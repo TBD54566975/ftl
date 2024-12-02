@@ -51,7 +51,7 @@ spec:
             {{- else }}
             httpGet:
               path: /healthz
-              port: 8893
+              port: 8892
             initialDelaySeconds: 1
             periodSeconds: 2
             timeoutSeconds: 2

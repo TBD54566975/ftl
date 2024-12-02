@@ -7,5 +7,6 @@ breaking:
     - FILE
 lint:
   use:
-    - BASIC
-    - SERVICE_SUFFIX
+    - STANDARD
+  except:
+    - RPC_REQUEST_RESPONSE_UNIQUE

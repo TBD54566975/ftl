@@ -1,5 +1,5 @@
+from xyz.block.ftl.schema.v1 import schema_pb2 as _schema_pb2
 from xyz.block.ftl.v1 import ftl_pb2 as _ftl_pb2
-from xyz.block.ftl.v1.schema import schema_pb2 as _schema_pb2
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -9,14 +9,14 @@ DESCRIPTOR: _descriptor.FileDescriptor
 
 class DeploymentChangeType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
-    DEPLOYMENT_UNKNOWN: _ClassVar[DeploymentChangeType]
-    DEPLOYMENT_ADDED: _ClassVar[DeploymentChangeType]
-    DEPLOYMENT_REMOVED: _ClassVar[DeploymentChangeType]
-    DEPLOYMENT_CHANGED: _ClassVar[DeploymentChangeType]
-DEPLOYMENT_UNKNOWN: DeploymentChangeType
-DEPLOYMENT_ADDED: DeploymentChangeType
-DEPLOYMENT_REMOVED: DeploymentChangeType
-DEPLOYMENT_CHANGED: DeploymentChangeType
+    DEPLOYMENT_CHANGE_TYPE_UNSPECIFIED: _ClassVar[DeploymentChangeType]
+    DEPLOYMENT_CHANGE_TYPE_ADDED: _ClassVar[DeploymentChangeType]
+    DEPLOYMENT_CHANGE_TYPE_REMOVED: _ClassVar[DeploymentChangeType]
+    DEPLOYMENT_CHANGE_TYPE_CHANGED: _ClassVar[DeploymentChangeType]
+DEPLOYMENT_CHANGE_TYPE_UNSPECIFIED: DeploymentChangeType
+DEPLOYMENT_CHANGE_TYPE_ADDED: DeploymentChangeType
+DEPLOYMENT_CHANGE_TYPE_REMOVED: DeploymentChangeType
+DEPLOYMENT_CHANGE_TYPE_CHANGED: DeploymentChangeType
 
 class GetSchemaRequest(_message.Message):
     __slots__ = ()

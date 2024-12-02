@@ -23,3 +23,13 @@ export async function navigateToDecl(page: Page, moduleName: string, declName: s
   await page.locator(`a#decl-${declName}`).click()
   await expect(page).toHaveURL(new RegExp(`/modules/${moduleName}/verb/${declName}`))
 }
+
+export async function pressShortcut(page: Page, key: string) {
+  // Get the platform-specific modifier key
+  const isMac = await page.evaluate(() => navigator.userAgent.includes('Mac'))
+  const modifier = isMac ? 'Meta' : 'Control'
+
+  await page.keyboard.down(modifier)
+  await page.keyboard.press(key)
+  await page.keyboard.up(modifier)
+}

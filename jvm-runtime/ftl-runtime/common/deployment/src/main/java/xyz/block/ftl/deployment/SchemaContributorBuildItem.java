@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import io.quarkus.builder.item.MultiBuildItem;
-import xyz.block.ftl.v1.schema.Decl;
+import xyz.block.ftl.schema.v1.Decl;
 
 /**
  * A build item that contributes information to the final Schema

@@ -14,9 +14,9 @@ import (
 	"github.com/alecthomas/types/must"
 	"github.com/alecthomas/types/optional"
 
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -97,7 +97,7 @@ func TestSchemaEventSource(t *testing.T) {
 		send(t, &ftlv1.PullSchemaResponse{
 			More:       true,
 			Schema:     (time1).ToProto().(*schemapb.Module), //nolint:forcetypeassert
-			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 		})
 
 		waitCtx, cancel := context.WithTimeout(ctx, time.Second)
@@ -107,7 +107,7 @@ func TestSchemaEventSource(t *testing.T) {
 		send(t, &ftlv1.PullSchemaResponse{
 			More:       false,
 			Schema:     (echo1).ToProto().(*schemapb.Module), //nolint:forcetypeassert
-			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 		})
 
 		waitCtx, cancel = context.WithTimeout(ctx, time.Second)
@@ -128,7 +128,7 @@ func TestSchemaEventSource(t *testing.T) {
 		send(t, &ftlv1.PullSchemaResponse{
 			More:       false,
 			Schema:     (time2).ToProto().(*schemapb.Module), //nolint:forcetypeassert
-			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 		})
 
 		var expected Event = EventUpsert{Module: time2}
@@ -143,12 +143,12 @@ func TestSchemaEventSource(t *testing.T) {
 		send(t, &ftlv1.PullSchemaResponse{
 			More:       true,
 			Schema:     (time2).ToProto().(*schemapb.Module), //nolint:forcetypeassert
-			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 		})
 		send(t, &ftlv1.PullSchemaResponse{
 			More:       false,
 			Schema:     (echo1).ToProto().(*schemapb.Module), //nolint:forcetypeassert
-			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 		})
 
 		var expected Event = EventUpsert{Module: time2}
@@ -163,7 +163,7 @@ func TestSchemaEventSource(t *testing.T) {
 	t.Run("Delete", func(t *testing.T) {
 		send(t, &ftlv1.PullSchemaResponse{
 			Schema:        (echo1).ToProto().(*schemapb.Module), //nolint:forcetypeassert
-			ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED,
+			ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED,
 			ModuleRemoved: true,
 		})
 		var expected Event = EventRemove{Module: echo1, Deleted: true}

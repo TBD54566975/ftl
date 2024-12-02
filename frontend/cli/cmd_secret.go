@@ -49,7 +49,7 @@ type secretListCmd struct {
 }
 
 func (s *secretListCmd) Run(ctx context.Context, adminClient admin.Client) error {
-	resp, err := adminClient.SecretsList(ctx, connect.NewRequest(&ftlv1.ListSecretsRequest{
+	resp, err := adminClient.SecretsList(ctx, connect.NewRequest(&ftlv1.SecretsListRequest{
 		Module:        &s.Module,
 		IncludeValues: &s.Values,
 	}))
@@ -78,7 +78,7 @@ Returns a JSON-encoded secret value.
 }
 
 func (s *secretGetCmd) Run(ctx context.Context, adminClient admin.Client) error {
-	resp, err := adminClient.SecretGet(ctx, connect.NewRequest(&ftlv1.GetSecretRequest{
+	resp, err := adminClient.SecretGet(ctx, connect.NewRequest(&ftlv1.SecretGetRequest{
 		Ref: configRefFromRef(s.Ref),
 	}))
 	if err != nil {
@@ -126,7 +126,7 @@ func (s *secretSetCmd) Run(ctx context.Context, adminClient admin.Client) (err e
 		}
 	}
 
-	req := &ftlv1.SetSecretRequest{
+	req := &ftlv1.SecretSetRequest{
 		Ref:   configRefFromRef(s.Ref),
 		Value: secretJSON,
 	}
@@ -142,7 +142,7 @@ type secretUnsetCmd struct {
 }
 
 func (s *secretUnsetCmd) Run(ctx context.Context, adminClient admin.Client) (err error) {
-	req := &ftlv1.UnsetSecretRequest{
+	req := &ftlv1.SecretUnsetRequest{
 		Ref: configRefFromRef(s.Ref),
 	}
 	_, err = adminClient.SecretUnset(ctx, connect.NewRequest(req))
@@ -181,7 +181,7 @@ func (s *secretImportCmd) Run(ctx context.Context, adminClient admin.Client) (er
 		if err != nil {
 			return fmt.Errorf("could not marshal value for %q: %w", refPath, err)
 		}
-		req := &ftlv1.SetSecretRequest{
+		req := &ftlv1.SecretSetRequest{
 			Ref:   configRefFromRef(ref),
 			Value: bytes,
 		}
@@ -203,7 +203,7 @@ Outputs secrets in a JSON object. A provider can be used to filter which secrets
 }
 
 func (s *secretExportCmd) Run(ctx context.Context, adminClient admin.Client) (err error) {
-	req := &ftlv1.ListSecretsRequest{
+	req := &ftlv1.SecretsListRequest{
 		IncludeValues: optional.Some(true).Ptr(),
 	}
 	listResponse, err := adminClient.SecretsList(ctx, connect.NewRequest(req))

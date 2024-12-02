@@ -12,9 +12,9 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
@@ -42,8 +42,11 @@ func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.SchemaServic
 	}
 	for resp.Receive() {
 		msg := resp.Msg()
-		switch resp.Msg().ChangeType {
-		case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
+		switch msg.ChangeType {
+		case ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_CHANGED:
+			if msg.Schema == nil {
+				return fmt.Errorf("schema is nil for added/changed deployment %q", msg.GetDeploymentKey())
+			}
 			module, err := schema.ModuleFromProto(msg.Schema)
 			if len(g.Modules) == 0 || remainingNames[msg.Schema.Name] {
 				if err != nil {
@@ -66,8 +69,16 @@ func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.SchemaServic
 					return nil
 				}
 			}
-		case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
+		case ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED:
+			if msg.Schema == nil {
+				return fmt.Errorf("schema is nil for removed deployment %q", msg.GetDeploymentKey())
+			}
+			if msg.ModuleRemoved {
+				delete(remainingNames, msg.Schema.Name)
+			}
 			fmt.Printf("deployment %s removed\n", msg.GetDeploymentKey())
+		case ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_UNSPECIFIED:
+			return fmt.Errorf("unexpected unspecified deployment change type for deployment %q", msg.GetDeploymentKey())
 		}
 
 	}

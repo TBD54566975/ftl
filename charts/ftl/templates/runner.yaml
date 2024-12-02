@@ -14,9 +14,9 @@ data:
       ports:
         - name: verbs
           protocol: TCP
-          port: 8893
+          port: 8892
           appProtocol: http
-          targetPort: 8893
+          targetPort: 8892
       type: ClusterIP
   deploymentTemplate: |-
     apiVersion: apps/v1

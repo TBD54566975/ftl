@@ -6,13 +6,14 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 type FromOffset int
 
 const (
-	FromOffsetBeginning FromOffset = iota
+	FromOffsetUnspecified FromOffset = iota
+	FromOffsetBeginning
 	FromOffsetLatest
 )
 
@@ -35,7 +36,7 @@ func (o FromOffset) String() string {
 	case FromOffsetLatest:
 		return "latest"
 	default:
-		panic("unexpected value")
+		panic(fmt.Sprintf("unexpected value %d", o))
 	}
 }
 

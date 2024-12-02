@@ -3,7 +3,7 @@ package ftl.externalkotlin
 import com.google.type.DayOfWeek
 import xyz.block.ftl.Context
 import xyz.block.ftl.Verb
-import xyz.block.ftl.v1.schema.Optional
+import xyz.block.ftl.schema.v1.Optional
 
 class InvalidInput(val field: String) : Exception()
 

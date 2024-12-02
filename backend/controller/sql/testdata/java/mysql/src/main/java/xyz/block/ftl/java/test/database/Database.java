@@ -1,10 +1,11 @@
 package xyz.block.ftl.java.test.database;
 
+import java.util.List;
+import java.util.Map;
+
 import jakarta.transaction.Transactional;
 
 import xyz.block.ftl.Verb;
-import java.util.Map;
-import java.util.List;
 
 public class Database {
 

@@ -1,4 +1,4 @@
-import type { Ref } from '../../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import type { Ref } from '../../../protos/xyz/block/ftl/schema/v1/schema_pb'
 import type { ExpandablePanelProps } from '../../graph/ExpandablePanel'
 import { Schema } from '../schema/Schema'
 import { References } from './References'

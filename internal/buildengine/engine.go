@@ -16,8 +16,8 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
+	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
@@ -194,7 +194,7 @@ type Engine struct {
 	// topic to subscribe to engine events
 	EngineUpdates *pubsub.Topic[EngineEvent]
 
-	devModeEndpointUpdates chan scaling.DevModeEndpoints
+	devModeEndpointUpdates chan dev.LocalEndpoint
 	devMode                bool
 }
 
@@ -213,7 +213,7 @@ func BuildEnv(env []string) Option {
 }
 
 // WithDevMode sets the engine to dev mode.
-func WithDevMode(updates chan scaling.DevModeEndpoints) Option {
+func WithDevMode(updates chan dev.LocalEndpoint) Option {
 	return func(o *Engine) {
 		o.devModeEndpointUpdates = updates
 		o.devMode = true

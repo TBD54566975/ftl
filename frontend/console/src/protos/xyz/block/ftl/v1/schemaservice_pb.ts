@@ -5,38 +5,38 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
-import { Module, Schema } from "./schema/schema_pb.js";
+import { Module, Schema } from "../schema/v1/schema_pb.js";
 
 /**
  * @generated from enum xyz.block.ftl.v1.DeploymentChangeType
  */
 export enum DeploymentChangeType {
   /**
-   * @generated from enum value: DEPLOYMENT_UNKNOWN = 0;
+   * @generated from enum value: DEPLOYMENT_CHANGE_TYPE_UNSPECIFIED = 0;
    */
-  DEPLOYMENT_UNKNOWN = 0,
+  UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: DEPLOYMENT_ADDED = 1;
+   * @generated from enum value: DEPLOYMENT_CHANGE_TYPE_ADDED = 1;
    */
-  DEPLOYMENT_ADDED = 1,
+  ADDED = 1,
 
   /**
-   * @generated from enum value: DEPLOYMENT_REMOVED = 2;
+   * @generated from enum value: DEPLOYMENT_CHANGE_TYPE_REMOVED = 2;
    */
-  DEPLOYMENT_REMOVED = 2,
+  REMOVED = 2,
 
   /**
-   * @generated from enum value: DEPLOYMENT_CHANGED = 3;
+   * @generated from enum value: DEPLOYMENT_CHANGE_TYPE_CHANGED = 3;
    */
-  DEPLOYMENT_CHANGED = 3,
+  CHANGED = 3,
 }
 // Retrieve enum metadata with: proto3.getEnumType(DeploymentChangeType)
 proto3.util.setEnumType(DeploymentChangeType, "xyz.block.ftl.v1.DeploymentChangeType", [
-  { no: 0, name: "DEPLOYMENT_UNKNOWN" },
-  { no: 1, name: "DEPLOYMENT_ADDED" },
-  { no: 2, name: "DEPLOYMENT_REMOVED" },
-  { no: 3, name: "DEPLOYMENT_CHANGED" },
+  { no: 0, name: "DEPLOYMENT_CHANGE_TYPE_UNSPECIFIED" },
+  { no: 1, name: "DEPLOYMENT_CHANGE_TYPE_ADDED" },
+  { no: 2, name: "DEPLOYMENT_CHANGE_TYPE_REMOVED" },
+  { no: 3, name: "DEPLOYMENT_CHANGE_TYPE_CHANGED" },
 ]);
 
 /**
@@ -75,7 +75,7 @@ export class GetSchemaRequest extends Message<GetSchemaRequest> {
  */
 export class GetSchemaResponse extends Message<GetSchemaResponse> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Schema schema = 1;
+   * @generated from field: xyz.block.ftl.schema.v1.Schema schema = 1;
    */
   schema?: Schema;
 
@@ -157,7 +157,7 @@ export class PullSchemaResponse extends Message<PullSchemaResponse> {
   /**
    * For deletes this will not be present.
    *
-   * @generated from field: optional xyz.block.ftl.v1.schema.Module schema = 4;
+   * @generated from field: optional xyz.block.ftl.schema.v1.Module schema = 4;
    */
   schema?: Module;
 
@@ -172,7 +172,7 @@ export class PullSchemaResponse extends Message<PullSchemaResponse> {
   /**
    * @generated from field: xyz.block.ftl.v1.DeploymentChangeType change_type = 5;
    */
-  changeType = DeploymentChangeType.DEPLOYMENT_UNKNOWN;
+  changeType = DeploymentChangeType.UNSPECIFIED;
 
   /**
    * If this is true then the module was removed as well as the deployment. This is only set for DEPLOYMENT_REMOVED.

@@ -119,8 +119,8 @@ func createMigrationTarball(migrationDir string, target string) error {
 	return nil
 }
 
-func handleDatabaseMigrations(moduleDir string, dbDir string, module *schema.Module) ([]string, error) {
-	target := filepath.Join(moduleDir, ".ftl", "migrations")
+func handleDatabaseMigrations(deployDir string, dbDir string, module *schema.Module) ([]string, error) {
+	target := filepath.Join(deployDir, ".ftl", "migrations")
 	err := os.MkdirAll(target, 0770) // #nosec
 	if err != nil {
 		return nil, fmt.Errorf("failed to create migration directory: %w", err)
@@ -131,7 +131,7 @@ func handleDatabaseMigrations(moduleDir string, dbDir string, module *schema.Mod
 	}
 	relativeFiles := []string{}
 	for _, file := range migrations {
-		filePath := filepath.Join("migrations", file)
+		filePath := filepath.Join(".ftl", "migrations", file)
 		relativeFiles = append(relativeFiles, filePath)
 	}
 	return relativeFiles, nil

@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Struct, Timestamp } from "@bufbuild/protobuf";
-import { Module, Ref } from "./schema/schema_pb.js";
+import { Module, Ref } from "../schema/v1/schema_pb.js";
 
 /**
  * @generated from message xyz.block.ftl.v1.GetCertificationRequest
@@ -385,7 +385,7 @@ export class DeploymentArtefact extends Message<DeploymentArtefact> {
  */
 export class CreateDeploymentRequest extends Message<CreateDeploymentRequest> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 1;
+   * @generated from field: xyz.block.ftl.schema.v1.Module schema = 1;
    */
   schema?: Module;
 
@@ -393,13 +393,6 @@ export class CreateDeploymentRequest extends Message<CreateDeploymentRequest> {
    * @generated from field: repeated xyz.block.ftl.v1.DeploymentArtefact artefacts = 2;
    */
   artefacts: DeploymentArtefact[] = [];
-
-  /**
-   * Runner labels required to run this deployment.
-   *
-   * @generated from field: optional google.protobuf.Struct labels = 3;
-   */
-  labels?: Struct;
 
   constructor(data?: PartialMessage<CreateDeploymentRequest>) {
     super();
@@ -411,7 +404,6 @@ export class CreateDeploymentRequest extends Message<CreateDeploymentRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "schema", kind: "message", T: Module },
     { no: 2, name: "artefacts", kind: "message", T: DeploymentArtefact, repeated: true },
-    { no: 3, name: "labels", kind: "message", T: Struct, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateDeploymentRequest {
@@ -604,7 +596,7 @@ export class GetDeploymentRequest extends Message<GetDeploymentRequest> {
  */
 export class GetDeploymentResponse extends Message<GetDeploymentResponse> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 1;
+   * @generated from field: xyz.block.ftl.schema.v1.Module schema = 1;
    */
   schema?: Module;
 
@@ -738,9 +730,14 @@ export class UpdateDeployRequest extends Message<UpdateDeployRequest> {
   deploymentKey = "";
 
   /**
-   * @generated from field: int32 min_replicas = 2;
+   * @generated from field: optional int32 min_replicas = 2;
    */
-  minReplicas = 0;
+  minReplicas?: number;
+
+  /**
+   * @generated from field: optional string endpoint = 3;
+   */
+  endpoint?: string;
 
   constructor(data?: PartialMessage<UpdateDeployRequest>) {
     super();
@@ -751,7 +748,8 @@ export class UpdateDeployRequest extends Message<UpdateDeployRequest> {
   static readonly typeName = "xyz.block.ftl.v1.UpdateDeployRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateDeployRequest {
@@ -1205,7 +1203,7 @@ export class StatusResponse_Deployment extends Message<StatusResponse_Deployment
   labels?: Struct;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 6;
+   * @generated from field: xyz.block.ftl.schema.v1.Module schema = 6;
    */
   schema?: Module;
 
@@ -1469,7 +1467,7 @@ export class ProcessListResponse_Process extends Message<ProcessListResponse_Pro
  */
 export class ResetSubscriptionRequest extends Message<ResetSubscriptionRequest> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Ref subscription = 1;
+   * @generated from field: xyz.block.ftl.schema.v1.Ref subscription = 1;
    */
   subscription?: Ref;
 

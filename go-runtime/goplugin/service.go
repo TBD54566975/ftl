@@ -15,10 +15,10 @@ import (
 	"github.com/alecthomas/types/pubsub"
 	"github.com/block/scaffolder"
 
+	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
+	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
-	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language/languagepbconnect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/internal"
@@ -172,13 +172,13 @@ func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request
 }
 
 // GetDependencies extracts dependencies for a module
-func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
+func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[langpb.GetDependenciesRequest]) (*connect.Response[langpb.GetDependenciesResponse], error) {
 	config := langpb.ModuleConfigFromProto(req.Msg.ModuleConfig)
 	deps, err := compile.ExtractDependencies(config)
 	if err != nil {
 		return nil, fmt.Errorf("could not extract dependencies: %w", err)
 	}
-	return connect.NewResponse(&langpb.DependenciesResponse{
+	return connect.NewResponse(&langpb.GetDependenciesResponse{
 		Modules: deps,
 	}), nil
 }
@@ -219,7 +219,7 @@ func (s *Service) SyncStubReferences(ctx context.Context, req *connect.Request[l
 // file changes and automatically rebuild as needed as long as this build request is alive. Each automactic
 // rebuild must include the latest build context id provided by the request or subsequent BuildContextUpdated
 // calls.
-func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent]) error {
+func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildResponse]) error {
 	events := make(chan updateEvent, 32)
 	s.updatesTopic.Subscribe(events)
 	defer s.updatesTopic.Unsubscribe(events)
@@ -240,6 +240,8 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 
 	watcher := watch.NewWatcher(watchPatterns...)
 
+	ongoingState := &compile.OngoingState{}
+
 	if req.Msg.RebuildAutomatically {
 		s.acceptsContextUpdates.Store(true)
 		defer s.acceptsContextUpdates.Store(false)
@@ -250,7 +252,6 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 	}
 
 	// Initial build
-	ongoingState := &compile.OngoingState{}
 	if err := buildAndSend(ctx, stream, req.Msg.ProjectRoot, req.Msg.StubsRoot, buildCtx, false, watcher.GetTransaction(buildCtx.Config.Dir), ongoingState); err != nil {
 		return err
 	}
@@ -265,8 +266,8 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 			var isAutomaticRebuild bool
 			buildCtx, isAutomaticRebuild = buildContextFromPendingEvents(ctx, buildCtx, events, e, ongoingState)
 			if isAutomaticRebuild {
-				err = stream.Send(&langpb.BuildEvent{
-					Event: &langpb.BuildEvent_AutoRebuildStarted{
+				err = stream.Send(&langpb.BuildResponse{
+					Event: &langpb.BuildResponse_AutoRebuildStarted{
 						AutoRebuildStarted: &langpb.AutoRebuildStarted{
 							ContextId: buildCtx.ID,
 						},
@@ -381,7 +382,7 @@ func buildContextFromPendingEvents(ctx context.Context, buildCtx buildContext, e
 //
 // Build errors are sent over the stream as a BuildFailure event.
 // This function only returns an error if events could not be send over the stream.
-func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.BuildEvent], projectRoot, stubsRoot string, buildCtx buildContext,
+func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.BuildResponse], projectRoot, stubsRoot string, buildCtx buildContext,
 	isAutomaticRebuild bool, transaction watch.ModifyFilesTransaction, ongoingState *compile.OngoingState) error {
 	buildEvent, err := build(ctx, projectRoot, stubsRoot, buildCtx, isAutomaticRebuild, transaction, ongoingState)
 	if err != nil {
@@ -398,7 +399,7 @@ func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.Build
 }
 
 func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildContext, isAutomaticRebuild bool, transaction watch.ModifyFilesTransaction,
-	ongoingState *compile.OngoingState) (*langpb.BuildEvent, error) {
+	ongoingState *compile.OngoingState) (*langpb.BuildResponse, error) {
 	release, err := flock.Acquire(ctx, buildCtx.Config.BuildLock, BuildLockTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("could not acquire build lock: %w", err)
@@ -408,8 +409,8 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 	m, buildErrs, err := compile.Build(ctx, projectRoot, stubsRoot, buildCtx.Config, buildCtx.Schema, buildCtx.Dependencies, buildCtx.BuildEnv, transaction, ongoingState, false)
 	if err != nil {
 		if errors.Is(err, compile.ErrInvalidateDependencies) {
-			return &langpb.BuildEvent{
-				Event: &langpb.BuildEvent_BuildFailure{
+			return &langpb.BuildResponse{
+				Event: &langpb.BuildResponse_BuildFailure{
 					BuildFailure: &langpb.BuildFailure{
 						ContextId:              buildCtx.ID,
 						IsAutomaticRebuild:     isAutomaticRebuild,
@@ -431,8 +432,8 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 
 	moduleProto := module.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 	deploy := []string{"main", "launch"}
-	return &langpb.BuildEvent{
-		Event: &langpb.BuildEvent_BuildSuccess{
+	return &langpb.BuildResponse{
+		Event: &langpb.BuildResponse_BuildSuccess{
 			BuildSuccess: &langpb.BuildSuccess{
 				ContextId:          buildCtx.ID,
 				IsAutomaticRebuild: isAutomaticRebuild,
@@ -445,9 +446,9 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 }
 
 // buildFailure creates a BuildFailure event based on build errors.
-func buildFailure(buildCtx buildContext, isAutomaticRebuild bool, errs ...builderrors.Error) *langpb.BuildEvent {
-	return &langpb.BuildEvent{
-		Event: &langpb.BuildEvent_BuildFailure{
+func buildFailure(buildCtx buildContext, isAutomaticRebuild bool, errs ...builderrors.Error) *langpb.BuildResponse {
+	return &langpb.BuildResponse{
+		Event: &langpb.BuildResponse_BuildFailure{
 			BuildFailure: &langpb.BuildFailure{
 				ContextId:              buildCtx.ID,
 				IsAutomaticRebuild:     isAutomaticRebuild,

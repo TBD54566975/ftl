@@ -5,7 +5,7 @@ WATCHEXEC_ARGS := "-d 1s -e proto -e go -e sql -f sqlc.yaml --ignore **/types.ft
 RELEASE := "build/release"
 VERSION := `git describe --tags --always | sed -e 's/^v//'`
 TIMESTAMP := `date +%s`
-SCHEMA_OUT := "backend/protos/xyz/block/ftl/v1/schema/schema.proto"
+SCHEMA_OUT := "backend/protos/xyz/block/ftl/schema/v1/schema.proto"
 ZIP_DIRS := "go-runtime/compile/build-template " + \
             "go-runtime/compile/external-module-template " + \
             "go-runtime/compile/main-work-template " + \
@@ -20,13 +20,29 @@ CONSOLE_ROOT := "frontend/console"
 FRONTEND_OUT := CONSOLE_ROOT + "/dist/index.html"
 EXTENSION_OUT := "frontend/vscode/dist/extension.js"
 PROTOS_IN := "backend/protos"
-PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go " + \
-              "backend/protos/xyz/block/ftl/v1/ftl.pb.go " + \
-              "backend/protos/xyz/block/ftl/v1/schema/schema.pb.go " + \
-              CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/console/console_pb.ts " + \
+PROTOS_OUT := "backend/protos/xyz/block/ftl/console/v1/console.pb.go " + \
+              "backend/protos/xyz/block/ftl//v1/ftl.pb.go " + \
+              "backend/protos/xyz/block/ftl/schema/v1/schema.pb.go " + \
+              CONSOLE_ROOT + "/src/protos/xyz/block/ftl/console/v1/console_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + \
-              CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts " + \
-              CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
+              CONSOLE_ROOT + "/src/protos/xyz/block/ftl/schema/v1/schema_pb.ts"
+# Configuration for building Docker images
+DOCKER_IMAGES := '''
+{
+  "controller": {
+    "extra_binaries": ["ftl"],
+    "extra_files": ["ftl-provisioner-config.toml"]
+  },
+  "provisioner": {
+    "extra_binaries": ["ftl-provisioner-cloudformation"],
+    "extra_files": ["ftl-provisioner-config.toml"]
+  },
+  "cron": {},
+  "http-ingress": {},
+  "runner": {},
+  "runner-jvm": {}
+}
+'''
 
 _help:
   @just -l
@@ -57,7 +73,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev --plain {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-backend build-frontend build-generate build-sqlc build-zips lsp-generate build-jvm build-language-plugins
+build-all: build-protos-unconditionally build-backend build-frontend build-backend-tests build-generate build-sqlc build-zips lsp-generate build-jvm build-language-plugins
 
 # Run "go generate" on all packages
 build-generate:
@@ -73,6 +89,7 @@ build +tools: build-protos build-zips build-frontend
 # But it will be included if it was already built
 build-without-frontend +tools: build-protos build-zips
   #!/bin/bash
+  set -euo pipefail
   mkdir -p frontend/console/dist
   touch frontend/console/dist/.phoney
   shopt -s extglob
@@ -91,7 +108,7 @@ build-backend:
 
 # Build all backend tests
 build-backend-tests:
-  go test -run ^NONE -tags integration,infrastructure ./...
+  go test -run ^NONE -tags integration,infrastructure ./... > /dev/null
 
 
 build-jvm *args:
@@ -176,9 +193,9 @@ build-protos:
 # Generate .proto files from .go types.
 go2proto:
   @mk "{{SCHEMA_OUT}}" : cmd/go2proto internal/schema -- go2proto -o "{{SCHEMA_OUT}}" \
-    -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb"' \
+    -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1;schemapb"' \
     -O 'java_multiple_files=true' \
-    xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint
+    xyz.block.ftl.schema.v1 ./internal/schema.Schema && buf format -w && buf lint
 
 # Unconditionally rebuild protos
 build-protos-unconditionally: lint-protos pnpm-install go2proto
@@ -299,7 +316,7 @@ build-docker name:
 # Run docker compose up with all docker compose files
 compose-up:
   #!/bin/bash
-  set -eo pipefail
+  set -o pipefail
   docker_compose_files="
   -f docker-compose.yml
   -f internal/dev/docker-compose.grafana.yml
@@ -307,7 +324,16 @@ compose-up:
   -f internal/dev/docker-compose.postgres.yml
   -f internal/dev/docker-compose.redpanda.yml
   -f internal/dev/docker-compose.registry.yml"
+
+  docker compose -p "ftl" $docker_compose_files up -d --wait
+  status=$?
+  if [ $status -ne 0 ] && [ -n "${CI-}" ]; then
+    # CI fails regularly due to network issues. Retry once.
+    echo "docker compose up failed, retrying in 3s..."
     docker compose -p "ftl" $docker_compose_files up -d --wait
+    docker compose -p "ftl" $docker_compose_files up -d --wait
+  fi
+
 
 # Run a Just command in the Helm charts directory
 chart *args:

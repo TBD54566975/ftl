@@ -7,7 +7,7 @@ import {
   IngressEvent,
   PubSubConsumeEvent,
   PubSubPublishEvent,
-} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+} from '../../protos/xyz/block/ftl/console/v1/console_pb'
 import { classNames, durationToMillis } from '../../utils'
 import { eventBackgroundColor } from '../timeline/timeline.utils'
 import { eventBarLeftOffsetPercentage, requestStartTime, totalDurationForRequest } from './traces.utils'

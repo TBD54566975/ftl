@@ -21,14 +21,13 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	"github.com/TBD54566975/ftl/backend/controller/scaling"
-	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/cron"
 	"github.com/TBD54566975/ftl/backend/ingress"
+	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/backend/provisioner"
+	"github.com/TBD54566975/ftl/backend/provisioner/scaling/localscaling"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
@@ -51,7 +50,7 @@ type serveCommonConfig struct {
 	Bind                *url.URL             `help:"Starting endpoint to bind to and advertise to. Each controller, ingress, runner and language plugin will increment the port by 1" default:"http://127.0.0.1:8891"`
 	DBPort              int                  `help:"Port to use for the database." env:"FTL_DB_PORT" default:"15432"`
 	MysqlPort           int                  `help:"Port to use for the MySQL database, if one is required." env:"FTL_MYSQL_PORT" default:"13306"`
-	RegistryPort        int                  `help:"Port to use for the registry." env:"FTL_REGISTRY_PORT" default:"15000"`
+	RegistryPort        int                  `help:"Port to use for the registry." env:"FTL_OCI_REGISTRY_PORT" default:"15000"`
 	Controllers         int                  `short:"c" help:"Number of controllers to start." default:"1"`
 	Provisioners        int                  `short:"p" help:"Number of provisioners to start." default:"1"`
 	Background          bool                 `help:"Run in the background." default:"false"`
@@ -101,7 +100,7 @@ func (s *serveCommonConfig) run(
 	schemaEventSourceFactory func() schemaeventsource.EventSource,
 	verbClient ftlv1connect.VerbServiceClient,
 	recreate bool,
-	devModeEndpoints <-chan scaling.DevModeEndpoints,
+	devModeEndpoints <-chan dev.LocalEndpoint,
 ) error {
 
 	logger := log.FromContext(ctx)
@@ -203,10 +202,13 @@ func (s *serveCommonConfig) run(
 		provisionerAddresses = append(provisionerAddresses, bind)
 	}
 
-	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, projConfig.Path, devMode && !projConfig.DisableIDEIntegration, registry, bool(s.ObservabilityConfig.ExportOTEL), devModeEndpoints)
-
+	runnerScaling, err := localscaling.NewLocalScaling(ctx, bindAllocator, controllerAddresses, projConfig.Path, devMode && !projConfig.DisableIDEIntegration, registry, bool(s.ObservabilityConfig.ExportOTEL), devModeEndpoints)
 	if err != nil {
 		return err
+	}
+	err = runnerScaling.Start(ctx)
+	if err != nil {
+		return fmt.Errorf("runner scaling failed to start: %w", err)
 	}
 	for i := range s.Controllers {
 		config := controller.Config{
@@ -229,7 +231,7 @@ func (s *serveCommonConfig) run(
 		}
 
 		wg.Go(func() error {
-			if err := controller.Start(controllerCtx, config, runnerScaling, cm, sm, conn, true); err != nil {
+			if err := controller.Start(controllerCtx, config, cm, sm, conn, true); err != nil {
 				logger.Errorf(err, "controller%d failed: %v", i, err)
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}
@@ -250,6 +252,7 @@ func (s *serveCommonConfig) run(
 		provisionerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
 
 		// default local dev provisioner
+
 		provisionerRegistry := &provisioner.ProvisionerRegistry{
 			Bindings: []*provisioner.ProvisionerBinding{
 				{
@@ -263,21 +266,26 @@ func (s *serveCommonConfig) run(
 					ID: "dev",
 				},
 				{
+					Provisioner: provisioner.NewSQLMigrationProvisioner(registry),
+					Types:       []provisioner.ResourceType{provisioner.ResourceTypeSQLMigration},
+					ID:          "migration",
+				},
+				{
 					Provisioner: provisioner.NewControllerProvisioner(controllerClient),
 					Types:       []provisioner.ResourceType{provisioner.ResourceTypeModule},
 					ID:          "controller",
 				},
 				{
-					Provisioner: provisioner.NewSQLMigrationProvisioner(registry),
-					Types:       []provisioner.ResourceType{provisioner.ResourceTypeSQLMigration},
-					ID:          "migration",
+					Provisioner: provisioner.NewRunnerScalingProvisioner(runnerScaling, controllerClient),
+					Types:       []provisioner.ResourceType{provisioner.ResourceTypeRunner},
+					ID:          "runner",
 				},
 			},
 		}
 
 		// read provisioners from a config file if provided
 		if s.PluginConfigFile != nil {
-			r, err := provisioner.RegistryFromConfigFile(provisionerCtx, s.PluginConfigFile, controllerClient)
+			r, err := provisioner.RegistryFromConfigFile(provisionerCtx, s.PluginConfigFile, controllerClient, runnerScaling)
 			if err != nil {
 				return fmt.Errorf("failed to create provisioner registry: %w", err)
 			}

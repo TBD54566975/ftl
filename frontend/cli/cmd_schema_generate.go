@@ -88,15 +88,23 @@ func (s *schemaGenerateCmd) hotReload(ctx context.Context, client ftlv1connect.S
 			for stream.Receive() {
 				msg := stream.Msg()
 				switch msg.ChangeType {
-				case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
+				case ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_CHANGED:
+					if msg.Schema == nil {
+						return fmt.Errorf("schema is nil for added/changed deployment %q", msg.GetDeploymentKey())
+					}
 					module, err := schema.ModuleFromProto(msg.Schema)
 					if err != nil {
-						return fmt.Errorf("invalid module schema: %w", err)
+						return fmt.Errorf("failed to convert proto to module: %w", err)
 					}
 					modules[module.Name] = module
 
-				case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
-					delete(modules, msg.ModuleName)
+				case ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED:
+					if msg.Schema == nil {
+						return fmt.Errorf("schema is nil for removed deployment %q", msg.GetDeploymentKey())
+					}
+					if msg.ModuleRemoved {
+						delete(modules, msg.Schema.Name)
+					}
 				}
 				if !msg.More {
 					regenerate = true

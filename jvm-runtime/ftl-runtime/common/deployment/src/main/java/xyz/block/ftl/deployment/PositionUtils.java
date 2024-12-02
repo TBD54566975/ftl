@@ -12,7 +12,7 @@ import org.objectweb.asm.tree.LineNumberNode;
 import org.objectweb.asm.tree.MethodNode;
 
 import io.quarkus.gizmo.DescriptorUtils;
-import xyz.block.ftl.v1.schema.Position;
+import xyz.block.ftl.schema.v1.Position;
 
 public class PositionUtils {
 

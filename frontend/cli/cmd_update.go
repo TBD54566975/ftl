@@ -18,7 +18,7 @@ type updateCmd struct {
 func (u *updateCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
 	_, err := client.UpdateDeploy(ctx, connect.NewRequest(&ftlv1.UpdateDeployRequest{
 		DeploymentKey: u.Deployment.String(),
-		MinReplicas:   u.Replicas,
+		MinReplicas:   &u.Replicas,
 	}))
 	if err != nil {
 		return err

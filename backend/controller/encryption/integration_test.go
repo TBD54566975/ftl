@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
-	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console"
+	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -39,7 +39,7 @@ func TestEncryptionForLogs(t *testing.T) {
 		// confirm that we can read an event for that call
 		func(t testing.TB, ic in.TestContext) {
 			in.Infof("Read Logs")
-			resp, err := ic.Console.GetEvents(ic.Context, connect.NewRequest(&pbconsole.EventsQuery{
+			resp, err := ic.Console.GetEvents(ic.Context, connect.NewRequest(&pbconsole.GetEventsRequest{
 				Limit: 10,
 			}))
 			assert.NoError(t, err, "could not get events")

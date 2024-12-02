@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { AcquireLeaseRequest, AcquireLeaseResponse, ModuleContextRequest, ModuleContextResponse, PublishEventRequest, PublishEventResponse } from "./module_pb.js";
+import { AcquireLeaseRequest, AcquireLeaseResponse, GetModuleContextRequest, GetModuleContextResponse, PublishEventRequest, PublishEventResponse } from "./module_pb.js";
 
 /**
  * ModuleService is the service that modules use to interact with the Controller.
@@ -34,8 +34,8 @@ export const ModuleService = {
      */
     getModuleContext: {
       name: "GetModuleContext",
-      I: ModuleContextRequest,
-      O: ModuleContextResponse,
+      I: GetModuleContextRequest,
+      O: GetModuleContextResponse,
       kind: MethodKind.ServerStreaming,
     },
     /**

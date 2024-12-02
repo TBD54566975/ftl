@@ -11,31 +11,37 @@ import { Message, proto3 } from "@bufbuild/protobuf";
  */
 export enum ConfigProvider {
   /**
+   * @generated from enum value: CONFIG_PROVIDER_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
    * Write values inline in the configuration file.
    *
-   * @generated from enum value: CONFIG_INLINE = 0;
+   * @generated from enum value: CONFIG_PROVIDER_INLINE = 1;
    */
-  CONFIG_INLINE = 0,
+  INLINE = 1,
 
   /**
    * Print configuration as environment variables.
    *
-   * @generated from enum value: CONFIG_ENVAR = 1;
+   * @generated from enum value: CONFIG_PROVIDER_ENVAR = 2;
    */
-  CONFIG_ENVAR = 1,
+  ENVAR = 2,
 
   /**
    * Use the database as a configuration store.
    *
-   * @generated from enum value: CONFIG_DB = 2;
+   * @generated from enum value: CONFIG_PROVIDER_DB = 3;
    */
-  CONFIG_DB = 2,
+  DB = 3,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ConfigProvider)
 proto3.util.setEnumType(ConfigProvider, "xyz.block.ftl.v1.ConfigProvider", [
-  { no: 0, name: "CONFIG_INLINE" },
-  { no: 1, name: "CONFIG_ENVAR" },
-  { no: 2, name: "CONFIG_DB" },
+  { no: 0, name: "CONFIG_PROVIDER_UNSPECIFIED" },
+  { no: 1, name: "CONFIG_PROVIDER_INLINE" },
+  { no: 2, name: "CONFIG_PROVIDER_ENVAR" },
+  { no: 3, name: "CONFIG_PROVIDER_DB" },
 ]);
 
 /**
@@ -43,47 +49,53 @@ proto3.util.setEnumType(ConfigProvider, "xyz.block.ftl.v1.ConfigProvider", [
  */
 export enum SecretProvider {
   /**
+   * @generated from enum value: SECRET_PROVIDER_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
    * Write values inline in the configuration file.
    *
-   * @generated from enum value: SECRET_INLINE = 0;
+   * @generated from enum value: SECRET_PROVIDER_INLINE = 1;
    */
-  SECRET_INLINE = 0,
+  INLINE = 1,
 
   /**
    * Print configuration as environment variables.
    *
-   * @generated from enum value: SECRET_ENVAR = 1;
+   * @generated from enum value: SECRET_PROVIDER_ENVAR = 2;
    */
-  SECRET_ENVAR = 1,
+  ENVAR = 2,
 
   /**
    * Write to the system keychain.
    *
-   * @generated from enum value: SECRET_KEYCHAIN = 2;
+   * @generated from enum value: SECRET_PROVIDER_KEYCHAIN = 3;
    */
-  SECRET_KEYCHAIN = 2,
+  KEYCHAIN = 3,
 
   /**
    * Store a secret in the 1Password vault.
    *
-   * @generated from enum value: SECRET_OP = 3;
+   * @generated from enum value: SECRET_PROVIDER_OP = 4;
    */
-  SECRET_OP = 3,
+  OP = 4,
 
   /**
    * Store a secret in the AWS Secrets Manager.
    *
-   * @generated from enum value: SECRET_ASM = 4;
+   * @generated from enum value: SECRET_PROVIDER_ASM = 5;
    */
-  SECRET_ASM = 4,
+  ASM = 5,
 }
 // Retrieve enum metadata with: proto3.getEnumType(SecretProvider)
 proto3.util.setEnumType(SecretProvider, "xyz.block.ftl.v1.SecretProvider", [
-  { no: 0, name: "SECRET_INLINE" },
-  { no: 1, name: "SECRET_ENVAR" },
-  { no: 2, name: "SECRET_KEYCHAIN" },
-  { no: 3, name: "SECRET_OP" },
-  { no: 4, name: "SECRET_ASM" },
+  { no: 0, name: "SECRET_PROVIDER_UNSPECIFIED" },
+  { no: 1, name: "SECRET_PROVIDER_INLINE" },
+  { no: 2, name: "SECRET_PROVIDER_ENVAR" },
+  { no: 3, name: "SECRET_PROVIDER_KEYCHAIN" },
+  { no: 4, name: "SECRET_PROVIDER_OP" },
+  { no: 5, name: "SECRET_PROVIDER_ASM" },
 ]);
 
 /**
@@ -130,9 +142,9 @@ export class ConfigRef extends Message<ConfigRef> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.ListConfigRequest
+ * @generated from message xyz.block.ftl.v1.ConfigListRequest
  */
-export class ListConfigRequest extends Message<ListConfigRequest> {
+export class ConfigListRequest extends Message<ConfigListRequest> {
   /**
    * @generated from field: optional string module = 1;
    */
@@ -148,77 +160,77 @@ export class ListConfigRequest extends Message<ListConfigRequest> {
    */
   provider?: ConfigProvider;
 
-  constructor(data?: PartialMessage<ListConfigRequest>) {
+  constructor(data?: PartialMessage<ConfigListRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ListConfigRequest";
+  static readonly typeName = "xyz.block.ftl.v1.ConfigListRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "include_values", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 3, name: "provider", kind: "enum", T: proto3.getEnumType(ConfigProvider), opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListConfigRequest {
-    return new ListConfigRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigListRequest {
+    return new ConfigListRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListConfigRequest {
-    return new ListConfigRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfigListRequest {
+    return new ConfigListRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListConfigRequest {
-    return new ListConfigRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfigListRequest {
+    return new ConfigListRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListConfigRequest | PlainMessage<ListConfigRequest> | undefined, b: ListConfigRequest | PlainMessage<ListConfigRequest> | undefined): boolean {
-    return proto3.util.equals(ListConfigRequest, a, b);
+  static equals(a: ConfigListRequest | PlainMessage<ConfigListRequest> | undefined, b: ConfigListRequest | PlainMessage<ConfigListRequest> | undefined): boolean {
+    return proto3.util.equals(ConfigListRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.ListConfigResponse
+ * @generated from message xyz.block.ftl.v1.ConfigListResponse
  */
-export class ListConfigResponse extends Message<ListConfigResponse> {
+export class ConfigListResponse extends Message<ConfigListResponse> {
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.ListConfigResponse.Config configs = 1;
+   * @generated from field: repeated xyz.block.ftl.v1.ConfigListResponse.Config configs = 1;
    */
-  configs: ListConfigResponse_Config[] = [];
+  configs: ConfigListResponse_Config[] = [];
 
-  constructor(data?: PartialMessage<ListConfigResponse>) {
+  constructor(data?: PartialMessage<ConfigListResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ListConfigResponse";
+  static readonly typeName = "xyz.block.ftl.v1.ConfigListResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "configs", kind: "message", T: ListConfigResponse_Config, repeated: true },
+    { no: 1, name: "configs", kind: "message", T: ConfigListResponse_Config, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListConfigResponse {
-    return new ListConfigResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigListResponse {
+    return new ConfigListResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListConfigResponse {
-    return new ListConfigResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfigListResponse {
+    return new ConfigListResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListConfigResponse {
-    return new ListConfigResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfigListResponse {
+    return new ConfigListResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListConfigResponse | PlainMessage<ListConfigResponse> | undefined, b: ListConfigResponse | PlainMessage<ListConfigResponse> | undefined): boolean {
-    return proto3.util.equals(ListConfigResponse, a, b);
+  static equals(a: ConfigListResponse | PlainMessage<ConfigListResponse> | undefined, b: ConfigListResponse | PlainMessage<ConfigListResponse> | undefined): boolean {
+    return proto3.util.equals(ConfigListResponse, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.ListConfigResponse.Config
+ * @generated from message xyz.block.ftl.v1.ConfigListResponse.Config
  */
-export class ListConfigResponse_Config extends Message<ListConfigResponse_Config> {
+export class ConfigListResponse_Config extends Message<ConfigListResponse_Config> {
   /**
    * @generated from field: string ref_path = 1;
    */
@@ -229,113 +241,113 @@ export class ListConfigResponse_Config extends Message<ListConfigResponse_Config
    */
   value?: Uint8Array;
 
-  constructor(data?: PartialMessage<ListConfigResponse_Config>) {
+  constructor(data?: PartialMessage<ConfigListResponse_Config>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ListConfigResponse.Config";
+  static readonly typeName = "xyz.block.ftl.v1.ConfigListResponse.Config";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "ref_path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListConfigResponse_Config {
-    return new ListConfigResponse_Config().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigListResponse_Config {
+    return new ConfigListResponse_Config().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListConfigResponse_Config {
-    return new ListConfigResponse_Config().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfigListResponse_Config {
+    return new ConfigListResponse_Config().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListConfigResponse_Config {
-    return new ListConfigResponse_Config().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfigListResponse_Config {
+    return new ConfigListResponse_Config().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListConfigResponse_Config | PlainMessage<ListConfigResponse_Config> | undefined, b: ListConfigResponse_Config | PlainMessage<ListConfigResponse_Config> | undefined): boolean {
-    return proto3.util.equals(ListConfigResponse_Config, a, b);
+  static equals(a: ConfigListResponse_Config | PlainMessage<ConfigListResponse_Config> | undefined, b: ConfigListResponse_Config | PlainMessage<ConfigListResponse_Config> | undefined): boolean {
+    return proto3.util.equals(ConfigListResponse_Config, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.GetConfigRequest
+ * @generated from message xyz.block.ftl.v1.ConfigGetRequest
  */
-export class GetConfigRequest extends Message<GetConfigRequest> {
+export class ConfigGetRequest extends Message<ConfigGetRequest> {
   /**
    * @generated from field: xyz.block.ftl.v1.ConfigRef ref = 1;
    */
   ref?: ConfigRef;
 
-  constructor(data?: PartialMessage<GetConfigRequest>) {
+  constructor(data?: PartialMessage<ConfigGetRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.GetConfigRequest";
+  static readonly typeName = "xyz.block.ftl.v1.ConfigGetRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "ref", kind: "message", T: ConfigRef },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetConfigRequest {
-    return new GetConfigRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigGetRequest {
+    return new ConfigGetRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetConfigRequest {
-    return new GetConfigRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfigGetRequest {
+    return new ConfigGetRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetConfigRequest {
-    return new GetConfigRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfigGetRequest {
+    return new ConfigGetRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetConfigRequest | PlainMessage<GetConfigRequest> | undefined, b: GetConfigRequest | PlainMessage<GetConfigRequest> | undefined): boolean {
-    return proto3.util.equals(GetConfigRequest, a, b);
+  static equals(a: ConfigGetRequest | PlainMessage<ConfigGetRequest> | undefined, b: ConfigGetRequest | PlainMessage<ConfigGetRequest> | undefined): boolean {
+    return proto3.util.equals(ConfigGetRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.GetConfigResponse
+ * @generated from message xyz.block.ftl.v1.ConfigGetResponse
  */
-export class GetConfigResponse extends Message<GetConfigResponse> {
+export class ConfigGetResponse extends Message<ConfigGetResponse> {
   /**
    * @generated from field: bytes value = 1;
    */
   value = new Uint8Array(0);
 
-  constructor(data?: PartialMessage<GetConfigResponse>) {
+  constructor(data?: PartialMessage<ConfigGetResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.GetConfigResponse";
+  static readonly typeName = "xyz.block.ftl.v1.ConfigGetResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetConfigResponse {
-    return new GetConfigResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigGetResponse {
+    return new ConfigGetResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetConfigResponse {
-    return new GetConfigResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfigGetResponse {
+    return new ConfigGetResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetConfigResponse {
-    return new GetConfigResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfigGetResponse {
+    return new ConfigGetResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetConfigResponse | PlainMessage<GetConfigResponse> | undefined, b: GetConfigResponse | PlainMessage<GetConfigResponse> | undefined): boolean {
-    return proto3.util.equals(GetConfigResponse, a, b);
+  static equals(a: ConfigGetResponse | PlainMessage<ConfigGetResponse> | undefined, b: ConfigGetResponse | PlainMessage<ConfigGetResponse> | undefined): boolean {
+    return proto3.util.equals(ConfigGetResponse, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.SetConfigRequest
+ * @generated from message xyz.block.ftl.v1.ConfigSetRequest
  */
-export class SetConfigRequest extends Message<SetConfigRequest> {
+export class ConfigSetRequest extends Message<ConfigSetRequest> {
   /**
    * @generated from field: optional xyz.block.ftl.v1.ConfigProvider provider = 1;
    */
@@ -351,71 +363,71 @@ export class SetConfigRequest extends Message<SetConfigRequest> {
    */
   value = new Uint8Array(0);
 
-  constructor(data?: PartialMessage<SetConfigRequest>) {
+  constructor(data?: PartialMessage<ConfigSetRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.SetConfigRequest";
+  static readonly typeName = "xyz.block.ftl.v1.ConfigSetRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "provider", kind: "enum", T: proto3.getEnumType(ConfigProvider), opt: true },
     { no: 2, name: "ref", kind: "message", T: ConfigRef },
     { no: 3, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetConfigRequest {
-    return new SetConfigRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigSetRequest {
+    return new ConfigSetRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetConfigRequest {
-    return new SetConfigRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfigSetRequest {
+    return new ConfigSetRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetConfigRequest {
-    return new SetConfigRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfigSetRequest {
+    return new ConfigSetRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SetConfigRequest | PlainMessage<SetConfigRequest> | undefined, b: SetConfigRequest | PlainMessage<SetConfigRequest> | undefined): boolean {
-    return proto3.util.equals(SetConfigRequest, a, b);
+  static equals(a: ConfigSetRequest | PlainMessage<ConfigSetRequest> | undefined, b: ConfigSetRequest | PlainMessage<ConfigSetRequest> | undefined): boolean {
+    return proto3.util.equals(ConfigSetRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.SetConfigResponse
+ * @generated from message xyz.block.ftl.v1.ConfigSetResponse
  */
-export class SetConfigResponse extends Message<SetConfigResponse> {
-  constructor(data?: PartialMessage<SetConfigResponse>) {
+export class ConfigSetResponse extends Message<ConfigSetResponse> {
+  constructor(data?: PartialMessage<ConfigSetResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.SetConfigResponse";
+  static readonly typeName = "xyz.block.ftl.v1.ConfigSetResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetConfigResponse {
-    return new SetConfigResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigSetResponse {
+    return new ConfigSetResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetConfigResponse {
-    return new SetConfigResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfigSetResponse {
+    return new ConfigSetResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetConfigResponse {
-    return new SetConfigResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfigSetResponse {
+    return new ConfigSetResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SetConfigResponse | PlainMessage<SetConfigResponse> | undefined, b: SetConfigResponse | PlainMessage<SetConfigResponse> | undefined): boolean {
-    return proto3.util.equals(SetConfigResponse, a, b);
+  static equals(a: ConfigSetResponse | PlainMessage<ConfigSetResponse> | undefined, b: ConfigSetResponse | PlainMessage<ConfigSetResponse> | undefined): boolean {
+    return proto3.util.equals(ConfigSetResponse, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.UnsetConfigRequest
+ * @generated from message xyz.block.ftl.v1.ConfigUnsetRequest
  */
-export class UnsetConfigRequest extends Message<UnsetConfigRequest> {
+export class ConfigUnsetRequest extends Message<ConfigUnsetRequest> {
   /**
    * @generated from field: optional xyz.block.ftl.v1.ConfigProvider provider = 1;
    */
@@ -426,70 +438,70 @@ export class UnsetConfigRequest extends Message<UnsetConfigRequest> {
    */
   ref?: ConfigRef;
 
-  constructor(data?: PartialMessage<UnsetConfigRequest>) {
+  constructor(data?: PartialMessage<ConfigUnsetRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.UnsetConfigRequest";
+  static readonly typeName = "xyz.block.ftl.v1.ConfigUnsetRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "provider", kind: "enum", T: proto3.getEnumType(ConfigProvider), opt: true },
     { no: 2, name: "ref", kind: "message", T: ConfigRef },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UnsetConfigRequest {
-    return new UnsetConfigRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigUnsetRequest {
+    return new ConfigUnsetRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UnsetConfigRequest {
-    return new UnsetConfigRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfigUnsetRequest {
+    return new ConfigUnsetRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UnsetConfigRequest {
-    return new UnsetConfigRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfigUnsetRequest {
+    return new ConfigUnsetRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UnsetConfigRequest | PlainMessage<UnsetConfigRequest> | undefined, b: UnsetConfigRequest | PlainMessage<UnsetConfigRequest> | undefined): boolean {
-    return proto3.util.equals(UnsetConfigRequest, a, b);
+  static equals(a: ConfigUnsetRequest | PlainMessage<ConfigUnsetRequest> | undefined, b: ConfigUnsetRequest | PlainMessage<ConfigUnsetRequest> | undefined): boolean {
+    return proto3.util.equals(ConfigUnsetRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.UnsetConfigResponse
+ * @generated from message xyz.block.ftl.v1.ConfigUnsetResponse
  */
-export class UnsetConfigResponse extends Message<UnsetConfigResponse> {
-  constructor(data?: PartialMessage<UnsetConfigResponse>) {
+export class ConfigUnsetResponse extends Message<ConfigUnsetResponse> {
+  constructor(data?: PartialMessage<ConfigUnsetResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.UnsetConfigResponse";
+  static readonly typeName = "xyz.block.ftl.v1.ConfigUnsetResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UnsetConfigResponse {
-    return new UnsetConfigResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigUnsetResponse {
+    return new ConfigUnsetResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UnsetConfigResponse {
-    return new UnsetConfigResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfigUnsetResponse {
+    return new ConfigUnsetResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UnsetConfigResponse {
-    return new UnsetConfigResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfigUnsetResponse {
+    return new ConfigUnsetResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UnsetConfigResponse | PlainMessage<UnsetConfigResponse> | undefined, b: UnsetConfigResponse | PlainMessage<UnsetConfigResponse> | undefined): boolean {
-    return proto3.util.equals(UnsetConfigResponse, a, b);
+  static equals(a: ConfigUnsetResponse | PlainMessage<ConfigUnsetResponse> | undefined, b: ConfigUnsetResponse | PlainMessage<ConfigUnsetResponse> | undefined): boolean {
+    return proto3.util.equals(ConfigUnsetResponse, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.ListSecretsRequest
+ * @generated from message xyz.block.ftl.v1.SecretsListRequest
  */
-export class ListSecretsRequest extends Message<ListSecretsRequest> {
+export class SecretsListRequest extends Message<SecretsListRequest> {
   /**
    * @generated from field: optional string module = 1;
    */
@@ -505,77 +517,77 @@ export class ListSecretsRequest extends Message<ListSecretsRequest> {
    */
   provider?: SecretProvider;
 
-  constructor(data?: PartialMessage<ListSecretsRequest>) {
+  constructor(data?: PartialMessage<SecretsListRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ListSecretsRequest";
+  static readonly typeName = "xyz.block.ftl.v1.SecretsListRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "include_values", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 3, name: "provider", kind: "enum", T: proto3.getEnumType(SecretProvider), opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSecretsRequest {
-    return new ListSecretsRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SecretsListRequest {
+    return new SecretsListRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSecretsRequest {
-    return new ListSecretsRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SecretsListRequest {
+    return new SecretsListRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSecretsRequest {
-    return new ListSecretsRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SecretsListRequest {
+    return new SecretsListRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListSecretsRequest | PlainMessage<ListSecretsRequest> | undefined, b: ListSecretsRequest | PlainMessage<ListSecretsRequest> | undefined): boolean {
-    return proto3.util.equals(ListSecretsRequest, a, b);
+  static equals(a: SecretsListRequest | PlainMessage<SecretsListRequest> | undefined, b: SecretsListRequest | PlainMessage<SecretsListRequest> | undefined): boolean {
+    return proto3.util.equals(SecretsListRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.ListSecretsResponse
+ * @generated from message xyz.block.ftl.v1.SecretsListResponse
  */
-export class ListSecretsResponse extends Message<ListSecretsResponse> {
+export class SecretsListResponse extends Message<SecretsListResponse> {
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.ListSecretsResponse.Secret secrets = 1;
+   * @generated from field: repeated xyz.block.ftl.v1.SecretsListResponse.Secret secrets = 1;
    */
-  secrets: ListSecretsResponse_Secret[] = [];
+  secrets: SecretsListResponse_Secret[] = [];
 
-  constructor(data?: PartialMessage<ListSecretsResponse>) {
+  constructor(data?: PartialMessage<SecretsListResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ListSecretsResponse";
+  static readonly typeName = "xyz.block.ftl.v1.SecretsListResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "secrets", kind: "message", T: ListSecretsResponse_Secret, repeated: true },
+    { no: 1, name: "secrets", kind: "message", T: SecretsListResponse_Secret, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSecretsResponse {
-    return new ListSecretsResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SecretsListResponse {
+    return new SecretsListResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSecretsResponse {
-    return new ListSecretsResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SecretsListResponse {
+    return new SecretsListResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSecretsResponse {
-    return new ListSecretsResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SecretsListResponse {
+    return new SecretsListResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListSecretsResponse | PlainMessage<ListSecretsResponse> | undefined, b: ListSecretsResponse | PlainMessage<ListSecretsResponse> | undefined): boolean {
-    return proto3.util.equals(ListSecretsResponse, a, b);
+  static equals(a: SecretsListResponse | PlainMessage<SecretsListResponse> | undefined, b: SecretsListResponse | PlainMessage<SecretsListResponse> | undefined): boolean {
+    return proto3.util.equals(SecretsListResponse, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.ListSecretsResponse.Secret
+ * @generated from message xyz.block.ftl.v1.SecretsListResponse.Secret
  */
-export class ListSecretsResponse_Secret extends Message<ListSecretsResponse_Secret> {
+export class SecretsListResponse_Secret extends Message<SecretsListResponse_Secret> {
   /**
    * @generated from field: string ref_path = 1;
    */
@@ -586,113 +598,113 @@ export class ListSecretsResponse_Secret extends Message<ListSecretsResponse_Secr
    */
   value?: Uint8Array;
 
-  constructor(data?: PartialMessage<ListSecretsResponse_Secret>) {
+  constructor(data?: PartialMessage<SecretsListResponse_Secret>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ListSecretsResponse.Secret";
+  static readonly typeName = "xyz.block.ftl.v1.SecretsListResponse.Secret";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "ref_path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSecretsResponse_Secret {
-    return new ListSecretsResponse_Secret().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SecretsListResponse_Secret {
+    return new SecretsListResponse_Secret().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListSecretsResponse_Secret {
-    return new ListSecretsResponse_Secret().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SecretsListResponse_Secret {
+    return new SecretsListResponse_Secret().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListSecretsResponse_Secret {
-    return new ListSecretsResponse_Secret().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SecretsListResponse_Secret {
+    return new SecretsListResponse_Secret().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ListSecretsResponse_Secret | PlainMessage<ListSecretsResponse_Secret> | undefined, b: ListSecretsResponse_Secret | PlainMessage<ListSecretsResponse_Secret> | undefined): boolean {
-    return proto3.util.equals(ListSecretsResponse_Secret, a, b);
+  static equals(a: SecretsListResponse_Secret | PlainMessage<SecretsListResponse_Secret> | undefined, b: SecretsListResponse_Secret | PlainMessage<SecretsListResponse_Secret> | undefined): boolean {
+    return proto3.util.equals(SecretsListResponse_Secret, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.GetSecretRequest
+ * @generated from message xyz.block.ftl.v1.SecretGetRequest
  */
-export class GetSecretRequest extends Message<GetSecretRequest> {
+export class SecretGetRequest extends Message<SecretGetRequest> {
   /**
    * @generated from field: xyz.block.ftl.v1.ConfigRef ref = 1;
    */
   ref?: ConfigRef;
 
-  constructor(data?: PartialMessage<GetSecretRequest>) {
+  constructor(data?: PartialMessage<SecretGetRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.GetSecretRequest";
+  static readonly typeName = "xyz.block.ftl.v1.SecretGetRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "ref", kind: "message", T: ConfigRef },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSecretRequest {
-    return new GetSecretRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SecretGetRequest {
+    return new SecretGetRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSecretRequest {
-    return new GetSecretRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SecretGetRequest {
+    return new SecretGetRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSecretRequest {
-    return new GetSecretRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SecretGetRequest {
+    return new SecretGetRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetSecretRequest | PlainMessage<GetSecretRequest> | undefined, b: GetSecretRequest | PlainMessage<GetSecretRequest> | undefined): boolean {
-    return proto3.util.equals(GetSecretRequest, a, b);
+  static equals(a: SecretGetRequest | PlainMessage<SecretGetRequest> | undefined, b: SecretGetRequest | PlainMessage<SecretGetRequest> | undefined): boolean {
+    return proto3.util.equals(SecretGetRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.GetSecretResponse
+ * @generated from message xyz.block.ftl.v1.SecretGetResponse
  */
-export class GetSecretResponse extends Message<GetSecretResponse> {
+export class SecretGetResponse extends Message<SecretGetResponse> {
   /**
    * @generated from field: bytes value = 1;
    */
   value = new Uint8Array(0);
 
-  constructor(data?: PartialMessage<GetSecretResponse>) {
+  constructor(data?: PartialMessage<SecretGetResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.GetSecretResponse";
+  static readonly typeName = "xyz.block.ftl.v1.SecretGetResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSecretResponse {
-    return new GetSecretResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SecretGetResponse {
+    return new SecretGetResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSecretResponse {
-    return new GetSecretResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SecretGetResponse {
+    return new SecretGetResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSecretResponse {
-    return new GetSecretResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SecretGetResponse {
+    return new SecretGetResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetSecretResponse | PlainMessage<GetSecretResponse> | undefined, b: GetSecretResponse | PlainMessage<GetSecretResponse> | undefined): boolean {
-    return proto3.util.equals(GetSecretResponse, a, b);
+  static equals(a: SecretGetResponse | PlainMessage<SecretGetResponse> | undefined, b: SecretGetResponse | PlainMessage<SecretGetResponse> | undefined): boolean {
+    return proto3.util.equals(SecretGetResponse, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.SetSecretRequest
+ * @generated from message xyz.block.ftl.v1.SecretSetRequest
  */
-export class SetSecretRequest extends Message<SetSecretRequest> {
+export class SecretSetRequest extends Message<SecretSetRequest> {
   /**
    * @generated from field: optional xyz.block.ftl.v1.SecretProvider provider = 1;
    */
@@ -708,71 +720,71 @@ export class SetSecretRequest extends Message<SetSecretRequest> {
    */
   value = new Uint8Array(0);
 
-  constructor(data?: PartialMessage<SetSecretRequest>) {
+  constructor(data?: PartialMessage<SecretSetRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.SetSecretRequest";
+  static readonly typeName = "xyz.block.ftl.v1.SecretSetRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "provider", kind: "enum", T: proto3.getEnumType(SecretProvider), opt: true },
     { no: 2, name: "ref", kind: "message", T: ConfigRef },
     { no: 3, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetSecretRequest {
-    return new SetSecretRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SecretSetRequest {
+    return new SecretSetRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetSecretRequest {
-    return new SetSecretRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SecretSetRequest {
+    return new SecretSetRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetSecretRequest {
-    return new SetSecretRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SecretSetRequest {
+    return new SecretSetRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SetSecretRequest | PlainMessage<SetSecretRequest> | undefined, b: SetSecretRequest | PlainMessage<SetSecretRequest> | undefined): boolean {
-    return proto3.util.equals(SetSecretRequest, a, b);
+  static equals(a: SecretSetRequest | PlainMessage<SecretSetRequest> | undefined, b: SecretSetRequest | PlainMessage<SecretSetRequest> | undefined): boolean {
+    return proto3.util.equals(SecretSetRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.SetSecretResponse
+ * @generated from message xyz.block.ftl.v1.SecretSetResponse
  */
-export class SetSecretResponse extends Message<SetSecretResponse> {
-  constructor(data?: PartialMessage<SetSecretResponse>) {
+export class SecretSetResponse extends Message<SecretSetResponse> {
+  constructor(data?: PartialMessage<SecretSetResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.SetSecretResponse";
+  static readonly typeName = "xyz.block.ftl.v1.SecretSetResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetSecretResponse {
-    return new SetSecretResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SecretSetResponse {
+    return new SecretSetResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetSecretResponse {
-    return new SetSecretResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SecretSetResponse {
+    return new SecretSetResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetSecretResponse {
-    return new SetSecretResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SecretSetResponse {
+    return new SecretSetResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SetSecretResponse | PlainMessage<SetSecretResponse> | undefined, b: SetSecretResponse | PlainMessage<SetSecretResponse> | undefined): boolean {
-    return proto3.util.equals(SetSecretResponse, a, b);
+  static equals(a: SecretSetResponse | PlainMessage<SecretSetResponse> | undefined, b: SecretSetResponse | PlainMessage<SecretSetResponse> | undefined): boolean {
+    return proto3.util.equals(SecretSetResponse, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.UnsetSecretRequest
+ * @generated from message xyz.block.ftl.v1.SecretUnsetRequest
  */
-export class UnsetSecretRequest extends Message<UnsetSecretRequest> {
+export class SecretUnsetRequest extends Message<SecretUnsetRequest> {
   /**
    * @generated from field: optional xyz.block.ftl.v1.SecretProvider provider = 1;
    */
@@ -783,63 +795,63 @@ export class UnsetSecretRequest extends Message<UnsetSecretRequest> {
    */
   ref?: ConfigRef;
 
-  constructor(data?: PartialMessage<UnsetSecretRequest>) {
+  constructor(data?: PartialMessage<SecretUnsetRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.UnsetSecretRequest";
+  static readonly typeName = "xyz.block.ftl.v1.SecretUnsetRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "provider", kind: "enum", T: proto3.getEnumType(SecretProvider), opt: true },
     { no: 2, name: "ref", kind: "message", T: ConfigRef },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UnsetSecretRequest {
-    return new UnsetSecretRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SecretUnsetRequest {
+    return new SecretUnsetRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UnsetSecretRequest {
-    return new UnsetSecretRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SecretUnsetRequest {
+    return new SecretUnsetRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UnsetSecretRequest {
-    return new UnsetSecretRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SecretUnsetRequest {
+    return new SecretUnsetRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UnsetSecretRequest | PlainMessage<UnsetSecretRequest> | undefined, b: UnsetSecretRequest | PlainMessage<UnsetSecretRequest> | undefined): boolean {
-    return proto3.util.equals(UnsetSecretRequest, a, b);
+  static equals(a: SecretUnsetRequest | PlainMessage<SecretUnsetRequest> | undefined, b: SecretUnsetRequest | PlainMessage<SecretUnsetRequest> | undefined): boolean {
+    return proto3.util.equals(SecretUnsetRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.UnsetSecretResponse
+ * @generated from message xyz.block.ftl.v1.SecretUnsetResponse
  */
-export class UnsetSecretResponse extends Message<UnsetSecretResponse> {
-  constructor(data?: PartialMessage<UnsetSecretResponse>) {
+export class SecretUnsetResponse extends Message<SecretUnsetResponse> {
+  constructor(data?: PartialMessage<SecretUnsetResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.UnsetSecretResponse";
+  static readonly typeName = "xyz.block.ftl.v1.SecretUnsetResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UnsetSecretResponse {
-    return new UnsetSecretResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SecretUnsetResponse {
+    return new SecretUnsetResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UnsetSecretResponse {
-    return new UnsetSecretResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SecretUnsetResponse {
+    return new SecretUnsetResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UnsetSecretResponse {
-    return new UnsetSecretResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SecretUnsetResponse {
+    return new SecretUnsetResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UnsetSecretResponse | PlainMessage<UnsetSecretResponse> | undefined, b: UnsetSecretResponse | PlainMessage<UnsetSecretResponse> | undefined): boolean {
-    return proto3.util.equals(UnsetSecretResponse, a, b);
+  static equals(a: SecretUnsetResponse | PlainMessage<SecretUnsetResponse> | undefined, b: SecretUnsetResponse | PlainMessage<SecretUnsetResponse> | undefined): boolean {
+    return proto3.util.equals(SecretUnsetResponse, a, b);
   }
 }
 

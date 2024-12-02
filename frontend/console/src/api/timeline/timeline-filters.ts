@@ -1,21 +1,21 @@
 import type { Timestamp } from '@bufbuild/protobuf'
 import {
   type EventType,
-  EventsQuery_CallFilter,
-  EventsQuery_DeploymentFilter,
-  EventsQuery_EventTypeFilter,
-  EventsQuery_Filter,
-  EventsQuery_IDFilter,
-  EventsQuery_LogLevelFilter,
-  EventsQuery_ModuleFilter,
-  EventsQuery_RequestFilter,
-  EventsQuery_TimeFilter,
+  GetEventsRequest_CallFilter,
+  GetEventsRequest_DeploymentFilter,
+  GetEventsRequest_EventTypeFilter,
+  GetEventsRequest_Filter,
+  GetEventsRequest_IDFilter,
+  GetEventsRequest_LogLevelFilter,
+  GetEventsRequest_ModuleFilter,
+  GetEventsRequest_RequestFilter,
+  GetEventsRequest_TimeFilter,
   type LogLevel,
-} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+} from '../../protos/xyz/block/ftl/console/v1/console_pb'
 
-export const requestKeysFilter = (requestKeys: string[]): EventsQuery_Filter => {
-  const filter = new EventsQuery_Filter()
-  const requestFilter = new EventsQuery_RequestFilter()
+export const requestKeysFilter = (requestKeys: string[]): GetEventsRequest_Filter => {
+  const filter = new GetEventsRequest_Filter()
+  const requestFilter = new GetEventsRequest_RequestFilter()
   requestFilter.requests = requestKeys
   filter.filter = {
     case: 'requests',
@@ -24,9 +24,9 @@ export const requestKeysFilter = (requestKeys: string[]): EventsQuery_Filter => 
   return filter
 }
 
-export const eventTypesFilter = (eventTypes: EventType[]): EventsQuery_Filter => {
-  const filter = new EventsQuery_Filter()
-  const typesFilter = new EventsQuery_EventTypeFilter()
+export const eventTypesFilter = (eventTypes: EventType[]): GetEventsRequest_Filter => {
+  const filter = new GetEventsRequest_Filter()
+  const typesFilter = new GetEventsRequest_EventTypeFilter()
   typesFilter.eventTypes = eventTypes
   filter.filter = {
     case: 'eventTypes',
@@ -35,9 +35,9 @@ export const eventTypesFilter = (eventTypes: EventType[]): EventsQuery_Filter =>
   return filter
 }
 
-export const logLevelFilter = (logLevel: LogLevel): EventsQuery_Filter => {
-  const filter = new EventsQuery_Filter()
-  const logFilter = new EventsQuery_LogLevelFilter()
+export const logLevelFilter = (logLevel: LogLevel): GetEventsRequest_Filter => {
+  const filter = new GetEventsRequest_Filter()
+  const logFilter = new GetEventsRequest_LogLevelFilter()
   logFilter.logLevel = logLevel
   filter.filter = {
     case: 'logLevel',
@@ -46,9 +46,9 @@ export const logLevelFilter = (logLevel: LogLevel): EventsQuery_Filter => {
   return filter
 }
 
-export const modulesFilter = (modules: string[]): EventsQuery_Filter => {
-  const filter = new EventsQuery_Filter()
-  const deploymentsFilter = new EventsQuery_DeploymentFilter()
+export const modulesFilter = (modules: string[]): GetEventsRequest_Filter => {
+  const filter = new GetEventsRequest_Filter()
+  const deploymentsFilter = new GetEventsRequest_DeploymentFilter()
   deploymentsFilter.deployments = modules
   filter.filter = {
     case: 'deployments',
@@ -57,9 +57,9 @@ export const modulesFilter = (modules: string[]): EventsQuery_Filter => {
   return filter
 }
 
-export const callFilter = (destModule: string, destVerb?: string, sourceModule?: string): EventsQuery_Filter => {
-  const filter = new EventsQuery_Filter()
-  const callFilter = new EventsQuery_CallFilter()
+export const callFilter = (destModule: string, destVerb?: string, sourceModule?: string): GetEventsRequest_Filter => {
+  const filter = new GetEventsRequest_Filter()
+  const callFilter = new GetEventsRequest_CallFilter()
   callFilter.destModule = destModule
   callFilter.destVerb = destVerb
   callFilter.sourceModule = sourceModule
@@ -70,9 +70,9 @@ export const callFilter = (destModule: string, destVerb?: string, sourceModule?:
   return filter
 }
 
-export const moduleFilter = (module: string, verb?: string): EventsQuery_Filter => {
-  const filter = new EventsQuery_Filter()
-  const moduleFilter = new EventsQuery_ModuleFilter()
+export const moduleFilter = (module: string, verb?: string): GetEventsRequest_Filter => {
+  const filter = new GetEventsRequest_Filter()
+  const moduleFilter = new GetEventsRequest_ModuleFilter()
   moduleFilter.module = module
   moduleFilter.verb = verb
   filter.filter = {
@@ -82,9 +82,9 @@ export const moduleFilter = (module: string, verb?: string): EventsQuery_Filter 
   return filter
 }
 
-export const timeFilter = (olderThan: Timestamp | undefined, newerThan: Timestamp | undefined): EventsQuery_Filter => {
-  const filter = new EventsQuery_Filter()
-  const timeFilter = new EventsQuery_TimeFilter()
+export const timeFilter = (olderThan: Timestamp | undefined, newerThan: Timestamp | undefined): GetEventsRequest_Filter => {
+  const filter = new GetEventsRequest_Filter()
+  const timeFilter = new GetEventsRequest_TimeFilter()
   timeFilter.olderThan = olderThan
   timeFilter.newerThan = newerThan
   filter.filter = {
@@ -100,9 +100,9 @@ export const eventIdFilter = ({
 }: {
   lowerThan?: bigint
   higherThan?: bigint
-}): EventsQuery_Filter => {
-  const filter = new EventsQuery_Filter()
-  const idFilter = new EventsQuery_IDFilter()
+}): GetEventsRequest_Filter => {
+  const filter = new GetEventsRequest_Filter()
+  const idFilter = new GetEventsRequest_IDFilter()
   idFilter.lowerThan = lowerThan
   idFilter.higherThan = higherThan
   filter.filter = {

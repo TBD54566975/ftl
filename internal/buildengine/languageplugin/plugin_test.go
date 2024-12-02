@@ -15,7 +15,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
+	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -33,7 +33,7 @@ type mockPluginClient struct {
 
 	// atomic.Value does not allow us to atomically publish, close and replace the chan
 	buildEventsLock *sync.Mutex
-	buildEvents     chan result.Result[*langpb.BuildEvent]
+	buildEvents     chan result.Result[*langpb.BuildResponse]
 
 	latestBuildContext atomic.Value[testBuildContext]
 
@@ -45,7 +45,7 @@ var _ pluginClient = &mockPluginClient{}
 func newMockPluginClient() *mockPluginClient {
 	return &mockPluginClient{
 		buildEventsLock: &sync.Mutex{},
-		buildEvents:     make(chan result.Result[*langpb.BuildEvent], 64),
+		buildEvents:     make(chan result.Result[*langpb.BuildResponse], 64),
 		cmdError:        make(chan error),
 	}
 }
@@ -67,7 +67,7 @@ func (p *mockPluginClient) moduleConfigDefaults(ctx context.Context, req *connec
 	}), nil
 }
 
-func (p *mockPluginClient) getDependencies(context.Context, *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
+func (p *mockPluginClient) getDependencies(context.Context, *connect.Request[langpb.GetDependenciesRequest]) (*connect.Response[langpb.GetDependenciesResponse], error) {
 	panic("not implemented")
 }
 
@@ -103,7 +103,7 @@ func (p *mockPluginClient) syncStubReferences(context.Context, *connect.Request[
 	panic("not implemented")
 }
 
-func (p *mockPluginClient) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildEvent], streamCancelFunc, error) {
+func (p *mockPluginClient) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildResponse], streamCancelFunc, error) {
 	p.buildEventsLock.Lock()
 	defer p.buildEventsLock.Unlock()
 
@@ -317,8 +317,8 @@ func TestAutomaticRebuilds(t *testing.T) {
 	result := beginBuild(ctx, plugin, bctx, true)
 
 	// plugin sends auto rebuild has started event (should be ignored)
-	mockImpl.publishBuildEvent(&langpb.BuildEvent{
-		Event: &langpb.BuildEvent_AutoRebuildStarted{},
+	mockImpl.publishBuildEvent(&langpb.BuildResponse{
+		Event: &langpb.BuildResponse_AutoRebuildStarted{},
 	})
 	// plugin sends auto rebuild event (should be ignored)
 	mockImpl.publishBuildEvent(buildEventWithBuildError("fake", true, "auto rebuild to ignore"))
@@ -340,8 +340,8 @@ func TestAutomaticRebuilds(t *testing.T) {
 	}
 
 	// plugin sends auto rebuild events
-	mockImpl.publishBuildEvent(&langpb.BuildEvent{
-		Event: &langpb.BuildEvent_AutoRebuildStarted{},
+	mockImpl.publishBuildEvent(&langpb.BuildResponse{
+		Event: &langpb.BuildResponse_AutoRebuildStarted{},
 	})
 	mockImpl.publishBuildEvent(buildEventWithBuildError(buildCtx.ContextID, true, "first real auto rebuild"))
 	// plugin sends auto rebuild events again (this time with no rebuild started event)
@@ -407,9 +407,9 @@ func eventsFromChannel(updates chan PluginEvent) []PluginEvent {
 	}
 }
 
-func buildEventWithBuildError(contextID string, isAutomaticRebuild bool, msg string) *langpb.BuildEvent {
-	return &langpb.BuildEvent{
-		Event: &langpb.BuildEvent_BuildFailure{
+func buildEventWithBuildError(contextID string, isAutomaticRebuild bool, msg string) *langpb.BuildResponse {
+	return &langpb.BuildResponse{
+		Event: &langpb.BuildResponse_BuildFailure{
 			BuildFailure: &langpb.BuildFailure{
 				ContextId:          contextID,
 				IsAutomaticRebuild: isAutomaticRebuild,
@@ -424,7 +424,7 @@ func buildEventWithBuildError(contextID string, isAutomaticRebuild bool, msg str
 	}
 }
 
-func (p *mockPluginClient) publishBuildEvent(event *langpb.BuildEvent) {
+func (p *mockPluginClient) publishBuildEvent(event *langpb.BuildResponse) {
 	p.buildEventsLock.Lock()
 	defer p.buildEventsLock.Unlock()
 
@@ -444,9 +444,9 @@ func beginBuild(ctx context.Context, plugin *LanguagePlugin, bctx BuildContext, 
 func (p *mockPluginClient) breakStream() {
 	p.buildEventsLock.Lock()
 	defer p.buildEventsLock.Unlock()
-	p.buildEvents <- result.Err[*langpb.BuildEvent](fmt.Errorf("fake a broken stream"))
+	p.buildEvents <- result.Err[*langpb.BuildResponse](fmt.Errorf("fake a broken stream"))
 	close(p.buildEvents)
-	p.buildEvents = make(chan result.Result[*langpb.BuildEvent], 64)
+	p.buildEvents = make(chan result.Result[*langpb.BuildResponse], 64)
 }
 
 func checkResult(t *testing.T, r result.Result[BuildResult], expectedMsg string) {

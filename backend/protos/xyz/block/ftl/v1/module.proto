@@ -3,8 +3,8 @@ syntax = "proto3";
 package xyz.block.ftl.v1;
 
 import "google/protobuf/duration.proto";
+import "xyz/block/ftl/schema/v1/schema.proto";
 import "xyz/block/ftl/v1/ftl.proto";
-import "xyz/block/ftl/v1/schema/schema.proto";
 
 option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1;ftlv1";
 option java_multiple_files = true;
@@ -18,7 +18,7 @@ message AcquireLeaseRequest {
 message AcquireLeaseResponse {}
 
 message PublishEventRequest {
-  schema.Ref topic = 1;
+  ftl.schema.v1.Ref topic = 1;
   bytes body = 2;
   // Only verb name is included because this verb will be in the same module as topic
   string caller = 3;
@@ -26,24 +26,25 @@ message PublishEventRequest {
 
 message PublishEventResponse {}
 
-message ModuleContextRequest {
+message GetModuleContextRequest {
   string module = 1;
 }
 
-message ModuleContextResponse {
+message GetModuleContextResponse {
   message Ref {
     optional string module = 1;
     string name = 2;
   }
 
-  enum DBType {
-    POSTGRES = 0;
-    MYSQL = 1;
+  enum DbType {
+    DB_TYPE_UNSPECIFIED = 0;
+    DB_TYPE_POSTGRES = 1;
+    DB_TYPE_MYSQL = 2;
   }
 
   message DSN {
     string name = 1;
-    DBType type = 2;
+    DbType type = 2;
     string dsn = 3;
   }
 
@@ -61,7 +62,7 @@ service ModuleService {
   }
 
   // Get configuration state for the module
-  rpc GetModuleContext(ModuleContextRequest) returns (stream ModuleContextResponse);
+  rpc GetModuleContext(GetModuleContextRequest) returns (stream GetModuleContextResponse);
 
   // Acquire (and renew) a lease for a deployment.
   //

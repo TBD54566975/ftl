@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Type
 
-from ftl.protos.xyz.block.ftl.v1.schema import schema_pb2 as schemapb
+from ftl.protos.xyz.block.ftl.schema.v1 import schema_pb2 as schemapb
 
 from ftl.extract.context import LocalExtractionContext
 

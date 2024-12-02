@@ -1,7 +1,7 @@
 from google.protobuf import struct_pb2 as _struct_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from xyz.block.ftl.schema.v1 import schema_pb2 as _schema_pb2
 from xyz.block.ftl.v1 import ftl_pb2 as _ftl_pb2
-from xyz.block.ftl.v1.schema import schema_pb2 as _schema_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -76,14 +76,12 @@ class DeploymentArtefact(_message.Message):
     def __init__(self, digest: _Optional[str] = ..., path: _Optional[str] = ..., executable: bool = ...) -> None: ...
 
 class CreateDeploymentRequest(_message.Message):
-    __slots__ = ("schema", "artefacts", "labels")
+    __slots__ = ("schema", "artefacts")
     SCHEMA_FIELD_NUMBER: _ClassVar[int]
     ARTEFACTS_FIELD_NUMBER: _ClassVar[int]
-    LABELS_FIELD_NUMBER: _ClassVar[int]
     schema: _schema_pb2.Module
     artefacts: _containers.RepeatedCompositeFieldContainer[DeploymentArtefact]
-    labels: _struct_pb2.Struct
-    def __init__(self, schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., artefacts: _Optional[_Iterable[_Union[DeploymentArtefact, _Mapping]]] = ..., labels: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+    def __init__(self, schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., artefacts: _Optional[_Iterable[_Union[DeploymentArtefact, _Mapping]]] = ...) -> None: ...
 
 class CreateDeploymentResponse(_message.Message):
     __slots__ = ("deployment_key", "active_deployment_key")
@@ -140,12 +138,14 @@ class RegisterRunnerResponse(_message.Message):
     def __init__(self) -> None: ...
 
 class UpdateDeployRequest(_message.Message):
-    __slots__ = ("deployment_key", "min_replicas")
+    __slots__ = ("deployment_key", "min_replicas", "endpoint")
     DEPLOYMENT_KEY_FIELD_NUMBER: _ClassVar[int]
     MIN_REPLICAS_FIELD_NUMBER: _ClassVar[int]
+    ENDPOINT_FIELD_NUMBER: _ClassVar[int]
     deployment_key: str
     min_replicas: int
-    def __init__(self, deployment_key: _Optional[str] = ..., min_replicas: _Optional[int] = ...) -> None: ...
+    endpoint: str
+    def __init__(self, deployment_key: _Optional[str] = ..., min_replicas: _Optional[int] = ..., endpoint: _Optional[str] = ...) -> None: ...
 
 class UpdateDeployResponse(_message.Message):
     __slots__ = ()

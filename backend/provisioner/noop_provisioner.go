@@ -5,9 +5,9 @@ import (
 
 	"connectrpc.com/connect"
 
+	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
+	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 )
 
 // NoopProvisioner is a provisioner that does nothing
@@ -25,7 +25,7 @@ func (d *NoopProvisioner) Plan(context.Context, *connect.Request[provisioner.Pla
 
 func (d *NoopProvisioner) Provision(context.Context, *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
 	return connect.NewResponse(&provisioner.ProvisionResponse{
-		Status:            provisioner.ProvisionResponse_SUBMITTED,
+		Status:            provisioner.ProvisionResponse_PROVISION_RESPONSE_STATUS_SUBMITTED,
 		ProvisioningToken: "token",
 	}), nil
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/provisioner"
+	"github.com/TBD54566975/ftl/backend/provisioner/scaling/k8sscaling"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
@@ -44,7 +45,11 @@ func main() {
 
 	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.ProvisionerConfig.ControllerEndpoint.String(), log.Error)
 
-	registry, err := provisioner.RegistryFromConfigFile(ctx, cli.ProvisionerConfig.PluginConfigFile, controllerClient)
+	scaling := k8sscaling.NewK8sScaling(false, cli.ProvisionerConfig.ControllerEndpoint.String())
+	err = scaling.Start(ctx)
+	kctx.FatalIfErrorf(err, "error starting k8s scaling")
+	registry, err := provisioner.RegistryFromConfigFile(ctx, cli.ProvisionerConfig.PluginConfigFile, controllerClient, scaling)
+
 	kctx.FatalIfErrorf(err, "failed to create provisioner registry")
 
 	err = provisioner.Start(ctx, cli.ProvisionerConfig, registry, controllerClient)

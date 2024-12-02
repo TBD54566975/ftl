@@ -1,5 +1,5 @@
 import { RightPanelAttribute } from '../../../../components/RightPanelAttribute'
-import type { Topic } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Topic } from '../../../../protos/xyz/block/ftl/console/v1/console_pb'
 import type { ExpandablePanelProps } from '../../../graph/ExpandablePanel'
 import { DeclDefaultPanels } from '../DeclDefaultPanels'
 export const topicPanels = (topic: Topic, schema?: string) => {

@@ -44,14 +44,13 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
-	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/timeline"
 	"github.com/TBD54566975/ftl/backend/libdal"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	frontend "github.com/TBD54566975/ftl/frontend/console"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
@@ -120,7 +119,6 @@ func (c *Config) OpenDBAndInstrument() (*sql.DB, error) {
 func Start(
 	ctx context.Context,
 	config Config,
-	runnerScaling scaling.RunnerScaling,
 	cm *cf.Manager[configuration.Configuration],
 	sm *cf.Manager[configuration.Secrets],
 	conn *sql.DB,
@@ -146,7 +144,7 @@ func Start(
 		logger.Infof("Web console available at: %s", config.Bind)
 	}
 
-	svc, err := New(ctx, conn, cm, sm, config, devel, runnerScaling)
+	svc, err := New(ctx, conn, cm, sm, config, devel)
 	if err != nil {
 		return err
 	}
@@ -169,9 +167,6 @@ func Start(
 			rpc.HTTP("/", consoleHandler),
 			rpc.PProf(),
 		)
-	})
-	g.Go(func() error {
-		return runnerScaling.Start(ctx, *config.Bind, svc.dbleaser)
 	})
 
 	go svc.dal.PollDeployments(ctx)
@@ -220,7 +215,6 @@ type Service struct {
 
 	increaseReplicaFailures map[string]int
 	asyncCallsLock          sync.Mutex
-	runnerScaling           scaling.RunnerScaling
 
 	clientLock sync.Mutex
 }
@@ -232,7 +226,6 @@ func New(
 	sm *cf.Manager[configuration.Secrets],
 	config Config,
 	devel bool,
-	runnerScaling scaling.RunnerScaling,
 ) (*Service, error) {
 	key := config.Key
 	if config.Key.IsZero() {
@@ -264,7 +257,6 @@ func New(
 		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
 		config:                  config,
 		increaseReplicaFailures: map[string]int{},
-		runnerScaling:           runnerScaling,
 	}
 	svc.schemaState.Store(schemaState{routes: map[string]Route{}, schema: &schema.Schema{}})
 
@@ -506,15 +498,27 @@ func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.U
 
 	logger := s.getDeploymentLogger(ctx, deploymentKey)
 	logger.Debugf("Update deployment for: %s", deploymentKey)
-
-	err = s.dal.SetDeploymentReplicas(ctx, deploymentKey, int(req.Msg.MinReplicas))
-	if err != nil {
-		if errors.Is(err, libdal.ErrNotFound) {
-			logger.Errorf(err, "Deployment not found: %s", deploymentKey)
-			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
+	if req.Msg.MinReplicas != nil {
+		err = s.dal.SetDeploymentReplicas(ctx, deploymentKey, int(*req.Msg.MinReplicas))
+		if err != nil {
+			if errors.Is(err, libdal.ErrNotFound) {
+				logger.Errorf(err, "Deployment not found: %s", deploymentKey)
+				return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
+			}
+			logger.Errorf(err, "Could not set deployment replicas: %s", deploymentKey)
+			return nil, fmt.Errorf("could not set deployment replicas: %w", err)
 		}
-		logger.Errorf(err, "Could not set deployment replicas: %s", deploymentKey)
-		return nil, fmt.Errorf("could not set deployment replicas: %w", err)
+	}
+	if req.Msg.Endpoint != nil {
+		err = s.dal.SetDeploymentEndpoint(ctx, deploymentKey, *req.Msg.Endpoint)
+		if err != nil {
+			if errors.Is(err, libdal.ErrNotFound) {
+				logger.Errorf(err, "Deployment not found: %s", deploymentKey)
+				return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
+			}
+			logger.Errorf(err, "Could not set deployment endpoint: %s", deploymentKey)
+			return nil, fmt.Errorf("could not set deployment endpoint: %w", err)
+		}
 	}
 
 	return connect.NewResponse(&ftlv1.UpdateDeployResponse{}), nil
@@ -689,7 +693,7 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 }
 
 // GetModuleContext retrieves config, secrets and DSNs for a module.
-func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest], resp *connect.ServerStream[ftlv1.ModuleContextResponse]) error {
+func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.GetModuleContextRequest], resp *connect.ServerStream[ftlv1.GetModuleContextResponse]) error {
 	name := req.Msg.Module
 
 	// Initialize checksum to -1; a zero checksum does occur when the context contains no settings
@@ -1506,7 +1510,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	builtinsResponse := &ftlv1.PullSchemaResponse{
 		ModuleName: builtins.Name,
 		Schema:     builtins,
-		ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+		ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 		More:       initialCount > 0,
 	}
 
@@ -1534,7 +1538,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				response = &ftlv1.PullSchemaResponse{
 					ModuleName:    name,
 					DeploymentKey: proto.String(deletion.String()),
-					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED,
+					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED,
 					ModuleRemoved: moduleRemoved,
 					Schema:        schema,
 				}
@@ -1566,11 +1570,11 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				}
 				if current, ok := moduleState[message.Schema.Name]; ok {
 					if !bytes.Equal(current.hash, newState.hash) || current.minReplicas != newState.minReplicas {
-						changeType := ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED
+						changeType := ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_CHANGED
 						// A deployment is considered removed if its minReplicas is set to 0.
 						moduleRemoved := false
 						if current.minReplicas > 0 && message.MinReplicas == 0 {
-							changeType = ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED
+							changeType = ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED
 							moduleRemoved = mostRecentDeploymentByModule[message.Schema.Name] == message.Key.String()
 						}
 						response = &ftlv1.PullSchemaResponse{
@@ -1587,7 +1591,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 						ModuleName:    moduleSchema.Name,
 						DeploymentKey: proto.String(message.Key.String()),
 						Schema:        moduleSchema,
-						ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED,
+						ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 						More:          initialCount > 1,
 					}
 					if initialCount > 0 {
@@ -1658,38 +1662,40 @@ func (s *Service) syncRoutesAndSchema(ctx context.Context) (ret time.Duration, e
 		// And we set its replicas to zero
 		// It may seem a bit odd to do this here but this is where we are actually updating the routing table
 		// Which is what makes as a deployment 'live' from a clients POV
-		optURI, err := s.runnerScaling.GetEndpointForDeployment(ctx, v.Module, v.Key.String())
-		if err != nil {
+		if v.Schema.Runtime == nil {
+			deploymentLogger.Debugf("Deployment %s has no runtime metadata", v.Key.String())
+			continue
+		}
+		targetEndpoint, ok := v.Endpoint.Get()
+		if !ok {
 			deploymentLogger.Debugf("Failed to get updated endpoint for deployment %s", v.Key.String())
 			continue
-		} else if uri, ok := optURI.Get(); ok {
-			// Check if this is a new route
-			targetEndpoint := uri.String()
-			if oldRoute, oldRouteExists := old[v.Module]; !oldRouteExists || oldRoute.Deployment.String() != v.Key.String() {
-				// If it is a new route we only add it if we can ping it
-				// Kube deployments can take a while to come up, so we don't want to add them to the routing table until they are ready.
-				_, err := s.clientsForEndpoint(targetEndpoint).verb.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
-				if err != nil {
-					deploymentLogger.Tracef("Unable to ping %s, not adding to route table", v.Key.String())
-					continue
-				}
-				deploymentLogger.Infof("Deployed %s", v.Key.String())
-				status.UpdateModuleState(ctx, v.Module, status.BuildStateDeployed)
-			}
-			if prev, ok := newRoutes[v.Module]; ok {
-				// We have already seen a route for this module, the existing route must be an old one
-				// as the deployments are in order
-				// We have a new route ready to go, so we can just set the old one to 0 replicas
-				// Do this in a TX so it doesn't happen until the route table is updated
-				deploymentLogger.Debugf("Setting %s to zero replicas", prev.Deployment)
-				err := tx.SetDeploymentReplicas(ctx, prev.Deployment, 0)
-				if err != nil {
-					deploymentLogger.Errorf(err, "Failed to set replicas to 0 for deployment %s", prev.Deployment.String())
-				}
-			}
-			newRoutes[v.Module] = Route{Module: v.Module, Deployment: v.Key, Endpoint: targetEndpoint}
-			modulesByName[v.Module] = v.Schema
 		}
+		// Check if this is a new route
+		if oldRoute, oldRouteExists := old[v.Module]; !oldRouteExists || oldRoute.Deployment.String() != v.Key.String() {
+			// If it is a new route we only add it if we can ping it
+			// Kube deployments can take a while to come up, so we don't want to add them to the routing table until they are ready.
+			_, err := s.clientsForEndpoint(targetEndpoint).verb.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
+			if err != nil {
+				deploymentLogger.Tracef("Unable to ping %s, not adding to route table", v.Key.String())
+				continue
+			}
+			deploymentLogger.Infof("Deployed %s", v.Key.String())
+			status.UpdateModuleState(ctx, v.Module, status.BuildStateDeployed)
+		}
+		if prev, ok := newRoutes[v.Module]; ok {
+			// We have already seen a route for this module, the existing route must be an old one
+			// as the deployments are in order
+			// We have a new route ready to go, so we can just set the old one to 0 replicas
+			// Do this in a TX so it doesn't happen until the route table is updated
+			deploymentLogger.Debugf("Setting %s to zero replicas", prev.Deployment)
+			err := tx.SetDeploymentReplicas(ctx, prev.Deployment, 0)
+			if err != nil {
+				deploymentLogger.Errorf(err, "Failed to set replicas to 0 for deployment %s", prev.Deployment.String())
+			}
+		}
+		newRoutes[v.Module] = Route{Module: v.Module, Deployment: v.Key, Endpoint: targetEndpoint}
+		modulesByName[v.Module] = v.Schema
 	}
 
 	orderedModules := maps.Values(modulesByName)

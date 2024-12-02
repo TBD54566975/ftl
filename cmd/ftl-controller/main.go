@@ -14,7 +14,6 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
-	"github.com/TBD54566975/ftl/backend/controller/scaling/k8sscaling"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	cfdal "github.com/TBD54566975/ftl/internal/configuration/dal"
@@ -76,6 +75,6 @@ func main() {
 	sm, err := manager.New[cf.Secrets](ctx, dbSecretResolver, asmSecretProvider)
 	kctx.FatalIfErrorf(err)
 
-	err = controller.Start(ctx, cli.ControllerConfig, k8sscaling.NewK8sScaling(cli.DisableIstio), cm, sm, conn, false)
+	err = controller.Start(ctx, cli.ControllerConfig, cm, sm, conn, false)
 	kctx.FatalIfErrorf(err)
 }

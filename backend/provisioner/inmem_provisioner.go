@@ -10,9 +10,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/puzpuzpuz/xsync/v3"
 
+	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
+	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -40,7 +40,7 @@ type inMemProvisioningStep struct {
 }
 
 // InMemResourceProvisionerFn is a function that provisions a resource
-type InMemResourceProvisionerFn func(context.Context, *provisioner.ResourceContext, string, string) (*provisioner.Resource, error)
+type InMemResourceProvisionerFn func(context.Context, *provisioner.ResourceContext, string, string, *provisioner.Resource) (*provisioner.Resource, error)
 
 // InMemProvisioner for running an in memory provisioner, constructing all resources concurrently
 //
@@ -83,7 +83,7 @@ func (d *InMemProvisioner) Provision(ctx context.Context, req *connect.Request[p
 			task.steps = append(task.steps, step)
 			go func() {
 				defer step.Done.Store(true)
-				output, err := handler(ctx, r, req.Msg.Module, r.Resource.ResourceId)
+				output, err := handler(ctx, r, req.Msg.Module, r.Resource.ResourceId, previous[r.Resource.ResourceId])
 				if err != nil {
 					step.Err = err
 					logger.Errorf(err, "failed to provision resource %s", r.Resource.ResourceId)
@@ -103,7 +103,7 @@ func (d *InMemProvisioner) Provision(ctx context.Context, req *connect.Request[p
 
 	return connect.NewResponse(&provisioner.ProvisionResponse{
 		ProvisioningToken: token,
-		Status:            provisioner.ProvisionResponse_SUBMITTED,
+		Status:            provisioner.ProvisionResponse_PROVISION_RESPONSE_STATUS_SUBMITTED,
 	}), nil
 }
 

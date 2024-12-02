@@ -1,5 +1,5 @@
 import { CellsIcon, PackageIcon } from 'hugeicons-react'
-import { Config, Data, Database, Enum, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Config, Data, Database, Enum, Module, Secret, Verb } from '../../protos/xyz/block/ftl/console/v1/console_pb'
 import { RightPanelHeader } from '../modules/decls/RightPanelHeader'
 import { declIcon } from '../modules/module.utils'
 import type { FTLNode } from './graph-utils'

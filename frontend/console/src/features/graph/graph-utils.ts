@@ -1,6 +1,6 @@
 import type { EdgeDefinition, ElementDefinition } from 'cytoscape'
 import type { StreamModulesResult } from '../../api/modules/use-stream-modules'
-import type { Config, Data, Database, Enum, Module, Secret, Topic, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Config, Data, Database, Enum, Module, Secret, Topic, Verb } from '../../protos/xyz/block/ftl/console/v1/console_pb'
 import { getNodeBackgroundColor } from './graph-styles'
 
 export type FTLNode = Module | Verb | Secret | Config | Data | Database | Topic | Enum

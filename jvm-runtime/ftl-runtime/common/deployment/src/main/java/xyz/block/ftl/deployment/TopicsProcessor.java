@@ -21,7 +21,7 @@ import xyz.block.ftl.ConsumableTopic;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.WriteableTopic;
 import xyz.block.ftl.runtime.TopicHelper;
-import xyz.block.ftl.v1.schema.Decl;
+import xyz.block.ftl.schema.v1.Decl;
 
 public class TopicsProcessor {
 
@@ -99,7 +99,7 @@ public class TopicsProcessor {
             @Override
             public void accept(ModuleBuilder moduleBuilder) {
                 for (var topic : topics.getTopics().values()) {
-                    moduleBuilder.addDecls(Decl.newBuilder().setTopic(xyz.block.ftl.v1.schema.Topic.newBuilder()
+                    moduleBuilder.addDecls(Decl.newBuilder().setTopic(xyz.block.ftl.schema.v1.Topic.newBuilder()
                             .setExport(topic.exported())
                             .setPos(PositionUtils.forClass(topic.interfaceName()))
                             .setName(topic.topicName())

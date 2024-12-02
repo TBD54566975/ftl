@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useModules } from '../../../../api/modules/use-modules'
 import { Loader } from '../../../../components/Loader'
 import { ResizablePanels } from '../../../../components/ResizablePanels'
-import type { Module, Verb } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Module, Verb } from '../../../../protos/xyz/block/ftl/console/v1/console_pb'
 
 import { NotificationType, NotificationsContext } from '../../../../providers/notifications-provider'
 import { SidePanelProvider } from '../../../../providers/side-panel-provider'

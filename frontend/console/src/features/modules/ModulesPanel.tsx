@@ -1,7 +1,7 @@
 import { useModules } from '../../api/modules/use-modules'
 import { AttributeBadge } from '../../components'
 import { List } from '../../components/List'
-import type { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Module } from '../../protos/xyz/block/ftl/console/v1/console_pb'
 import { classNames } from '../../utils'
 import { deploymentTextColor } from '../deployments/deployment.utils'
 

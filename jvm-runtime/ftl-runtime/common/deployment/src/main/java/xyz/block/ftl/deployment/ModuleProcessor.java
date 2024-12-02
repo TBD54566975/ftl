@@ -41,6 +41,8 @@ import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
 import io.quarkus.grpc.deployment.BindableServiceBuildItem;
 import io.quarkus.vertx.http.deployment.RequireSocketHttpBuildItem;
 import io.quarkus.vertx.http.deployment.RequireVirtualHttpBuildItem;
+import xyz.block.ftl.language.v1.Error;
+import xyz.block.ftl.language.v1.ErrorList;
 import xyz.block.ftl.runtime.FTLDatasourceCredentials;
 import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.JsonSerializationConfig;
@@ -50,8 +52,6 @@ import xyz.block.ftl.runtime.VerbHandler;
 import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.config.FTLConfigSourceFactoryBuilder;
 import xyz.block.ftl.runtime.http.FTLHttpHandler;
-import xyz.block.ftl.v1.language.Error;
-import xyz.block.ftl.v1.language.ErrorList;
 
 public class ModuleProcessor {
 
@@ -96,14 +96,18 @@ public class ModuleProcessor {
                 if (compileProblem != null || deploymentProblems != null) {
                     ErrorList.Builder builder = ErrorList.newBuilder();
                     if (compileProblem != null) {
-                        builder.addErrors(
-                                Error.newBuilder().setLevel(Error.ErrorLevel.ERROR).setType(Error.ErrorType.COMPILER)
-                                        .setMsg(compileProblem.getMessage()).build());
+                        builder.addErrors(Error.newBuilder()
+                                .setLevel(Error.ErrorLevel.ERROR_LEVEL_ERROR)
+                                .setType(Error.ErrorType.ERROR_TYPE_COMPILER)
+                                .setMsg(compileProblem.getMessage())
+                                .build());
                     }
                     if (deploymentProblems != null) {
-                        builder.addErrors(
-                                Error.newBuilder().setLevel(Error.ErrorLevel.ERROR).setType(Error.ErrorType.FTL)
-                                        .setMsg(deploymentProblems.getMessage()).build());
+                        builder.addErrors(Error.newBuilder()
+                                .setLevel(Error.ErrorLevel.ERROR_LEVEL_ERROR)
+                                .setType(Error.ErrorType.ERROR_TYPE_FTL)
+                                .setMsg(deploymentProblems.getMessage())
+                                .build());
                     }
                     try (var out = Files.newOutputStream(errorOutput)) {
                         builder.build().writeTo(out);

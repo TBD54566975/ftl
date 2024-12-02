@@ -564,6 +564,7 @@ func TestParsing(t *testing.T) {
 										Module: "test",
 										Name:   "topicB",
 									},
+									FromOffset: FromOffsetBeginning,
 									DeadLetter: true,
 								},
 								&MetadataRetry{

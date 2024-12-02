@@ -29,8 +29,8 @@ import io.quarkus.gizmo.ClassOutput;
 import io.quarkus.gizmo.MethodDescriptor;
 import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.runtime.VerbClientHelper;
-import xyz.block.ftl.v1.schema.Metadata;
-import xyz.block.ftl.v1.schema.MetadataCronJob;
+import xyz.block.ftl.schema.v1.Metadata;
+import xyz.block.ftl.schema.v1.MetadataCronJob;
 
 public class VerbProcessor {
 

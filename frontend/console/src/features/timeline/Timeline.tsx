@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { timeFilter, useTimeline } from '../../api/timeline/index.ts'
 import { Loader } from '../../components/Loader.tsx'
-import type { Event, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
+import type { Event, GetEventsRequest_Filter } from '../../protos/xyz/block/ftl/console/v1/console_pb.ts'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
 import TimelineEventList from './TimelineEventList.tsx'
 import { TimelineAsyncExecuteDetails } from './details/TimelineAsyncExecuteDetails.tsx'
@@ -17,7 +17,7 @@ import { TimelinePubSubConsumeDetails } from './details/TimelinePubSubConsumeDet
 import { TimelinePubSubPublishDetails } from './details/TimelinePubSubPublishDetails.tsx'
 import type { TimeSettings } from './filters/TimelineTimeControls.tsx'
 
-export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings; filters: EventsQuery_Filter[] }) => {
+export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings; filters: GetEventsRequest_Filter[] }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const { openPanel, closePanel, isOpen } = useContext(SidePanelContext)
   const [selectedEntry, setSelectedEntry] = useState<Event | null>(null)

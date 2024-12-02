@@ -21,11 +21,11 @@ func TestFromSecrets(t *testing.T) {
 	assert.NoError(t, err)
 
 	response := NewBuilder("echo").AddDatabases(databases).Build().ToProto()
-	assert.Equal(t, &ftlv1.ModuleContextResponse{
+	assert.Equal(t, &ftlv1.GetModuleContextResponse{
 		Module:  "echo",
 		Configs: map[string][]byte{},
 		Secrets: map[string][]byte{},
-		Databases: []*ftlv1.ModuleContextResponse_DSN{
+		Databases: []*ftlv1.GetModuleContextResponse_DSN{
 			{Name: "echo", Dsn: `postgres://echo:echo@localhost:5432/echo?sslmode=disable&user=echo&password=echo`},
 		},
 	}, response)

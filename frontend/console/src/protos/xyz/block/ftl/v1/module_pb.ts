@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Duration, Message, proto3 } from "@bufbuild/protobuf";
-import { Ref } from "./schema/schema_pb.js";
+import { Ref } from "../schema/v1/schema_pb.js";
 
 /**
  * @generated from message xyz.block.ftl.v1.AcquireLeaseRequest
@@ -92,7 +92,7 @@ export class AcquireLeaseResponse extends Message<AcquireLeaseResponse> {
  */
 export class PublishEventRequest extends Message<PublishEventRequest> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Ref topic = 1;
+   * @generated from field: xyz.block.ftl.schema.v1.Ref topic = 1;
    */
   topic?: Ref;
 
@@ -170,46 +170,46 @@ export class PublishEventResponse extends Message<PublishEventResponse> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.ModuleContextRequest
+ * @generated from message xyz.block.ftl.v1.GetModuleContextRequest
  */
-export class ModuleContextRequest extends Message<ModuleContextRequest> {
+export class GetModuleContextRequest extends Message<GetModuleContextRequest> {
   /**
    * @generated from field: string module = 1;
    */
   module = "";
 
-  constructor(data?: PartialMessage<ModuleContextRequest>) {
+  constructor(data?: PartialMessage<GetModuleContextRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ModuleContextRequest";
+  static readonly typeName = "xyz.block.ftl.v1.GetModuleContextRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleContextRequest {
-    return new ModuleContextRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetModuleContextRequest {
+    return new GetModuleContextRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleContextRequest {
-    return new ModuleContextRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetModuleContextRequest {
+    return new GetModuleContextRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleContextRequest {
-    return new ModuleContextRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetModuleContextRequest {
+    return new GetModuleContextRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ModuleContextRequest | PlainMessage<ModuleContextRequest> | undefined, b: ModuleContextRequest | PlainMessage<ModuleContextRequest> | undefined): boolean {
-    return proto3.util.equals(ModuleContextRequest, a, b);
+  static equals(a: GetModuleContextRequest | PlainMessage<GetModuleContextRequest> | undefined, b: GetModuleContextRequest | PlainMessage<GetModuleContextRequest> | undefined): boolean {
+    return proto3.util.equals(GetModuleContextRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.ModuleContextResponse
+ * @generated from message xyz.block.ftl.v1.GetModuleContextResponse
  */
-export class ModuleContextResponse extends Message<ModuleContextResponse> {
+export class GetModuleContextResponse extends Message<GetModuleContextResponse> {
   /**
    * @generated from field: string module = 1;
    */
@@ -226,65 +226,71 @@ export class ModuleContextResponse extends Message<ModuleContextResponse> {
   secrets: { [key: string]: Uint8Array } = {};
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.ModuleContextResponse.DSN databases = 4;
+   * @generated from field: repeated xyz.block.ftl.v1.GetModuleContextResponse.DSN databases = 4;
    */
-  databases: ModuleContextResponse_DSN[] = [];
+  databases: GetModuleContextResponse_DSN[] = [];
 
-  constructor(data?: PartialMessage<ModuleContextResponse>) {
+  constructor(data?: PartialMessage<GetModuleContextResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ModuleContextResponse";
+  static readonly typeName = "xyz.block.ftl.v1.GetModuleContextResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "configs", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 12 /* ScalarType.BYTES */} },
     { no: 3, name: "secrets", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 12 /* ScalarType.BYTES */} },
-    { no: 4, name: "databases", kind: "message", T: ModuleContextResponse_DSN, repeated: true },
+    { no: 4, name: "databases", kind: "message", T: GetModuleContextResponse_DSN, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleContextResponse {
-    return new ModuleContextResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetModuleContextResponse {
+    return new GetModuleContextResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleContextResponse {
-    return new ModuleContextResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetModuleContextResponse {
+    return new GetModuleContextResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleContextResponse {
-    return new ModuleContextResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetModuleContextResponse {
+    return new GetModuleContextResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ModuleContextResponse | PlainMessage<ModuleContextResponse> | undefined, b: ModuleContextResponse | PlainMessage<ModuleContextResponse> | undefined): boolean {
-    return proto3.util.equals(ModuleContextResponse, a, b);
+  static equals(a: GetModuleContextResponse | PlainMessage<GetModuleContextResponse> | undefined, b: GetModuleContextResponse | PlainMessage<GetModuleContextResponse> | undefined): boolean {
+    return proto3.util.equals(GetModuleContextResponse, a, b);
   }
 }
 
 /**
- * @generated from enum xyz.block.ftl.v1.ModuleContextResponse.DBType
+ * @generated from enum xyz.block.ftl.v1.GetModuleContextResponse.DbType
  */
-export enum ModuleContextResponse_DBType {
+export enum GetModuleContextResponse_DbType {
   /**
-   * @generated from enum value: POSTGRES = 0;
+   * @generated from enum value: DB_TYPE_UNSPECIFIED = 0;
    */
-  POSTGRES = 0,
+  UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: MYSQL = 1;
+   * @generated from enum value: DB_TYPE_POSTGRES = 1;
    */
-  MYSQL = 1,
+  POSTGRES = 1,
+
+  /**
+   * @generated from enum value: DB_TYPE_MYSQL = 2;
+   */
+  MYSQL = 2,
 }
-// Retrieve enum metadata with: proto3.getEnumType(ModuleContextResponse_DBType)
-proto3.util.setEnumType(ModuleContextResponse_DBType, "xyz.block.ftl.v1.ModuleContextResponse.DBType", [
-  { no: 0, name: "POSTGRES" },
-  { no: 1, name: "MYSQL" },
+// Retrieve enum metadata with: proto3.getEnumType(GetModuleContextResponse_DbType)
+proto3.util.setEnumType(GetModuleContextResponse_DbType, "xyz.block.ftl.v1.GetModuleContextResponse.DbType", [
+  { no: 0, name: "DB_TYPE_UNSPECIFIED" },
+  { no: 1, name: "DB_TYPE_POSTGRES" },
+  { no: 2, name: "DB_TYPE_MYSQL" },
 ]);
 
 /**
- * @generated from message xyz.block.ftl.v1.ModuleContextResponse.Ref
+ * @generated from message xyz.block.ftl.v1.GetModuleContextResponse.Ref
  */
-export class ModuleContextResponse_Ref extends Message<ModuleContextResponse_Ref> {
+export class GetModuleContextResponse_Ref extends Message<GetModuleContextResponse_Ref> {
   /**
    * @generated from field: optional string module = 1;
    */
@@ -295,81 +301,81 @@ export class ModuleContextResponse_Ref extends Message<ModuleContextResponse_Ref
    */
   name = "";
 
-  constructor(data?: PartialMessage<ModuleContextResponse_Ref>) {
+  constructor(data?: PartialMessage<GetModuleContextResponse_Ref>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ModuleContextResponse.Ref";
+  static readonly typeName = "xyz.block.ftl.v1.GetModuleContextResponse.Ref";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleContextResponse_Ref {
-    return new ModuleContextResponse_Ref().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetModuleContextResponse_Ref {
+    return new GetModuleContextResponse_Ref().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleContextResponse_Ref {
-    return new ModuleContextResponse_Ref().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetModuleContextResponse_Ref {
+    return new GetModuleContextResponse_Ref().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleContextResponse_Ref {
-    return new ModuleContextResponse_Ref().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetModuleContextResponse_Ref {
+    return new GetModuleContextResponse_Ref().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ModuleContextResponse_Ref | PlainMessage<ModuleContextResponse_Ref> | undefined, b: ModuleContextResponse_Ref | PlainMessage<ModuleContextResponse_Ref> | undefined): boolean {
-    return proto3.util.equals(ModuleContextResponse_Ref, a, b);
+  static equals(a: GetModuleContextResponse_Ref | PlainMessage<GetModuleContextResponse_Ref> | undefined, b: GetModuleContextResponse_Ref | PlainMessage<GetModuleContextResponse_Ref> | undefined): boolean {
+    return proto3.util.equals(GetModuleContextResponse_Ref, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.ModuleContextResponse.DSN
+ * @generated from message xyz.block.ftl.v1.GetModuleContextResponse.DSN
  */
-export class ModuleContextResponse_DSN extends Message<ModuleContextResponse_DSN> {
+export class GetModuleContextResponse_DSN extends Message<GetModuleContextResponse_DSN> {
   /**
    * @generated from field: string name = 1;
    */
   name = "";
 
   /**
-   * @generated from field: xyz.block.ftl.v1.ModuleContextResponse.DBType type = 2;
+   * @generated from field: xyz.block.ftl.v1.GetModuleContextResponse.DbType type = 2;
    */
-  type = ModuleContextResponse_DBType.POSTGRES;
+  type = GetModuleContextResponse_DbType.UNSPECIFIED;
 
   /**
    * @generated from field: string dsn = 3;
    */
   dsn = "";
 
-  constructor(data?: PartialMessage<ModuleContextResponse_DSN>) {
+  constructor(data?: PartialMessage<GetModuleContextResponse_DSN>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ModuleContextResponse.DSN";
+  static readonly typeName = "xyz.block.ftl.v1.GetModuleContextResponse.DSN";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "type", kind: "enum", T: proto3.getEnumType(ModuleContextResponse_DBType) },
+    { no: 2, name: "type", kind: "enum", T: proto3.getEnumType(GetModuleContextResponse_DbType) },
     { no: 3, name: "dsn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleContextResponse_DSN {
-    return new ModuleContextResponse_DSN().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetModuleContextResponse_DSN {
+    return new GetModuleContextResponse_DSN().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleContextResponse_DSN {
-    return new ModuleContextResponse_DSN().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetModuleContextResponse_DSN {
+    return new GetModuleContextResponse_DSN().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleContextResponse_DSN {
-    return new ModuleContextResponse_DSN().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetModuleContextResponse_DSN {
+    return new GetModuleContextResponse_DSN().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ModuleContextResponse_DSN | PlainMessage<ModuleContextResponse_DSN> | undefined, b: ModuleContextResponse_DSN | PlainMessage<ModuleContextResponse_DSN> | undefined): boolean {
-    return proto3.util.equals(ModuleContextResponse_DSN, a, b);
+  static equals(a: GetModuleContextResponse_DSN | PlainMessage<GetModuleContextResponse_DSN> | undefined, b: GetModuleContextResponse_DSN | PlainMessage<GetModuleContextResponse_DSN> | undefined): boolean {
+    return proto3.util.equals(GetModuleContextResponse_DSN, a, b);
   }
 }
 

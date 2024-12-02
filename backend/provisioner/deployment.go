@@ -9,7 +9,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/jpillora/backoff"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
+	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 

@@ -8,7 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
+	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
 	"github.com/TBD54566975/ftl/internal/slices"
 
 	"github.com/alecthomas/assert/v2"
@@ -49,7 +49,7 @@ func TestExtractModuleDepsGo(t *testing.T) {
 
 	configProto, err := langpb.ModuleConfigToProto(config.Abs())
 	assert.NoError(t, err)
-	depsResp, err := service.GetDependencies(ctx, connect.NewRequest(&langpb.DependenciesRequest{
+	depsResp, err := service.GetDependencies(ctx, connect.NewRequest(&langpb.GetDependenciesRequest{
 		ModuleConfig: configProto,
 	}))
 	assert.NoError(t, err)

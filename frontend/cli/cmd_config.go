@@ -45,11 +45,11 @@ func configRefFromRef(ref configuration.Ref) *ftlv1.ConfigRef {
 
 func (s *configCmd) provider() optional.Option[ftlv1.ConfigProvider] {
 	if s.Envar {
-		return optional.Some(ftlv1.ConfigProvider_CONFIG_ENVAR)
+		return optional.Some(ftlv1.ConfigProvider_CONFIG_PROVIDER_ENVAR)
 	} else if s.Inline {
-		return optional.Some(ftlv1.ConfigProvider_CONFIG_INLINE)
+		return optional.Some(ftlv1.ConfigProvider_CONFIG_PROVIDER_INLINE)
 	} else if s.DB {
-		return optional.Some(ftlv1.ConfigProvider_CONFIG_DB)
+		return optional.Some(ftlv1.ConfigProvider_CONFIG_PROVIDER_DB)
 	}
 	return optional.None[ftlv1.ConfigProvider]()
 }
@@ -60,7 +60,7 @@ type configListCmd struct {
 }
 
 func (s *configListCmd) Run(ctx context.Context, adminClient admin.Client) error {
-	resp, err := adminClient.ConfigList(ctx, connect.NewRequest(&ftlv1.ListConfigRequest{
+	resp, err := adminClient.ConfigList(ctx, connect.NewRequest(&ftlv1.ConfigListRequest{
 		Module:        &s.Module,
 		IncludeValues: &s.Values,
 	}))
@@ -90,7 +90,7 @@ Returns a JSON-encoded configuration value.
 }
 
 func (s *configGetCmd) Run(ctx context.Context, adminClient admin.Client) error {
-	resp, err := adminClient.ConfigGet(ctx, connect.NewRequest(&ftlv1.GetConfigRequest{
+	resp, err := adminClient.ConfigGet(ctx, connect.NewRequest(&ftlv1.ConfigGetRequest{
 		Ref: configRefFromRef(s.Ref),
 	}))
 	if err != nil {
@@ -131,7 +131,7 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, adminClient adm
 		}
 	}
 
-	req := &ftlv1.SetConfigRequest{
+	req := &ftlv1.ConfigSetRequest{
 		Ref:   configRefFromRef(s.Ref),
 		Value: configJSON,
 	}
@@ -150,7 +150,7 @@ type configUnsetCmd struct {
 }
 
 func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, adminClient admin.Client) error {
-	req := &ftlv1.UnsetConfigRequest{
+	req := &ftlv1.ConfigUnsetRequest{
 		Ref: configRefFromRef(s.Ref),
 	}
 	if provider, ok := scmd.provider().Get(); ok {
@@ -192,7 +192,7 @@ func (s *configImportCmd) Run(ctx context.Context, cmd *configCmd, adminClient a
 		if err != nil {
 			return fmt.Errorf("could not marshal value for %q: %w", refPath, err)
 		}
-		req := &ftlv1.SetConfigRequest{
+		req := &ftlv1.ConfigSetRequest{
 			Ref:   configRefFromRef(ref),
 			Value: bytes,
 		}
@@ -217,7 +217,7 @@ Outputs configuration values in a JSON object. A provider can be used to filter 
 }
 
 func (s *configExportCmd) Run(ctx context.Context, cmd *configCmd, adminClient admin.Client) error {
-	req := &ftlv1.ListConfigRequest{
+	req := &ftlv1.ConfigListRequest{
 		IncludeValues: optional.Some(true).Ptr(),
 	}
 	if provider, ok := cmd.provider().Get(); ok {

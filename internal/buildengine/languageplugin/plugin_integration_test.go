@@ -20,8 +20,8 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	"golang.org/x/sync/errgroup"
 
-	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/flock"
 	in "github.com/TBD54566975/ftl/internal/integration"
@@ -49,7 +49,7 @@ import (
 var client *pluginClientImpl
 var bindURL *url.URL
 var config moduleconfig.ModuleConfig
-var buildChan chan result.Result[*langpb.BuildEvent]
+var buildChan chan result.Result[*langpb.BuildResponse]
 var buildChanCancel streamCancelFunc
 
 const MODULE_NAME = "plugintest"
@@ -92,8 +92,8 @@ func TestBuilds(t *testing.T) {
 		// Update verb name and expect auto rebuild started and ended
 		modifyVerbName(MODULE_NAME, VERB_NAME_SNIPPET, "aaabbbccc"),
 		waitForAutoRebuildToStart("build-and-watch"),
-		waitForBuildToEnd(SUCCESS, "build-and-watch", true, func(t testing.TB, ic in.TestContext, event *langpb.BuildEvent) {
-			successEvent, ok := event.Event.(*langpb.BuildEvent_BuildSuccess)
+		waitForBuildToEnd(SUCCESS, "build-and-watch", true, func(t testing.TB, ic in.TestContext, event *langpb.BuildResponse) {
+			successEvent, ok := event.Event.(*langpb.BuildResponse_BuildSuccess)
 			assert.True(t, ok)
 			_, found := slices.Find(successEvent.BuildSuccess.Module.Decls, func(decl *schemapb.Decl) bool {
 				verb, ok := decl.Value.(*schemapb.Decl_Verb)
@@ -143,8 +143,8 @@ func TestDependenciesUpdate(t *testing.T) {
 		// Add dependency, build, and expect a failure due to invalidated dependencies
 		addDependency(MODULE_NAME, "dependable"),
 		build(false, []string{}, sch, "detect-dep"),
-		waitForBuildToEnd(FAILURE, "detect-dep", false, func(t testing.TB, ic in.TestContext, event *langpb.BuildEvent) {
-			failureEvent, ok := event.Event.(*langpb.BuildEvent_BuildFailure)
+		waitForBuildToEnd(FAILURE, "detect-dep", false, func(t testing.TB, ic in.TestContext, event *langpb.BuildResponse) {
+			failureEvent, ok := event.Event.(*langpb.BuildResponse_BuildFailure)
 			assert.True(t, ok)
 			assert.True(t, failureEvent.BuildFailure.InvalidateDependencies, "expected dependencies to be invalidated")
 		}),
@@ -409,19 +409,19 @@ func waitForAutoRebuildToStart(contextId string) in.Action {
 			event, err := (<-buildChan).Result()
 			assert.NoError(t, err, "did not expect a build stream error")
 			switch event := event.Event.(type) {
-			case *langpb.BuildEvent_AutoRebuildStarted:
+			case *langpb.BuildResponse_AutoRebuildStarted:
 				if event.AutoRebuildStarted.ContextId == contextId {
 					return
 				} else {
 					logger.Warnf("ignoring automatic rebuild started event for unexpected context %q instead of %q", event.AutoRebuildStarted.ContextId, contextId)
 				}
-			case *langpb.BuildEvent_BuildSuccess:
+			case *langpb.BuildResponse_BuildSuccess:
 				if event.BuildSuccess.ContextId == contextId {
 					panic("build succeeded, but expected auto rebuild started event first")
 				} else {
 					logger.Warnf("ignoring build success for unexpected context %q while waiting for auto rebuild started event for %q", event.BuildSuccess.ContextId, contextId)
 				}
-			case *langpb.BuildEvent_BuildFailure:
+			case *langpb.BuildResponse_BuildFailure:
 				if event.BuildFailure.ContextId == contextId {
 					panic("build failed, but expected auto rebuild started event first")
 				} else {
@@ -432,7 +432,7 @@ func waitForAutoRebuildToStart(contextId string) in.Action {
 	}
 }
 
-func waitForBuildToEnd(success BuildResultType, contextId string, automaticRebuild bool, additionalChecks func(t testing.TB, ic in.TestContext, event *langpb.BuildEvent)) in.Action {
+func waitForBuildToEnd(success BuildResultType, contextId string, automaticRebuild bool, additionalChecks func(t testing.TB, ic in.TestContext, event *langpb.BuildResponse)) in.Action {
 	return func(t testing.TB, ic in.TestContext) {
 		switch success {
 		case SUCCESSORFAILURE:
@@ -449,14 +449,14 @@ func waitForBuildToEnd(success BuildResultType, contextId string, automaticRebui
 			assert.NoError(t, err, "did not expect a build stream error")
 
 			switch event := e.Event.(type) {
-			case *langpb.BuildEvent_AutoRebuildStarted:
+			case *langpb.BuildResponse_AutoRebuildStarted:
 				if event.AutoRebuildStarted.ContextId != contextId {
 					logger.Warnf("Ignoring automatic rebuild started event for unexpected context %q instead of %q", event.AutoRebuildStarted.ContextId, contextId)
 					continue
 				}
 				logger.Debugf("Ignoring auto rebuild started event for the build we are waiting to finish %q", contextId)
 
-			case *langpb.BuildEvent_BuildSuccess:
+			case *langpb.BuildResponse_BuildSuccess:
 				if event.BuildSuccess.ContextId != contextId {
 					logger.Warnf("Ignoring build success for unexpected context %q while waiting for auto rebuild started event for %q", event.BuildSuccess.ContextId, contextId)
 					continue
@@ -472,7 +472,7 @@ func waitForBuildToEnd(success BuildResultType, contextId string, automaticRebui
 					additionalChecks(t, ic, e)
 				}
 				return
-			case *langpb.BuildEvent_BuildFailure:
+			case *langpb.BuildResponse_BuildFailure:
 				if event.BuildFailure.ContextId != contextId {
 					logger.Warnf("Ignoring build failure for unexpected context %q while waiting for auto rebuild started event for %q", event.BuildFailure.ContextId, contextId)
 					continue
@@ -502,11 +502,11 @@ func checkForNoEvents(duration time.Duration) in.Action {
 				e, err := result.Result()
 				assert.NoError(t, err, "did not expect a build stream error")
 				switch event := e.Event.(type) {
-				case *langpb.BuildEvent_AutoRebuildStarted:
+				case *langpb.BuildResponse_AutoRebuildStarted:
 					panic(fmt.Sprintf("rebuild started event when expecting no events: %v", event))
-				case *langpb.BuildEvent_BuildSuccess:
+				case *langpb.BuildResponse_BuildSuccess:
 					panic(fmt.Sprintf("build success event when expecting no events: %v", event))
-				case *langpb.BuildEvent_BuildFailure:
+				case *langpb.BuildResponse_BuildFailure:
 					panic(fmt.Sprintf("build failure event when expecting no events: %v", event))
 				}
 			case <-time.After(duration):

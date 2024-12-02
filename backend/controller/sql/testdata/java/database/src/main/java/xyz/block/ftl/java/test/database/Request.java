@@ -7,6 +7,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
 @Table(name = "requests")
@@ -14,9 +16,11 @@ public class Request extends PanacheEntity {
     public String data;
 
     @Column(name = "created_at")
+    @CreationTimestamp
     public Timestamp createdAt;
 
     @Column(name = "updated_at")
+    @UpdateTimestamp
     public Timestamp updatedAt;
 
 }

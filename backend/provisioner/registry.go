@@ -9,14 +9,16 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/testing/protocmp"
 
+	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
+	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
@@ -70,14 +72,14 @@ func (reg *ProvisionerRegistry) listBindings() []*ProvisionerBinding {
 	return result
 }
 
-func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig, controller ftlv1connect.ControllerServiceClient) (*ProvisionerRegistry, error) {
+func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig, controller ftlv1connect.ControllerServiceClient, runnerScaling scaling.RunnerScaling) (*ProvisionerRegistry, error) {
 	logger := log.FromContext(ctx)
 	result := &ProvisionerRegistry{}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("error validating provisioner config: %w", err)
 	}
 	for _, plugin := range cfg.Plugins {
-		provisioner, err := provisionerIDToProvisioner(ctx, plugin.ID, controller)
+		provisioner, err := provisionerIDToProvisioner(ctx, plugin.ID, controller, runnerScaling)
 		if err != nil {
 			return nil, err
 		}
@@ -87,10 +89,13 @@ func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig, contr
 	return result, nil
 }
 
-func provisionerIDToProvisioner(ctx context.Context, id string, controller ftlv1connect.ControllerServiceClient) (provisionerconnect.ProvisionerPluginServiceClient, error) {
+func provisionerIDToProvisioner(ctx context.Context, id string, controller ftlv1connect.ControllerServiceClient, scaling scaling.RunnerScaling) (provisionerconnect.ProvisionerPluginServiceClient, error) {
 	switch id {
 	case "controller":
 		return NewControllerProvisioner(controller), nil
+	case "kubernetes":
+		// TODO: move this into a plugin
+		return NewRunnerScalingProvisioner(scaling, controller), nil
 	case "noop":
 		return &NoopProvisioner{}, nil
 	default:
@@ -263,7 +268,6 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 			Module: &provisioner.ModuleResource{
 				Schema:    msg.Schema,
 				Artefacts: msg.Artefacts,
-				Labels:    msg.Labels,
 			},
 		},
 	}
@@ -273,9 +277,31 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 			to:   dep.ResourceId,
 		})
 	}
+	digests := ""
+	orderedDigests := []string{}
+	for _, d := range msg.Artefacts {
+		orderedDigests = append(orderedDigests, d.Digest)
+	}
+	slices.Sort(orderedDigests)
+	for _, d := range orderedDigests {
+		digests += d
+	}
 
+	// Hack, we just use the artifact digests to create a unique runner resource
+	hash := sha256.Sum([]byte(digests))
+
+	runnerResource := &provisioner.Resource{
+		ResourceId: module.GetName() + "-" + hash.String() + "-runner",
+		Resource: &provisioner.Resource_Runner{
+			Runner: &provisioner.RunnerResource{},
+		},
+	}
+	edges = append(edges, &ResourceEdge{
+		from: runnerResource.ResourceId,
+		to:   root.ResourceId,
+	})
 	result := &ResourceGraph{
-		nodes: append(deps, root),
+		nodes: append(deps, root, runnerResource),
 		edges: edges,
 	}
 

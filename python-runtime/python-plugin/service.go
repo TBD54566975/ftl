@@ -9,9 +9,9 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/block/scaffolder"
 
+	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
+	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
-	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language/languagepbconnect"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -92,11 +92,11 @@ func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request
 	}), nil
 }
 
-func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
-	return connect.NewResponse(&langpb.DependenciesResponse{}), nil
+func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[langpb.GetDependenciesRequest]) (*connect.Response[langpb.GetDependenciesResponse], error) {
+	return connect.NewResponse(&langpb.GetDependenciesResponse{}), nil
 }
 
-func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent]) error {
+func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildResponse]) error {
 	logger := log.FromContext(ctx)
 	logger.Infof("Do python build")
 
@@ -109,8 +109,8 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 	logger.Errorf(err, "build failed")
 
 	// TODO: Actually build the module instead of just returning an error.
-	buildEvent := &langpb.BuildEvent{
-		Event: &langpb.BuildEvent_BuildFailure{
+	buildEvent := &langpb.BuildResponse{
+		Event: &langpb.BuildResponse_BuildFailure{
 			BuildFailure: &langpb.BuildFailure{
 				ContextId:          req.Msg.BuildContext.Id,
 				IsAutomaticRebuild: false,

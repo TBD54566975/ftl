@@ -8,7 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
 
-	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console"
+	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
 	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
