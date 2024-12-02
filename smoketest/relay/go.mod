@@ -2,7 +2,7 @@ module ftl/relay
 
 go 1.23.0
 
-require github.com/TBD54566975/ftl v0.400.0
+require github.com/TBD54566975/ftl v0.408.0
 
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect
@@ -13,7 +13,7 @@ require (
 	github.com/XSAM/otelsql v0.35.0 // indirect
 	github.com/alecthomas/atomic v0.1.0-alpha2 // indirect
 	github.com/alecthomas/concurrency v0.0.2 // indirect
-	github.com/alecthomas/kong v1.4.0 // indirect
+	github.com/alecthomas/kong v1.5.1 // indirect
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
 	github.com/alecthomas/types v0.17.0 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
