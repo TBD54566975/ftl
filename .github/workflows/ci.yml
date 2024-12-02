@@ -314,7 +314,7 @@ jobs:
           go test -v -race -tags integration -run '^${{ matrix.test }}$' $(git grep -l '^//go:build integration' | xargs grep -l '^func ${{ matrix.test }}' | xargs -I {} dirname ./{})
   infrastructure-shard:
     name: Shard Infrastructure Tests
-    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.extract-tests.outputs.matrix }}

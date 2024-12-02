@@ -88,6 +88,7 @@ func TestKubeScaling(t *testing.T) {
 			assert.Equal(t, "Bonjour, Bob!!!", response)
 		}),
 		func(t testing.TB, ic in.TestContext) {
+			t.Logf("Checking for no failure during redeploys")
 			done.Store(true)
 			routineStopped.Wait()
 			err := failure.Load()
