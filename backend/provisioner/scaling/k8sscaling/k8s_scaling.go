@@ -90,7 +90,7 @@ func (r *k8sScaling) StartDeployment(ctx context.Context, module string, deploym
 	}
 	delCtx := log.ContextWithLogger(context.Background(), logger)
 	go func() {
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 20)
 		err := r.deleteOldDeployments(delCtx, module, deploymentKey)
 		if err != nil {
 			logger.Errorf(err, "Failed to delete old deployments")
@@ -215,7 +215,7 @@ func (r *k8sScaling) GetEndpointForDeployment(ctx context.Context, module string
 	// TODO: hard coded port? It's hard to deal with as we might not have the lease
 	// I think requiring this port is fine for now
 	return optional.Some(url.URL{Scheme: "http",
-		Host: fmt.Sprintf("%s:8893", deployment),
+		Host: fmt.Sprintf("%s:8892", deployment),
 	}), nil
 }
 

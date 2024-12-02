@@ -180,15 +180,10 @@ runner:
 
   ports:
     - name: http
-      containerPort: 8893
+      containerPort: 8892
       protocol: TCP
 
   readinessProbe: null
-
-  headlessService:
-    ports:
-      - port: 8893
-        targetPort: 8893
 
   podAnnotations:
     proxy.istio.io/config: |

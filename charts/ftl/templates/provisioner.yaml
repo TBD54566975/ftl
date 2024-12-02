@@ -39,6 +39,8 @@ spec:
             {{- if .Values.provisioner.env }}
             {{- toYaml .Values.provisioner.env | nindent 12 }}
             {{- end }}
+            - name: FTL_BIND
+              value: "http://0.0.0.0:{{ (index .Values.provisioner.ports 0).containerPort }}"
           ports:
             {{- range .Values.provisioner.ports }}
             - name: {{ .name }}
@@ -51,7 +53,7 @@ spec:
             {{- else }}
             httpGet:
               path: /healthz
-              port: 8892
+              port: {{ (index .Values.provisioner.ports 0).containerPort }}
             initialDelaySeconds: 1
             periodSeconds: 2
             timeoutSeconds: 2
