@@ -31,9 +31,9 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
+	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/publish/publishpbconnect"
 	"github.com/TBD54566975/ftl/backend/runner/observability"
 	"github.com/TBD54566975/ftl/backend/runner/pubsub"
 	"github.com/TBD54566975/ftl/common/plugin"

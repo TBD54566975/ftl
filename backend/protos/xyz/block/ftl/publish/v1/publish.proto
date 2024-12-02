@@ -1,15 +1,15 @@
 syntax = "proto3";
 
-package xyz.block.ftl.v1.publish;
+package xyz.block.ftl.publish.v1;
 
+import "xyz/block/ftl/schema/v1/schema.proto";
 import "xyz/block/ftl/v1/ftl.proto";
-import "xyz/block/ftl/v1/schema/schema.proto";
 
-option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/publish;publishpb";
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1;publishpb";
 option java_multiple_files = true;
 
 message PublishEventRequest {
-  ftl.v1.schema.Ref topic = 1;
+  schema.v1.Ref topic = 1;
   bytes body = 2;
   string key = 3;
   // Only verb name is included because this verb will be in the same module as topic

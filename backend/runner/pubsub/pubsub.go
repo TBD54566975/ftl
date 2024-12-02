@@ -6,10 +6,10 @@ import (
 
 	"connectrpc.com/connect"
 
+	pb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1"
+	pbconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	pb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/publish"
-	pbconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/publish/publishpbconnect"
 	"github.com/TBD54566975/ftl/internal/schema"
 	sl "github.com/TBD54566975/ftl/internal/slices"
 )
