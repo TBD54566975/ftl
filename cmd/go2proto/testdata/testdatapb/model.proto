@@ -1,0 +1,53 @@
+
+// THIS FILE IS GENERATED; DO NOT MODIFY
+syntax = "proto3";
+
+package xyz.block.ftl.go2proto.test;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+
+option go_package = "github.com/TBD54566975/ftl/cmd/go2proto/testdata/testdatapb";
+
+enum Enum {
+  ENUM_A = 0;
+  ENUM_B = 1;
+}
+
+message Message {
+  google.protobuf.Timestamp time = 1;
+  google.protobuf.Duration duration = 2;
+}
+
+message Root {
+  int64 int = 1;
+  string string = 2;
+  Message message_ptr = 4;
+  Enum enum = 5;
+  SumType sum_type = 6;
+  optional int64 optional_int = 7;
+  optional int64 optional_int_ptr = 8;
+  optional Message optional_msg = 9;
+}
+
+
+message SumType {
+  oneof value {
+    SumTypeA a = 1;
+    SumTypeB b = 2;
+    SumTypeC c = 3;
+  }
+}
+
+message SumTypeA {
+  string a = 1;
+}
+
+message SumTypeB {
+  int64 b = 1;
+}
+
+message SumTypeC {
+  double c = 1;
+}
+

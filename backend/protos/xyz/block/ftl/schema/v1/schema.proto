@@ -1,3 +1,4 @@
+
 // THIS FILE IS GENERATED; DO NOT MODIFY
 syntax = "proto3";
 
@@ -68,6 +69,7 @@ message Database {
   repeated Metadata metadata = 5;
 }
 
+
 message DatabaseConnector {
   oneof value {
     AWSIAMAuthDatabaseConnector awsiam_auth_database_connector = 2;
@@ -88,11 +90,13 @@ message DatabaseRuntimeConnectionsEvent {
   DatabaseRuntimeConnections connections = 1;
 }
 
+
 message DatabaseRuntimeEvent {
   oneof value {
     DatabaseRuntimeConnectionsEvent database_runtime_connections_event = 1;
   }
 }
+
 
 message Decl {
   oneof value {
@@ -141,6 +145,7 @@ enum FromOffset {
   FROM_OFFSET_LATEST = 2;
 }
 
+
 message IngressPathComponent {
   oneof value {
     IngressPathLiteral ingress_path_literal = 1;
@@ -172,6 +177,7 @@ message Map {
   Type key = 2;
   Type value = 3;
 }
+
 
 message Metadata {
   oneof value {
@@ -303,6 +309,7 @@ message ModuleRuntimeDeployment {
   string deployment_key = 2;
 }
 
+
 message ModuleRuntimeEvent {
   oneof value {
     ModuleRuntimeBase module_runtime_base = 1;
@@ -372,6 +379,7 @@ message TopicRuntime {
   string topic_id = 2;
 }
 
+
 message Type {
   oneof value {
     Any any = 9;
@@ -412,6 +420,7 @@ message Unit {
   optional Position pos = 1;
 }
 
+
 message Value {
   oneof value {
     IntValue int_value = 2;
@@ -436,3 +445,4 @@ message VerbRuntime {
   optional google.protobuf.Timestamp start_time = 2;
   repeated string kafka_brokers = 3;
 }
+
