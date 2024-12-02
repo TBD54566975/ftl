@@ -380,7 +380,7 @@ compose-up:
   if [ $status -ne 0 ] && [ -n "${CI-}" ]; then
     # CI fails regularly due to network issues. Retry once.
     echo "docker compose up failed, retrying in 3s..."
-    docker compose -p "ftl" $docker_compose_files up -d --wait
+    sleep 3
     docker compose -p "ftl" $docker_compose_files up -d --wait
   fi
 
