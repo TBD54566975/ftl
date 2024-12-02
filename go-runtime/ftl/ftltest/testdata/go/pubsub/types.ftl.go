@@ -3,6 +3,7 @@ package pubsub
 
 import (
 	"context"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 )
@@ -25,11 +26,11 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			PropagateToTopic2,
-			server.TopicHandle[Event]("pubsub", "topic2"),
+			server.TopicHandle[Event, ftl.SinglePartitionMap[Event]]("pubsub", "topic2"),
 		),
 		reflection.ProvideResourcesForVerb(
 			PublishToTopicOne,
-			server.TopicHandle[Event]("pubsub", "topic1"),
+			server.TopicHandle[Event, ftl.SinglePartitionMap[Event]]("pubsub", "topic1"),
 		),
 	)
 }

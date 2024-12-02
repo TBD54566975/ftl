@@ -10,7 +10,7 @@ import (
 
 type EchoClient func(context.Context, EchoRequest) (EchoResponse, error)
 
-type SendInvoiceEmailClient func(context.Context, ftltime.Invoice) error
+type EmailInvoicesClient func(context.Context, ftltime.Invoice) error
 
 func init() {
 	reflection.Register(
@@ -19,7 +19,7 @@ func init() {
 			server.VerbClient[ftltime.TimeClient, ftltime.TimeRequest, ftltime.TimeResponse](),
 		),
 		reflection.ProvideResourcesForVerb(
-			SendInvoiceEmail,
+			EmailInvoices,
 		),
 	)
 }

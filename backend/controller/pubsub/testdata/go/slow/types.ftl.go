@@ -3,6 +3,7 @@ package slow
 
 import (
 	"context"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 )
@@ -18,7 +19,7 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			Publish,
-			server.TopicHandle[Event]("slow", "topic"),
+			server.TopicHandle[Event, ftl.SinglePartitionMap[Event]]("slow", "topic"),
 		),
 	)
 }

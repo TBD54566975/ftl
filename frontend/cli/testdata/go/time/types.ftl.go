@@ -3,6 +3,7 @@ package time
 
 import (
 	"context"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 )
@@ -20,7 +21,7 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			PublishInvoice,
-			server.TopicHandle[Invoice]("time", "invoices"),
+			server.TopicHandle[Invoice, ftl.SinglePartitionMap[Invoice]]("time", "invoices"),
 		),
 		reflection.ProvideResourcesForVerb(
 			Time,

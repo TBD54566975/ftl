@@ -3,6 +3,7 @@ package pubsub
 
 import (
 	"context"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 )
@@ -19,11 +20,11 @@ func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
 			Broadcast,
-			server.TopicHandle[PayinEvent]("pubsub", "publicBroadcast"),
+			server.TopicHandle[PayinEvent, ftl.SinglePartitionMap[PayinEvent]]("pubsub", "publicBroadcast"),
 		),
 		reflection.ProvideResourcesForVerb(
 			Payin,
-			server.TopicHandle[PayinEvent]("pubsub", "payins"),
+			server.TopicHandle[PayinEvent, ftl.SinglePartitionMap[PayinEvent]]("pubsub", "payins"),
 		),
 		reflection.ProvideResourcesForVerb(
 			ProcessBroadcast,

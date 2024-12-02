@@ -3,6 +3,7 @@ package publisher
 
 import (
 	"context"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 )
@@ -17,15 +18,15 @@ func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
 			PublishOne,
-			server.TopicHandle[PubSubEvent]("publisher", "testTopic"),
+			server.TopicHandle[PubSubEvent, ftl.SinglePartitionMap[PubSubEvent]]("publisher", "testTopic"),
 		),
 		reflection.ProvideResourcesForVerb(
 			PublishOneToTopic2,
-			server.TopicHandle[PubSubEvent]("publisher", "topic2"),
+			server.TopicHandle[PubSubEvent, ftl.SinglePartitionMap[PubSubEvent]]("publisher", "topic2"),
 		),
 		reflection.ProvideResourcesForVerb(
 			PublishTen,
-			server.TopicHandle[PubSubEvent]("publisher", "testTopic"),
+			server.TopicHandle[PubSubEvent, ftl.SinglePartitionMap[PubSubEvent]]("publisher", "testTopic"),
 		),
 	)
 }

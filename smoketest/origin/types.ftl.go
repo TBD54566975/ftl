@@ -21,7 +21,7 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			PostAgent,
-			server.TopicHandle[Agent]("origin", "agentBroadcast"),
+			server.TopicHandle[Agent, ftl.SinglePartitionMap[Agent]]("origin", "agentBroadcast"),
 		),
 	)
 }

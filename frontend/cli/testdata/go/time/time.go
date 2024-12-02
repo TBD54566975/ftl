@@ -39,4 +39,4 @@ type Invoice struct {
 }
 
 //ftl:export
-type Invoices = ftl.TopicHandle[Invoice]
+type Invoices = ftl.TopicHandle[Invoice, ftl.SinglePartitionMap[Invoice]]
