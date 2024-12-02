@@ -699,6 +699,9 @@ func IsSelfReference(pass *analysis.Pass, obj types.Object, t schema.Type) bool 
 
 // GetNativeName returns the fully qualified name of the object, e.g. "github.com/TBD54566975/ftl/go-runtime/ftl.Unit".
 func GetNativeName(obj types.Object) string {
+	if obj.Pkg() == nil {
+		return obj.Name()
+	}
 	fqName := obj.Pkg().Path()
 	if parts := strings.Split(obj.Pkg().Path(), "/"); parts[len(parts)-1] != obj.Pkg().Name() {
 		fqName = fqName + "." + obj.Pkg().Name()

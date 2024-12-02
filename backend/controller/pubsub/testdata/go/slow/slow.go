@@ -9,7 +9,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
-type Topic = ftl.TopicHandle[Event]
+type Topic = ftl.TopicHandle[Event, ftl.SinglePartitionMap[Event]]
 
 type Event struct {
 	Duration int

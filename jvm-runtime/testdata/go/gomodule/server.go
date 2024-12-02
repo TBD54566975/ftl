@@ -13,7 +13,7 @@ import (
 // Comment on topic
 //
 //ftl:export
-type TestTopic = ftl.TopicHandle[string]
+type TestTopic = ftl.TopicHandle[string, ftl.SinglePartitionMap[string]]
 
 // Comment on data
 type TestObject struct {

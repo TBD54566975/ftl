@@ -68,7 +68,9 @@ func (f *fakePubSub) fetchTopicState(topic *schema.Ref) *topicState {
 }
 
 // eventsForTopic returns all events published to a topic
-func eventsForTopic[E any](ctx context.Context, f *fakePubSub, topic ftl.TopicHandle[E]) []E {
+//
+//nolint:unused
+func eventsForTopic[E any, M ftl.TopicPartitionMap[E]](ctx context.Context, f *fakePubSub, topic ftl.TopicHandle[E, M]) []E {
 	// Make sure all published events make it into our pubsub state
 	f.publishWaitGroup.Wait()
 

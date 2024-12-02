@@ -9,6 +9,7 @@ import (
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
 	"github.com/TBD54566975/golang-tools/go/ast/inspector"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -22,6 +23,15 @@ var Analyzer = &analysis.Analyzer{
 	Run:              Run,
 	ResultType:       reflect.TypeFor[Result](),
 	RunDespiteErrors: true,
+}
+
+// TopicMapperQualifiedNames contains the qualified names of the partition mapper and associated types
+// for a topic.
+type TopicMapperQualifiedNames struct {
+	// qualified name of the partition mapper
+	Mapper string
+	// qualified name of associated type of the partition mapper
+	AssociatedType optional.Option[string]
 }
 
 // Result contains the final schema extraction result.
@@ -39,6 +49,8 @@ type Result struct {
 	FunctionCalls map[schema.Position]FunctionCall
 	// VerbResourceParamOrder contains the order of resource parameters for each verb.
 	VerbResourceParamOrder map[*schema.Verb][]common.VerbResourceParam
+	// TopicPartitionMapper maps the topic to the native names for the partition mapper.
+	TopicPartitionMaps map[*schema.Topic]TopicMapperQualifiedNames
 }
 
 type FunctionCall struct {
@@ -56,6 +68,7 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 	// for identifying duplicates
 	declKeys := make(map[string]types.Object)
 	nativeNames := make(map[schema.Node]string)
+	topicMappers := make(map[*schema.Topic]TopicMapperQualifiedNames)
 	verbParamOrder := make(map[*schema.Verb][]common.VerbResourceParam)
 	for obj, fact := range common.GetAllFactsExtractionStatus(pass) {
 		switch f := fact.(type) {
@@ -91,12 +104,24 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 			nativeNames[fact.Node] = common.GetNativeName(obj)
 		}
 	}
+	for obj, facts := range common.GetAllFactsOfType[*common.IncludeTopicMapper](pass) {
+		for _, fact := range facts {
+			var nativeNames = TopicMapperQualifiedNames{
+				Mapper: common.GetNativeName(obj),
+			}
+			if associated, ok := fact.AssociatedObject.Get(); ok {
+				nativeNames.AssociatedType = optional.Some(common.GetNativeName(associated))
+			}
+			topicMappers[fact.Topic] = nativeNames
+		}
+	}
 	return Result{
 		ModuleName:             moduleName,
 		ModuleComments:         extractModuleComments(pass),
 		Extracted:              extracted,
 		Failed:                 failed,
 		NativeNames:            nativeNames,
+		TopicPartitionMaps:     topicMappers,
 		FunctionCalls:          getFunctionCalls(pass),
 		VerbResourceParamOrder: verbParamOrder,
 	}, nil

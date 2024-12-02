@@ -207,7 +207,7 @@ func resolveResource(pass *analysis.Pass, typ ast.Expr) (*resource, error) {
 	case common.VerbResourceTypeTopicHandle, common.VerbResourceTypeSecret, common.VerbResourceTypeConfig:
 		var ok bool
 		if ref, ok = common.ExtractSimpleRefWithCasing(pass, typ, strcase.ToLowerCamel).Get(); !ok {
-			return nil, fmt.Errorf("unsupported verb parameter type; expected ftl.TopicHandle[Event]")
+			return nil, fmt.Errorf("unsupported verb parameter type; expected ftl.TopicHandle[Event, PartitionMapper]")
 		}
 	}
 	if ref == nil {

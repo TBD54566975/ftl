@@ -11,7 +11,7 @@ type PayinEvent struct {
 	Name string
 }
 
-type Payins = ftl.TopicHandle[PayinEvent]
+type Payins = ftl.TopicHandle[PayinEvent, ftl.SinglePartitionMap[PayinEvent]]
 
 //ftl:verb
 func Payin(ctx context.Context, topic Payins) error {
@@ -33,7 +33,7 @@ func ProcessPayin(ctx context.Context, event PayinEvent) error {
 // out of order with subscription registration to test ordering doesn't matter.
 //
 //ftl:export
-type PublicBroadcast = ftl.TopicHandle[PayinEvent]
+type PublicBroadcast = ftl.TopicHandle[PayinEvent, ftl.SinglePartitionMap[PayinEvent]]
 
 //ftl:verb export
 func Broadcast(ctx context.Context, topic PublicBroadcast) error {

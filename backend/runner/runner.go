@@ -31,9 +31,11 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
+	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/runner/observability"
+	"github.com/TBD54566975/ftl/backend/runner/pubsub"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/download"
 	"github.com/TBD54566975/ftl/internal/dsn"
@@ -162,7 +164,6 @@ func Start(ctx context.Context, config Config) error {
 }
 
 func (s *Service) startDeployment(ctx context.Context, key model.DeploymentKey, module *schema.Module) error {
-
 	err := s.deploy(ctx, key, module)
 	if err != nil {
 		// If we fail to deploy we just exit
@@ -177,6 +178,7 @@ func (s *Service) startDeployment(ctx context.Context, key model.DeploymentKey, 
 	}()
 	return fmt.Errorf("failure in runner: %w", rpc.Serve(ctx, s.config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, s),
+		rpc.GRPC(pubconnect.NewPublishServiceHandler, s.pubSub),
 		rpc.HTTP("/", s),
 		rpc.HealthCheck(s.healthCheck),
 	))
@@ -300,6 +302,8 @@ type Service struct {
 	deploymentLogQueue  chan log.Entry
 	cancelFunc          func()
 	devEndpoint         optional.Option[url.URL]
+
+	pubSub *pubsub.Service
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
@@ -397,7 +401,9 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 			return fmt.Errorf("failed to download artefacts: %w", err)
 		}
 
-		envVars := []string{"FTL_ENDPOINT=" + s.config.ControllerEndpoint.String(),
+		envVars := []string{
+			"FTL_ENDPOINT=" + s.config.ControllerEndpoint.String(),
+			"FTL_RUNNER_ENDPOINT=" + s.config.Bind.String(),
 			"FTL_CONFIG=" + strings.Join(s.config.Config, ","),
 			"FTL_OBSERVABILITY_ENDPOINT=" + s.config.ControllerEndpoint.String()}
 		if s.config.DebugPort > 0 {
@@ -422,6 +428,13 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 		}
 		dep = s.makeDeployment(cmdCtx, key, deployment)
 	}
+
+	pubSub, err := pubsub.New(ctx, module, dep.client)
+	if err != nil {
+		observability.Deployment.Failure(ctx, optional.Some(key.String()))
+		return fmt.Errorf("failed to create pubsub service: %w", err)
+	}
+	s.pubSub = pubSub
 
 	s.readyTime.Store(time.Now().Add(time.Second * 2)) // Istio is a bit flakey, add a small delay for readiness
 	s.deployment.Store(optional.Some(dep))

@@ -17,7 +17,7 @@ type MetadataKey string
 // implementations.
 type FTL interface {
 	// PublishEvent sends an event to a pubsub topic.
-	PublishEvent(ctx context.Context, topic *schema.Ref, event any) error
+	PublishEvent(ctx context.Context, topic *schema.Ref, event any, key string) error
 
 	// CallMap calls Get on an instance of an ftl.Map.
 	//

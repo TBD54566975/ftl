@@ -6,7 +6,6 @@ import (
 	ftlbuiltin "ftl/builtin"
 	ftlpublisher "ftl/publisher"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
-	"github.com/TBD54566975/ftl/go-runtime/server"
 )
 
 type CatchClient func(context.Context, ftlbuiltin.CatchRequest[ftlpublisher.PubSubEvent]) error
@@ -40,7 +39,6 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			PublishToExternalModule,
-			server.TopicHandle[ftlpublisher.PubSubEvent]("publisher", "testTopic"),
 		),
 	)
 }

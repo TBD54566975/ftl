@@ -12,7 +12,7 @@ import (
 type Nonce = ftl.Config[string]
 
 //ftl:export
-type AgentBroadcast = ftl.TopicHandle[Agent]
+type AgentBroadcast = ftl.TopicHandle[Agent, ftl.SinglePartitionMap[Agent]]
 
 type Agent struct {
 	ID            int       `json:"id"`

@@ -76,6 +76,8 @@ func contextWithFakeFTL(ctx context.Context, options ...Option) context.Context 
 		options:       options,
 	}
 	ctx = internal.WithContext(ctx, fake)
+
+	// TODO: revisit this and all unused funcs and types
 	// fake.pubSub = newFakePubSub(ctx)
 	return ctx
 }
@@ -161,6 +163,6 @@ func actuallyCallMap(ctx context.Context, impl mapImpl) any {
 	return out
 }
 
-func (f *fakeFTL) PublishEvent(ctx context.Context, topic *schema.Ref, event any) error {
+func (f *fakeFTL) PublishEvent(ctx context.Context, topic *schema.Ref, event any, key string) error {
 	return f.pubSub.publishEvent(topic, event)
 }

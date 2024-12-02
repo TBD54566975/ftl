@@ -3,6 +3,7 @@ package pubsub
 
 import (
 	"context"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 )
@@ -17,14 +18,14 @@ func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
 			CookPizza,
-			server.TopicHandle[Pizza]("pubsub", "pizzaReadyTopic"),
+			server.TopicHandle[Pizza, ftl.SinglePartitionMap[Pizza]]("pubsub", "pizzaReadyTopic"),
 		),
 		reflection.ProvideResourcesForVerb(
 			DeliverPizza,
 		),
 		reflection.ProvideResourcesForVerb(
 			OrderPizza,
-			server.TopicHandle[Pizza]("pubsub", "newOrderTopic"),
+			server.TopicHandle[Pizza, PizzaPartitionMapper]("pubsub", "newOrderTopic"),
 		),
 	)
 }

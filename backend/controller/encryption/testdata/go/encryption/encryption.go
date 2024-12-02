@@ -33,7 +33,7 @@ type Event struct {
 //
 // Used to test encryption of topic_events and async_calls tables
 
-type Topic = ftl.TopicHandle[Event]
+type Topic = ftl.TopicHandle[Event, ftl.SinglePartitionMap[Event]]
 
 //ftl:verb
 func Publish(ctx context.Context, e Event, topic Topic) error {

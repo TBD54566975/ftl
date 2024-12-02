@@ -91,6 +91,8 @@ type Result struct {
 	NativeNames NativeNames
 	// VerbResourceParamOrder contains the order of resource parameters for each verb.
 	VerbResourceParamOrder map[*schema.Verb][]common.VerbResourceParam
+	// TopicPartitionMapperNames maps topics to the native name of the partition mapper.
+	TopicPartitionMapperNames map[*schema.Topic]finalize.TopicMapperQualifiedNames
 	// Errors is a list of errors encountered during schema extraction.
 	Errors []builderrors.Error
 }
@@ -157,6 +159,7 @@ type combinedData struct {
 	refResults             map[schema.RefKey]refResult
 	extractedDecls         map[schema.Decl]types.Object
 	externalTypeAliases    sets.Set[*schema.TypeAlias]
+	topicPartitionMaps     map[*schema.Topic]finalize.TopicMapperQualifiedNames
 	// for detecting duplicates
 	typeUniqueness   map[string]tuple.Pair[types.Object, schema.Position]
 	globalUniqueness map[string]tuple.Pair[types.Object, schema.Position]
@@ -172,6 +175,7 @@ func newCombinedData(diagnostics []analysis.SimpleDiagnostic) *combinedData {
 		refResults:             make(map[schema.RefKey]refResult),
 		extractedDecls:         make(map[schema.Decl]types.Object),
 		externalTypeAliases:    sets.NewSet[*schema.TypeAlias](),
+		topicPartitionMaps:     make(map[*schema.Topic]finalize.TopicMapperQualifiedNames),
 		typeUniqueness:         make(map[string]tuple.Pair[types.Object, schema.Position]),
 		globalUniqueness:       make(map[string]tuple.Pair[types.Object, schema.Position]),
 	}
@@ -188,6 +192,7 @@ func (cd *combinedData) update(fr finalize.Result) {
 	}
 	copyFailedRefs(cd.refResults, fr.Failed)
 	maps.Copy(cd.nativeNames, fr.NativeNames)
+	maps.Copy(cd.topicPartitionMaps, fr.TopicPartitionMaps)
 	maps.Copy(cd.functionCalls, fr.FunctionCalls)
 	maps.Copy(cd.verbResourceParamOrder, fr.VerbResourceParamOrder)
 }
@@ -199,10 +204,11 @@ func (cd *combinedData) toResult() Result {
 	cd.errorDirectVerbInvocations()
 	builderrors.SortErrorsByPosition(cd.errs)
 	return Result{
-		Module:                 cd.module,
-		NativeNames:            cd.nativeNames,
-		VerbResourceParamOrder: cd.verbResourceParamOrder,
-		Errors:                 cd.errs,
+		Module:                    cd.module,
+		NativeNames:               cd.nativeNames,
+		VerbResourceParamOrder:    cd.verbResourceParamOrder,
+		TopicPartitionMapperNames: cd.topicPartitionMaps,
+		Errors:                    cd.errs,
 	}
 }
 

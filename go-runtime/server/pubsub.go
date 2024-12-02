@@ -8,8 +8,8 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
-func TopicHandle[E any](module, name string) reflection.VerbResource {
-	handle := ftl.TopicHandle[E]{Ref: &schema.Ref{
+func TopicHandle[E any, M ftl.TopicPartitionMap[E]](module, name string) reflection.VerbResource {
+	handle := ftl.TopicHandle[E, M]{Ref: &schema.Ref{
 		Name:   name,
 		Module: module,
 	}}

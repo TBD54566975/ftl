@@ -40,7 +40,7 @@ func ConsumeButFailAndCatchAny(ctx context.Context, req publisher.PubSubEvent) e
 //ftl:verb
 func PublishToExternalModule(ctx context.Context) error {
 	// Get around compile-time checks
-	externalTopic := ftl.TopicHandle[publisher.PubSubEvent]{Ref: reflection.Ref{Module: "publisher", Name: "testTopic"}.ToSchema()}
+	externalTopic := ftl.TopicHandle[publisher.PubSubEvent, ftl.SinglePartitionMap[publisher.PubSubEvent]]{Ref: reflection.Ref{Module: "publisher", Name: "testTopic"}.ToSchema()}
 	return externalTopic.Publish(ctx, publisher.PubSubEvent{Time: time.Now()})
 }
 
