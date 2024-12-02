@@ -5,6 +5,7 @@ import (
 	"context"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
 type ConsumeClient func(context.Context, Event) error
@@ -23,7 +24,7 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			Publish,
-			server.TopicHandle[Event]("encryption", "topic"),
+			server.TopicHandle[Event, ftl.SinglePartitionMap[Event]]("encryption", "topic"),
 		),
 	)
 }

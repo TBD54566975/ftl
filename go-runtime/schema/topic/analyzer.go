@@ -59,28 +59,16 @@ func Extract(pass *analysis.Pass, obj types.Object, node *ast.TypeSpec) optional
 		return optional.None[*schema.Topic]()
 	}
 
-	associatedExprs := []ast.Expr{}
-	switch mapper := idxListExpr.Indices[1].(type) {
-	case *ast.IndexExpr:
-		associatedExprs = append(associatedExprs, mapper.Index)
-
-	case *ast.IndexListExpr:
-		associatedExprs = append(associatedExprs, mapper.Indices...)
-
-	default:
-	}
-	associatedMapperObjs := []types.Object{}
-	for _, expr := range associatedExprs {
-		associatedObj, ok := common.GetObjectForNode(pass.TypesInfo, expr).Get()
+	var associatedMapperObj optional.Option[types.Object]
+	if mapper, ok := idxListExpr.Indices[1].(*ast.IndexExpr); ok {
+		associatedObj, ok := common.GetObjectForNode(pass.TypesInfo, mapper.Index).Get()
 		if !ok {
 			common.Errorf(pass, node, "could not find associated type for topic partition mapper")
 			return optional.None[*schema.Topic]()
 		}
-		associatedMapperObjs = append(associatedMapperObjs, associatedObj)
+		associatedMapperObj = optional.Some(associatedObj)
 	}
-
-	common.MarkTopicMapper(pass, mapperObj, associatedMapperObjs, topic)
-
+	common.MarkTopicMapper(pass, mapperObj, associatedMapperObj, topic)
 	return optional.Some(topic)
 }
 

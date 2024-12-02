@@ -134,8 +134,8 @@ type IncludeTopicMapper struct {
 
 	// The object for the partition mapper type.
 	MapperObject types.Object
-	// The objects for each associated type for the partition mapper.
-	AssociatedObjects []types.Object
+	// The object for the associated type for the partition mapper.
+	AssociatedObject optional.Option[types.Object]
 }
 
 func (*IncludeTopicMapper) schemaFactValue() {}
@@ -258,12 +258,12 @@ func MarkVerbResourceParamOrder(pass *analysis.Pass, obj types.Object, resources
 }
 
 // MarkTopicMapper marks the given object as the partition mapper for a topic.
-func MarkTopicMapper(pass *analysis.Pass, mapperObj types.Object, associatedObjs []types.Object, topic *schema.Topic) {
+func MarkTopicMapper(pass *analysis.Pass, mapperObj types.Object, associatedObj optional.Option[types.Object], topic *schema.Topic) {
 	fact := newFact(pass, mapperObj)
 	fact.Add(&IncludeTopicMapper{
-		Topic:             topic,
-		MapperObject:      mapperObj,
-		AssociatedObjects: associatedObjs,
+		Topic:            topic,
+		MapperObject:     mapperObj,
+		AssociatedObject: associatedObj,
 	})
 	pass.ExportObjectFact(mapperObj, fact)
 }

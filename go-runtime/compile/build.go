@@ -26,6 +26,7 @@ import (
 	"github.com/TBD54566975/ftl"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
+	"github.com/TBD54566975/ftl/go-runtime/schema/finalize"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -280,8 +281,8 @@ type goTopicHandle struct {
 
 	// Types for the topics partition mapper
 	// TODO: we should support multiple levels of associated types, rather than just one level.
-	MapperType            nativeType
-	MapperAssociatedTypes []nativeType
+	MapperType           nativeType
+	MapperAssociatedType optional.Option[nativeType]
 
 	nativeType
 }
@@ -294,10 +295,8 @@ func (d goTopicHandle) getNativeType() nativeType {
 
 func (d goTopicHandle) MapperTypeName(trimModuleName string) string {
 	name := trimModuleQualifier(trimModuleName, d.MapperType.TypeName())
-	if len(d.MapperAssociatedTypes) > 0 {
-		name += "[" + strings.Join(islices.Map(d.MapperAssociatedTypes, func(t nativeType) string {
-			return trimModuleQualifier(trimModuleName, t.TypeName())
-		}), ", ") + "]"
+	if at, ok := d.MapperAssociatedType.Get(); ok {
+		name += "[" + trimModuleQualifier(trimModuleName, at.TypeName()) + "]"
 	}
 	return name
 }
@@ -616,7 +615,7 @@ type mainModuleContextBuilder struct {
 	sch                     *schema.Schema
 	mainModule              *schema.Module
 	nativeNames             extract.NativeNames
-	topicMapperNames        map[*schema.Topic]extract.TopicMapperQualifiedNames
+	topicMapperNames        map[*schema.Topic]finalize.TopicMapperQualifiedNames
 	verbResourceParamOrders map[*schema.Verb][]common.VerbResourceParam
 	imports                 map[string]string
 }
@@ -1032,22 +1031,22 @@ func (b *mainModuleContextBuilder) processTopic(moduleName string, ref *schema.R
 	if err != nil {
 		return goTopicHandle{}, fmt.Errorf("failed to get event type for topic partition mapper %s.%s: %w", moduleName, topic.Name, err)
 	}
-	mapperAssociatedTypes := []nativeType{}
-	for _, a := range mapperQualifiedNames.AssociatedTypes {
+	var mapperAssociatedType optional.Option[nativeType]
+	if a, ok := mapperQualifiedNames.AssociatedType.Get(); ok {
 		at, err := b.getNativeType(a)
 		if err != nil {
 			return goTopicHandle{}, fmt.Errorf("failed to get associated type for topic partition mapper %s.%s: %w", moduleName, topic.Name, err)
 		}
-		mapperAssociatedTypes = append(mapperAssociatedTypes, at)
+		mapperAssociatedType = optional.Some(at)
 	}
 
 	return goTopicHandle{
-		Name:                  topic.Name,
-		Module:                moduleName,
-		EventType:             et,
-		MapperType:            mt,
-		MapperAssociatedTypes: mapperAssociatedTypes,
-		nativeType:            nt,
+		Name:                 topic.Name,
+		Module:               moduleName,
+		EventType:            et,
+		MapperType:           mt,
+		MapperAssociatedType: mapperAssociatedType,
+		nativeType:           nt,
 	}, nil
 }
 
