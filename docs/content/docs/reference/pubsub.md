@@ -84,7 +84,7 @@ First, declare a new topic:
 ```java
 @Export
 @Topic("invoices")
-interface InvoiceTopic extends WriteableTopc<Invoice> {}
+interface InvoiceTopic extends WriteableTopic<Invoice> {}
 ```
 
 Events can be published to a topic by injecting it into an `@Verb` method:
