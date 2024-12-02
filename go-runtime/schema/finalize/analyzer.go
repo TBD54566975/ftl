@@ -39,6 +39,8 @@ type Result struct {
 	FunctionCalls map[schema.Position]FunctionCall
 	// VerbResourceParamOrder contains the order of resource parameters for each verb.
 	VerbResourceParamOrder map[*schema.Verb][]common.VerbResourceParam
+	// TopicPartitionMaps maps the topic to the native name of the partition mapper.
+	TopicPartitionMaps map[*schema.Topic][]string
 }
 
 type FunctionCall struct {
@@ -56,6 +58,7 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 	// for identifying duplicates
 	declKeys := make(map[string]types.Object)
 	nativeNames := make(map[schema.Node]string)
+	topicMappers := make(map[*schema.Topic][]string)
 	verbParamOrder := make(map[*schema.Verb][]common.VerbResourceParam)
 	for obj, fact := range common.GetAllFactsExtractionStatus(pass) {
 		switch f := fact.(type) {
@@ -91,12 +94,22 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 			nativeNames[fact.Node] = common.GetNativeName(obj)
 		}
 	}
+	for obj, facts := range common.GetAllFactsOfType[*common.IncludeTopicMapper](pass) {
+		for _, fact := range facts {
+			var nativeNames = []string{common.GetNativeName(obj)}
+			for _, associated := range fact.AssociatedObjects {
+				nativeNames = append(nativeNames, common.GetNativeName(associated))
+			}
+			topicMappers[fact.Topic] = nativeNames
+		}
+	}
 	return Result{
 		ModuleName:             moduleName,
 		ModuleComments:         extractModuleComments(pass),
 		Extracted:              extracted,
 		Failed:                 failed,
 		NativeNames:            nativeNames,
+		TopicPartitionMaps:     topicMappers,
 		FunctionCalls:          getFunctionCalls(pass),
 		VerbResourceParamOrder: verbParamOrder,
 	}, nil

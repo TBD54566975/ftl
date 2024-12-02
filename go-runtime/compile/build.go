@@ -159,9 +159,12 @@ func verbImports(v goVerb) []string {
 	}
 
 	for _, r := range v.Resources {
-		if c, ok := r.(verbClient); ok {
+		switch r := r.(type) {
+		case verbClient:
 			imports.Add(`"github.com/TBD54566975/ftl/go-runtime/server"`)
-			imports.Append(verbImports(c.goVerb)...)
+			imports.Append(verbImports(r.goVerb)...)
+		case goTopicHandle:
+			imports.Add(r.MapperType.importStatement())
 		}
 	}
 	return imports.ToSlice()
@@ -275,6 +278,11 @@ type goTopicHandle struct {
 	Module    string
 	EventType goSchemaType
 
+	// Types for the topics partition mapper
+	// TODO: we should support multiple levels of associated types, rather than just one level.
+	MapperType            nativeType
+	MapperAssociatedTypes []nativeType
+
 	nativeType
 }
 
@@ -282,6 +290,16 @@ func (d goTopicHandle) resource() {}
 
 func (d goTopicHandle) getNativeType() nativeType {
 	return d.nativeType
+}
+
+func (d goTopicHandle) MapperTypeName(trimModuleName string) string {
+	name := trimModuleQualifier(trimModuleName, d.MapperType.TypeName())
+	if len(d.MapperAssociatedTypes) > 0 {
+		name += "[" + strings.Join(islices.Map(d.MapperAssociatedTypes, func(t nativeType) string {
+			return trimModuleQualifier(trimModuleName, t.TypeName())
+		}), ", ") + "]"
+	}
+	return name
 }
 
 type goConfigHandle struct {
@@ -598,6 +616,7 @@ type mainModuleContextBuilder struct {
 	sch                     *schema.Schema
 	mainModule              *schema.Module
 	nativeNames             extract.NativeNames
+	topicMapperNames        map[*schema.Topic]extract.TopicMapperQualifiedNames
 	verbResourceParamOrders map[*schema.Verb][]common.VerbResourceParam
 	imports                 map[string]string
 }
@@ -615,6 +634,7 @@ func buildMainModuleContext(sch *schema.Schema, result extract.Result, goModVers
 		sch:                     combinedSch,
 		mainModule:              result.Module,
 		nativeNames:             result.NativeNames,
+		topicMapperNames:        result.TopicPartitionMapperNames,
 		verbResourceParamOrders: result.VerbResourceParamOrder,
 		imports:                 imports(result.Module, false),
 	}
@@ -1004,11 +1024,30 @@ func (b *mainModuleContextBuilder) processTopic(moduleName string, ref *schema.R
 	if err != nil {
 		return goTopicHandle{}, fmt.Errorf("failed to get event type for topic %s.%s: %w", moduleName, topic.Name, err)
 	}
+	mapperQualifiedNames, ok := b.topicMapperNames[topic]
+	if !ok {
+		return goTopicHandle{}, fmt.Errorf("missing topic partition mapper name for topic %s.%s", moduleName, topic.Name)
+	}
+	mt, err := b.getNativeType(mapperQualifiedNames.Mapper)
+	if err != nil {
+		return goTopicHandle{}, fmt.Errorf("failed to get event type for topic partition mapper %s.%s: %w", moduleName, topic.Name, err)
+	}
+	mapperAssociatedTypes := []nativeType{}
+	for _, a := range mapperQualifiedNames.AssociatedTypes {
+		at, err := b.getNativeType(a)
+		if err != nil {
+			return goTopicHandle{}, fmt.Errorf("failed to get associated type for topic partition mapper %s.%s: %w", moduleName, topic.Name, err)
+		}
+		mapperAssociatedTypes = append(mapperAssociatedTypes, at)
+	}
+
 	return goTopicHandle{
-		Name:       topic.Name,
-		Module:     moduleName,
-		EventType:  et,
-		nativeType: nt,
+		Name:                  topic.Name,
+		Module:                moduleName,
+		EventType:             et,
+		MapperType:            mt,
+		MapperAssociatedTypes: mapperAssociatedTypes,
+		nativeType:            nt,
 	}, nil
 }
 
@@ -1171,12 +1210,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		}
 		return out
 	},
-	"trimModuleQualifier": func(moduleName string, str string) string {
-		if strings.HasPrefix(str, moduleName+".") {
-			return strings.TrimPrefix(str, moduleName+".")
-		}
-		return str
-	},
+	"trimModuleQualifier": trimModuleQualifier,
 	"typeAliasType": func(m *schema.Module, t *schema.TypeAlias) string {
 		for _, md := range t.Metadata {
 			md, ok := md.(*schema.MetadataTypeMap)
@@ -1221,6 +1255,13 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		}
 		return nil
 	},
+}
+
+func trimModuleQualifier(moduleName string, str string) string {
+	if strings.HasPrefix(str, moduleName+".") {
+		return strings.TrimPrefix(str, moduleName+".")
+	}
+	return str
 }
 
 // returns the import path and the directory name for a type alias if there is an associated go library
@@ -1455,11 +1496,11 @@ func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 			imports["time"] = "stdtime"
 
 		case *schema.Optional, *schema.Unit:
-			imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
+			imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = "ftl"
 
 		case *schema.Topic:
 			if n.IsExported() {
-				imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
+				imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = "ftl"
 			}
 
 		case *schema.TypeAlias:

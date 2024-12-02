@@ -71,7 +71,7 @@ func init() {
 			server.DatabaseHandle[{{ trimModuleQualifier $moduleName .TypeName }}]("{{.Type}}"),
                 {{- end }}
                 {{- with getTopicHandle . }}
-			server.TopicHandle[{{ trimModuleQualifier $moduleName .EventType.TypeName }}]("{{.Module}}", "{{.Name}}"),
+			server.TopicHandle[{{ trimModuleQualifier $moduleName .EventType.TypeName }}, {{ .MapperTypeName $moduleName}}]("{{.Module}}", "{{.Name}}"),
                 {{- end }}
 				{{- with getConfigHandle . }}
 			server.Config[{{ trimModuleQualifier $moduleName .Type.TypeName }}]("{{.Module}}", "{{.Name}}"),

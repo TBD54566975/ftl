@@ -128,6 +128,18 @@ type IncludeNativeName struct {
 
 func (*IncludeNativeName) schemaFactValue() {}
 
+// IncludeTopicMapper marks a node as the partition mapper type for a topic.
+type IncludeTopicMapper struct {
+	Topic *schema.Topic
+
+	// The object for the partition mapper type.
+	MapperObject types.Object
+	// The objects for each assocaited type for the partition mapper.
+	AssociatedObjects []types.Object
+}
+
+func (*IncludeTopicMapper) schemaFactValue() {}
+
 type DatabaseConfigMethod int
 
 const (
@@ -243,6 +255,17 @@ func MarkVerbResourceParamOrder(pass *analysis.Pass, obj types.Object, resources
 	fact := newFact(pass, obj)
 	fact.Add(&VerbResourceParamOrder{Resources: resources})
 	pass.ExportObjectFact(obj, fact)
+}
+
+// MarkTopicMapper marks the given object as the partition mapper for a topic.
+func MarkTopicMapper(pass *analysis.Pass, mapperObj types.Object, associatedObjs []types.Object, topic *schema.Topic) {
+	fact := newFact(pass, mapperObj)
+	fact.Add(&IncludeTopicMapper{
+		Topic:             topic,
+		MapperObject:      mapperObj,
+		AssociatedObjects: associatedObjs,
+	})
+	pass.ExportObjectFact(mapperObj, fact)
 }
 
 // GetAllFactsExtractionStatus merges schema facts inclusive of all available results and the present pass facts.

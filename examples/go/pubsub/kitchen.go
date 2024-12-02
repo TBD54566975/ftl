@@ -6,11 +6,17 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
-//ftl:export
-type NewOrderTopic = ftl.TopicHandle[Pizza]
+type PizzaPartitionMapper struct{}
+
+func (PizzaPartitionMapper) PartitionKey(pizza Pizza) string {
+	return pizza.Customer
+}
 
 //ftl:export
-type PizzaReadyTopic = ftl.TopicHandle[Pizza]
+type NewOrderTopic = ftl.TopicHandle[Pizza, PizzaPartitionMapper]
+
+//ftl:export
+type PizzaReadyTopic = ftl.TopicHandle[Pizza, ftl.SinglePartitionMap[Pizza]]
 
 type Pizza struct {
 	ID       int
