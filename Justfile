@@ -123,7 +123,7 @@ build-language-plugins:
   @just build-go-binary ./jvm-runtime/cmd/ftl-language-kotlin
 
 # Build a Go binary with the correct flags and place it in the release dir
-build-go-binary dir binary="": build-zips build-protos build-frontend
+build-go-binary dir binary="": build-zips build-protos
   #!/bin/bash
   set -euo pipefail
   shopt -s extglob
