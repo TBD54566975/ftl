@@ -15,11 +15,12 @@ import (
 )
 
 type publisher struct {
+	module   string
 	topic    *schema.Topic
 	producer sarama.SyncProducer
 }
 
-func newPublisher(t *schema.Topic) (*publisher, error) {
+func newPublisher(module string, t *schema.Topic) (*publisher, error) {
 	if t.Runtime == nil {
 		return nil, fmt.Errorf("topic %s has no runtime", t.Name)
 	}
@@ -37,6 +38,7 @@ func newPublisher(t *schema.Topic) (*publisher, error) {
 		return nil, fmt.Errorf("failed to create producer for topic %s: %w", t.Name, err)
 	}
 	return &publisher{
+		module:   module,
 		topic:    t,
 		producer: producer,
 	}, nil
@@ -63,7 +65,7 @@ func (p *publisher) publish(ctx context.Context, data []byte, key string, caller
 func (p *publisher) publishToController(ctx context.Context, data []byte, caller schema.RefKey) error {
 	client := rpc.ClientFromContext[ftlv1connect.ModuleServiceClient](ctx)
 	_, err := client.PublishEvent(ctx, connect.NewRequest(&ftlv1.PublishEventRequest{
-		Topic:  p.topic.ToProto().(*schemapb.Ref), //nolint: forcetypeassert
+		Topic:  &schemapb.Ref{Module: p.module, Name: p.topic.Name},
 		Caller: caller.Name,
 		Body:   data,
 	}))

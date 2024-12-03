@@ -22,7 +22,7 @@ var _ pbconnect.PublishServiceHandler = (*Service)(nil)
 func New(module *schema.Module) (*Service, error) {
 	publishers := map[string]*publisher{}
 	for t := range sl.FilterVariants[*schema.Topic](module.Decls) {
-		publisher, err := newPublisher(t)
+		publisher, err := newPublisher(module.Name, t)
 		if err != nil {
 			return nil, err
 		}
