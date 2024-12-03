@@ -14,6 +14,7 @@ import (
 	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type inMemProvisioningTask struct {
@@ -48,10 +49,10 @@ type InMemResourceProvisionerFn func(context.Context, *provisioner.ResourceConte
 // finishes the task when all resources are provisioned or an error occurs.
 type InMemProvisioner struct {
 	running  *xsync.MapOf[string, *inMemProvisioningTask]
-	handlers map[ResourceType]InMemResourceProvisionerFn
+	handlers map[schema.ResourceType]InMemResourceProvisionerFn
 }
 
-func NewEmbeddedProvisioner(handlers map[ResourceType]InMemResourceProvisionerFn) *InMemProvisioner {
+func NewEmbeddedProvisioner(handlers map[schema.ResourceType]InMemResourceProvisionerFn) *InMemProvisioner {
 	return &InMemProvisioner{
 		running:  xsync.NewMapOf[string, *inMemProvisioningTask](),
 		handlers: handlers,

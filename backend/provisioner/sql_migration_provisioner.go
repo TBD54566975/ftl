@@ -29,8 +29,8 @@ const tenMB = 1024 * 1024 * 10
 
 // NewSQLMigrationProvisioner creates a new provisioner that provisions database migrations
 func NewSQLMigrationProvisioner(registryConfig artefacts.RegistryConfig) *InMemProvisioner {
-	return NewEmbeddedProvisioner(map[ResourceType]InMemResourceProvisionerFn{
-		ResourceTypeSQLMigration: provisionSQLMigration(registryConfig),
+	return NewEmbeddedProvisioner(map[schema.ResourceType]InMemResourceProvisionerFn{
+		schema.ResourceTypeSQLMigration: provisionSQLMigration(registryConfig),
 	})
 }
 

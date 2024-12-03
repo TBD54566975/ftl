@@ -2,40 +2,27 @@ package provisioner
 
 import (
 	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
-)
-
-// ResourceType is a type of resource used to configure provisioners
-type ResourceType string
-
-const (
-	ResourceTypeUnknown      ResourceType = "unknown"
-	ResourceTypePostgres     ResourceType = "postgres"
-	ResourceTypeMysql        ResourceType = "mysql"
-	ResourceTypeModule       ResourceType = "module"
-	ResourceTypeSQLMigration ResourceType = "sql-migration"
-	ResourceTypeTopic        ResourceType = "topic"
-	ResourceTypeSubscription ResourceType = "subscription"
-	ResourceTypeRunner       ResourceType = "runner"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // TypeOf returns the resource type of the given resource
-func TypeOf(r *provisioner.Resource) ResourceType {
+func TypeOf(r *provisioner.Resource) schema.ResourceType {
 	switch r.Resource.(type) {
 	case *provisioner.Resource_Module:
-		return ResourceTypeModule
+		return schema.ResourceTypeModule
 	case *provisioner.Resource_Mysql:
-		return ResourceTypeMysql
+		return schema.ResourceTypeMysql
 	case *provisioner.Resource_Postgres:
-		return ResourceTypePostgres
+		return schema.ResourceTypePostgres
 	case *provisioner.Resource_SqlMigration:
-		return ResourceTypeSQLMigration
+		return schema.ResourceTypeSQLMigration
 	case *provisioner.Resource_Topic:
-		return ResourceTypeTopic
+		return schema.ResourceTypeTopic
 	case *provisioner.Resource_Subscription:
-		return ResourceTypeSubscription
+		return schema.ResourceTypeSubscription
 	case *provisioner.Resource_Runner:
-		return ResourceTypeRunner
+		return schema.ResourceTypeRunner
 	default:
-		return ResourceTypeUnknown
+		return schema.ResourceTypeUnknown
 	}
 }

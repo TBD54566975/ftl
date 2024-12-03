@@ -38,6 +38,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
@@ -257,27 +258,27 @@ func (s *serveCommonConfig) run(
 			Bindings: []*provisioner.ProvisionerBinding{
 				{
 					Provisioner: provisioner.NewDevProvisioner(s.DBPort, s.MysqlPort, s.Recreate),
-					Types: []provisioner.ResourceType{
-						provisioner.ResourceTypeMysql,
-						provisioner.ResourceTypePostgres,
-						provisioner.ResourceTypeTopic,
-						provisioner.ResourceTypeSubscription,
+					Types: []schema.ResourceType{
+						schema.ResourceTypeMysql,
+						schema.ResourceTypePostgres,
+						schema.ResourceTypeTopic,
+						schema.ResourceTypeSubscription,
 					},
 					ID: "dev",
 				},
 				{
 					Provisioner: provisioner.NewSQLMigrationProvisioner(registry),
-					Types:       []provisioner.ResourceType{provisioner.ResourceTypeSQLMigration},
+					Types:       []schema.ResourceType{schema.ResourceTypeSQLMigration},
 					ID:          "migration",
 				},
 				{
 					Provisioner: provisioner.NewControllerProvisioner(controllerClient),
-					Types:       []provisioner.ResourceType{provisioner.ResourceTypeModule},
+					Types:       []schema.ResourceType{schema.ResourceTypeModule},
 					ID:          "controller",
 				},
 				{
 					Provisioner: provisioner.NewRunnerScalingProvisioner(runnerScaling, controllerClient),
-					Types:       []provisioner.ResourceType{provisioner.ResourceTypeRunner},
+					Types:       []schema.ResourceType{schema.ResourceTypeRunner},
 					ID:          "runner",
 				},
 			},

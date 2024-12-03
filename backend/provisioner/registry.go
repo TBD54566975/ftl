@@ -27,13 +27,13 @@ type provisionerPluginConfig struct {
 	// The default provisioner to use for all resources not matched here
 	Default string `toml:"default"`
 	Plugins []struct {
-		ID        string         `toml:"id"`
-		Resources []ResourceType `toml:"resources"`
+		ID        string                `toml:"id"`
+		Resources []schema.ResourceType `toml:"resources"`
 	} `toml:"plugins"`
 }
 
 func (cfg *provisionerPluginConfig) Validate() error {
-	registeredResources := map[ResourceType]bool{}
+	registeredResources := map[schema.ResourceType]bool{}
 	for _, plugin := range cfg.Plugins {
 		for _, r := range plugin.Resources {
 			if registeredResources[r] {
@@ -49,7 +49,7 @@ func (cfg *provisionerPluginConfig) Validate() error {
 type ProvisionerBinding struct {
 	Provisioner provisionerconnect.ProvisionerPluginServiceClient
 	ID          string
-	Types       []ResourceType
+	Types       []schema.ResourceType
 }
 
 func (p ProvisionerBinding) String() string {
@@ -116,7 +116,7 @@ func provisionerIDToProvisioner(ctx context.Context, id string, controller ftlv1
 }
 
 // Register to the registry, to be executed after all the previously added handlers
-func (reg *ProvisionerRegistry) Register(id string, handler provisionerconnect.ProvisionerPluginServiceClient, types ...ResourceType) *ProvisionerBinding {
+func (reg *ProvisionerRegistry) Register(id string, handler provisionerconnect.ProvisionerPluginServiceClient, types ...schema.ResourceType) *ProvisionerBinding {
 	binding := &ProvisionerBinding{
 		Provisioner: handler,
 		Types:       types,
@@ -154,7 +154,7 @@ func (reg *ProvisionerRegistry) CreateDeployment(ctx context.Context, module str
 	return deployment
 }
 
-func getTypes(resources []*provisioner.Resource, types []ResourceType) []*provisioner.Resource {
+func getTypes(resources []*provisioner.Resource, types []schema.ResourceType) []*provisioner.Resource {
 	result := []*provisioner.Resource{}
 	for _, r := range resources {
 		for _, t := range types {

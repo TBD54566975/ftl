@@ -15,6 +15,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/provisioner"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // MockProvisioner is a mock implementation of the Provisioner interface
@@ -89,8 +90,8 @@ func TestDeployment_Progress(t *testing.T) {
 		mock := &MockProvisioner{}
 
 		registry := provisioner.ProvisionerRegistry{}
-		registry.Register("mock", mock, provisioner.ResourceTypePostgres)
-		registry.Register("mock", mock, provisioner.ResourceTypeMysql)
+		registry.Register("mock", mock, schema.ResourceTypePostgres)
+		registry.Register("mock", mock, schema.ResourceTypeMysql)
 
 		graph := &provisioner.ResourceGraph{}
 		graph.AddNode(&proto.Resource{ResourceId: "a", Resource: &proto.Resource_Mysql{}})
@@ -165,8 +166,8 @@ func TestDeployment_Progress(t *testing.T) {
 		}
 
 		registry := provisioner.ProvisionerRegistry{}
-		registry.Register("mockdb", dbMock, provisioner.ResourceTypePostgres)
-		registry.Register("mockmod", moduleMock, provisioner.ResourceTypeModule)
+		registry.Register("mockdb", dbMock, schema.ResourceTypePostgres)
+		registry.Register("mockmod", moduleMock, schema.ResourceTypeModule)
 
 		// Check that the deployment finishes without errors
 		graph := &provisioner.ResourceGraph{}
