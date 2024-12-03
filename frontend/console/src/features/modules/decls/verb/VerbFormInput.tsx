@@ -1,4 +1,5 @@
 import { Copy01Icon } from 'hugeicons-react'
+import { useEffect, useRef } from 'react'
 import { Button } from '../../../../components/Button'
 
 export const VerbFormInput = ({
@@ -18,13 +19,32 @@ export const VerbFormInput = ({
   onSubmit: (path: string) => void
   handleCopyButton?: () => void
 }) => {
+  const formRef = useRef<HTMLFormElement>(null)
+
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault()
     onSubmit(path)
   }
 
+  const shortcutText = `Send ${window.navigator.userAgent.includes('Mac') ? '⌘ + ⏎' : 'Ctrl + ⏎'}`
+
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        event.preventDefault()
+        formRef.current?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
+      }
+    }
+
+    window.addEventListener('keydown', handleKeydown)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeydown)
+    }
+  }, [path, readOnly, onSubmit])
+
   return (
-    <form onSubmit={handleSubmit} className='rounded-lg'>
+    <form ref={formRef} onSubmit={handleSubmit} className='rounded-lg'>
       <div className='flex rounded-md'>
         <span id='call-type' className='inline-flex items-center rounded-l-md border border-r-0 border-gray-300 dark:border-gray-500 px-3 ml-4 sm:text-sm'>
           {requestType}
@@ -38,7 +58,7 @@ export const VerbFormInput = ({
           readOnly={readOnly}
           onChange={(event) => setPath(event.target.value)}
         />
-        <Button variant='primary' size='md' type='submit' title='Send' className='mx-2'>
+        <Button variant='primary' size='md' type='submit' title={shortcutText} className='mx-2'>
           Send
         </Button>
         <Button variant='secondary' size='md' type='button' title='Copy' onClick={handleCopyButton} className='mr-2'>
