@@ -331,7 +331,7 @@ jobs:
           echo "matrix={\"test\":$(jq -c -n '$ARGS.positional' --args $(git grep -l '^//go:build infrastructure' | xargs grep '^func Test' | awk '{print $2}' | cut -d'(' -f1))}" >> "$GITHUB_OUTPUT"
   infrastructure-run:
     name: Infrastructure Test
-    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    #if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     needs: infrastructure-shard
     runs-on: ubuntu-latest
     strategy:
