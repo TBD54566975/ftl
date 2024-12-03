@@ -21,6 +21,9 @@ import io.grpc.stub.StreamObserver;
 import xyz.block.ftl.LeaseClient;
 import xyz.block.ftl.LeaseFailedException;
 import xyz.block.ftl.LeaseHandle;
+import xyz.block.ftl.publish.v1.*;
+import xyz.block.ftl.publish.v1.PublishEventRequest;
+import xyz.block.ftl.publish.v1.PublishEventResponse;
 import xyz.block.ftl.schema.v1.Ref;
 import xyz.block.ftl.v1.*;
 
@@ -34,6 +37,7 @@ public class FTLController implements LeaseClient {
 
     final VerbServiceGrpc.VerbServiceStub verbService;
     final ModuleServiceGrpc.ModuleServiceStub moduleService;
+    final PublishServiceGrpc.PublishServiceStub publishService;
     final StreamObserver<GetModuleContextResponse> moduleObserver = new ModuleObserver();
 
     private static volatile FTLController controller;
@@ -73,6 +77,7 @@ public class FTLController implements LeaseClient {
         moduleService = ModuleServiceGrpc.newStub(channel);
         moduleService.getModuleContext(GetModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
         verbService = VerbServiceGrpc.newStub(channel);
+        publishService = PublishServiceGrpc.newStub(channel);
     }
 
     public void registerDatabase(String name, GetModuleContextResponse.DbType type) {
@@ -144,11 +149,12 @@ public class FTLController implements LeaseClient {
         }
     }
 
-    public void publishEvent(String topic, String callingVerbName, byte[] event) {
+    public void publishEvent(String topic, String callingVerbName, byte[] event, String key) {
         CompletableFuture<?> cf = new CompletableFuture<>();
-        moduleService.publishEvent(PublishEventRequest.newBuilder()
+        publishService.publishEvent(PublishEventRequest.newBuilder()
                 .setCaller(callingVerbName).setBody(ByteString.copyFrom(event))
-                .setTopic(Ref.newBuilder().setModule(moduleName).setName(topic).build()).build(),
+                .setTopic(Ref.newBuilder().setModule(moduleName).setName(topic).build())
+                .setKey(key).build(),
                 new StreamObserver<PublishEventResponse>() {
                     @Override
                     public void onNext(PublishEventResponse publishEventResponse) {

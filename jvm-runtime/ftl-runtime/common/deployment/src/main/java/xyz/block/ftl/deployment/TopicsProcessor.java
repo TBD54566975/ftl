@@ -10,6 +10,7 @@ import org.jboss.jandex.DotName;
 import org.jboss.jandex.Type;
 import org.jboss.logging.Logger;
 
+import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.GeneratedClassGizmoAdaptor;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
@@ -30,7 +31,8 @@ public class TopicsProcessor {
     private static final Logger log = Logger.getLogger(TopicsProcessor.class);
 
     @BuildStep
-    TopicsBuildItem handleTopics(CombinedIndexBuildItem index, BuildProducer<GeneratedClassBuildItem> generatedTopicProducer) {
+    TopicsBuildItem handleTopics(CombinedIndexBuildItem index, BuildProducer<GeneratedClassBuildItem> generatedTopicProducer,
+            BuildProducer<AdditionalBeanBuildItem> beans) {
         var topicDefinitions = index.getComputingIndex().getAnnotations(FTLDotNames.TOPIC);
         log.infof("Processing %d topic definition annotations into decls", topicDefinitions.size());
         Map<DotName, TopicsBuildItem.DiscoveredTopic> topics = new HashMap<>();
@@ -42,18 +44,20 @@ public class TopicsProcessor {
                         "@TopicDefinition can only be applied to interfaces " + iface.name() + " is not an interface");
             }
             Type paramType = null;
+            Type partitionMapperType = null;
             var consumer = false;
             for (var i : iface.interfaceTypes()) {
                 if (i.name().equals(WRITEABLE_TOPIC)) {
                     if (i.kind() == Type.Kind.PARAMETERIZED_TYPE) {
                         paramType = i.asParameterizedType().arguments().get(0);
+                        partitionMapperType = i.asParameterizedType().arguments().get(1);
                     }
                 } else if (i.name().equals(CONSUMEABLE_TOPIC)) {
                     consumer = true;
                 }
 
             }
-            if (paramType == null) {
+            if (paramType == null || partitionMapperType == null) {
                 if (consumer) {
                     // We don't care about these here, they are handled by the subscriptions processor
                     continue;
@@ -62,6 +66,8 @@ public class TopicsProcessor {
                         "@TopicDefinition can only be applied to interfaces that directly extend " + WRITEABLE_TOPIC
                                 + " with a concrete type parameter " + iface.name() + " does not extend this interface");
             }
+            var partitionMapperClass = partitionMapperType.name();
+            beans.produce(AdditionalBeanBuildItem.unremovableOf(partitionMapperClass.toString()));
 
             String name = topicDefinition.value().asString();
             if (names.contains(name)) {
@@ -81,9 +87,9 @@ public class TopicsProcessor {
                         .invokeStaticMethod(MethodDescriptor.ofMethod(TopicHelper.class, "instance", TopicHelper.class));
                 publish.invokeVirtualMethod(
                         MethodDescriptor.ofMethod(TopicHelper.class, "publish", void.class, String.class, String.class,
-                                Object.class),
+                                Object.class, Class.class),
                         helper, publish.load(name), publish.readInstanceField(verb.getFieldDescriptor(), publish.getThis()),
-                        publish.getMethodParam(0));
+                        publish.getMethodParam(0), publish.loadClass(partitionMapperClass.toString()));
                 publish.returnVoid();
                 topics.put(iface.name(), new TopicsBuildItem.DiscoveredTopic(name, cc.getClassName(), paramType,
                         iface.hasAnnotation(Export.class), iface.name().toString()));

@@ -5,25 +5,32 @@ import xyz.block.ftl.Export;
 import xyz.block.ftl.FromOffset;
 import xyz.block.ftl.Subscription;
 import xyz.block.ftl.Topic;
+import xyz.block.ftl.TopicPartitionMapper;
 import xyz.block.ftl.Verb;
 import xyz.block.ftl.WriteableTopic;
+
+class PartitionMapper implements TopicPartitionMapper<PubSubEvent> {
+    public String getPartitionKey(PubSubEvent event) {
+        return event.getTime().toString();
+    }
+}
 
 public class Publisher {
 
     @Export
     @Topic("testTopic")
-    interface TestTopic extends WriteableTopic<PubSubEvent> {
+    interface TestTopic extends WriteableTopic<PubSubEvent, PartitionMapper> {
 
     }
 
     @Topic("localTopic")
-    interface LocalTopic extends WriteableTopic<PubSubEvent> {
+    interface LocalTopic extends WriteableTopic<PubSubEvent, PartitionMapper> {
 
     }
 
     @Export
     @Topic("topic2")
-    interface Topic2 extends WriteableTopic<PubSubEvent> {
+    interface Topic2 extends WriteableTopic<PubSubEvent, PartitionMapper> {
 
     }
 
