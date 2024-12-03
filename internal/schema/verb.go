@@ -19,6 +19,10 @@ type VerbRuntime struct {
 	KafkaBrokers []string   `protobuf:"3,optional"`
 }
 
+var _ Runtime = (*VerbRuntime)(nil)
+
+func (v *VerbRuntime) runtime() {}
+
 //protobuf:2
 type Verb struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
