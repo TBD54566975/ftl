@@ -42,10 +42,10 @@ func (d *DatabaseRuntime) schemaChildren() []Node {
 	return []Node{d.Connections}
 }
 
-func (d *DatabaseRuntime) ApplyEvent(e DatabaseRuntimeEvent) {
-	switch e := e.(type) {
+func (d *DatabaseRuntime) ApplyEvent(e *DatabaseRuntimeEvent) {
+	switch e := e.Payload.(type) {
 	case *DatabaseRuntimeConnectionsEvent:
-		d.Connections = &e.Connections
+		d.Connections = e.Connections
 	default:
 		panic(fmt.Sprintf("unknown database runtime event type: %T", e))
 	}
@@ -175,31 +175,76 @@ func DatabaseConnectorFromProto(s *schemapb.DatabaseConnector) DatabaseConnector
 	}
 }
 
+type DatabaseRuntimeEvent struct {
+	ID      string                      `parser:"" protobuf:"1"`
+	Payload DatabaseRuntimeEventPayload `parser:"" protobuf:"2"`
+}
+
+func (d *DatabaseRuntimeEvent) ApplyTo(s *Module) {
+	for _, decl := range s.Decls {
+		if db, ok := decl.(*Database); ok && db.Name == d.ID {
+			if db.Runtime == nil {
+				db.Runtime = &DatabaseRuntime{}
+			}
+			db.Runtime.ApplyEvent(d)
+		}
+	}
+}
+
+func (d *DatabaseRuntimeEvent) ToProto() *schemapb.DatabaseRuntimeEvent {
+	return &schemapb.DatabaseRuntimeEvent{
+		Id:      d.ID,
+		Payload: d.Payload.ToProto(),
+	}
+}
+
+func DatabaseRuntimeEventFromProto(s *schemapb.DatabaseRuntimeEvent) *DatabaseRuntimeEvent {
+	return &DatabaseRuntimeEvent{
+		ID:      s.Id,
+		Payload: DatabaseRuntimeEventPayloadFromProto(s.Payload),
+	}
+}
+
 //sumtype:decl
-type DatabaseRuntimeEvent interface {
-	databaseRuntimeEvent()
+type DatabaseRuntimeEventPayload interface {
+	ToProto() *schemapb.DatabaseRuntimeEventPayload
+
+	databaseRuntimeEventPayload()
+}
+
+func DatabaseRuntimeEventPayloadFromProto(s *schemapb.DatabaseRuntimeEventPayload) DatabaseRuntimeEventPayload {
+	switch s := s.Value.(type) {
+	case *schemapb.DatabaseRuntimeEventPayload_DatabaseRuntimeConnectionsEvent:
+		return DatabaseRuntimeConnectionsEventFromProto(s.DatabaseRuntimeConnectionsEvent)
+	default:
+		panic(fmt.Sprintf("unknown database runtime event payload type: %T", s))
+	}
 }
 
 //protobuf:1
 type DatabaseRuntimeConnectionsEvent struct {
-	Connections DatabaseRuntimeConnections `parser:"" protobuf:"1"`
+	Connections *DatabaseRuntimeConnections `parser:"" protobuf:"1"`
 }
 
-var _ DatabaseRuntimeEvent = (*DatabaseRuntimeConnectionsEvent)(nil)
+var _ DatabaseRuntimeEventPayload = (*DatabaseRuntimeConnectionsEvent)(nil)
 
-func (d *DatabaseRuntimeConnectionsEvent) databaseRuntimeEvent() {}
+func (d *DatabaseRuntimeConnectionsEvent) databaseRuntimeEventPayload() {}
 
 func DatabaseRuntimeConnectionsEventFromProto(s *schemapb.DatabaseRuntimeConnectionsEvent) *DatabaseRuntimeConnectionsEvent {
 	if s == nil {
 		return nil
 	}
 	return &DatabaseRuntimeConnectionsEvent{
-		Connections: *DatabaseRuntimeConnectionsFromProto(s.Connections),
+		Connections: DatabaseRuntimeConnectionsFromProto(s.Connections),
 	}
 }
 
-func (d *DatabaseRuntimeConnectionsEvent) ToProto() protoreflect.ProtoMessage {
-	return &schemapb.DatabaseRuntimeConnectionsEvent{
-		Connections: d.Connections.ToProto().(*schemapb.DatabaseRuntimeConnections), //nolint:forcetypeassert
+func (d *DatabaseRuntimeConnectionsEvent) ToProto() *schemapb.DatabaseRuntimeEventPayload {
+	return &schemapb.DatabaseRuntimeEventPayload{
+		Value: &schemapb.DatabaseRuntimeEventPayload_DatabaseRuntimeConnectionsEvent{
+			DatabaseRuntimeConnectionsEvent: &schemapb.DatabaseRuntimeConnectionsEvent{
+				Connections: d.Connections.ToProto().(*schemapb.DatabaseRuntimeConnections), //nolint:forcetypeassert
+			},
+		},
 	}
 }

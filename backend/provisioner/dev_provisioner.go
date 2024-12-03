@@ -7,12 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/IBM/sarama"
 	"github.com/XSAM/otelsql"
 	_ "github.com/go-sql-driver/mysql"
 
-	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -25,23 +22,25 @@ var pubSubNameLimit = 249 // 255 (filename limit) - 6 (partition id)
 
 // NewDevProvisioner creates a new provisioner that provisions resources locally when running FTL in dev mode
 func NewDevProvisioner(postgresPort int, mysqlPort int, recreate bool) *InMemProvisioner {
+	// return NewEmbeddedProvisioner(map[schema.ResourceType]LegacyInMemResourceProvisionerFn{
+	// 	schema.ResourceTypeTopic:        provisionTopic(),
+	// 	schema.ResourceTypeSubscription: provisionSubscription(),
+	// }, map[schema.ResourceType]InMemResourceProvisionerFn{
+	// 	schema.ResourceTypePostgres: provisionPostgres(postgresPort, recreate),
+	// 	schema.ResourceTypeMysql:    provisionMysql(mysqlPort, recreate),
+	// })
 	return NewEmbeddedProvisioner(map[schema.ResourceType]InMemResourceProvisionerFn{
-		schema.ResourceTypePostgres:     provisionPostgres(postgresPort, recreate),
-		schema.ResourceTypeMysql:        provisionMysql(mysqlPort, recreate),
-		schema.ResourceTypeTopic:        provisionTopic(),
-		schema.ResourceTypeSubscription: provisionSubscription(),
+		schema.ResourceTypePostgres: provisionPostgres(postgresPort, recreate),
+		schema.ResourceTypeMysql:    provisionMysql(mysqlPort, recreate),
 	})
 }
 func provisionMysql(mysqlPort int, recreate bool) InMemResourceProvisionerFn {
-	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
-		mysql, ok := rc.Resource.Resource.(*provisioner.Resource_Mysql)
-		if !ok {
-			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
-		}
+	return func(ctx context.Context, res schema.Provisioned, module *schema.Module) (*RuntimeEvent, error) {
 		logger := log.FromContext(ctx)
-		logger.Infof("Provisioning mysql database: %s_%s", module, id)
 
-		dbName := strcase.ToLowerSnake(module) + "_" + strcase.ToLowerSnake(id)
+		dbName := strcase.ToLowerSnake(module.Name) + "_" + strcase.ToLowerSnake(res.ResourceID())
+
+		logger.Infof("Provisioning mysql database: %s", dbName)
 
 		// We assume that the DB hsas already been started when running in dev mode
 		mysqlDSN, err := dev.SetupMySQL(ctx, mysqlPort)
@@ -56,19 +55,21 @@ func provisionMysql(mysqlPort int, recreate bool) InMemResourceProvisionerFn {
 			case <-timeout:
 				return nil, fmt.Errorf("failed to query database: %w", err)
 			case <-retry.C:
-				var ret *provisioner.Resource
-				ret, err = establishMySQLDB(ctx, rc, mysqlDSN, dbName, mysql, mysqlPort, recreate)
+				event, err := establishMySQLDB(ctx, mysqlDSN, dbName, mysqlPort, recreate)
 				if err != nil {
 					logger.Debugf("failed to establish mysql database: %s", err.Error())
 					continue
 				}
-				return ret, nil
+				return &RuntimeEvent{Database: &schema.DatabaseRuntimeEvent{
+					ID:      res.ResourceID(),
+					Payload: event,
+				}}, nil
 			}
 		}
 	}
 }
 
-func establishMySQLDB(ctx context.Context, rc *provisioner.ResourceContext, mysqlDSN string, dbName string, mysql *provisioner.Resource_Mysql, mysqlPort int, recreate bool) (*provisioner.Resource, error) {
+func establishMySQLDB(ctx context.Context, mysqlDSN string, dbName string, mysqlPort int, recreate bool) (*schema.DatabaseRuntimeConnectionsEvent, error) {
 	conn, err := otelsql.Open("mysql", mysqlDSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to mysql: %w", err)
@@ -95,66 +96,42 @@ func establishMySQLDB(ctx context.Context, rc *provisioner.ResourceContext, mysq
 		}
 	}
 
-	if mysql.Mysql == nil {
-		mysql.Mysql = &provisioner.MysqlResource{}
-	}
 	dsn := dsn.MySQLDSN(dbName, dsn.Port(mysqlPort))
-	mysql.Mysql.Output = &schemapb.DatabaseRuntime{
-		Connections: &schemapb.DatabaseRuntimeConnections{
-			Write: &schemapb.DatabaseConnector{
-				Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
-					DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
-						Dsn: dsn,
-					},
-				},
-			},
-			Read: &schemapb.DatabaseConnector{
-				Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
-					DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
-						Dsn: dsn,
-					},
-				},
-			},
+
+	return &schema.DatabaseRuntimeConnectionsEvent{
+		Connections: &schema.DatabaseRuntimeConnections{
+			Write: &schema.DSNDatabaseConnector{DSN: dsn},
+			Read:  &schema.DSNDatabaseConnector{DSN: dsn},
 		},
-	}
-	return rc.Resource, nil
+	}, nil
 }
 
-func ProvisionPostgresForTest(ctx context.Context, module string, id string) (string, error) {
-	rc := &provisioner.ResourceContext{}
-	rc.Resource = &provisioner.Resource{
-		Resource: &provisioner.Resource_Postgres{},
-	}
-	res, err := provisionPostgres(15432, true)(ctx, rc, module, id+"_test", nil)
+func ProvisionPostgresForTest(ctx context.Context, module *schema.Module, id string) (string, error) {
+	node := &schema.Database{Name: id + "_test"}
+	event, err := provisionPostgres(15432, true)(ctx, node, module)
 	if err != nil {
 		return "", err
 	}
 
-	return res.GetPostgres().GetOutput().Connections.Write.GetDsnDatabaseConnector().GetDsn(), nil
+	return event.Database.Payload.(*schema.DatabaseRuntimeConnectionsEvent).Connections.Write.(*schema.DSNDatabaseConnector).DSN, nil //nolint:forcetypeassert
 }
 
-func ProvisionMySQLForTest(ctx context.Context, module string, id string) (string, error) {
-	rc := &provisioner.ResourceContext{}
-	rc.Resource = &provisioner.Resource{
-		Resource: &provisioner.Resource_Mysql{},
-	}
-	res, err := provisionMysql(13306, true)(ctx, rc, module, id+"_test", nil)
+func ProvisionMySQLForTest(ctx context.Context, module *schema.Module, id string) (string, error) {
+	node := &schema.Database{Name: id + "_test"}
+	event, err := provisionMysql(13306, true)(ctx, node, module)
 	if err != nil {
 		return "", err
 	}
-	return res.GetMysql().GetOutput().Connections.Write.GetDsnDatabaseConnector().GetDsn(), nil
+	return event.Database.Payload.(*schema.DatabaseRuntimeConnectionsEvent).Connections.Write.(*schema.DSNDatabaseConnector).DSN, nil //nolint:forcetypeassert
+
 }
 
-func provisionPostgres(postgresPort int, recreate bool) func(ctx context.Context, rc *provisioner.ResourceContext, module string, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
-	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
-		pg, ok := rc.Resource.Resource.(*provisioner.Resource_Postgres)
-		if !ok {
-			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
-		}
+func provisionPostgres(postgresPort int, recreate bool) InMemResourceProvisionerFn {
+	return func(ctx context.Context, resource schema.Provisioned, module *schema.Module) (*RuntimeEvent, error) {
 		logger := log.FromContext(ctx)
-		logger.Infof("Provisioning postgres database: %s_%s", module, id)
 
-		dbName := strcase.ToLowerSnake(module) + "_" + strcase.ToLowerSnake(id)
+		dbName := strcase.ToLowerSnake(module.Name) + "_" + strcase.ToLowerSnake(resource.ResourceID())
+		logger.Infof("Provisioning postgres database: %s", dbName)
 
 		// We assume that the DB has already been started when running in dev mode
 		postgresDSN := dsn.PostgresDSN("ftl", dsn.Port(postgresPort))
@@ -194,116 +171,105 @@ func provisionPostgres(postgresPort int, recreate bool) func(ctx context.Context
 			}
 		}
 
-		if pg.Postgres == nil {
-			pg.Postgres = &provisioner.PostgresResource{}
-		}
 		dsn := dsn.PostgresDSN(dbName, dsn.Port(postgresPort))
-		pg.Postgres.Output = &schemapb.DatabaseRuntime{
-			Connections: &schemapb.DatabaseRuntimeConnections{
-				Write: &schemapb.DatabaseConnector{
-					Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
-						DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
-							Dsn: dsn,
-						},
-					},
-				},
-				Read: &schemapb.DatabaseConnector{
-					Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
-						DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
-							Dsn: dsn,
-						},
+		return &RuntimeEvent{
+			Database: &schema.DatabaseRuntimeEvent{
+				ID: resource.ResourceID(),
+				Payload: &schema.DatabaseRuntimeConnectionsEvent{
+					Connections: &schema.DatabaseRuntimeConnections{
+						Write: &schema.DSNDatabaseConnector{DSN: dsn},
+						Read:  &schema.DSNDatabaseConnector{DSN: dsn},
 					},
 				},
 			},
-		}
-		return rc.Resource, nil
+		}, nil
 	}
 
 }
 
-func provisionTopic() func(ctx context.Context, rc *provisioner.ResourceContext, module string, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
-	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
-		logger := log.FromContext(ctx)
-		if err := dev.SetUpRedPanda(ctx); err != nil {
-			return nil, fmt.Errorf("could not set up redpanda: %w", err)
-		}
-		topic, ok := rc.Resource.Resource.(*provisioner.Resource_Topic)
-		if !ok {
-			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
-		}
+// func provisionTopic() func(ctx context.Context, rc *provisioner.ResourceContext, module string, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
+// 	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
+// 		logger := log.FromContext(ctx)
+// 		if err := dev.SetUpRedPanda(ctx); err != nil {
+// 			return nil, fmt.Errorf("could not set up redpanda: %w", err)
+// 		}
+// 		topic, ok := rc.Resource.Resource.(*provisioner.Resource_Topic)
+// 		if !ok {
+// 			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
+// 		}
 
-		topicID := kafkaTopicID(module, id)
-		logger.Infof("Provisioning topic: %s", topicID)
+// 		topicID := kafkaTopicID(module, id)
+// 		logger.Infof("Provisioning topic: %s", topicID)
 
-		config := sarama.NewConfig()
-		admin, err := sarama.NewClusterAdmin(redPandaBrokers, config)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create cluster admin: %w", err)
-		}
-		defer admin.Close()
+// 		config := sarama.NewConfig()
+// 		admin, err := sarama.NewClusterAdmin(redPandaBrokers, config)
+// 		if err != nil {
+// 			return nil, fmt.Errorf("failed to create cluster admin: %w", err)
+// 		}
+// 		defer admin.Close()
 
-		topicMetas, err := admin.DescribeTopics([]string{topicID})
-		if err != nil {
-			return nil, fmt.Errorf("failed to describe topic: %w", err)
-		}
-		if len(topicMetas) != 1 {
-			return nil, fmt.Errorf("expected topic metadata from kafka but received none")
-		}
-		if topicMetas[0].Err == sarama.ErrUnknownTopicOrPartition {
-			// No topic exists yet. Create it
-			err = admin.CreateTopic(topicID, &sarama.TopicDetail{
-				NumPartitions:     8,
-				ReplicationFactor: 1,
-				ReplicaAssignment: nil,
-			}, false)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create topic: %w", err)
-			}
-		} else if topicMetas[0].Err != sarama.ErrNoError {
-			return nil, fmt.Errorf("failed to describe topic %q: %w", topicID, topicMetas[0].Err)
-		}
+// 		topicMetas, err := admin.DescribeTopics([]string{topicID})
+// 		if err != nil {
+// 			return nil, fmt.Errorf("failed to describe topic: %w", err)
+// 		}
+// 		if len(topicMetas) != 1 {
+// 			return nil, fmt.Errorf("expected topic metadata from kafka but received none")
+// 		}
+// 		if topicMetas[0].Err == sarama.ErrUnknownTopicOrPartition {
+// 			// No topic exists yet. Create it
+// 			err = admin.CreateTopic(topicID, &sarama.TopicDetail{
+// 				NumPartitions:     8,
+// 				ReplicationFactor: 1,
+// 				ReplicaAssignment: nil,
+// 			}, false)
+// 			if err != nil {
+// 				return nil, fmt.Errorf("failed to create topic: %w", err)
+// 			}
+// 		} else if topicMetas[0].Err != sarama.ErrNoError {
+// 			return nil, fmt.Errorf("failed to describe topic %q: %w", topicID, topicMetas[0].Err)
+// 		}
 
-		if topic.Topic == nil {
-			topic.Topic = &provisioner.TopicResource{}
-		}
-		topic.Topic.Output = &provisioner.TopicResource_TopicResourceOutput{
-			KafkaBrokers: redPandaBrokers,
-			TopicId:      topicID,
-		}
-		return rc.Resource, nil
-	}
-}
+// 		if topic.Topic == nil {
+// 			topic.Topic = &provisioner.TopicResource{}
+// 		}
+// 		topic.Topic.Output = &provisioner.TopicResource_TopicResourceOutput{
+// 			KafkaBrokers: redPandaBrokers,
+// 			TopicId:      topicID,
+// 		}
+// 		return rc.Resource, nil
+// 	}
+// }
 
-func provisionSubscription() func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
-	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
-		logger := log.FromContext(ctx)
-		if err := dev.SetUpRedPanda(ctx); err != nil {
-			return nil, fmt.Errorf("could not set up redpanda: %w", err)
-		}
-		subscription, ok := rc.Resource.Resource.(*provisioner.Resource_Subscription)
-		if !ok {
-			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
-		}
+// func provisionSubscription() func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
+// 	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
+// 		logger := log.FromContext(ctx)
+// 		if err := dev.SetUpRedPanda(ctx); err != nil {
+// 			return nil, fmt.Errorf("could not set up redpanda: %w", err)
+// 		}
+// 		subscription, ok := rc.Resource.Resource.(*provisioner.Resource_Subscription)
+// 		if !ok {
+// 			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
+// 		}
 
-		topicID := kafkaTopicID(subscription.Subscription.Topic.Module, subscription.Subscription.Topic.Name)
-		consumerGroupID := consumerGroupID(module, id)
-		subscription.Subscription.Output = &provisioner.SubscriptionResource_SubscriptionResourceOutput{
-			KafkaBrokers:    redPandaBrokers,
-			TopicId:         topicID,
-			ConsumerGroupId: consumerGroupID,
-		}
-		logger.Infof("Provisioning subscription: %v", consumerGroupID)
-		return rc.Resource, nil
-	}
-}
+// 		topicID := kafkaTopicID(subscription.Subscription.Topic.Module, subscription.Subscription.Topic.Name)
+// 		consumerGroupID := consumerGroupID(module, id)
+// 		subscription.Subscription.Output = &provisioner.SubscriptionResource_SubscriptionResourceOutput{
+// 			KafkaBrokers:    redPandaBrokers,
+// 			TopicId:         topicID,
+// 			ConsumerGroupId: consumerGroupID,
+// 		}
+// 		logger.Infof("Provisioning subscription: %v", consumerGroupID)
+// 		return rc.Resource, nil
+// 	}
+// }
 
-func kafkaTopicID(module, id string) string {
-	return shortenString(fmt.Sprintf("%s.%s", module, id), pubSubNameLimit)
-}
+// func kafkaTopicID(module, id string) string {
+// 	return shortenString(fmt.Sprintf("%s.%s", module, id), pubSubNameLimit)
+// }
 
-func consumerGroupID(module, id string) string {
-	return shortenString(fmt.Sprintf("%s.%s", module, id), pubSubNameLimit)
-}
+// func consumerGroupID(module, id string) string {
+// 	return shortenString(fmt.Sprintf("%s.%s", module, id), pubSubNameLimit)
+// }
 
 // shortenString truncates the input string to maxLength and appends a hash of the original string for uniqueness
 func shortenString(input string, maxLength int) string {

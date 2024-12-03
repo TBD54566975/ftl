@@ -224,7 +224,7 @@ func WithDatabase[T ftl.DatabaseConfig]() Option {
 			name := cfg.Name()
 			switch any(cfg).(type) {
 			case ftl.PostgresDatabaseConfig:
-				dsn, err := provisioner.ProvisionPostgresForTest(ctx, moduleGetter(), name)
+				dsn, err := provisioner.ProvisionPostgresForTest(ctx, &schema.Module{Name: moduleGetter()}, name)
 				if err != nil {
 					return fmt.Errorf("could not provision database %q: %w", name, err)
 				}
@@ -243,7 +243,7 @@ func WithDatabase[T ftl.DatabaseConfig]() Option {
 				}
 				state.databases[name] = replacementDB
 			case ftl.MySQLDatabaseConfig:
-				dsn, err := provisioner.ProvisionMySQLForTest(ctx, moduleGetter(), name)
+				dsn, err := provisioner.ProvisionMySQLForTest(ctx, &schema.Module{Name: moduleGetter()}, name)
 				if err != nil {
 					return fmt.Errorf("could not provision database %q: %w", name, err)
 				}

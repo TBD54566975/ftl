@@ -10,7 +10,10 @@ import (
 	"github.com/jpillora/backoff"
 
 	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type TaskState string
@@ -27,7 +30,6 @@ type Task struct {
 	binding *ProvisionerBinding
 	module  string
 	state   TaskState
-	desired *ResourceGraph
 
 	deployment *Deployment
 
@@ -41,17 +43,17 @@ func (t *Task) Start(ctx context.Context) error {
 	}
 	t.state = TaskStateRunning
 
-	ids := map[string]bool{}
-	for _, res := range t.desired.Roots() {
-		ids[res.ResourceId] = true
+	var previous *schemapb.Module
+	if t.deployment.Previous != nil {
+		previous = t.deployment.Previous.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 	}
 
 	resp, err := t.binding.Provisioner.Provision(ctx, connect.NewRequest(&provisioner.ProvisionRequest{
-		Module: t.module,
+		DesiredModule: t.deployment.Module.ToProto().(*schemapb.Module),
 		// TODO: We need a proper cluster specific ID here
-		FtlClusterId:      "ftl",
-		ExistingResources: t.deployment.Graph.ByIDs(ids),
-		DesiredResources:  t.constructResourceContext(t.desired.Roots(), t.deployment.Graph),
+		FtlClusterId:   "ftl",
+		PreviousModule: previous,
+		Kinds:          slices.Map(t.binding.Types, func(x schema.ResourceType) string { return string(x) }),
 	}))
 	if err != nil {
 		t.state = TaskStateFailed
@@ -60,17 +62,6 @@ func (t *Task) Start(ctx context.Context) error {
 	t.runningToken = resp.Msg.ProvisioningToken
 
 	return nil
-}
-
-func (t *Task) constructResourceContext(resources []*provisioner.Resource, state *ResourceGraph) []*provisioner.ResourceContext {
-	result := make([]*provisioner.ResourceContext, len(resources))
-	for i, res := range resources {
-		result[i] = &provisioner.ResourceContext{
-			Resource:     res,
-			Dependencies: state.Dependencies(res.ResourceId),
-		}
-	}
-	return result
 }
 
 func (t *Task) Progress(ctx context.Context) error {
@@ -86,7 +77,7 @@ func (t *Task) Progress(ctx context.Context) error {
 	for {
 		resp, err := t.binding.Provisioner.Status(ctx, connect.NewRequest(&provisioner.StatusRequest{
 			ProvisioningToken: t.runningToken,
-			DesiredResources:  t.desired.Resources(),
+			DesiredModule:     t.deployment.Module.ToProto().(*schemapb.Module),
 		}))
 		if err != nil {
 			t.state = TaskStateFailed
@@ -94,8 +85,21 @@ func (t *Task) Progress(ctx context.Context) error {
 		}
 		if succ, ok := resp.Msg.Status.(*provisioner.StatusResponse_Success); ok {
 			t.state = TaskStateDone
-			t.deployment.Graph.Update(succ.Success.UpdatedResources)
+			events := succ.Success.Events
+			module := t.deployment.Module
+
+			for _, event := range events {
+				switch event.Value.(type) {
+				case *provisioner.ProvisioningEvent_ModuleRuntimeEvent:
+					moduleEvent := schema.ModuleRuntimeEventFromProto(event.GetModuleRuntimeEvent())
+					module.Runtime.ApplyEvent(moduleEvent)
+
+				case *provisioner.ProvisioningEvent_DatabaseRuntimeEvent:
+					schema.DatabaseRuntimeEventFromProto(event.GetDatabaseRuntimeEvent()).ApplyTo(module)
+				}
+			}
 			return nil
+
 		}
 		time.Sleep(retry.Duration())
 	}
@@ -103,10 +107,10 @@ func (t *Task) Progress(ctx context.Context) error {
 
 // Deployment is a single deployment of resources for a single module
 type Deployment struct {
-	Module string
-	Tasks  []*Task
-	// Graph is the current state of the resources affected by the deployment
-	Graph *ResourceGraph
+	Tasks []*Task
+	// TODO: Merge runtimes at creation time
+	Module   *schema.Module
+	Previous *schema.Module
 }
 
 // next running or pending task. Nil if all tasks are done.

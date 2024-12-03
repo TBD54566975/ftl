@@ -3,6 +3,7 @@ package provisioner
 import (
 	"archive/tar"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -17,12 +18,11 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
 	"github.com/TBD54566975/ftl/internal/dsn"
-	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/sha256"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 const tenMB = 1024 * 1024 * 10
@@ -34,63 +34,65 @@ func NewSQLMigrationProvisioner(storage *artefacts.OCIArtefactService) *InMemPro
 	})
 }
 
-func provisionSQLMigration(storage *artefacts.OCIArtefactService) func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
-	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
-		migration, ok := rc.Resource.Resource.(*provisioner.Resource_SqlMigration)
+func provisionSQLMigration(storage *artefacts.OCIArtefactService) InMemResourceProvisionerFn {
+	return func(ctx context.Context, resource schema.Provisioned, module *schema.Module) (*RuntimeEvent, error) {
+		if len(slices.Filter(resource.GetProvisioned(), func(r *schema.ProvisionedResource) bool { return r.Kind == schema.ResourceTypeSQLMigration })) == 0 {
+			return nil, fmt.Errorf("invalid sql migration resource: %T", resource)
+		}
+		provisioned, err := schema.FindProvisioned(module, resource.ResourceID())
+		if err != nil {
+			return nil, fmt.Errorf("failed to find database: %w", err)
+		}
+		db, ok := provisioned.(*schema.Database)
 		if !ok {
-			return nil, fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource)
+			return nil, fmt.Errorf("unexpected resource type: %T", provisioned)
 		}
-		if len(rc.Dependencies) != 1 {
-			return nil, fmt.Errorf("migrations must have exaclyt one dependency, found %v", rc.Dependencies)
-		}
-		parseSHA256, err := sha256.ParseSHA256(rc.Resource.GetSqlMigration().Digest)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse digest %w", err)
-		}
-		download, err := storage.Download(ctx, parseSHA256)
-		if err != nil {
-			return nil, fmt.Errorf("failed to download migration: %w", err)
-		}
-		dir, err := extractTarToTempDir(download)
-		if err != nil {
-			return nil, fmt.Errorf("failed to extract tar: %w", err)
-		}
-		d := ""
-
-		resource := rc.Dependencies[0].Resource
-		switch res := resource.(type) {
-		case *provisioner.Resource_Postgres:
-			d, err = dsn.ResolvePostgresDSN(ctx, schema.DatabaseConnectorFromProto(res.Postgres.GetOutput().Connections.Write))
+		for migration := range slices.FilterVariants[*schema.MetadataSQLMigration](db.Metadata) {
+			parseSHA256, err := sha256.ParseSHA256(migration.Digest)
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve postgres DSN: %w", err)
+				return nil, fmt.Errorf("failed to parse digest %w", err)
 			}
-		case *provisioner.Resource_Mysql:
-			d, err = dsn.ResolveMySQLDSN(ctx, schema.DatabaseConnectorFromProto(res.Mysql.GetOutput().Connections.Write))
+			download, err := storage.Download(ctx, parseSHA256)
 			if err != nil {
-				return nil, fmt.Errorf("failed to resolve mysql DSN: %w", err)
+				return nil, fmt.Errorf("failed to download migration: %w", err)
 			}
-			d = "mysql://" + d
-			// strip the tcp part
-			exp := regexp.MustCompile(`tcp\((.*?)\)`)
-			d = exp.ReplaceAllString(d, "$1")
-		}
-		u, err := url.Parse(d)
-		if err != nil {
-			return nil, fmt.Errorf("invalid DSN: %w", err)
-		}
+			dir, err := extractTarToTempDir(download)
+			if err != nil {
+				return nil, fmt.Errorf("failed to extract tar: %w", err)
+			}
+			d := ""
 
-		db := dbmate.New(u)
-		db.AutoDumpSchema = false
-		db.Log = log.FromContext(ctx).Scope("migrate").WriterAt(log.Info)
-		db.MigrationsDir = []string{dir}
-		err = db.CreateAndMigrate()
-		if err != nil {
-			return nil, fmt.Errorf("failed to create and migrate database: %w", err)
+			switch db.Type {
+			case schema.PostgresDatabaseType:
+				d, err = dsn.ResolvePostgresDSN(ctx, db.Runtime.Connections.Write)
+				if err != nil {
+					return nil, fmt.Errorf("failed to resolve postgres DSN: %w", err)
+				}
+			case schema.MySQLDatabaseType:
+				d, err = dsn.ResolveMySQLDSN(ctx, db.Runtime.Connections.Write)
+				if err != nil {
+					return nil, fmt.Errorf("failed to resolve mysql DSN: %w", err)
+				}
+				d = "mysql://" + d
+				// strip the tcp part
+				exp := regexp.MustCompile(`tcp\((.*?)\)`)
+				d = exp.ReplaceAllString(d, "$1")
+			}
+			u, err := url.Parse(d)
+			if err != nil {
+				return nil, fmt.Errorf("invalid DSN: %w", err)
+			}
+
+			db := dbmate.New(u)
+			db.AutoDumpSchema = false
+			db.Log = log.FromContext(ctx).Scope("migrate").WriterAt(log.Info)
+			db.MigrationsDir = []string{dir}
+			err = db.CreateAndMigrate()
+			if err != nil {
+				return nil, fmt.Errorf("failed to create and migrate database: %w", err)
+			}
 		}
-		migration.SqlMigration = &provisioner.SqlMigrationResource{
-			Output: &provisioner.SqlMigrationResource_SqlMigrationResourceOutput{},
-		}
-		return rc.Resource, nil
+		return nil, nil
 	}
 }
 

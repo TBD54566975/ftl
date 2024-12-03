@@ -144,6 +144,14 @@ class DatabaseRuntimeConnectionsEvent(_message.Message):
     def __init__(self, connections: _Optional[_Union[DatabaseRuntimeConnections, _Mapping]] = ...) -> None: ...
 
 class DatabaseRuntimeEvent(_message.Message):
+    __slots__ = ("id", "payload")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    PAYLOAD_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    payload: DatabaseRuntimeEventPayload
+    def __init__(self, id: _Optional[str] = ..., payload: _Optional[_Union[DatabaseRuntimeEventPayload, _Mapping]] = ...) -> None: ...
+
+class DatabaseRuntimeEventPayload(_message.Message):
     __slots__ = ("database_runtime_connections_event",)
     DATABASE_RUNTIME_CONNECTIONS_EVENT_FIELD_NUMBER: _ClassVar[int]
     database_runtime_connections_event: DatabaseRuntimeConnectionsEvent
