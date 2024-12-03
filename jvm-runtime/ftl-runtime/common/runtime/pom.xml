@@ -161,6 +161,7 @@
                         <include>**/module.proto</include>
                         <include>**/ftl.proto</include>
                         <include>**/language.proto</include>
+                        <include>**/publish.proto</include>
                     </includes>
                 </configuration>
             </plugin>
