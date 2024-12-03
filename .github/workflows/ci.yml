@@ -224,24 +224,25 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: cashapp/activate-hermit@v1.1.3
+      - name: Checkout code
+        uses: actions/checkout@v4
       - id: set-matrix
-        run: echo "matrix=$(just list-docker-images | tr -d '\n' | jq -R -s -c 'split(" ")')" >> "$GITHUB_OUTPUT"
-  docker-build:
+        name: Shard Docker Builds
+        uses: ./.github/actions/shard-docker-builds
+  build-docker-images:
     name: Build ${{ matrix.service }} Docker Image
     needs: docker-shard
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
         service: ${{ fromJson(needs.docker-shard.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: cashapp/activate-hermit@v1.1.3
-      - uses: ./.github/actions/build-cache
-      - name: Build Docker Image
-        run: just build-docker ${{ matrix.service }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build Image and Save
+        uses: ./.github/actions/save-docker-image
+        with:
+          service: ${{ matrix.service }}
   console-e2e:
     name: Console e2e
     # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
@@ -394,13 +395,13 @@ jobs:
           fi
   docker-success:
     name: Docker Success
-    needs: [docker-build]
+    needs: [build-docker-images]
     runs-on: ubuntu-latest
     if: ${{ always() }}
     steps:
       - name: Check docker builds result
         run: |
-          if [[ "${{ needs.docker-build.result }}" == "failure" ]]; then
+          if [[ "${{ needs.build-docker-images.result }}" == "failure" ]]; then
             echo "Docker builds failed"
             exit 1
           else

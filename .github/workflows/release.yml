@@ -10,10 +10,11 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: cashapp/activate-hermit@v1.1.3
+      - name: Checkout code
+        uses: actions/checkout@v4
       - id: set-matrix
-        run: echo "matrix=$(just list-docker-images | tr -d '\n' | jq -R -s -c 'split(" ")')" >> "$GITHUB_OUTPUT"
+        name: Shard Docker Builds
+        uses: ./.github/actions/shard-docker-builds
   build-docker-images:
     name: Build ${{ matrix.service }} Docker Image
     needs: docker-shard
@@ -24,19 +25,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Init Hermit
-        uses: cashapp/activate-hermit@v1.1.3
-      - name: Build Docker Image
-        run: |
-          just build-docker ${{ matrix.service }}
-          mkdir -p artifacts/ftl-${{ matrix.service }}
-          docker save -o artifacts/ftl-${{ matrix.service }}/ftl-${{ matrix.service }}.tar ftl0/ftl-${{ matrix.service }}:latest
-      - name: Temporarily save Docker image
-        uses: actions/upload-artifact@v4
+      - name: Build Image and Save
+        uses: ./.github/actions/save-docker-image
         with:
-          name: docker-${{ matrix.service }}-artifact
-          path: artifacts/ftl-${{ matrix.service }}
-          retention-days: 1
+          service: ${{ matrix.service }}
   release-docker:
     name: Release Docker Images
     runs-on: ubuntu-latest
