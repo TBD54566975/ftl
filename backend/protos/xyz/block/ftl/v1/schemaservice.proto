@@ -35,6 +35,13 @@ message PullSchemaResponse {
   bool module_removed = 6;
 }
 
+message UpdateModuleRuntimeRequest {
+  string module = 1;
+  ftl.schema.v1.ModuleRuntimeEvent event = 2;
+}
+
+message UpdateModuleRuntimeResponse {}
+
 service SchemaService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
@@ -53,4 +60,7 @@ service SchemaService {
   rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
+
+  // UpdateModuleRuntime is used to update the runtime configuration of a module.
+  rpc UpdateModuleRuntime(UpdateModuleRuntimeRequest) returns (UpdateModuleRuntimeResponse);
 }

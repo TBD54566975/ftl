@@ -30,7 +30,6 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/admin"
@@ -488,6 +487,33 @@ func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.Pul
 	return s.watchModuleChanges(ctx, func(response *ftlv1.PullSchemaResponse) error {
 		return stream.Send(response)
 	})
+}
+
+func (s *Service) UpdateModuleRuntime(ctx context.Context, req *connect.Request[ftlv1.UpdateModuleRuntimeRequest]) (*connect.Response[ftlv1.UpdateModuleRuntimeResponse], error) {
+	schemas, err := s.dal.GetActiveDeploymentSchemasByDeploymentKey(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get schemas: %w", err)
+	}
+	for deployment, module := range schemas {
+		if module.Name != req.Msg.Module {
+			continue
+		}
+		key, err := model.ParseDeploymentKey(deployment)
+		if err != nil {
+			return nil, fmt.Errorf("invalid deployment key: %w", err)
+		}
+		if module.Runtime == nil {
+			module.Runtime = &schema.ModuleRuntime{}
+		}
+		event := schema.ModuleRuntimeEventFromProto(req.Msg.Event)
+		module.Runtime.ApplyEvent(event)
+		err = s.dal.UpdateModuleSchema(ctx, key, module)
+		if err != nil {
+			return nil, fmt.Errorf("could not update schema for module %s: %w", module.Name, err)
+		}
+		break
+	}
+	return connect.NewResponse(&ftlv1.UpdateModuleRuntimeResponse{}), nil
 }
 
 func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.UpdateDeployRequest]) (response *connect.Response[ftlv1.UpdateDeployResponse], err error) {
@@ -1549,15 +1575,15 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 					delete(mostRecentDeploymentByModule, name)
 				}
 			} else if message, ok := notification.Message.Get(); ok {
-				moduleSchema := message.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
-				if moduleSchema.Runtime == nil {
-					moduleSchema.Runtime = &schemapb.ModuleRuntime{
-						Language: message.Language,
-					}
+				if message.Schema.Runtime == nil {
+					message.Schema.Runtime = &schema.ModuleRuntime{}
 				}
-				moduleSchema.Runtime.CreateTime = timestamppb.New(message.CreatedAt)
-				moduleSchema.Runtime.MinReplicas = int32(message.MinReplicas)
+				message.Schema.Runtime.Scaling = &schema.ModuleRuntimeScaling{
+					MinReplicas: int32(message.MinReplicas),
+				}
+				message.Schema.Runtime.CreateTime = message.CreatedAt
 
+				moduleSchema := message.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 				hasher := sha.New()
 				data := []byte(moduleSchema.String())
 				if _, err := hasher.Write(data); err != nil {

@@ -163,10 +163,10 @@ func (q *Queries) CompleteEventForSubscription(ctx context.Context, name string,
 
 const createDeployment = `-- name: CreateDeployment :exec
 INSERT INTO deployments (module_id, "schema", "key")
-VALUES ((SELECT id FROM modules WHERE name = $1::TEXT LIMIT 1), $2::BYTEA, $3::deployment_key)
+VALUES ((SELECT id FROM modules WHERE name = $1::TEXT LIMIT 1), $2::module_schema_pb, $3::deployment_key)
 `
 
-func (q *Queries) CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error {
+func (q *Queries) CreateDeployment(ctx context.Context, moduleName string, schema *schema.Module, key model.DeploymentKey) error {
 	_, err := q.db.ExecContext(ctx, createDeployment, moduleName, schema, key)
 	return err
 }
@@ -411,7 +411,7 @@ func (q *Queries) GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDe
 }
 
 const getActiveDeployments = `-- name: GetActiveDeployments :many
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, d.endpoint, m.name AS module_name, m.language, COUNT(r.id) AS replicas
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, d.endpoint, m.name AS module_name, m.language, COUNT(r.id) AS replicas, d.endpoint
 FROM deployments d
   JOIN modules m ON d.module_id = m.id
   LEFT JOIN runners r ON d.id = r.deployment_id
@@ -425,6 +425,7 @@ type GetActiveDeploymentsRow struct {
 	ModuleName string
 	Language   string
 	Replicas   int64
+	Endpoint   optional.Option[string]
 }
 
 func (q *Queries) GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error) {
@@ -449,6 +450,7 @@ func (q *Queries) GetActiveDeployments(ctx context.Context) ([]GetActiveDeployme
 			&i.ModuleName,
 			&i.Language,
 			&i.Replicas,
+			&i.Endpoint,
 		); err != nil {
 			return nil, err
 		}
@@ -1502,6 +1504,20 @@ func (q *Queries) SucceedAsyncCall(ctx context.Context, response api.OptionalEnc
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
+}
+
+const updateDeploymentSchema = `-- name: UpdateDeploymentSchema :exec
+UPDATE deployments
+SET schema = $1::module_schema_pb
+WHERE key = $2::deployment_key
+RETURNING 1
+`
+
+// Note that this can result in a race condition if the deployment is being updated by another process. This will go
+// away once we ditch the DB.
+func (q *Queries) UpdateDeploymentSchema(ctx context.Context, schema *schema.Module, key model.DeploymentKey) error {
+	_, err := q.db.ExecContext(ctx, updateDeploymentSchema, schema, key)
+	return err
 }
 
 const upsertController = `-- name: UpsertController :one

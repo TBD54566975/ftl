@@ -2,7 +2,6 @@ package dal
 
 import (
 	"context"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"time"
@@ -13,6 +12,7 @@ import (
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
 // DeploymentNotification is a notification from the database when a deployment changes.
@@ -20,19 +20,17 @@ type DeploymentNotification = dalmodel.Notification[dalmodel.Deployment, model.D
 
 type deploymentState struct {
 	Key         model.DeploymentKey
-	schemaHash  []byte
+	schemaHash  sha256.SHA256
 	minReplicas int
 }
 
 func deploymentStateFromDeployment(deployment dalmodel.Deployment) (deploymentState, error) {
-	hasher := sha256.New()
-	data := []byte(deployment.Schema.String())
-	if _, err := hasher.Write(data); err != nil {
+	h, err := deployment.Schema.Hash()
+	if err != nil {
 		return deploymentState{}, fmt.Errorf("failed to hash schema: %w", err)
 	}
-
 	return deploymentState{
-		schemaHash:  hasher.Sum(nil),
+		schemaHash:  h,
 		minReplicas: deployment.MinReplicas,
 		Key:         deployment.Key,
 	}, nil
@@ -76,7 +74,7 @@ func (d *DAL) PollDeployments(ctx context.Context) {
 				d.DeploymentChanges.Publish(DeploymentNotification{
 					Message: optional.Some(deployment),
 				})
-			} else if previousState.minReplicas != state.minReplicas {
+			} else if previousState.schemaHash != state.schemaHash {
 				logger.Tracef("Changed deployment: %s", name)
 				d.DeploymentChanges.Publish(DeploymentNotification{
 					Message: optional.Some(deployment),

@@ -11,7 +11,6 @@ import (
 	"github.com/alecthomas/types/optional"
 	inprocesspubsub "github.com/alecthomas/types/pubsub"
 	xmaps "golang.org/x/exp/maps"
-	"google.golang.org/protobuf/proto"
 
 	aregistry "github.com/TBD54566975/ftl/backend/controller/artefacts"
 	dalsql "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
@@ -209,11 +208,6 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		return in.Digest, in
 	})
 
-	schemaBytes, err := proto.Marshal(moduleSchema.ToProto())
-	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("failed to marshal schema: %w", err)
-	}
-
 	// TODO(aat): "schema" containing language?
 	_, err = tx.db.UpsertModule(ctx, language, moduleSchema.Name)
 	if err != nil {
@@ -240,7 +234,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	deploymentKey := model.NewDeploymentKey(moduleSchema.Name)
 
 	// Create the deployment
-	err = tx.db.CreateDeployment(ctx, moduleSchema.Name, schemaBytes, deploymentKey)
+	err = tx.db.CreateDeployment(ctx, moduleSchema.Name, moduleSchema, deploymentKey)
 	if err != nil {
 		return model.DeploymentKey{}, fmt.Errorf("failed to create deployment: %w", libdal.TranslatePGError(err))
 	}
@@ -565,6 +559,17 @@ func (d *DAL) GetActiveSchema(ctx context.Context) (*schema.Schema, error) {
 	return sch, nil
 }
 
+// UpdateModuleSchema updates the schema for a deployment in place.
+//
+// Note that this is racey as the deployment can be updated by another process. This will go away once we ditch the DB.
+func (d *DAL) UpdateModuleSchema(ctx context.Context, deployment model.DeploymentKey, module *schema.Module) error {
+	err := d.db.UpdateDeploymentSchema(ctx, module, deployment)
+	if err != nil {
+		return fmt.Errorf("failed to update deployment schema: %w", err)
+	}
+	return nil
+}
+
 func (d *DAL) GetDeploymentsWithMinReplicas(ctx context.Context) ([]dalmodel.Deployment, error) {
 	rows, err := d.db.GetDeploymentsWithMinReplicas(ctx)
 	if err != nil {
@@ -591,6 +596,19 @@ func (d *DAL) GetActiveDeploymentSchemas(ctx context.Context) ([]*schema.Module,
 		return nil, fmt.Errorf("could not get active deployments: %w", libdal.TranslatePGError(err))
 	}
 	return slices.Map(rows, func(in dalsql.GetActiveDeploymentSchemasRow) *schema.Module { return in.Schema }), nil
+}
+
+// GetActiveDeploymentSchemasByDeploymentKey returns the schema for all active deployments by deployment key.
+//
+// model.DeploymentKey is not used directly as a key as it's not a valid map key.
+func (d *DAL) GetActiveDeploymentSchemasByDeploymentKey(ctx context.Context) (map[string]*schema.Module, error) {
+	rows, err := d.db.GetActiveDeploymentSchemas(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get active deployments: %w", libdal.TranslatePGError(err))
+	}
+	return maps.FromSlice(rows, func(in dalsql.GetActiveDeploymentSchemasRow) (string, *schema.Module) {
+		return in.Key.String(), in.Schema
+	}), nil
 }
 
 type ProcessRunner struct {
