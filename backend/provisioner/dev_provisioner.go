@@ -23,15 +23,15 @@ var redPandaBrokers = []string{"127.0.0.1:19092"}
 var pubSubNameLimit = 249 // 255 (filename limit) - 6 (partition id)
 
 // NewDevProvisioner creates a new provisioner that provisions resources locally when running FTL in dev mode
-func NewDevProvisioner(postgresPort int, mysqlPort int) *InMemProvisioner {
+func NewDevProvisioner(postgresPort int, mysqlPort int, recreate bool) *InMemProvisioner {
 	return NewEmbeddedProvisioner(map[ResourceType]InMemResourceProvisionerFn{
-		ResourceTypePostgres:     provisionPostgres(postgresPort),
-		ResourceTypeMysql:        provisionMysql(mysqlPort),
+		ResourceTypePostgres:     provisionPostgres(postgresPort, recreate),
+		ResourceTypeMysql:        provisionMysql(mysqlPort, recreate),
 		ResourceTypeTopic:        provisionTopic(),
 		ResourceTypeSubscription: provisionSubscription(),
 	})
 }
-func provisionMysql(mysqlPort int) InMemResourceProvisionerFn {
+func provisionMysql(mysqlPort int, recreate bool) InMemResourceProvisionerFn {
 	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
 		mysql, ok := rc.Resource.Resource.(*provisioner.Resource_Mysql)
 		if !ok {
@@ -56,7 +56,7 @@ func provisionMysql(mysqlPort int) InMemResourceProvisionerFn {
 				return nil, fmt.Errorf("failed to query database: %w", err)
 			case <-retry.C:
 				var ret *provisioner.Resource
-				ret, err = establishMySQLDB(ctx, rc, mysqlDSN, dbName, mysql, mysqlPort)
+				ret, err = establishMySQLDB(ctx, rc, mysqlDSN, dbName, mysql, mysqlPort, recreate)
 				if err != nil {
 					logger.Debugf("failed to establish mysql database: %s", err.Error())
 					continue
@@ -67,7 +67,7 @@ func provisionMysql(mysqlPort int) InMemResourceProvisionerFn {
 	}
 }
 
-func establishMySQLDB(ctx context.Context, rc *provisioner.ResourceContext, mysqlDSN string, dbName string, mysql *provisioner.Resource_Mysql, mysqlPort int) (*provisioner.Resource, error) {
+func establishMySQLDB(ctx context.Context, rc *provisioner.ResourceContext, mysqlDSN string, dbName string, mysql *provisioner.Resource_Mysql, mysqlPort int, recreate bool) (*provisioner.Resource, error) {
 	conn, err := otelsql.Open("mysql", mysqlDSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to mysql: %w", err)
@@ -79,16 +79,19 @@ func establishMySQLDB(ctx context.Context, rc *provisioner.ResourceContext, mysq
 		return nil, fmt.Errorf("failed to query database: %w", err)
 	}
 	defer res.Close()
-	if res.Next() {
+
+	exists := res.Next()
+	if exists && recreate {
 		_, err = conn.ExecContext(ctx, "DROP DATABASE "+dbName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to drop database %q: %w", dbName, err)
 		}
 	}
-
-	_, err = conn.ExecContext(ctx, "CREATE DATABASE "+dbName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create database %q: %w", dbName, err)
+	if !exists || recreate {
+		_, err = conn.ExecContext(ctx, "CREATE DATABASE "+dbName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create database %q: %w", dbName, err)
+		}
 	}
 
 	if mysql.Mysql == nil {
@@ -119,7 +122,7 @@ func ProvisionPostgresForTest(ctx context.Context, module string, id string) (st
 	rc.Resource = &provisioner.Resource{
 		Resource: &provisioner.Resource_Postgres{},
 	}
-	res, err := provisionPostgres(15432)(ctx, rc, module, id+"_test", nil)
+	res, err := provisionPostgres(15432, true)(ctx, rc, module, id+"_test", nil)
 	if err != nil {
 		return "", err
 	}
@@ -132,14 +135,14 @@ func ProvisionMySQLForTest(ctx context.Context, module string, id string) (strin
 	rc.Resource = &provisioner.Resource{
 		Resource: &provisioner.Resource_Mysql{},
 	}
-	res, err := provisionMysql(13306)(ctx, rc, module, id+"_test", nil)
+	res, err := provisionMysql(13306, true)(ctx, rc, module, id+"_test", nil)
 	if err != nil {
 		return "", err
 	}
 	return res.GetMysql().GetOutput().WriteConnector.GetDsnDatabaseConnector().GetDsn(), nil
 }
 
-func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provisioner.ResourceContext, module string, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
+func provisionPostgres(postgresPort int, recreate bool) func(ctx context.Context, rc *provisioner.ResourceContext, module string, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
 	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
 		pg, ok := rc.Resource.Resource.(*provisioner.Resource_Postgres)
 		if !ok {
@@ -164,7 +167,9 @@ func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provision
 			return nil, fmt.Errorf("failed to query database: %w", err)
 		}
 		defer res.Close()
-		if res.Next() {
+
+		exists := res.Next()
+		if exists && recreate {
 			// Terminate any dangling connections.
 			_, err = conn.ExecContext(ctx, `
 			SELECT pid, pg_terminate_backend(pid)
@@ -179,9 +184,11 @@ func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provision
 				return nil, fmt.Errorf("failed to drop database %q: %w", dbName, err)
 			}
 		}
-		_, err = conn.ExecContext(ctx, "CREATE DATABASE "+dbName)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create database %q: %w", dbName, err)
+		if !exists || recreate {
+			_, err = conn.ExecContext(ctx, "CREATE DATABASE "+dbName)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create database %q: %w", dbName, err)
+			}
 		}
 
 		if pg.Postgres == nil {

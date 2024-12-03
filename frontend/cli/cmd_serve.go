@@ -42,7 +42,6 @@ import (
 )
 
 type serveCmd struct {
-	Recreate bool `help:"Recreate the database even if it already exists." default:"false"`
 	serveCommonConfig
 }
 
@@ -62,6 +61,7 @@ type serveCommonConfig struct {
 	GrafanaImage        string               `help:"The container image to start for the automatic Grafana instance" default:"grafana/otel-lgtm" env:"FTL_GRAFANA_IMAGE" hidden:""`
 	DisableGrafana      bool                 `help:"Disable the automatic Grafana that is started if no telemetry collector is specified." default:"false"`
 	Ingress             ingress.Config       `embed:"" prefix:"ingress-"`
+	Recreate            bool                 `help:"Recreate any stateful resources if they already exist." default:"false"`
 	controller.CommonConfig
 	provisioner.CommonProvisionerConfig
 }
@@ -256,7 +256,7 @@ func (s *serveCommonConfig) run(
 		provisionerRegistry := &provisioner.ProvisionerRegistry{
 			Bindings: []*provisioner.ProvisionerBinding{
 				{
-					Provisioner: provisioner.NewDevProvisioner(s.DBPort, s.MysqlPort),
+					Provisioner: provisioner.NewDevProvisioner(s.DBPort, s.MysqlPort, s.Recreate),
 					Types: []provisioner.ResourceType{
 						provisioner.ResourceTypeMysql,
 						provisioner.ResourceTypePostgres,
