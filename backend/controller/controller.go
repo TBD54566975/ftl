@@ -1075,7 +1075,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		return nil, fmt.Errorf("invalid module schema: %w", err)
 	}
 
-	dkey, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts)
+	dkey, err := s.dal.CreateDeployment(ctx, ms.Runtime.Base.Language, module, artefacts)
 
 	if err != nil {
 		logger.Errorf(err, "Could not create deployment")
@@ -1581,7 +1581,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				message.Schema.Runtime.Scaling = &schema.ModuleRuntimeScaling{
 					MinReplicas: int32(message.MinReplicas),
 				}
-				message.Schema.Runtime.CreateTime = message.CreatedAt
+				message.Schema.Runtime.Base.CreateTime = message.CreatedAt
 
 				moduleSchema := message.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 				hasher := sha.New()

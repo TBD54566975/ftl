@@ -1947,7 +1947,7 @@ export class Module extends Message<Module> {
   decls: Decl[] = [];
 
   /**
-   * @generated from field: xyz.block.ftl.schema.v1.ModuleRuntime runtime = 6;
+   * @generated from field: xyz.block.ftl.schema.v1.ModuleRuntime runtime = 31634;
    */
   runtime?: ModuleRuntime;
 
@@ -1964,7 +1964,7 @@ export class Module extends Message<Module> {
     { no: 3, name: "builtin", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 4, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "decls", kind: "message", T: Decl, repeated: true },
-    { no: 6, name: "runtime", kind: "message", T: ModuleRuntime },
+    { no: 31634, name: "runtime", kind: "message", T: ModuleRuntime },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Module {
@@ -1988,6 +1988,55 @@ export class Module extends Message<Module> {
  * @generated from message xyz.block.ftl.schema.v1.ModuleRuntime
  */
 export class ModuleRuntime extends Message<ModuleRuntime> {
+  /**
+   * @generated from field: xyz.block.ftl.schema.v1.ModuleRuntimeBase base = 1;
+   */
+  base?: ModuleRuntimeBase;
+
+  /**
+   * @generated from field: optional xyz.block.ftl.schema.v1.ModuleRuntimeScaling scaling = 2;
+   */
+  scaling?: ModuleRuntimeScaling;
+
+  /**
+   * @generated from field: optional xyz.block.ftl.schema.v1.ModuleRuntimeDeployment deployment = 3;
+   */
+  deployment?: ModuleRuntimeDeployment;
+
+  constructor(data?: PartialMessage<ModuleRuntime>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.schema.v1.ModuleRuntime";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "base", kind: "message", T: ModuleRuntimeBase },
+    { no: 2, name: "scaling", kind: "message", T: ModuleRuntimeScaling, opt: true },
+    { no: 3, name: "deployment", kind: "message", T: ModuleRuntimeDeployment, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleRuntime {
+    return new ModuleRuntime().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleRuntime {
+    return new ModuleRuntime().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleRuntime {
+    return new ModuleRuntime().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ModuleRuntime | PlainMessage<ModuleRuntime> | undefined, b: ModuleRuntime | PlainMessage<ModuleRuntime> | undefined): boolean {
+    return proto3.util.equals(ModuleRuntime, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.schema.v1.ModuleRuntimeBase
+ */
+export class ModuleRuntimeBase extends Message<ModuleRuntimeBase> {
   /**
    * @generated from field: google.protobuf.Timestamp create_time = 1;
    */
@@ -2013,47 +2062,35 @@ export class ModuleRuntime extends Message<ModuleRuntime> {
    */
   image?: string;
 
-  /**
-   * @generated from field: optional xyz.block.ftl.schema.v1.ModuleRuntimeScaling scaling = 7;
-   */
-  scaling?: ModuleRuntimeScaling;
-
-  /**
-   * @generated from field: optional xyz.block.ftl.schema.v1.ModuleRuntimeDeployment deployment = 8;
-   */
-  deployment?: ModuleRuntimeDeployment;
-
-  constructor(data?: PartialMessage<ModuleRuntime>) {
+  constructor(data?: PartialMessage<ModuleRuntimeBase>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.schema.v1.ModuleRuntime";
+  static readonly typeName = "xyz.block.ftl.schema.v1.ModuleRuntimeBase";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "create_time", kind: "message", T: Timestamp },
     { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "os", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "arch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 7, name: "scaling", kind: "message", T: ModuleRuntimeScaling, opt: true },
-    { no: 8, name: "deployment", kind: "message", T: ModuleRuntimeDeployment, opt: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleRuntime {
-    return new ModuleRuntime().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleRuntimeBase {
+    return new ModuleRuntimeBase().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleRuntime {
-    return new ModuleRuntime().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleRuntimeBase {
+    return new ModuleRuntimeBase().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleRuntime {
-    return new ModuleRuntime().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleRuntimeBase {
+    return new ModuleRuntimeBase().fromJsonString(jsonString, options);
   }
 
-  static equals(a: ModuleRuntime | PlainMessage<ModuleRuntime> | undefined, b: ModuleRuntime | PlainMessage<ModuleRuntime> | undefined): boolean {
-    return proto3.util.equals(ModuleRuntime, a, b);
+  static equals(a: ModuleRuntimeBase | PlainMessage<ModuleRuntimeBase> | undefined, b: ModuleRuntimeBase | PlainMessage<ModuleRuntimeBase> | undefined): boolean {
+    return proto3.util.equals(ModuleRuntimeBase, a, b);
   }
 }
 
@@ -2109,13 +2146,19 @@ export class ModuleRuntimeEvent extends Message<ModuleRuntimeEvent> {
    */
   value: {
     /**
-     * @generated from field: xyz.block.ftl.schema.v1.ModuleRuntimeDeployment module_runtime_deployment = 2;
+     * @generated from field: xyz.block.ftl.schema.v1.ModuleRuntimeBase module_runtime_base = 1;
+     */
+    value: ModuleRuntimeBase;
+    case: "moduleRuntimeBase";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.schema.v1.ModuleRuntimeDeployment module_runtime_deployment = 3;
      */
     value: ModuleRuntimeDeployment;
     case: "moduleRuntimeDeployment";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.schema.v1.ModuleRuntimeScaling module_runtime_scaling = 1;
+     * @generated from field: xyz.block.ftl.schema.v1.ModuleRuntimeScaling module_runtime_scaling = 2;
      */
     value: ModuleRuntimeScaling;
     case: "moduleRuntimeScaling";
@@ -2129,8 +2172,9 @@ export class ModuleRuntimeEvent extends Message<ModuleRuntimeEvent> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.schema.v1.ModuleRuntimeEvent";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 2, name: "module_runtime_deployment", kind: "message", T: ModuleRuntimeDeployment, oneof: "value" },
-    { no: 1, name: "module_runtime_scaling", kind: "message", T: ModuleRuntimeScaling, oneof: "value" },
+    { no: 1, name: "module_runtime_base", kind: "message", T: ModuleRuntimeBase, oneof: "value" },
+    { no: 3, name: "module_runtime_deployment", kind: "message", T: ModuleRuntimeDeployment, oneof: "value" },
+    { no: 2, name: "module_runtime_scaling", kind: "message", T: ModuleRuntimeScaling, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleRuntimeEvent {

@@ -156,10 +156,13 @@ func loadProtoSchema(projectConfig projectconfig.Config, config moduleconfig.Abs
 		module.Runtime = runtime
 	}
 	module.Runtime = runtime
-	if runtime.CreateTime == nil {
-		runtime.CreateTime = timestamppb.Now()
+	if runtime.Base == nil {
+		runtime.Base = &schemapb.ModuleRuntimeBase{}
 	}
-	runtime.Language = config.Language
+	if runtime.Base.CreateTime == nil {
+		runtime.Base.CreateTime = timestamppb.Now()
+	}
+	runtime.Base.Language = config.Language
 	return module, nil
 }
 

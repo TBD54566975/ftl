@@ -258,17 +258,21 @@ message Module {
   bool builtin = 3;
   string name = 4;
   repeated Decl decls = 5;
-  ModuleRuntime runtime = 6;
+  ModuleRuntime runtime = 31634;
 }
 
 message ModuleRuntime {
+  ModuleRuntimeBase base = 1;
+  optional ModuleRuntimeScaling scaling = 2;
+  optional ModuleRuntimeDeployment deployment = 3;
+}
+
+message ModuleRuntimeBase {
   google.protobuf.Timestamp create_time = 1;
   string language = 2;
   optional string os = 3;
   optional string arch = 4;
   optional string image = 5;
-  optional ModuleRuntimeScaling scaling = 7;
-  optional ModuleRuntimeDeployment deployment = 8;
 }
 
 message ModuleRuntimeDeployment {
@@ -278,8 +282,9 @@ message ModuleRuntimeDeployment {
 
 message ModuleRuntimeEvent {
   oneof value {
-    ModuleRuntimeDeployment module_runtime_deployment = 2;
-    ModuleRuntimeScaling module_runtime_scaling = 1;
+    ModuleRuntimeBase module_runtime_base = 1;
+    ModuleRuntimeDeployment module_runtime_deployment = 3;
+    ModuleRuntimeScaling module_runtime_scaling = 2;
   }
 }
 
