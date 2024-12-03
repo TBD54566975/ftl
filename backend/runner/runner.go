@@ -643,8 +643,8 @@ func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, start
 	logger := log.FromContext(ctx)
 
 	databases := map[string]*schema.Database{}
-	for _, decl := range module.Decls {
-		if db, ok := decl.(*schema.Database); ok && db.Type == "postgres" {
+	for db := range slices.FilterVariants[*schema.Database](module.Decls) {
+		if db.Type == "postgres" {
 			databases[db.Name] = db
 		}
 	}

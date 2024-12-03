@@ -27,6 +27,7 @@ PROTOS_OUT := "backend/protos/xyz/block/ftl/console/v1/console.pb.go " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/schema/v1/schema_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/publish/v1/publish_pb.ts"
+GO_SCHEMA_ROOTS := "./internal/schema.Schema ./internal/schema.ModuleRuntimeEvent"
 # Configuration for building Docker images
 DOCKER_IMAGES := '''
 {
@@ -196,10 +197,10 @@ go2proto:
   @mk "{{SCHEMA_OUT}}" : cmd/go2proto internal/schema -- go2proto -o "{{SCHEMA_OUT}}" \
     -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1;schemapb"' \
     -O 'java_multiple_files=true' \
-    xyz.block.ftl.schema.v1 ./internal/schema.Schema && buf format -w && buf lint
+    xyz.block.ftl.schema.v1 {{GO_SCHEMA_ROOTS}} && buf format -w && buf lint
 
 # Unconditionally rebuild protos
-build-protos-unconditionally: lint-protos pnpm-install go2proto
+build-protos-unconditionally: go2proto lint-protos pnpm-install
   cd backend/protos && buf generate
 
 # Run integration test(s)
