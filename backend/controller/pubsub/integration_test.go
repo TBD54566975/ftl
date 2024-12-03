@@ -16,6 +16,8 @@ import (
 )
 
 func TestPubSub(t *testing.T) {
+	t.Skip("Pubsub feature is transitioning to Kafka implementation")
+
 	calls := 20
 	events := calls * 10
 	in.Run(t,
@@ -43,50 +45,9 @@ func TestPubSub(t *testing.T) {
 	)
 }
 
-func TestConsumptionDelay(t *testing.T) {
-	in.Run(t,
-		in.WithLanguages("go", "java"),
-		in.CopyModule("publisher"),
-		in.CopyModule("subscriber"),
-		in.Deploy("publisher"),
-		in.Deploy("subscriber"),
-
-		// publish events with a small delay between each
-		// pubsub should trigger its poll a few times during this period
-		// each time it should continue processing each event until it reaches one that is too new to process
-		func(t testing.TB, ic in.TestContext) {
-			for i := 0; i < 120; i++ {
-				in.Call("publisher", "publishOne", in.Obj{}, func(t testing.TB, resp in.Obj) {})(t, ic)
-				time.Sleep(time.Millisecond * 25)
-			}
-		},
-
-		in.Sleep(time.Second*2),
-
-		// Get all event created ats, and all async call created ats
-		// Compare each, make sure none are less than 0.1s of each other
-		in.QueryRow("ftl", `
-			WITH event_times AS (
-				SELECT created_at, ROW_NUMBER() OVER (ORDER BY created_at) AS row_num
-				FROM (
-				select * from topic_events order by created_at
-				) AS sub_event_times
-			),
-			async_call_times AS (
-				SELECT created_at, ROW_NUMBER() OVER (ORDER BY created_at) AS row_num
-				FROM (
-				select * from async_calls ac order by created_at
-				) AS sub_async_calls
-			)
-			SELECT COUNT(*)
-			FROM event_times
-			JOIN async_call_times ON event_times.row_num = async_call_times.row_num
-			WHERE ABS(EXTRACT(EPOCH FROM (event_times.created_at - async_call_times.created_at))) < 0.1;
-		`, 0),
-	)
-}
-
 func TestRetry(t *testing.T) {
+	t.Skip("Pubsub feature is transitioning to Kafka implementation")
+
 	retriesPerCall := 2
 	in.Run(t,
 		in.WithLanguages("java", "go"),
