@@ -820,43 +820,44 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	return s.callWithRequest(ctx, headers.CopyRequestForForwarding(req), optional.None[model.RequestKey](), optional.None[model.RequestKey](), "")
 }
 
-func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {
-	// Publish the event.
-	now := time.Now().UTC()
-	pubishError := optional.None[string]()
-	err := s.pubSub.PublishEventForTopic(ctx, req.Msg.Topic.Module, req.Msg.Topic.Name, req.Msg.Caller, req.Msg.Body)
-	if err != nil {
-		pubishError = optional.Some(err.Error())
-	}
+// TODO: remove
+// func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {
+// 	// Publish the event.
+// 	now := time.Now().UTC()
+// 	pubishError := optional.None[string]()
+// 	err := s.pubSub.PublishEventForTopic(ctx, req.Msg.Topic.Module, req.Msg.Topic.Name, req.Msg.Caller, req.Msg.Body)
+// 	if err != nil {
+// 		pubishError = optional.Some(err.Error())
+// 	}
 
-	requestKey := optional.None[string]()
-	if rk, err := rpc.RequestKeyFromContext(ctx); err == nil {
-		if rk, ok := rk.Get(); ok {
-			requestKey = optional.Some(rk.String())
-		}
-	}
+// 	requestKey := optional.None[string]()
+// 	if rk, err := rpc.RequestKeyFromContext(ctx); err == nil {
+// 		if rk, ok := rk.Get(); ok {
+// 			requestKey = optional.Some(rk.String())
+// 		}
+// 	}
 
-	// Add to timeline.
-	sstate := s.schemaState.Load()
-	module := req.Msg.Topic.Module
-	route, ok := sstate.routes[module]
-	if ok {
-		s.timeline.EnqueueEvent(ctx, &timeline.PubSubPublish{
-			DeploymentKey: route.Deployment,
-			RequestKey:    requestKey,
-			Time:          now,
-			SourceVerb:    schema.Ref{Name: req.Msg.Caller, Module: req.Msg.Topic.Module},
-			Topic:         req.Msg.Topic.Name,
-			Request:       req.Msg,
-			Error:         pubishError,
-		})
-	}
+// 	// Add to timeline.
+// 	sstate := s.schemaState.Load()
+// 	module := req.Msg.Topic.Module
+// 	route, ok := sstate.routes[module]
+// 	if ok {
+// 		s.timeline.EnqueueEvent(ctx, &timeline.PubSubPublish{
+// 			DeploymentKey: route.Deployment,
+// 			RequestKey:    requestKey,
+// 			Time:          now,
+// 			SourceVerb:    schema.Ref{Name: req.Msg.Caller, Module: req.Msg.Topic.Module},
+// 			Topic:         req.Msg.Topic.Name,
+// 			Request:       req.Msg,
+// 			Error:         pubishError,
+// 		})
+// 	}
 
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to publish a event to topic %s:%s: %w", req.Msg.Topic.Module, req.Msg.Topic.Name, err))
-	}
-	return connect.NewResponse(&ftlv1.PublishEventResponse{}), nil
-}
+// 	if err != nil {
+// 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to publish a event to topic %s:%s: %w", req.Msg.Topic.Module, req.Msg.Topic.Name, err))
+// 	}
+// 	return connect.NewResponse(&ftlv1.PublishEventResponse{}), nil
+// }
 
 func (s *Service) callWithRequest(
 	ctx context.Context,

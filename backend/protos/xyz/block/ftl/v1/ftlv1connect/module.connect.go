@@ -41,9 +41,6 @@ const (
 	// ModuleServiceAcquireLeaseProcedure is the fully-qualified name of the ModuleService's
 	// AcquireLease RPC.
 	ModuleServiceAcquireLeaseProcedure = "/xyz.block.ftl.v1.ModuleService/AcquireLease"
-	// ModuleServicePublishEventProcedure is the fully-qualified name of the ModuleService's
-	// PublishEvent RPC.
-	ModuleServicePublishEventProcedure = "/xyz.block.ftl.v1.ModuleService/PublishEvent"
 )
 
 // ModuleServiceClient is a client for the xyz.block.ftl.v1.ModuleService service.
@@ -56,8 +53,6 @@ type ModuleServiceClient interface {
 	//
 	// Returns ResourceExhausted if the lease is held.
 	AcquireLease(context.Context) *connect.BidiStreamForClient[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]
-	// Publish an event to a topic.
-	PublishEvent(context.Context, *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error)
 }
 
 // NewModuleServiceClient constructs a client for the xyz.block.ftl.v1.ModuleService service. By
@@ -86,11 +81,6 @@ func NewModuleServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			baseURL+ModuleServiceAcquireLeaseProcedure,
 			opts...,
 		),
-		publishEvent: connect.NewClient[v1.PublishEventRequest, v1.PublishEventResponse](
-			httpClient,
-			baseURL+ModuleServicePublishEventProcedure,
-			opts...,
-		),
 	}
 }
 
@@ -99,7 +89,6 @@ type moduleServiceClient struct {
 	ping             *connect.Client[v1.PingRequest, v1.PingResponse]
 	getModuleContext *connect.Client[v1.GetModuleContextRequest, v1.GetModuleContextResponse]
 	acquireLease     *connect.Client[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]
-	publishEvent     *connect.Client[v1.PublishEventRequest, v1.PublishEventResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.ModuleService.Ping.
@@ -117,11 +106,6 @@ func (c *moduleServiceClient) AcquireLease(ctx context.Context) *connect.BidiStr
 	return c.acquireLease.CallBidiStream(ctx)
 }
 
-// PublishEvent calls xyz.block.ftl.v1.ModuleService.PublishEvent.
-func (c *moduleServiceClient) PublishEvent(ctx context.Context, req *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error) {
-	return c.publishEvent.CallUnary(ctx, req)
-}
-
 // ModuleServiceHandler is an implementation of the xyz.block.ftl.v1.ModuleService service.
 type ModuleServiceHandler interface {
 	// Ping service for readiness.
@@ -132,8 +116,6 @@ type ModuleServiceHandler interface {
 	//
 	// Returns ResourceExhausted if the lease is held.
 	AcquireLease(context.Context, *connect.BidiStream[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]) error
-	// Publish an event to a topic.
-	PublishEvent(context.Context, *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error)
 }
 
 // NewModuleServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -158,11 +140,6 @@ func NewModuleServiceHandler(svc ModuleServiceHandler, opts ...connect.HandlerOp
 		svc.AcquireLease,
 		opts...,
 	)
-	moduleServicePublishEventHandler := connect.NewUnaryHandler(
-		ModuleServicePublishEventProcedure,
-		svc.PublishEvent,
-		opts...,
-	)
 	return "/xyz.block.ftl.v1.ModuleService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ModuleServicePingProcedure:
@@ -171,8 +148,6 @@ func NewModuleServiceHandler(svc ModuleServiceHandler, opts ...connect.HandlerOp
 			moduleServiceGetModuleContextHandler.ServeHTTP(w, r)
 		case ModuleServiceAcquireLeaseProcedure:
 			moduleServiceAcquireLeaseHandler.ServeHTTP(w, r)
-		case ModuleServicePublishEventProcedure:
-			moduleServicePublishEventHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -192,8 +167,4 @@ func (UnimplementedModuleServiceHandler) GetModuleContext(context.Context, *conn
 
 func (UnimplementedModuleServiceHandler) AcquireLease(context.Context, *connect.BidiStream[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ModuleService.AcquireLease is not implemented"))
-}
-
-func (UnimplementedModuleServiceHandler) PublishEvent(context.Context, *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ModuleService.PublishEvent is not implemented"))
 }
