@@ -1,0 +1,22 @@
+name: Load Docker Images
+description: Loads all docker images built in previous steps
+inputs:
+  service:
+    description: The service to build
+    required: true
+runs:
+  using: "composite"
+  # Make sure to keep these cache entries in sync with those in writecache.yml
+  steps:
+    - name: Init Hermit
+      uses: cashapp/activate-hermit@v1.1.3
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        pattern: docker-*-artifact
+    - name: Load Docker images
+      run: |
+        for tar in artifacts/docker-*/ftl-*.tar; do
+          docker load -i "$tar"
+        done
