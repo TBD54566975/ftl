@@ -30,9 +30,15 @@ func TestKubeScaling(t *testing.T) {
 		in.WithKubernetes(),
 		in.CopyModule("echo"),
 		in.Deploy("echo"),
+		in.CopyModule("proxy"),
+		in.Deploy("proxy"),
 		in.CopyModule("naughty"),
 		in.Deploy("naughty"),
 		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
+			assert.Equal(t, "Hello, Bob!!!", response)
+		}),
+		in.Call("proxy", "proxy", "Bob", func(t testing.TB, response string) {
+			// Verify peer to peer communication
 			assert.Equal(t, "Hello, Bob!!!", response)
 		}),
 		in.VerifyKubeState(func(ctx context.Context, t testing.TB, namespace string, client kubernetes.Clientset) {
