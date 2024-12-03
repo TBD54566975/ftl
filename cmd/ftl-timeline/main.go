@@ -11,8 +11,8 @@ import (
 	"github.com/alecthomas/kong"
 
 	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/backend/ingress"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
@@ -24,7 +24,7 @@ var cli struct {
 	Version             kong.VersionFlag     `help:"Show version."`
 	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
 	LogConfig           log.Config           `embed:"" prefix:"log-"`
-	HTTPIngressConfig   ingress.Config       `embed:""`
+	TimelineConfig      timeline.Config      `embed:"" prefix:"timeline-"`
 	ConfigFlag          string               `name:"config" short:"C" help:"Path to FTL project cf file." env:"FTL_CONFIG" placeholder:"FILE"`
 	ControllerEndpoint  *url.URL             `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
 }
@@ -41,13 +41,12 @@ func main() {
 	)
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
-	err = observability.Init(ctx, false, "", "ftl-http-ingress", ftl.Version, cli.ObservabilityConfig)
+	err = observability.Init(ctx, false, "", "ftl-timeline", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
-	verbClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.ControllerEndpoint.String(), log.Error)
 	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.ControllerEndpoint.String(), log.Error)
 	schemaEventSource := schemaeventsource.New(ctx, schemaClient)
 
-	err = ingress.Start(ctx, cli.HTTPIngressConfig, schemaEventSource, verbClient)
+	err = timeline.Start(ctx, cli.TimelineConfig, schemaEventSource)
 	kctx.FatalIfErrorf(err, "failed to start HTTP ingress")
 }
