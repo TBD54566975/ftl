@@ -29,7 +29,7 @@ class GetDeploymentContextRequest(_message.Message):
     def __init__(self, deployment: _Optional[str] = ...) -> None: ...
 
 class GetDeploymentContextResponse(_message.Message):
-    __slots__ = ("module", "deployment", "configs", "secrets", "databases")
+    __slots__ = ("module", "deployment", "configs", "secrets", "databases", "routes")
     class DbType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
         DB_TYPE_UNSPECIFIED: _ClassVar[GetDeploymentContextResponse.DbType]
@@ -47,6 +47,13 @@ class GetDeploymentContextResponse(_message.Message):
         type: GetDeploymentContextResponse.DbType
         dsn: str
         def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[GetDeploymentContextResponse.DbType, str]] = ..., dsn: _Optional[str] = ...) -> None: ...
+    class Route(_message.Message):
+        __slots__ = ("module", "uri")
+        MODULE_FIELD_NUMBER: _ClassVar[int]
+        URI_FIELD_NUMBER: _ClassVar[int]
+        module: str
+        uri: str
+        def __init__(self, module: _Optional[str] = ..., uri: _Optional[str] = ...) -> None: ...
     class ConfigsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -66,9 +73,11 @@ class GetDeploymentContextResponse(_message.Message):
     CONFIGS_FIELD_NUMBER: _ClassVar[int]
     SECRETS_FIELD_NUMBER: _ClassVar[int]
     DATABASES_FIELD_NUMBER: _ClassVar[int]
+    ROUTES_FIELD_NUMBER: _ClassVar[int]
     module: str
     deployment: str
     configs: _containers.ScalarMap[str, bytes]
     secrets: _containers.ScalarMap[str, bytes]
     databases: _containers.RepeatedCompositeFieldContainer[GetDeploymentContextResponse.DSN]
-    def __init__(self, module: _Optional[str] = ..., deployment: _Optional[str] = ..., configs: _Optional[_Mapping[str, bytes]] = ..., secrets: _Optional[_Mapping[str, bytes]] = ..., databases: _Optional[_Iterable[_Union[GetDeploymentContextResponse.DSN, _Mapping]]] = ...) -> None: ...
+    routes: _containers.RepeatedCompositeFieldContainer[GetDeploymentContextResponse.Route]
+    def __init__(self, module: _Optional[str] = ..., deployment: _Optional[str] = ..., configs: _Optional[_Mapping[str, bytes]] = ..., secrets: _Optional[_Mapping[str, bytes]] = ..., databases: _Optional[_Iterable[_Union[GetDeploymentContextResponse.DSN, _Mapping]]] = ..., routes: _Optional[_Iterable[_Union[GetDeploymentContextResponse.Route, _Mapping]]] = ...) -> None: ...

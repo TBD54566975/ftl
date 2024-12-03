@@ -34,11 +34,17 @@ message GetDeploymentContextResponse {
     string dsn = 3;
   }
 
+  message Route {
+    string module = 1;
+    string uri = 2;
+  }
+
   string module = 1;
   string deployment = 2;
   map<string, bytes> configs = 3;
   map<string, bytes> secrets = 4;
   repeated DSN databases = 5;
+  repeated Route routes = 6;
 }
 
 // ModuleService is the service that modules use to interact with the Controller.

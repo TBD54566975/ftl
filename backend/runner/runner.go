@@ -361,10 +361,10 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 		}
 		s.pubSub = pubSub
 
-		moduleServiceClient := rpc.Dial(ftldeploymentconnect.NewDeploymentServiceClient, s.config.ControllerEndpoint.String(), log.Error)
+		deploymentServiceClient := rpc.Dial(ftldeploymentconnect.NewDeploymentServiceClient, s.config.ControllerEndpoint.String(), log.Error)
 		leaseServiceClient := rpc.Dial(ftlleaseconnect.NewLeaseServiceClient, s.config.ControllerEndpoint.String(), log.Error)
-		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, s.config.ControllerEndpoint.String(), log.Error)
-		s.proxy = proxy.New(verbServiceClient, moduleServiceClient, leaseServiceClient)
+
+		s.proxy = proxy.New(deploymentServiceClient, leaseServiceClient)
 
 		parse, err := url.Parse("http://127.0.0.1:0")
 		if err != nil {

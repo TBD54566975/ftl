@@ -23,6 +23,7 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
+	subscriptions "github.com/alecthomas/types/pubsub"
 	"github.com/jackc/pgx/v5"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
@@ -220,7 +221,8 @@ type Service struct {
 	increaseReplicaFailures map[string]int
 	asyncCallsLock          sync.Mutex
 
-	clientLock sync.Mutex
+	clientLock        sync.Mutex
+	routeTableUpdated *subscriptions.Topic[struct{}]
 }
 
 func New(
@@ -261,6 +263,7 @@ func New(
 		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
 		config:                  config,
 		increaseReplicaFailures: map[string]int{},
+		routeTableUpdated:       subscriptions.New[struct{}](),
 	}
 	svc.schemaState.Store(schemaState{routes: map[string]Route{}, schema: &schema.Schema{}})
 
@@ -706,6 +709,10 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 
 // GetDeploymentContext retrieves config, secrets and DSNs for a module.
 func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request[ftldeployment.GetDeploymentContextRequest], resp *connect.ServerStream[ftldeployment.GetDeploymentContextResponse]) error {
+
+	logger := log.FromContext(ctx)
+	updates := s.routeTableUpdated.Subscribe(nil)
+	defer s.routeTableUpdated.Unsubscribe(updates)
 	depName := req.Msg.Deployment
 	if !strings.HasPrefix(depName, "dpl-") {
 		// For hot reload endponts we might not have a deployment key
@@ -733,10 +740,38 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 	// Initialize checksum to -1; a zero checksum does occur when the context contains no settings
 	lastChecksum := int64(-1)
 
+	callableModuleNames := []string{}
+	callableModules := map[string]bool{}
+	for _, decl := range deployment.Schema.Decls {
+		switch entry := decl.(type) {
+		case *schema.Verb:
+			for _, md := range entry.Metadata {
+				if calls, ok := md.(*schema.MetadataCalls); ok {
+					for _, call := range calls.Calls {
+						callableModules[call.Module] = true
+					}
+				}
+			}
+		default:
+
+		}
+	}
+	callableModuleNames = maps.Keys(callableModules)
+	callableModuleNames = slices.Sort(callableModuleNames)
+	logger.Debugf("Modules %s can call %v", module, callableModuleNames)
 	for {
+		logger.Debugf("Checking for updated deployment context for: %s", key.String())
 		h := sha.New()
 
 		configs, err := s.cm.MapForModule(ctx, module)
+		routeTable := map[string]string{}
+		routes := s.schemaState.Load().routes
+		for _, module := range callableModuleNames {
+			if route, ok := routes[module]; ok {
+				routeTable[module] = route.Endpoint
+			}
+		}
+
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
 		}
@@ -751,11 +786,15 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 		if err := hashConfigurationMap(h, secrets); err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not detect change on secrets: %w", err))
 		}
+		if err := hashRoutesTable(h, routeTable); err != nil {
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not detect change on routes: %w", err))
+		}
 
 		checksum := int64(binary.BigEndian.Uint64((h.Sum(nil))[0:8]))
 
 		if checksum != lastChecksum {
-			response := deploymentcontext.NewBuilder(module).AddConfigs(configs).AddSecrets(secrets).Build().ToProto()
+			logger.Debugf("Sending module context for: %s routes: %v", module, routeTable)
+			response := deploymentcontext.NewBuilder(module).AddConfigs(configs).AddSecrets(secrets).AddRoutes(routeTable).Build().ToProto()
 
 			if err := resp.Send(response); err != nil {
 				return connect.NewError(connect.CodeInternal, fmt.Errorf("could not send response: %w", err))
@@ -768,6 +807,8 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 		case <-ctx.Done():
 			return nil
 		case <-time.After(s.config.ModuleUpdateFrequency):
+		case <-updates:
+
 		}
 	}
 }
@@ -781,6 +822,20 @@ func hashConfigurationMap(h hash.Hash, m map[string][]byte) error {
 		_, err := h.Write(append([]byte(k), m[k]...))
 		if err != nil {
 			return fmt.Errorf("error hashing configuration: %w", err)
+		}
+	}
+	return nil
+}
+
+// hashRoutesTable computes an order invariant checksum on the configuration
+// settings supplied in the map.
+func hashRoutesTable(h hash.Hash, m map[string]string) error {
+	keys := maps.Keys(m)
+	sort.Strings(keys)
+	for _, k := range keys {
+		_, err := h.Write(append([]byte(k), m[k]...))
+		if err != nil {
+			return fmt.Errorf("error hashing routes: %w", err)
 		}
 	}
 	return nil
@@ -1616,6 +1671,7 @@ func (s *Service) syncRoutesAndSchema(ctx context.Context) (ret time.Duration, e
 	old := s.schemaState.Load().routes
 	newRoutes := map[string]Route{}
 	modulesByName := map[string]*schema.Module{}
+	changed := false
 
 	builtins := schema.Builtins().ToProto().(*schemapb.Module) //nolint:forcetypeassert
 	modulesByName[builtins.Name], err = schema.ModuleFromProto(builtins)
@@ -1649,6 +1705,7 @@ func (s *Service) syncRoutesAndSchema(ctx context.Context) (ret time.Duration, e
 				continue
 			}
 			deploymentLogger.Infof("Deployed %s", v.Key.String())
+			changed = true
 			status.UpdateModuleState(ctx, v.Module, status.BuildStateDeployed)
 		}
 		if prev, ok := newRoutes[v.Module]; ok {
@@ -1661,6 +1718,7 @@ func (s *Service) syncRoutesAndSchema(ctx context.Context) (ret time.Duration, e
 			if err != nil {
 				deploymentLogger.Errorf(err, "Failed to set replicas to 0 for deployment %s", prev.Deployment.String())
 			}
+			changed = true
 		}
 		newRoutes[v.Module] = Route{Module: v.Module, Deployment: v.Key, Endpoint: targetEndpoint}
 		modulesByName[v.Module] = v.Schema
@@ -1672,6 +1730,9 @@ func (s *Service) syncRoutesAndSchema(ctx context.Context) (ret time.Duration, e
 	})
 	combined := &schema.Schema{Modules: orderedModules}
 	s.schemaState.Store(schemaState{schema: combined, routes: newRoutes})
+	if changed {
+		s.routeTableUpdated.Publish(struct{}{})
+	}
 	return time.Second, nil
 }
 

@@ -10,10 +10,12 @@ import (
 
 	"github.com/alecthomas/types/optional"
 	"github.com/puzpuzpuz/xsync/v3"
+	"golang.org/x/exp/maps"
 	istiosecmodel "istio.io/api/security/v1"
 	"istio.io/api/type/v1beta1"
 	istiosec "istio.io/client-go/pkg/apis/security/v1"
 	istioclient "istio.io/client-go/pkg/clientset/versioned"
+	v2 "istio.io/client-go/pkg/clientset/versioned/typed/security/v1"
 	kubeapps "k8s.io/api/apps/v1"
 	kubecore "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -27,6 +29,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 const controllerDeploymentName = "ftl-controller"
@@ -349,7 +352,7 @@ func (r *k8sScaling) handleNewDeployment(ctx context.Context, module string, nam
 
 	// Sync the istio policy if applicable
 	if sec, ok := r.istioSecurity.Get(); ok {
-		err = r.syncIstioPolicy(ctx, sec, module, name, service, thisDeployment)
+		err = r.syncIstioPolicy(ctx, sec, module, name, service, thisDeployment, sch)
 		if err != nil {
 			return err
 		}
@@ -542,12 +545,87 @@ func (r *k8sScaling) updateEnvVar(deployment *kubeapps.Deployment, envVerName st
 	return changes
 }
 
-func (r *k8sScaling) syncIstioPolicy(ctx context.Context, sec istioclient.Clientset, module string, name string, service *kubecore.Service, controllerDeployment *kubeapps.Deployment) error {
+func (r *k8sScaling) syncIstioPolicy(ctx context.Context, sec istioclient.Clientset, module string, name string, service *kubecore.Service, controllerDeployment *kubeapps.Deployment, sch *schema.Module) error {
 	logger := log.FromContext(ctx)
 	logger.Debugf("Creating new istio policy for %s", name)
-	var update func(policy *istiosec.AuthorizationPolicy) error
+
+	var callableModuleNames []string
+	callableModules := map[string]bool{}
+	for _, decl := range sch.Decls {
+		if verb, ok := decl.(*schema.Verb); ok {
+			for _, md := range verb.Metadata {
+				if calls, ok := md.(*schema.MetadataCalls); ok {
+					for _, call := range calls.Calls {
+						callableModules[call.Module] = true
+					}
+				}
+			}
+
+		}
+	}
+	callableModuleNames = maps.Keys(callableModules)
+	callableModuleNames = slices.Sort(callableModuleNames)
 
 	policiesClient := sec.SecurityV1().AuthorizationPolicies(r.namespace)
+
+	// Allow controller ingress
+	err := r.createOrUpdateIstioPolicy(ctx, policiesClient, name, func(policy *istiosec.AuthorizationPolicy) {
+		policy.Name = name
+		policy.Namespace = r.namespace
+		addLabels(&policy.ObjectMeta, module, name)
+		policy.OwnerReferences = []v1.OwnerReference{{APIVersion: "v1", Kind: "service", Name: name, UID: service.UID}}
+		// At present we only allow ingress from the controller
+		policy.Spec.Selector = &v1beta1.WorkloadSelector{MatchLabels: map[string]string{"app": name}}
+		policy.Spec.Action = istiosecmodel.AuthorizationPolicy_ALLOW
+		policy.Spec.Rules = []*istiosecmodel.Rule{
+			{
+				From: []*istiosecmodel.Rule_From{
+					{
+						Source: &istiosecmodel.Source{
+							Principals: []string{"cluster.local/ns/" + r.namespace + "/sa/" + controllerDeployment.Spec.Template.Spec.ServiceAccountName},
+						},
+					},
+				},
+			},
+		}
+	})
+	if err != nil {
+		return err
+	}
+
+	// Setup policies for the modules we call
+	// This feels like the wrong way around but given the way the provisioner works there is not much we can do about this at this stage
+	for _, callableModule := range callableModuleNames {
+		policyName := module + "-" + callableModule
+		err := r.createOrUpdateIstioPolicy(ctx, policiesClient, policyName, func(policy *istiosec.AuthorizationPolicy) {
+			if policy.Labels == nil {
+				policy.Labels = map[string]string{}
+			}
+			policy.Labels[moduleLabel] = module
+			policy.OwnerReferences = []v1.OwnerReference{{APIVersion: "v1", Kind: "service", Name: name, UID: service.UID}}
+			policy.Spec.Selector = &v1beta1.WorkloadSelector{MatchLabels: map[string]string{moduleLabel: callableModule}}
+			policy.Spec.Action = istiosecmodel.AuthorizationPolicy_ALLOW
+			policy.Spec.Rules = []*istiosecmodel.Rule{
+				{
+					From: []*istiosecmodel.Rule_From{
+						{
+							Source: &istiosecmodel.Source{
+								Principals: []string{"cluster.local/ns/" + r.namespace + "/sa/" + module},
+							},
+						},
+					},
+				},
+			}
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return err
+}
+
+func (r *k8sScaling) createOrUpdateIstioPolicy(ctx context.Context, policiesClient v2.AuthorizationPolicyInterface, name string, controllerIngress func(policy *istiosec.AuthorizationPolicy)) error {
+	var update func(policy *istiosec.AuthorizationPolicy) error
 	policy, err := policiesClient.Get(ctx, name, v1.GetOptions{})
 	if err != nil {
 		if !errors.IsNotFound(err) {
@@ -572,22 +650,7 @@ func (r *k8sScaling) syncIstioPolicy(ctx context.Context, sec istioclient.Client
 			return nil
 		}
 	}
-	addLabels(&policy.ObjectMeta, module, name)
-	policy.OwnerReferences = []v1.OwnerReference{{APIVersion: "v1", Kind: "service", Name: name, UID: service.UID}}
-	// At present we only allow ingress from the controller
-	policy.Spec.Selector = &v1beta1.WorkloadSelector{MatchLabels: map[string]string{"app": name}}
-	policy.Spec.Action = istiosecmodel.AuthorizationPolicy_ALLOW
-	policy.Spec.Rules = []*istiosecmodel.Rule{
-		{
-			From: []*istiosecmodel.Rule_From{
-				{
-					Source: &istiosecmodel.Source{
-						Principals: []string{"cluster.local/ns/" + r.namespace + "/sa/" + controllerDeployment.Spec.Template.Spec.ServiceAccountName},
-					},
-				},
-			},
-		},
-	}
+	controllerIngress(policy)
 
 	return update(policy)
 }
