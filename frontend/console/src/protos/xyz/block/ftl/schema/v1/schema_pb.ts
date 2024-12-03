@@ -673,15 +673,14 @@ export class DatabaseRuntimeConnectionsEvent extends Message<DatabaseRuntimeConn
  */
 export class DatabaseRuntimeEvent extends Message<DatabaseRuntimeEvent> {
   /**
-   * @generated from oneof xyz.block.ftl.schema.v1.DatabaseRuntimeEvent.value
+   * @generated from field: string id = 1;
    */
-  value: {
-    /**
-     * @generated from field: xyz.block.ftl.schema.v1.DatabaseRuntimeConnectionsEvent database_runtime_connections_event = 1;
-     */
-    value: DatabaseRuntimeConnectionsEvent;
-    case: "databaseRuntimeConnectionsEvent";
-  } | { case: undefined; value?: undefined } = { case: undefined };
+  id = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.schema.v1.DatabaseRuntimeEventPayload payload = 2;
+   */
+  payload?: DatabaseRuntimeEventPayload;
 
   constructor(data?: PartialMessage<DatabaseRuntimeEvent>) {
     super();
@@ -691,7 +690,8 @@ export class DatabaseRuntimeEvent extends Message<DatabaseRuntimeEvent> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.schema.v1.DatabaseRuntimeEvent";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "database_runtime_connections_event", kind: "message", T: DatabaseRuntimeConnectionsEvent, oneof: "value" },
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "payload", kind: "message", T: DatabaseRuntimeEventPayload },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DatabaseRuntimeEvent {
@@ -708,6 +708,49 @@ export class DatabaseRuntimeEvent extends Message<DatabaseRuntimeEvent> {
 
   static equals(a: DatabaseRuntimeEvent | PlainMessage<DatabaseRuntimeEvent> | undefined, b: DatabaseRuntimeEvent | PlainMessage<DatabaseRuntimeEvent> | undefined): boolean {
     return proto3.util.equals(DatabaseRuntimeEvent, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.schema.v1.DatabaseRuntimeEventPayload
+ */
+export class DatabaseRuntimeEventPayload extends Message<DatabaseRuntimeEventPayload> {
+  /**
+   * @generated from oneof xyz.block.ftl.schema.v1.DatabaseRuntimeEventPayload.value
+   */
+  value: {
+    /**
+     * @generated from field: xyz.block.ftl.schema.v1.DatabaseRuntimeConnectionsEvent database_runtime_connections_event = 1;
+     */
+    value: DatabaseRuntimeConnectionsEvent;
+    case: "databaseRuntimeConnectionsEvent";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<DatabaseRuntimeEventPayload>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.schema.v1.DatabaseRuntimeEventPayload";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "database_runtime_connections_event", kind: "message", T: DatabaseRuntimeConnectionsEvent, oneof: "value" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DatabaseRuntimeEventPayload {
+    return new DatabaseRuntimeEventPayload().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DatabaseRuntimeEventPayload {
+    return new DatabaseRuntimeEventPayload().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DatabaseRuntimeEventPayload {
+    return new DatabaseRuntimeEventPayload().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DatabaseRuntimeEventPayload | PlainMessage<DatabaseRuntimeEventPayload> | undefined, b: DatabaseRuntimeEventPayload | PlainMessage<DatabaseRuntimeEventPayload> | undefined): boolean {
+    return proto3.util.equals(DatabaseRuntimeEventPayload, a, b);
   }
 }
 

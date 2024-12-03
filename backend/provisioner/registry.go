@@ -3,23 +3,14 @@ package provisioner
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 
-	"github.com/google/go-cmp/cmp"
-	"google.golang.org/protobuf/testing/protocmp"
-
-	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
 	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/sha256"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // provisionerPluginConfig is a map of provisioner name to resources it supports
@@ -127,183 +118,30 @@ func (reg *ProvisionerRegistry) Register(id string, handler provisionerconnect.P
 }
 
 // CreateDeployment to take the system to the desired state
-func (reg *ProvisionerRegistry) CreateDeployment(ctx context.Context, module string, desiredResources, existingResources *ResourceGraph) *Deployment {
+func (reg *ProvisionerRegistry) CreateDeployment(ctx context.Context, desiredModule, existingModule *schema.Module) *Deployment {
 	logger := log.FromContext(ctx)
+	module := desiredModule.GetName()
 
 	deployment := &Deployment{
-		Module: module,
-		Graph:  desiredResources,
+		Module:   desiredModule,
+		Previous: existingModule,
 	}
 
-	for _, binding := range reg.listBindings() {
-		desired := getTypes(desiredResources.Resources(), binding.Types)
-		existing := getTypes(existingResources.Resources(), binding.Types)
+	allDesired := schema.GetProvisionedResources(desiredModule)
+	allExisting := schema.GetProvisionedResources(existingModule)
 
-		if !resourcesEqual(desired, existing) {
-			logger.Debugf("Adding task for module %s: %s", module, binding)
+	for _, binding := range reg.listBindings() {
+		desired := allDesired.Filter(binding.Types...)
+		existing := allExisting.Filter(binding.Types...)
+
+		if !desired.EqualSets(existing) {
+			logger.Debugf("Adding task for module %s: %s", module, binding.ID)
 			deployment.Tasks = append(deployment.Tasks, &Task{
 				module:     module,
 				binding:    binding,
 				deployment: deployment,
-				desired:    desiredResources.WithDirectDependencies(desired),
 			})
-		} else {
-			logger.Debugf("Skipping task for module %s with provisioner %s", module, binding.ID)
 		}
 	}
 	return deployment
-}
-
-func getTypes(resources []*provisioner.Resource, types []schema.ResourceType) []*provisioner.Resource {
-	result := []*provisioner.Resource{}
-	for _, r := range resources {
-		for _, t := range types {
-			if TypeOf(r) == t {
-				result = append(result, r)
-			}
-		}
-	}
-	return result
-}
-
-func resourcesEqual(desired, existing []*provisioner.Resource) bool {
-	if len(desired) != len(existing) {
-		return false
-	}
-	// sort by resource id
-	sort.Slice(desired, func(i, j int) bool {
-		return desired[i].ResourceId < desired[j].ResourceId
-	})
-	sort.Slice(existing, func(i, j int) bool {
-		return existing[i].ResourceId < existing[j].ResourceId
-	})
-	// check each resource
-	for i := range desired {
-		if !resourceEqual(desired[i], existing[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func resourceEqual(desired, existing *provisioner.Resource) bool {
-	return cmp.Equal(desired, existing,
-		protocmp.Transform(),
-		protocmp.IgnoreMessages(
-			&schemapb.DatabaseRuntime{},
-			&provisioner.ModuleResource_ModuleResourceOutput{},
-			&provisioner.SqlMigrationResource_SqlMigrationResourceOutput{},
-			&provisioner.TopicResource_TopicResourceOutput{},
-			&provisioner.SubscriptionResource_SubscriptionResourceOutput{},
-		),
-	)
-}
-
-// ExtractResources from a module schema
-func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error) {
-	var deps []*provisioner.Resource
-
-	module, err := schema.ModuleFromProto(msg.Schema)
-	if err != nil {
-		return nil, fmt.Errorf("invalid module schema for module %s: %w", msg.Schema.Name, err)
-	}
-	edges := make([]*ResourceEdge, 0)
-	for _, decl := range module.Decls {
-		switch decl := decl.(type) {
-		case *schema.Database:
-			switch decl.Type {
-			case "postgres":
-				deps = append(deps, &provisioner.Resource{
-					ResourceId: decl.GetName(),
-					Resource:   &provisioner.Resource_Postgres{},
-				})
-			case "mysql":
-				deps = append(deps, &provisioner.Resource{
-					ResourceId: decl.GetName(),
-					Resource:   &provisioner.Resource_Mysql{},
-				})
-			default:
-				return nil, fmt.Errorf("unknown db type: %s", decl.Type)
-			}
-
-			if migration, ok := slices.FindVariant[*schema.MetadataSQLMigration](decl.Metadata); ok {
-				id := decl.GetName() + "-migration-" + migration.Digest
-				deps = append(deps, &provisioner.Resource{
-					ResourceId: id,
-					Resource:   &provisioner.Resource_SqlMigration{SqlMigration: &provisioner.SqlMigrationResource{Digest: migration.Digest}},
-				})
-				edges = append(edges, &ResourceEdge{
-					from: id,
-					to:   decl.GetName(),
-				})
-			}
-		case *schema.Topic:
-			deps = append(deps, &provisioner.Resource{
-				ResourceId: decl.GetName(),
-				Resource:   &provisioner.Resource_Topic{},
-			})
-		case *schema.Verb:
-			subscriber, ok := slices.FindVariant[*schema.MetadataSubscriber](decl.Metadata)
-			if !ok {
-				continue
-			}
-			deps = append(deps, &provisioner.Resource{
-				ResourceId: decl.GetName(),
-				Resource: &provisioner.Resource_Subscription{
-					Subscription: &provisioner.SubscriptionResource{
-						Topic: &schemapb.Ref{
-							Module: subscriber.Topic.Module,
-							Name:   subscriber.Topic.Name,
-						},
-					},
-				},
-			})
-		case *schema.Config, *schema.Data, *schema.Enum, *schema.Secret, *schema.TypeAlias:
-		}
-	}
-
-	root := &provisioner.Resource{
-		ResourceId: module.GetName(),
-		Resource: &provisioner.Resource_Module{
-			Module: &provisioner.ModuleResource{
-				Schema:    msg.Schema,
-				Artefacts: msg.Artefacts,
-			},
-		},
-	}
-	for _, dep := range deps {
-		edges = append(edges, &ResourceEdge{
-			from: root.ResourceId,
-			to:   dep.ResourceId,
-		})
-	}
-	digests := ""
-	orderedDigests := []string{}
-	for _, d := range msg.Artefacts {
-		orderedDigests = append(orderedDigests, d.Digest)
-	}
-	slices.Sort(orderedDigests)
-	for _, d := range orderedDigests {
-		digests += d
-	}
-
-	// Hack, we just use the artifact digests to create a unique runner resource
-	hash := sha256.Sum([]byte(digests))
-
-	runnerResource := &provisioner.Resource{
-		ResourceId: module.GetName() + "-" + hash.String() + "-runner",
-		Resource: &provisioner.Resource_Runner{
-			Runner: &provisioner.RunnerResource{},
-		},
-	}
-	edges = append(edges, &ResourceEdge{
-		from: runnerResource.ResourceId,
-		to:   root.ResourceId,
-	})
-	result := &ResourceGraph{
-		nodes: append(deps, root, runnerResource),
-		edges: edges,
-	}
-
-	return result, nil
 }

@@ -19,18 +19,14 @@ func (d *NoopProvisioner) Ping(context.Context, *connect.Request[ftlv1.PingReque
 	return &connect.Response[ftlv1.PingResponse]{}, nil
 }
 
-func (d *NoopProvisioner) Plan(context.Context, *connect.Request[provisioner.PlanRequest]) (*connect.Response[provisioner.PlanResponse], error) {
-	panic("unimplemented")
-}
-
-func (d *NoopProvisioner) Provision(context.Context, *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
+func (d *NoopProvisioner) Provision(ctx context.Context, req *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
 	return connect.NewResponse(&provisioner.ProvisionResponse{
 		Status:            provisioner.ProvisionResponse_PROVISION_RESPONSE_STATUS_SUBMITTED,
 		ProvisioningToken: "token",
 	}), nil
 }
 
-func (d *NoopProvisioner) Status(context.Context, *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
+func (d *NoopProvisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
 	return connect.NewResponse(&provisioner.StatusResponse{
 		Status: &provisioner.StatusResponse_Success{},
 	}), nil

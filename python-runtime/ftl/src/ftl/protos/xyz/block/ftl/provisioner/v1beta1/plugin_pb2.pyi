@@ -1,4 +1,4 @@
-from xyz.block.ftl.provisioner.v1beta1 import resource_pb2 as _resource_pb2
+from xyz.block.ftl.schema.v1 import schema_pb2 as _schema_pb2
 from xyz.block.ftl.v1 import ftl_pb2 as _ftl_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
@@ -8,25 +8,17 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
-class ResourceContext(_message.Message):
-    __slots__ = ("resource", "dependencies")
-    RESOURCE_FIELD_NUMBER: _ClassVar[int]
-    DEPENDENCIES_FIELD_NUMBER: _ClassVar[int]
-    resource: _resource_pb2.Resource
-    dependencies: _containers.RepeatedCompositeFieldContainer[_resource_pb2.Resource]
-    def __init__(self, resource: _Optional[_Union[_resource_pb2.Resource, _Mapping]] = ..., dependencies: _Optional[_Iterable[_Union[_resource_pb2.Resource, _Mapping]]] = ...) -> None: ...
-
 class ProvisionRequest(_message.Message):
-    __slots__ = ("ftl_cluster_id", "module", "existing_resources", "desired_resources")
+    __slots__ = ("ftl_cluster_id", "desired_module", "previous_module", "kinds")
     FTL_CLUSTER_ID_FIELD_NUMBER: _ClassVar[int]
-    MODULE_FIELD_NUMBER: _ClassVar[int]
-    EXISTING_RESOURCES_FIELD_NUMBER: _ClassVar[int]
-    DESIRED_RESOURCES_FIELD_NUMBER: _ClassVar[int]
+    DESIRED_MODULE_FIELD_NUMBER: _ClassVar[int]
+    PREVIOUS_MODULE_FIELD_NUMBER: _ClassVar[int]
+    KINDS_FIELD_NUMBER: _ClassVar[int]
     ftl_cluster_id: str
-    module: str
-    existing_resources: _containers.RepeatedCompositeFieldContainer[_resource_pb2.Resource]
-    desired_resources: _containers.RepeatedCompositeFieldContainer[ResourceContext]
-    def __init__(self, ftl_cluster_id: _Optional[str] = ..., module: _Optional[str] = ..., existing_resources: _Optional[_Iterable[_Union[_resource_pb2.Resource, _Mapping]]] = ..., desired_resources: _Optional[_Iterable[_Union[ResourceContext, _Mapping]]] = ...) -> None: ...
+    desired_module: _schema_pb2.Module
+    previous_module: _schema_pb2.Module
+    kinds: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, ftl_cluster_id: _Optional[str] = ..., desired_module: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., previous_module: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., kinds: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class ProvisionResponse(_message.Message):
     __slots__ = ("provisioning_token", "status")
@@ -43,12 +35,20 @@ class ProvisionResponse(_message.Message):
     def __init__(self, provisioning_token: _Optional[str] = ..., status: _Optional[_Union[ProvisionResponse.ProvisionResponseStatus, str]] = ...) -> None: ...
 
 class StatusRequest(_message.Message):
-    __slots__ = ("provisioning_token", "desired_resources")
+    __slots__ = ("provisioning_token", "desired_module")
     PROVISIONING_TOKEN_FIELD_NUMBER: _ClassVar[int]
-    DESIRED_RESOURCES_FIELD_NUMBER: _ClassVar[int]
+    DESIRED_MODULE_FIELD_NUMBER: _ClassVar[int]
     provisioning_token: str
-    desired_resources: _containers.RepeatedCompositeFieldContainer[_resource_pb2.Resource]
-    def __init__(self, provisioning_token: _Optional[str] = ..., desired_resources: _Optional[_Iterable[_Union[_resource_pb2.Resource, _Mapping]]] = ...) -> None: ...
+    desired_module: _schema_pb2.Module
+    def __init__(self, provisioning_token: _Optional[str] = ..., desired_module: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ...) -> None: ...
+
+class ProvisioningEvent(_message.Message):
+    __slots__ = ("module_runtime_event", "database_runtime_event")
+    MODULE_RUNTIME_EVENT_FIELD_NUMBER: _ClassVar[int]
+    DATABASE_RUNTIME_EVENT_FIELD_NUMBER: _ClassVar[int]
+    module_runtime_event: _schema_pb2.ModuleRuntimeEvent
+    database_runtime_event: _schema_pb2.DatabaseRuntimeEvent
+    def __init__(self, module_runtime_event: _Optional[_Union[_schema_pb2.ModuleRuntimeEvent, _Mapping]] = ..., database_runtime_event: _Optional[_Union[_schema_pb2.DatabaseRuntimeEvent, _Mapping]] = ...) -> None: ...
 
 class StatusResponse(_message.Message):
     __slots__ = ("running", "success")
@@ -61,24 +61,12 @@ class StatusResponse(_message.Message):
         error_message: str
         def __init__(self, error_message: _Optional[str] = ...) -> None: ...
     class ProvisioningSuccess(_message.Message):
-        __slots__ = ("updated_resources",)
-        UPDATED_RESOURCES_FIELD_NUMBER: _ClassVar[int]
-        updated_resources: _containers.RepeatedCompositeFieldContainer[_resource_pb2.Resource]
-        def __init__(self, updated_resources: _Optional[_Iterable[_Union[_resource_pb2.Resource, _Mapping]]] = ...) -> None: ...
+        __slots__ = ("events",)
+        EVENTS_FIELD_NUMBER: _ClassVar[int]
+        events: _containers.RepeatedCompositeFieldContainer[ProvisioningEvent]
+        def __init__(self, events: _Optional[_Iterable[_Union[ProvisioningEvent, _Mapping]]] = ...) -> None: ...
     RUNNING_FIELD_NUMBER: _ClassVar[int]
     SUCCESS_FIELD_NUMBER: _ClassVar[int]
     running: StatusResponse.ProvisioningRunning
     success: StatusResponse.ProvisioningSuccess
     def __init__(self, running: _Optional[_Union[StatusResponse.ProvisioningRunning, _Mapping]] = ..., success: _Optional[_Union[StatusResponse.ProvisioningSuccess, _Mapping]] = ...) -> None: ...
-
-class PlanRequest(_message.Message):
-    __slots__ = ("provisioning",)
-    PROVISIONING_FIELD_NUMBER: _ClassVar[int]
-    provisioning: ProvisionRequest
-    def __init__(self, provisioning: _Optional[_Union[ProvisionRequest, _Mapping]] = ...) -> None: ...
-
-class PlanResponse(_message.Message):
-    __slots__ = ("plan",)
-    PLAN_FIELD_NUMBER: _ClassVar[int]
-    plan: str
-    def __init__(self, plan: _Optional[str] = ...) -> None: ...

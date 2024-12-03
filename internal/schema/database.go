@@ -7,6 +7,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 const PostgresDatabaseType = "postgres"
@@ -25,6 +26,7 @@ type Database struct {
 
 var _ Decl = (*Database)(nil)
 var _ Symbol = (*Database)(nil)
+var _ Provisioned = (*Database)(nil)
 
 func (d *Database) Position() Position { return d.Pos }
 func (*Database) schemaDecl()          {}
@@ -66,6 +68,32 @@ func (d *Database) ToProto() proto.Message {
 
 func (d *Database) GetName() string  { return d.Name }
 func (d *Database) IsExported() bool { return false }
+
+func (d *Database) GetProvisioned() ResourceSet {
+	kind := ResourceTypeMysql
+	if d.Type == PostgresDatabaseType {
+		kind = ResourceTypePostgres
+	}
+	result := []*ProvisionedResource{{
+		Kind:   kind,
+		Config: &Database{Type: d.Type},
+	}}
+
+	migration, ok := slices.FindVariant[*MetadataSQLMigration](d.Metadata)
+	if ok {
+		result = append(result, &ProvisionedResource{
+			Kind:   ResourceTypeSQLMigration,
+			Config: &Database{Type: d.Type, Metadata: []Metadata{migration}},
+		})
+	}
+
+	return result
+
+}
+
+func (d *Database) ResourceID() string {
+	return d.Name
+}
 
 func DatabaseFromProto(s *schemapb.Database) *Database {
 	return &Database{

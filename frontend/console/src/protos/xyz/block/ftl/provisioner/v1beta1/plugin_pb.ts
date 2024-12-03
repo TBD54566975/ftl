@@ -5,54 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
-import { Resource } from "./resource_pb.js";
-
-/**
- * ResourceContext is the context used to create a new resource
- * This includes the direct dependencies of the new resource, that can impact
- * the resource creation.
- *
- * @generated from message xyz.block.ftl.provisioner.v1beta1.ResourceContext
- */
-export class ResourceContext extends Message<ResourceContext> {
-  /**
-   * @generated from field: xyz.block.ftl.provisioner.v1beta1.Resource resource = 1;
-   */
-  resource?: Resource;
-
-  /**
-   * @generated from field: repeated xyz.block.ftl.provisioner.v1beta1.Resource dependencies = 2;
-   */
-  dependencies: Resource[] = [];
-
-  constructor(data?: PartialMessage<ResourceContext>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.provisioner.v1beta1.ResourceContext";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "resource", kind: "message", T: Resource },
-    { no: 2, name: "dependencies", kind: "message", T: Resource, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ResourceContext {
-    return new ResourceContext().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ResourceContext {
-    return new ResourceContext().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ResourceContext {
-    return new ResourceContext().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ResourceContext | PlainMessage<ResourceContext> | undefined, b: ResourceContext | PlainMessage<ResourceContext> | undefined): boolean {
-    return proto3.util.equals(ResourceContext, a, b);
-  }
-}
+import { DatabaseRuntimeEvent, Module, ModuleRuntimeEvent } from "../../schema/v1/schema_pb.js";
 
 /**
  * @generated from message xyz.block.ftl.provisioner.v1beta1.ProvisionRequest
@@ -64,24 +17,19 @@ export class ProvisionRequest extends Message<ProvisionRequest> {
   ftlClusterId = "";
 
   /**
-   * @generated from field: string module = 2;
+   * @generated from field: xyz.block.ftl.schema.v1.Module desired_module = 2;
    */
-  module = "";
+  desiredModule?: Module;
 
   /**
-   * The resource FTL thinks exists currently
-   *
-   * @generated from field: repeated xyz.block.ftl.provisioner.v1beta1.Resource existing_resources = 3;
+   * @generated from field: xyz.block.ftl.schema.v1.Module previous_module = 3;
    */
-  existingResources: Resource[] = [];
+  previousModule?: Module;
 
   /**
-   * The resource FTL would like to exist after this provisioning run.
-   * This includes all new, existing, and changes resources in this change.
-   *
-   * @generated from field: repeated xyz.block.ftl.provisioner.v1beta1.ResourceContext desired_resources = 4;
+   * @generated from field: repeated string kinds = 4;
    */
-  desiredResources: ResourceContext[] = [];
+  kinds: string[] = [];
 
   constructor(data?: PartialMessage<ProvisionRequest>) {
     super();
@@ -92,9 +40,9 @@ export class ProvisionRequest extends Message<ProvisionRequest> {
   static readonly typeName = "xyz.block.ftl.provisioner.v1beta1.ProvisionRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "ftl_cluster_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "existing_resources", kind: "message", T: Resource, repeated: true },
-    { no: 4, name: "desired_resources", kind: "message", T: ResourceContext, repeated: true },
+    { no: 2, name: "desired_module", kind: "message", T: Module },
+    { no: 3, name: "previous_module", kind: "message", T: Module },
+    { no: 4, name: "kinds", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProvisionRequest {
@@ -187,13 +135,11 @@ export class StatusRequest extends Message<StatusRequest> {
   provisioningToken = "";
 
   /**
-   * The set of desired_resources used to initiate this provisioning request
-   * We need this as input here, so we can populate any resource fields in them
-   * when the provisioning finishes
+   * The outputs of this module are updated if the the status is a success
    *
-   * @generated from field: repeated xyz.block.ftl.provisioner.v1beta1.Resource desired_resources = 2;
+   * @generated from field: xyz.block.ftl.schema.v1.Module desired_module = 2;
    */
-  desiredResources: Resource[] = [];
+  desiredModule?: Module;
 
   constructor(data?: PartialMessage<StatusRequest>) {
     super();
@@ -204,7 +150,7 @@ export class StatusRequest extends Message<StatusRequest> {
   static readonly typeName = "xyz.block.ftl.provisioner.v1beta1.StatusRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "provisioning_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "desired_resources", kind: "message", T: Resource, repeated: true },
+    { no: 2, name: "desired_module", kind: "message", T: Module },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusRequest {
@@ -221,6 +167,56 @@ export class StatusRequest extends Message<StatusRequest> {
 
   static equals(a: StatusRequest | PlainMessage<StatusRequest> | undefined, b: StatusRequest | PlainMessage<StatusRequest> | undefined): boolean {
     return proto3.util.equals(StatusRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.provisioner.v1beta1.ProvisioningEvent
+ */
+export class ProvisioningEvent extends Message<ProvisioningEvent> {
+  /**
+   * @generated from oneof xyz.block.ftl.provisioner.v1beta1.ProvisioningEvent.value
+   */
+  value: {
+    /**
+     * @generated from field: xyz.block.ftl.schema.v1.ModuleRuntimeEvent module_runtime_event = 1;
+     */
+    value: ModuleRuntimeEvent;
+    case: "moduleRuntimeEvent";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.schema.v1.DatabaseRuntimeEvent database_runtime_event = 2;
+     */
+    value: DatabaseRuntimeEvent;
+    case: "databaseRuntimeEvent";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<ProvisioningEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.provisioner.v1beta1.ProvisioningEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "module_runtime_event", kind: "message", T: ModuleRuntimeEvent, oneof: "value" },
+    { no: 2, name: "database_runtime_event", kind: "message", T: DatabaseRuntimeEvent, oneof: "value" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProvisioningEvent {
+    return new ProvisioningEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ProvisioningEvent {
+    return new ProvisioningEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ProvisioningEvent {
+    return new ProvisioningEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ProvisioningEvent | PlainMessage<ProvisioningEvent> | undefined, b: ProvisioningEvent | PlainMessage<ProvisioningEvent> | undefined): boolean {
+    return proto3.util.equals(ProvisioningEvent, a, b);
   }
 }
 
@@ -347,12 +343,9 @@ export class StatusResponse_ProvisioningFailed extends Message<StatusResponse_Pr
  */
 export class StatusResponse_ProvisioningSuccess extends Message<StatusResponse_ProvisioningSuccess> {
   /**
-   * Some fields in the resources might have been populated
-   * during the provisioning. The new state is returned here
-   *
-   * @generated from field: repeated xyz.block.ftl.provisioner.v1beta1.Resource updated_resources = 1;
+   * @generated from field: repeated xyz.block.ftl.provisioner.v1beta1.ProvisioningEvent events = 1;
    */
-  updatedResources: Resource[] = [];
+  events: ProvisioningEvent[] = [];
 
   constructor(data?: PartialMessage<StatusResponse_ProvisioningSuccess>) {
     super();
@@ -362,7 +355,7 @@ export class StatusResponse_ProvisioningSuccess extends Message<StatusResponse_P
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.provisioner.v1beta1.StatusResponse.ProvisioningSuccess";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "updated_resources", kind: "message", T: Resource, repeated: true },
+    { no: 1, name: "events", kind: "message", T: ProvisioningEvent, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_ProvisioningSuccess {
@@ -379,82 +372,6 @@ export class StatusResponse_ProvisioningSuccess extends Message<StatusResponse_P
 
   static equals(a: StatusResponse_ProvisioningSuccess | PlainMessage<StatusResponse_ProvisioningSuccess> | undefined, b: StatusResponse_ProvisioningSuccess | PlainMessage<StatusResponse_ProvisioningSuccess> | undefined): boolean {
     return proto3.util.equals(StatusResponse_ProvisioningSuccess, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.provisioner.v1beta1.PlanRequest
- */
-export class PlanRequest extends Message<PlanRequest> {
-  /**
-   * @generated from field: xyz.block.ftl.provisioner.v1beta1.ProvisionRequest provisioning = 1;
-   */
-  provisioning?: ProvisionRequest;
-
-  constructor(data?: PartialMessage<PlanRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.provisioner.v1beta1.PlanRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "provisioning", kind: "message", T: ProvisionRequest },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PlanRequest {
-    return new PlanRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PlanRequest {
-    return new PlanRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PlanRequest {
-    return new PlanRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: PlanRequest | PlainMessage<PlanRequest> | undefined, b: PlanRequest | PlainMessage<PlanRequest> | undefined): boolean {
-    return proto3.util.equals(PlanRequest, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.provisioner.v1beta1.PlanResponse
- */
-export class PlanResponse extends Message<PlanResponse> {
-  /**
-   * a detailed, implementation specific, plan of changes this deployment would do
-   *
-   * @generated from field: string plan = 1;
-   */
-  plan = "";
-
-  constructor(data?: PartialMessage<PlanResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.provisioner.v1beta1.PlanResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "plan", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PlanResponse {
-    return new PlanResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PlanResponse {
-    return new PlanResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PlanResponse {
-    return new PlanResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: PlanResponse | PlainMessage<PlanResponse> | undefined, b: PlanResponse | PlainMessage<PlanResponse> | undefined): boolean {
-    return proto3.util.equals(PlanResponse, a, b);
   }
 }
 

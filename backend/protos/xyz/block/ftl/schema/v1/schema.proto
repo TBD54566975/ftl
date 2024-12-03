@@ -89,6 +89,11 @@ message DatabaseRuntimeConnectionsEvent {
 }
 
 message DatabaseRuntimeEvent {
+  string id = 1;
+  DatabaseRuntimeEventPayload payload = 2;
+}
+
+message DatabaseRuntimeEventPayload {
   oneof value {
     DatabaseRuntimeConnectionsEvent database_runtime_connections_event = 1;
   }
