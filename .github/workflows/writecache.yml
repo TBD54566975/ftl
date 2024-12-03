@@ -19,7 +19,7 @@ jobs:
       - name: Install Hermit Packages
         run: hermit install
       - name: Docker Compose
-        run: docker compose up -d --wait
+        run: just compose-up
       - name: Init DB
         run: just init-db
       - name: Rebuild All
