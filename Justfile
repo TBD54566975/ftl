@@ -19,6 +19,7 @@ ZIP_DIRS := "go-runtime/compile/build-template " + \
 CONSOLE_ROOT := "frontend/console"
 FRONTEND_OUT := CONSOLE_ROOT + "/dist/index.html"
 EXTENSION_OUT := "frontend/vscode/dist/extension.js"
+SQLC_GEN_FTL_OUT := "internal/sqlc-gen-ftl/dist"
 PROTOS_IN := "backend/protos"
 PROTOS_OUT := "backend/protos/xyz/block/ftl/console/v1/console.pb.go " + \
               "backend/protos/xyz/block/ftl//v1/ftl.pb.go " + \
@@ -64,6 +65,7 @@ clean:
   rm -rf python-runtime/ftl/.venv
   find . -name '*.zip' -exec rm {} \;
   mvn -f jvm-runtime/ftl-runtime clean
+  cargo clean
 
 # Live rebuild the ftl binary whenever source changes.
 live-rebuild:
@@ -74,7 +76,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev --plain {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-backend build-frontend build-backend-tests build-generate build-sqlc build-zips lsp-generate build-jvm build-language-plugins
+build-all: build-protos-unconditionally build-backend build-frontend build-backend-tests build-generate build-sqlc build-zips lsp-generate build-jvm build-language-plugins build-sqlc-gen-ftl
 
 # Run "go generate" on all packages
 build-generate:
@@ -162,6 +164,21 @@ build-frontend: pnpm-install
 build-extension: pnpm-install
   @mk {{EXTENSION_OUT}} : frontend/vscode/src frontend/vscode/package.json -- "cd frontend/vscode && rm -f ftl-*.vsix && pnpm run compile"
 
+# Install Rust dependencies based on Cargo.toml
+cargo-deps:
+    @mk internal/sqlc-gen-ftl/target : internal/sqlc-gen-ftl/Cargo.toml -- \
+        "cd internal/sqlc-gen-ftl && \
+        cargo build && \
+        cargo install protoc-gen-prost"
+
+# Build the sqlc-ftl-gen plugin, used to generate FTL schema from SQL
+build-sqlc-gen-ftl: build-protos wasm-target-install update-sqlc-plugin-codegen-proto
+    @mk {{SQLC_GEN_FTL_OUT}} : internal/sqlc-gen-ftl/src -- \
+        "cd internal/sqlc-gen-ftl && \
+        cargo build --target wasm32-wasip1 --release && \
+        cp target/wasm32-wasip1/release/sqlc-gen-ftl.wasm ../../{{SQLC_GEN_FTL_OUT}} && \
+        codesign --force --deep --sign - ../../{{SQLC_GEN_FTL_OUT}}/sqlc-gen-ftl.wasm"
+
 # Install development version of VSCode extension
 install-extension: build-extension
   @cd frontend/vscode && vsce package && code --install-extension ftl-*.vsix
@@ -186,6 +203,13 @@ format-frontend:
 pnpm-install:
   @for i in {1..3}; do mk frontend/**/node_modules : frontend/**/package.json -- "pnpm install --frozen-lockfile" && break || sleep 5; done
 
+# Install WASM targets for Rust
+wasm-target-install:
+    rustup target add wasm32-wasip1
+
+update-sqlc-plugin-codegen-proto:
+	curl -L --fail --show-error --silent "https://raw.githubusercontent.com/sqlc-dev/sqlc/main/protos/plugin/codegen.proto" -o "internal/sqlc-gen-ftl/proto/codegen.proto" 
+
 # Regenerate protos
 build-protos:
   @mk {{SCHEMA_OUT}} : internal/schema -- "@just go2proto"
@@ -199,7 +223,7 @@ go2proto:
     xyz.block.ftl.schema.v1 ./internal/schema.Schema && buf format -w && buf lint
 
 # Unconditionally rebuild protos
-build-protos-unconditionally: lint-protos pnpm-install go2proto
+build-protos-unconditionally: lint-protos pnpm-install go2proto cargo-deps
   cd backend/protos && buf generate
 
 # Run integration test(s)
@@ -243,6 +267,9 @@ test-scripts:
 # Test the frontend
 test-frontend: build-frontend
   @cd {{CONSOLE_ROOT}} && pnpm run test
+
+test-sqlc-gen-ftl:
+    cd internal/sqlc-gen-ftl && cargo test --test sqlc_gen_ftl_test -- --nocapture
 
 # Run end-to-end tests on the frontend
 e2e-frontend: build-frontend
