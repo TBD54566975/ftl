@@ -699,26 +699,6 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	// Initialize checksum to -1; a zero checksum does occur when the context contains no settings
 	lastChecksum := int64(-1)
 
-	dbTypes := map[string]modulecontext.DBType{}
-	deps, err := s.dal.GetActiveDeployments(ctx)
-	if err != nil {
-		return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get deployments: %w", err))
-	}
-	for _, dep := range deps {
-		if dep.Module == name {
-			for _, decl := range dep.Schema.Decls {
-				if db, ok := decl.(*schema.Database); ok {
-					dbType, err := modulecontext.DBTypeFromString(db.Type)
-					if err != nil {
-						// Not much we can do here
-						continue
-					}
-					dbTypes[db.Name] = dbType
-				}
-			}
-			break
-		}
-	}
 	for {
 		h := sha.New()
 
