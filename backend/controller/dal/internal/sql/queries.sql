@@ -16,7 +16,16 @@ WHERE id = ANY (@ids::BIGINT[]);
 
 -- name: CreateDeployment :exec
 INSERT INTO deployments (module_id, "schema", "key")
-VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA, @key::deployment_key);
+VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::module_schema_pb, @key::deployment_key);
+
+-- Note that this can result in a race condition if the deployment is being updated by another process. This will go
+-- away once we ditch the DB.
+--
+-- name: UpdateDeploymentSchema :exec
+UPDATE deployments
+SET schema = @schema::module_schema_pb
+WHERE key = @key::deployment_key
+RETURNING 1;
 
 -- name: GetArtefactDigests :many
 -- Return the digests that exist in the database.

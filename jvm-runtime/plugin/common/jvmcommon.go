@@ -488,10 +488,12 @@ func readSchema(bctx buildContext) (*schemapb.Module, error) {
 	}
 
 	moduleSchema.Runtime = &schema.ModuleRuntime{
-		CreateTime:  time.Now(),
-		Language:    bctx.Config.Language,
-		MinReplicas: 1,
-		Image:       "ftl0/ftl-runner-jvm",
+		CreateTime: time.Now(),
+		Language:   bctx.Config.Language,
+		Image:      "ftl0/ftl-runner-jvm",
+		Scaling: &schema.ModuleRuntimeScaling{
+			MinReplicas: 1,
+		},
 	}
 
 	moduleProto := moduleSchema.ToProto().(*schemapb.Module) //nolint:forcetypeassert

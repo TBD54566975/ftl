@@ -9,30 +9,14 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/internal/sha256"
 )
-
-type ModuleRuntime struct {
-	CreateTime  time.Time `protobuf:"1"`
-	Language    string    `protobuf:"2"`
-	MinReplicas int32     `protobuf:"3"`
-	OS          string    `protobuf:"4,optional"`
-	Arch        string    `protobuf:"5,optional"`
-	// Image is the name of the runner image. Defaults to "ftl0/ftl-runner".
-	// Must not include a tag, as FTL's version will be used as the tag.
-	Image string `protobuf:"6,optional"`
-}
-
-var _ Runtime = (*ModuleRuntime)(nil)
-
-func (m *ModuleRuntime) runtime() {}
 
 type Module struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
@@ -42,7 +26,7 @@ type Module struct {
 	Name     string   `parser:"'module' @Ident '{'" protobuf:"4"`
 	Decls    []Decl   `parser:"@@* '}'" protobuf:"5"`
 
-	Runtime *ModuleRuntime `protobuf:"31634,optional" parser:""`
+	Runtime *ModuleRuntime `protobuf:"6" parser:""`
 }
 
 var _ Node = (*Module)(nil)
@@ -69,6 +53,15 @@ func (m *Module) Scan(src any) error {
 	default:
 		return fmt.Errorf("cannot scan %T", src)
 	}
+}
+
+// Hash returns the sha256 hash of the module, including runtime.
+func (m *Module) Hash() (sha256.SHA256, error) {
+	pb, err := ModuleToBytes(m)
+	if err != nil {
+		return sha256.SHA256{}, fmt.Errorf("failed to marshal module to bytes: %w", err)
+	}
+	return sha256.FromBytes(pb), nil
 }
 
 // Resolve returns the declaration in this module with the given name, or nil
@@ -233,20 +226,7 @@ func (m *Module) Imports() []string {
 func (m *Module) ToProto() proto.Message {
 	var runtime *schemapb.ModuleRuntime
 	if m.Runtime != nil {
-		runtime = &schemapb.ModuleRuntime{
-			CreateTime:  timestamppb.New(m.Runtime.CreateTime),
-			Language:    m.Runtime.Language,
-			MinReplicas: m.Runtime.MinReplicas,
-		}
-		if m.Runtime.OS != "" {
-			runtime.Os = &m.Runtime.OS
-		}
-		if m.Runtime.Arch != "" {
-			runtime.Arch = &m.Runtime.Arch
-		}
-		if m.Runtime.Image != "" {
-			runtime.Image = &m.Runtime.Image
-		}
+		runtime = m.Runtime.ToProto().(*schemapb.ModuleRuntime) //nolint:forcetypeassert
 	}
 	return &schemapb.Module{
 		Pos:      posToProto(m.Pos),
@@ -278,16 +258,7 @@ func ModuleFromProto(s *schemapb.Module) (*Module, error) {
 		Name:     s.Name,
 		Comments: s.Comments,
 		Decls:    declListToSchema(s.Decls),
-	}
-	if s.Runtime != nil {
-		module.Runtime = &ModuleRuntime{
-			CreateTime:  s.Runtime.GetCreateTime().AsTime(),
-			Language:    s.Runtime.Language,
-			MinReplicas: s.Runtime.MinReplicas,
-			OS:          s.Runtime.GetOs(),
-			Arch:        s.Runtime.GetArch(),
-			Image:       s.Runtime.GetImage(),
-		}
+		Runtime:  ModuleRuntimeFromProto(s.Runtime),
 	}
 	return module, ValidateModule(module)
 }

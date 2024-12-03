@@ -65,7 +65,7 @@ func Deploy(ctx context.Context, projectConfig projectconfig.Config, module Modu
 		return fmt.Errorf("failed to get artefact diffs: %w", err)
 	}
 
-	moduleSchema, err := loadProtoSchema(projectConfig, moduleConfig, replicas)
+	moduleSchema, err := loadProtoSchema(projectConfig, moduleConfig)
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func terminateModuleDeployment(ctx context.Context, client DeployClient, module 
 	return err
 }
 
-func loadProtoSchema(projectConfig projectconfig.Config, config moduleconfig.AbsModuleConfig, replicas int32) (*schemapb.Module, error) {
+func loadProtoSchema(projectConfig projectconfig.Config, config moduleconfig.AbsModuleConfig) (*schemapb.Module, error) {
 	schPath := projectConfig.SchemaPath(config.Module)
 	content, err := os.ReadFile(schPath)
 	if err != nil {
@@ -160,7 +160,6 @@ func loadProtoSchema(projectConfig projectconfig.Config, config moduleconfig.Abs
 		runtime.CreateTime = timestamppb.Now()
 	}
 	runtime.Language = config.Language
-	runtime.MinReplicas = replicas
 	return module, nil
 }
 
