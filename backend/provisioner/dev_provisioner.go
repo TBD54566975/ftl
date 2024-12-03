@@ -16,6 +16,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
 
@@ -24,11 +25,11 @@ var pubSubNameLimit = 249 // 255 (filename limit) - 6 (partition id)
 
 // NewDevProvisioner creates a new provisioner that provisions resources locally when running FTL in dev mode
 func NewDevProvisioner(postgresPort int, mysqlPort int, recreate bool) *InMemProvisioner {
-	return NewEmbeddedProvisioner(map[ResourceType]InMemResourceProvisionerFn{
-		ResourceTypePostgres:     provisionPostgres(postgresPort, recreate),
-		ResourceTypeMysql:        provisionMysql(mysqlPort, recreate),
-		ResourceTypeTopic:        provisionTopic(),
-		ResourceTypeSubscription: provisionSubscription(),
+	return NewEmbeddedProvisioner(map[schema.ResourceType]InMemResourceProvisionerFn{
+		schema.ResourceTypePostgres:     provisionPostgres(postgresPort, recreate),
+		schema.ResourceTypeMysql:        provisionMysql(mysqlPort, recreate),
+		schema.ResourceTypeTopic:        provisionTopic(),
+		schema.ResourceTypeSubscription: provisionSubscription(),
 	})
 }
 func provisionMysql(mysqlPort int, recreate bool) InMemResourceProvisionerFn {

@@ -11,12 +11,13 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // NewControllerProvisioner creates a new provisioner that uses the FTL controller to provision modules
 func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMemProvisioner {
-	return NewEmbeddedProvisioner(map[ResourceType]InMemResourceProvisionerFn{
-		ResourceTypeModule: func(ctx context.Context, rc *provisioner.ResourceContext, module, _ string, previous *provisioner.Resource) (*provisioner.Resource, error) {
+	return NewEmbeddedProvisioner(map[schema.ResourceType]InMemResourceProvisionerFn{
+		schema.ResourceTypeModule: func(ctx context.Context, rc *provisioner.ResourceContext, module, _ string, previous *provisioner.Resource) (*provisioner.Resource, error) {
 			mod, ok := rc.Resource.Resource.(*provisioner.Resource_Module)
 			if !ok {
 				panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))

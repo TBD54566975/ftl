@@ -78,6 +78,10 @@ type TopicRuntime struct {
 	TopicID      string   `parser:"" protobuf:"2"`
 }
 
+var _ Runtime = (*TopicRuntime)(nil)
+
+func (t *TopicRuntime) runtime() {}
+
 func (t *TopicRuntime) ToProto() *schemapb.TopicRuntime {
 	return &schemapb.TopicRuntime{
 		KafkaBrokers: t.KafkaBrokers,

@@ -18,8 +18,8 @@ import (
 
 // NewRunnerScalingProvisioner creates a new provisioner that provisions resources locally when running FTL in dev mode
 func NewRunnerScalingProvisioner(runners scaling.RunnerScaling, client ftlv1connect.ControllerServiceClient) *InMemProvisioner {
-	return NewEmbeddedProvisioner(map[ResourceType]InMemResourceProvisionerFn{
-		ResourceTypeRunner: provisionRunner(runners, client),
+	return NewEmbeddedProvisioner(map[schema.ResourceType]InMemResourceProvisionerFn{
+		schema.ResourceTypeRunner: provisionRunner(runners, client),
 	})
 }
 

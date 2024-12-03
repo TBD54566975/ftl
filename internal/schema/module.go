@@ -30,6 +30,10 @@ type ModuleRuntime struct {
 	Image string `protobuf:"6,optional"`
 }
 
+var _ Runtime = (*ModuleRuntime)(nil)
+
+func (m *ModuleRuntime) runtime() {}
+
 type Module struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 

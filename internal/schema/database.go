@@ -85,8 +85,10 @@ type DatabaseRuntime struct {
 	WriteConnector DatabaseConnector `parser:"" protobuf:"2"`
 }
 
+var _ Runtime = (*DatabaseRuntime)(nil)
 var _ Symbol = (*DatabaseRuntime)(nil)
 
+func (d *DatabaseRuntime) runtime()           {}
 func (d *DatabaseRuntime) Position() Position { return d.ReadConnector.Position() }
 func (d *DatabaseRuntime) schemaSymbol()      {}
 func (d *DatabaseRuntime) String() string {
