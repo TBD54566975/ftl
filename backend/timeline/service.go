@@ -5,13 +5,13 @@ import (
 	"net/url"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/kong"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
-	"github.com/alecthomas/kong"
 )
 
 type Config struct {
