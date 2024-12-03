@@ -1,0 +1,16 @@
+name: Load Docker Images
+description: Loads all docker images built in previous steps
+runs:
+  using: "composite"
+  steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        pattern: docker-*-artifact
+    - name: Load Docker images
+      shell: bash
+      run: |
+        for tar in artifacts/docker-*/ftl-*.tar; do
+          docker load -i "$tar"
+        done

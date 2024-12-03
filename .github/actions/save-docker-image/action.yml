@@ -1,0 +1,21 @@
+name: Save Docker Images
+description: Builds all docker images and saves them as artifacts
+inputs:
+  service:
+    description: The service to build
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Build Docker Image
+      shell: bash
+      run: |
+        just build-docker ${{ inputs.service }}
+        mkdir -p artifacts/ftl-${{ inputs.service }}
+        docker save -o artifacts/ftl-${{ inputs.service }}/ftl-${{ inputs.service }}.tar ftl0/ftl-${{ inputs.service }}:latest
+    - name: Temporarily save Docker image
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-${{ inputs.service }}-artifact
+        path: artifacts/ftl-${{ inputs.service }}
+        retention-days: 1

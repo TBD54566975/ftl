@@ -1,0 +1,12 @@
+name: Shard Docker Builds
+description: Outputs a matrix of all services to build
+outputs:
+    matrix:
+      description: A matrix of all services to build
+      value: ${{ steps.set-matrix.outputs.matrix }}
+runs:
+  using: "composite"
+  steps:
+    - id: set-matrix
+      shell: bash
+      run: echo "matrix=$(just list-docker-images | tr -d '\n' | jq -R -s -c 'split(" ")')" >> "$GITHUB_OUTPUT"
