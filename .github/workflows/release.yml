@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1.1.3
       - name: Build Image and Save
         uses: ./.github/actions/save-docker-image
         with:
@@ -43,16 +45,8 @@ jobs:
           fetch-depth: 0
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1.1.3
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          pattern: docker-*-artifact
-      - name: Load Docker images
-        run: |
-          for tar in artifacts/docker-*/ftl-*.tar; do
-            docker load -i "$tar"
-          done
+      - name: Load Docker Images
+        uses: ./.github/actions/load-docker-images
       - name: Log in to Container registry
         uses: docker/login-action@v3
         with:
