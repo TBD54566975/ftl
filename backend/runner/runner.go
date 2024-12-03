@@ -35,6 +35,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/runner/observability"
+	"github.com/TBD54566975/ftl/backend/runner/proxy"
 	"github.com/TBD54566975/ftl/backend/runner/pubsub"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/download"
@@ -178,7 +179,6 @@ func (s *Service) startDeployment(ctx context.Context, key model.DeploymentKey, 
 	}()
 	return fmt.Errorf("failure in runner: %w", rpc.Serve(ctx, s.config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, s),
-		rpc.GRPC(pubconnect.NewPublishServiceHandler, s.pubSub),
 		rpc.HTTP("/", s),
 		rpc.HealthCheck(s.healthCheck),
 	))
@@ -302,8 +302,9 @@ type Service struct {
 	deploymentLogQueue  chan log.Entry
 	cancelFunc          func()
 	devEndpoint         optional.Option[url.URL]
-
-	pubSub *pubsub.Service
+	proxy               *proxy.Service
+	pubSub              *pubsub.Service
+	proxyBindAddress    *url.URL
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
@@ -401,9 +402,41 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 			return fmt.Errorf("failed to download artefacts: %w", err)
 		}
 
-		envVars := []string{
-			"FTL_ENDPOINT=" + s.config.ControllerEndpoint.String(),
-			"FTL_RUNNER_ENDPOINT=" + s.config.Bind.String(),
+		pubSub, err := pubsub.New(module)
+		if err != nil {
+			observability.Deployment.Failure(ctx, optional.Some(key.String()))
+			return fmt.Errorf("failed to create pubsub service: %w", err)
+		}
+		s.pubSub = pubSub
+
+		moduleServiceClient := rpc.Dial(ftlv1connect.NewModuleServiceClient, s.config.ControllerEndpoint.String(), log.Error)
+		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, s.config.ControllerEndpoint.String(), log.Error)
+		s.proxy = proxy.New(verbServiceClient, moduleServiceClient)
+
+		parse, err := url.Parse("http://127.0.0.1:0")
+		if err != nil {
+			return fmt.Errorf("failed to parse url: %w", err)
+		}
+		proxyServer, err := rpc.NewServer(ctx, parse,
+			rpc.GRPC(ftlv1connect.NewVerbServiceHandler, s.proxy),
+			rpc.GRPC(ftlv1connect.NewModuleServiceHandler, s.proxy),
+			rpc.GRPC(pubconnect.NewPublishServiceHandler, s.pubSub),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to create server: %w", err)
+		}
+		urls := proxyServer.Bind.Subscribe(nil)
+		go func() {
+			err := proxyServer.Serve(ctx)
+			if err != nil {
+				logger.Errorf(err, "failed to serve")
+				return
+			}
+		}()
+		s.proxyBindAddress = <-urls
+
+		logger.Debugf("Setting FTL_ENDPOINT to %s", s.proxyBindAddress.String())
+		envVars := []string{"FTL_ENDPOINT=" + s.proxyBindAddress.String(),
 			"FTL_CONFIG=" + strings.Join(s.config.Config, ","),
 			"FTL_OBSERVABILITY_ENDPOINT=" + s.config.ControllerEndpoint.String()}
 		if s.config.DebugPort > 0 {
@@ -428,13 +461,6 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 		}
 		dep = s.makeDeployment(cmdCtx, key, deployment)
 	}
-
-	pubSub, err := pubsub.New(ctx, module, dep.client)
-	if err != nil {
-		observability.Deployment.Failure(ctx, optional.Some(key.String()))
-		return fmt.Errorf("failed to create pubsub service: %w", err)
-	}
-	s.pubSub = pubSub
 
 	s.readyTime.Store(time.Now().Add(time.Second * 2)) // Istio is a bit flakey, add a small delay for readiness
 	s.deployment.Store(optional.Some(dep))
