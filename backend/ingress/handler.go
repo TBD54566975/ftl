@@ -16,13 +16,14 @@ import (
 	"github.com/TBD54566975/ftl/backend/libdal"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // handleHTTP HTTP ingress routes.
-func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.RequestKey, routesForMethod []ingressRoute, w http.ResponseWriter, r *http.Request, verbClient CallClient) {
+func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.RequestKey, routesForMethod []ingressRoute, w http.ResponseWriter, r *http.Request, verbClientLookup func(module string) optional.Option[ftlv1connect.VerbServiceClient]) {
 	logger := log.FromContext(r.Context()).Scope(fmt.Sprintf("ingress:%s:%s", r.Method, r.URL.Path))
 	logger.Debugf("Start ingress request")
 
@@ -68,6 +69,15 @@ func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.Reques
 		Verb:     verbRef,
 		Body:     body,
 	})
+	verbClient, ok := verbClientLookup(route.module).Get()
+	if !ok {
+		// we have a route in the schema, but the service is not ready
+		logger.Debugf("service not ready")
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("bad request"))
+		recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusBadGateway, err.Error())
+		return
+	}
 
 	resp, err := verbClient.Call(r.Context(), creq)
 	if err != nil {

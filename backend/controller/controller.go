@@ -180,7 +180,6 @@ func Start(
 }
 
 var _ ftlv1connect.ControllerServiceHandler = (*Service)(nil)
-var _ ftlv1connect.VerbServiceHandler = (*Service)(nil)
 var _ ftlv1connect.SchemaServiceHandler = (*Service)(nil)
 
 type clients struct {
@@ -743,7 +742,6 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 	// Initialize checksum to -1; a zero checksum does occur when the context contains no settings
 	lastChecksum := int64(-1)
 
-	callableModuleNames := []string{}
 	callableModules := map[string]bool{}
 	for _, decl := range deployment.Schema.Decls {
 		switch entry := decl.(type) {
@@ -759,7 +757,7 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 
 		}
 	}
-	callableModuleNames = maps.Keys(callableModules)
+	callableModuleNames := maps.Keys(callableModules)
 	callableModuleNames = slices.Sort(callableModuleNames)
 	logger.Debugf("Modules %s can call %v", module, callableModuleNames)
 	for {
@@ -1586,7 +1584,11 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 
 				moduleSchema := message.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 				hasher := sha.New()
-				data := []byte(moduleSchema.String())
+				data, err := schema.ModuleToBytes(message.Schema)
+				if err != nil {
+					logger.Errorf(err, "Could not serialize module schema")
+					return fmt.Errorf("could not serialize module schema: %w", err)
+				}
 				if _, err := hasher.Write(data); err != nil {
 					return err
 				}

@@ -12,9 +12,11 @@ import (
 	"github.com/TBD54566975/ftl/backend/cron/observability"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -33,7 +35,7 @@ type cronJob struct {
 }
 
 type Config struct {
-	ControllerEndpoint *url.URL `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
+	SchemaServiceEndpoint *url.URL `name:"ftl-endpoint" help:"Schema Service endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
 }
 
 func (c cronJob) String() string {
@@ -46,12 +48,13 @@ func (c cronJob) String() string {
 }
 
 // Start the cron service. Blocks until the context is cancelled.
-func Start(ctx context.Context, eventSource schemaeventsource.EventSource, verbClient CallClient) error {
+func Start(ctx context.Context, eventSource schemaeventsource.EventSource, table *routing.RouteTable) error {
 	logger := log.FromContext(ctx).Scope("cron")
 	// Map of cron jobs for each module.
 	cronJobs := map[string][]cronJob{}
 	// Cron jobs ordered by next execution.
 	cronQueue := []cronJob{}
+	routeManager := routing.NewClientManager(ctx, table, ftlv1connect.NewVerbServiceClient)
 
 	logger.Debugf("Starting cron service")
 
@@ -98,7 +101,13 @@ func Start(ctx context.Context, eventSource schemaeventsource.EventSource, verbC
 				NextExecution: job.next,
 			}
 			observability.Cron.JobStarted(ctx, cronModel)
-			if err := callCronJob(ctx, verbClient, job); err != nil {
+			client, ok := routeManager.LookupClient(job.module).Get()
+			if !ok {
+				logger.Debugf("Service not ready")
+				observability.Cron.JobFailed(ctx, cronModel)
+				continue
+			}
+			if err := callCronJob(ctx, client, job); err != nil {
 				observability.Cron.JobFailed(ctx, cronModel)
 				logger.Errorf(err, "Failed to execute cron job")
 			} else {

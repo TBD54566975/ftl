@@ -21,12 +21,12 @@ import (
 )
 
 var cli struct {
-	Version             kong.VersionFlag     `help:"Show version."`
-	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
-	LogConfig           log.Config           `embed:"" prefix:"log-"`
-	HTTPIngressConfig   ingress.Config       `embed:""`
-	ConfigFlag          string               `name:"config" short:"C" help:"Path to FTL project cf file." env:"FTL_CONFIG" placeholder:"FILE"`
-	ControllerEndpoint  *url.URL             `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
+	Version              kong.VersionFlag     `help:"Show version."`
+	ObservabilityConfig  observability.Config `embed:"" prefix:"o11y-"`
+	LogConfig            log.Config           `embed:"" prefix:"log-"`
+	HTTPIngressConfig    ingress.Config       `embed:""`
+	ConfigFlag           string               `name:"config" short:"C" help:"Path to FTL project cf file." env:"FTL_CONFIG" placeholder:"FILE"`
+	SchemaServerEndpoint *url.URL             `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
 }
 
 func main() {
@@ -44,10 +44,9 @@ func main() {
 	err = observability.Init(ctx, false, "", "ftl-http-ingress", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
-	verbClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.ControllerEndpoint.String(), log.Error)
-	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.ControllerEndpoint.String(), log.Error)
-	schemaEventSource := schemaeventsource.New(ctx, schemaClient)
+	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.SchemaServerEndpoint.String(), log.Error)
+	eventSource := schemaeventsource.New(ctx, schemaClient)
 
-	err = ingress.Start(ctx, cli.HTTPIngressConfig, schemaEventSource, verbClient)
+	err = ingress.Start(ctx, cli.HTTPIngressConfig, eventSource)
 	kctx.FatalIfErrorf(err, "failed to start HTTP ingress")
 }

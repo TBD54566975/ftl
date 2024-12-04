@@ -16,10 +16,12 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/cors"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -43,16 +45,17 @@ func (c *Config) Validate() error {
 
 type service struct {
 	// Complete schema synchronised from the database.
-	view       *atomic.Value[materialisedView]
-	callClient CallClient
+	view         *atomic.Value[materialisedView]
+	routingTable *routing.RouteClientManager[ftlv1connect.VerbServiceClient]
 }
 
 // Start the HTTP ingress service. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, schemaEventSource schemaeventsource.EventSource, verbClient CallClient) error {
+func Start(ctx context.Context, config Config, schemaEventSource schemaeventsource.EventSource) error {
 	logger := log.FromContext(ctx).Scope("http-ingress")
+	routingTable := routing.New(ctx, schemaEventSource)
 	svc := &service{
-		view:       syncView(ctx, schemaEventSource),
-		callClient: verbClient,
+		view:         syncView(ctx, schemaEventSource),
+		routingTable: routing.NewClientManager(ctx, routingTable, ftlv1connect.NewVerbServiceClient),
 	}
 
 	ingressHandler := otelhttp.NewHandler(http.Handler(svc), "ftl.ingress")
@@ -89,5 +92,5 @@ func (s *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("route not found in dal"))
 		return
 	}
-	handleHTTP(start, state.schema, requestKey, routes, w, r, s.callClient)
+	handleHTTP(start, state.schema, requestKey, routes, w, r, s.routingTable.LookupClient)
 }

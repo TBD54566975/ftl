@@ -41,12 +41,17 @@ func (r *RouteTable) run(ctx context.Context, changes schemaeventsource.EventSou
 		case <-ctx.Done():
 			return
 
-		case event := <-changes.Events():
+		case <-changes.Events():
 			old := r.routes.Load()
-			routes := extractRoutes(ctx, event.Schema())
-			//TODO: removal notifications
+			routes := extractRoutes(ctx, changes.View())
 			for module, rd := range old.moduleToDeployment {
 				if old.byDeployment[rd.String()] != routes.byDeployment[rd.String()] {
+					r.changeNotification.Publish(module)
+				}
+			}
+			for module, rd := range routes.moduleToDeployment {
+				// Check for new modules
+				if old.byDeployment[rd.String()] == nil {
 					r.changeNotification.Publish(module)
 				}
 			}

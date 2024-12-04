@@ -38,6 +38,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
@@ -314,7 +315,8 @@ func (s *serveCommonConfig) run(
 	})
 	// Start Cron
 	wg.Go(func() error {
-		err := cron.Start(ctx, schemaEventSourceFactory(), verbClient)
+		rt := routing.New(ctx, schemaEventSourceFactory())
+		err := cron.Start(ctx, schemaEventSourceFactory(), rt)
 		if err != nil {
 			return fmt.Errorf("cron failed: %w", err)
 		}
@@ -322,7 +324,7 @@ func (s *serveCommonConfig) run(
 	})
 	// Start Ingress
 	wg.Go(func() error {
-		err := ingress.Start(ctx, s.Ingress, schemaEventSourceFactory(), verbClient)
+		err := ingress.Start(ctx, s.Ingress, schemaEventSourceFactory())
 		if err != nil {
 			return fmt.Errorf("ingress failed: %w", err)
 		}
