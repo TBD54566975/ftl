@@ -1,4 +1,4 @@
-import type { PubSubPublishEvent } from '../../protos/xyz/block/ftl/console/v1/console_pb'
+import type { PubSubPublishEvent } from '../../protos/xyz/block/ftl/v1/event_pb'
 import { refString } from '../modules/decls/verb/verb.utils'
 
 export const TimelinePubSubPublish = ({ pubSubPublish }: { pubSubPublish: PubSubPublishEvent }) => {

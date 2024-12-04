@@ -90,7 +90,7 @@ func (c *replayCmd) Run(
 			{
 				Filter: &pbconsole.GetEventsRequest_Filter_EventTypes{
 					EventTypes: &pbconsole.GetEventsRequest_EventTypeFilter{
-						EventTypes: []pbconsole.EventType{pbconsole.EventType_EVENT_TYPE_CALL},
+						EventTypes: []ftlv1.EventType{ftlv1.EventType_EVENT_TYPE_CALL},
 					},
 				},
 			},

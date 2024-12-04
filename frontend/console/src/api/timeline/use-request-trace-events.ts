@@ -1,12 +1,14 @@
 import {
+  type GetEventsRequest_Filter,
+} from '../../protos/xyz/block/ftl/console/v1/console_pb.ts'
+import {
   type AsyncExecuteEvent,
   type CallEvent,
   EventType,
-  type GetEventsRequest_Filter,
   type IngressEvent,
   type PubSubConsumeEvent,
   type PubSubPublishEvent,
-} from '../../protos/xyz/block/ftl/console/v1/console_pb.ts'
+} from '../../protos/xyz/block/ftl/v1/event_pb.ts'
 import { eventTypesFilter, requestKeysFilter } from './timeline-filters.ts'
 import { useTimeline } from './use-timeline.ts'
 

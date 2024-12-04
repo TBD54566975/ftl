@@ -622,7 +622,7 @@ func eventsQueryProtoToDAL(query *pbconsole.GetEventsRequest) ([]timeline.Timeli
 	return result, nil
 }
 
-func eventDALToProto(event timeline.Event) *pbconsole.Event {
+func eventDALToProto(event timeline.Event) *ftlv1.Event {
 	switch event := event.(type) {
 	case *timeline.CallEvent:
 		var requestKey *string
@@ -634,11 +634,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 		if sourceVerb, ok := event.SourceVerb.Get(); ok {
 			sourceVerbRef = sourceVerb.ToProto().(*schemapb.Ref) //nolint:forcetypeassert
 		}
-		return &pbconsole.Event{
+		return &ftlv1.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_Call{
-				Call: &pbconsole.CallEvent{
+			Entry: &ftlv1.Event_Call{
+				Call: &ftlv1.CallEvent{
 					RequestKey:    requestKey,
 					DeploymentKey: event.DeploymentKey.String(),
 					TimeStamp:     timestamppb.New(event.Time),
@@ -662,11 +662,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			rstr := r.String()
 			requestKey = &rstr
 		}
-		return &pbconsole.Event{
+		return &ftlv1.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_Log{
-				Log: &pbconsole.LogEvent{
+			Entry: &ftlv1.Event_Log{
+				Log: &ftlv1.LogEvent{
 					DeploymentKey: event.DeploymentKey.String(),
 					RequestKey:    requestKey,
 					TimeStamp:     timestamppb.New(event.Time),
@@ -684,11 +684,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			rstr := r.String()
 			replaced = &rstr
 		}
-		return &pbconsole.Event{
+		return &ftlv1.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_DeploymentCreated{
-				DeploymentCreated: &pbconsole.DeploymentCreatedEvent{
+			Entry: &ftlv1.Event_DeploymentCreated{
+				DeploymentCreated: &ftlv1.DeploymentCreatedEvent{
 					Key:         event.DeploymentKey.String(),
 					Language:    event.Language,
 					ModuleName:  event.ModuleName,
@@ -698,11 +698,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			},
 		}
 	case *timeline.DeploymentUpdatedEvent:
-		return &pbconsole.Event{
+		return &ftlv1.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_DeploymentUpdated{
-				DeploymentUpdated: &pbconsole.DeploymentUpdatedEvent{
+			Entry: &ftlv1.Event_DeploymentUpdated{
+				DeploymentUpdated: &ftlv1.DeploymentUpdatedEvent{
 					Key:             event.DeploymentKey.String(),
 					MinReplicas:     int32(event.MinReplicas),
 					PrevMinReplicas: int32(event.PrevMinReplicas),
@@ -717,11 +717,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			requestKey = &rstr
 		}
 
-		return &pbconsole.Event{
+		return &ftlv1.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_Ingress{
-				Ingress: &pbconsole.IngressEvent{
+			Entry: &ftlv1.Event_Ingress{
+				Ingress: &ftlv1.IngressEvent{
 					DeploymentKey: event.DeploymentKey.String(),
 					RequestKey:    requestKey,
 					VerbRef: &schemapb.Ref{
@@ -743,11 +743,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 		}
 
 	case *timeline.CronScheduledEvent:
-		return &pbconsole.Event{
+		return &ftlv1.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_CronScheduled{
-				CronScheduled: &pbconsole.CronScheduledEvent{
+			Entry: &ftlv1.Event_CronScheduled{
+				CronScheduled: &ftlv1.CronScheduledEvent{
 					DeploymentKey: event.DeploymentKey.String(),
 					VerbRef: &schemapb.Ref{
 						Module: event.Verb.Module,
@@ -768,21 +768,21 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			requestKey = &rstr
 		}
 
-		var asyncEventType pbconsole.AsyncExecuteEventType
+		var asyncEventType ftlv1.AsyncExecuteEventType
 		switch event.EventType {
 		case timeline.AsyncExecuteEventTypeUnkown:
-			asyncEventType = pbconsole.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_UNSPECIFIED
+			asyncEventType = ftlv1.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_UNSPECIFIED
 		case timeline.AsyncExecuteEventTypeCron:
-			asyncEventType = pbconsole.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_CRON
+			asyncEventType = ftlv1.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_CRON
 		case timeline.AsyncExecuteEventTypePubSub:
-			asyncEventType = pbconsole.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_PUBSUB
+			asyncEventType = ftlv1.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_PUBSUB
 		}
 
-		return &pbconsole.Event{
+		return &ftlv1.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_AsyncExecute{
-				AsyncExecute: &pbconsole.AsyncExecuteEvent{
+			Entry: &ftlv1.Event_AsyncExecute{
+				AsyncExecute: &ftlv1.AsyncExecuteEvent{
 					DeploymentKey:  event.DeploymentKey.String(),
 					RequestKey:     requestKey,
 					TimeStamp:      timestamppb.New(event.Time),
@@ -803,11 +803,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			requestKey = &r
 		}
 
-		return &pbconsole.Event{
+		return &ftlv1.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_PubsubPublish{
-				PubsubPublish: &pbconsole.PubSubPublishEvent{
+			Entry: &ftlv1.Event_PubsubPublish{
+				PubsubPublish: &ftlv1.PubSubPublishEvent{
 					DeploymentKey: event.DeploymentKey.String(),
 					RequestKey:    requestKey,
 					VerbRef:       event.SourceVerb.ToProto().(*schemapb.Ref), //nolint:forcetypeassert
@@ -833,11 +833,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			destVerbName = destVerb.Name
 		}
 
-		return &pbconsole.Event{
+		return &ftlv1.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_PubsubConsume{
-				PubsubConsume: &pbconsole.PubSubConsumeEvent{
+			Entry: &ftlv1.Event_PubsubConsume{
+				PubsubConsume: &ftlv1.PubSubConsumeEvent{
 					DeploymentKey:  event.DeploymentKey.String(),
 					RequestKey:     requestKey,
 					DestVerbModule: &destVerbModule,
