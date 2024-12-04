@@ -20,29 +20,25 @@ import (
 const asmLeaderSyncInterval = time.Minute * 5
 const asmTagKey = "ftl"
 
-type asmLeader struct {
+type asmManager struct {
 	client *secretsmanager.Client
 }
 
-var _ asmClient = &asmLeader{}
+var _ asmClient = &asmManager{}
 
-func newASMLeader(client *secretsmanager.Client) *asmLeader {
-	l := &asmLeader{
+func newAsmManager(client *secretsmanager.Client) *asmManager {
+	l := &asmManager{
 		client: client,
 	}
 	return l
 }
 
-func (l *asmLeader) name() string {
+func (l *asmManager) name() string {
 	return "asm/leader"
 }
 
-func (l *asmLeader) syncInterval() time.Duration {
-	return asmLeaderSyncInterval
-}
-
 // sync retrieves all secrets from ASM and updates the cache
-func (l *asmLeader) sync(ctx context.Context) (map[configuration.Ref]configuration.SyncedValue, error) {
+func (l *asmManager) sync(ctx context.Context) (map[configuration.Ref]configuration.SyncedValue, error) {
 	// get list of secrets
 	refsToLoad := map[configuration.Ref]time.Time{}
 	nextToken := optional.None[string]()
@@ -118,7 +114,7 @@ func (l *asmLeader) sync(ctx context.Context) (map[configuration.Ref]configurati
 }
 
 // store and if the secret already exists, update it.
-func (l *asmLeader) store(ctx context.Context, ref configuration.Ref, value []byte) (*url.URL, error) {
+func (l *asmManager) store(ctx context.Context, ref configuration.Ref, value []byte) (*url.URL, error) {
 	valueWithComments := aws.String(string(wrapWithComments(value, defaultSecretModificationWarning)))
 	_, err := l.client.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 		Name:         aws.String(ref.String()),
@@ -145,7 +141,7 @@ func (l *asmLeader) store(ctx context.Context, ref configuration.Ref, value []by
 	return asmURLForRef(ref), nil
 }
 
-func (l *asmLeader) delete(ctx context.Context, ref configuration.Ref) error {
+func (l *asmManager) delete(ctx context.Context, ref configuration.Ref) error {
 	var t = true
 	_, err := l.client.DeleteSecret(ctx, &secretsmanager.DeleteSecretInput{
 		SecretId:                   aws.String(ref.String()),
