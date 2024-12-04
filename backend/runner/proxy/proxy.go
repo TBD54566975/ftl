@@ -45,7 +45,7 @@ func (r *Service) GetDeploymentContext(ctx context.Context, c *connect.Request[f
 		rcv := moduleContext.Receive()
 
 		if rcv {
-			logger.Debugf("Received ModuleContext from module: %v", moduleContext.Msg())
+			logger.Debugf("Received DeploymentContext from module: %v", moduleContext.Msg())
 			newRouteTable := map[string]ftlv1connect.VerbServiceClient{}
 			for _, route := range moduleContext.Msg().Routes {
 				logger.Debugf("Adding route: %s -> %s", route.Module, route.Uri)

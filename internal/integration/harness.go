@@ -36,9 +36,7 @@ import (
 	"github.com/TBD54566975/ftl/internal"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
 const dumpPath = "/tmp/ftl-kube-report"
@@ -297,11 +295,12 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			t.Helper()
 			tmpDir := initWorkDir(t, cwd, opts)
 
+			verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
+
 			var controller ftlv1connect.ControllerServiceClient
 			var console pbconsoleconnect.ConsoleServiceClient
 			var provisioner provisionerconnect.ProvisionerServiceClient
 			var schema ftlv1connect.SchemaServiceClient
-			var verbs routing.CallClient
 			if opts.startController {
 				Infof("Starting ftl cluster")
 
@@ -329,8 +328,6 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
 				console = rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, "http://localhost:8892", log.Debug)
 				schema = rpc.Dial(ftlv1connect.NewSchemaServiceClient, "http://localhost:8892", log.Debug)
-				eventsource := schemaeventsource.New(ctx, schema)
-				verbs = routing.NewVerbRouter(ctx, eventsource)
 			}
 			if opts.startProvisioner {
 				provisioner = rpc.Dial(provisionerconnect.NewProvisionerServiceClient, "http://localhost:8893", log.Debug)
@@ -438,7 +435,7 @@ type TestContext struct {
 	Provisioner provisionerconnect.ProvisionerServiceClient
 	Schema      ftlv1connect.SchemaServiceClient
 	Console     pbconsoleconnect.ConsoleServiceClient
-	Verbs       routing.CallClient
+	Verbs       ftlv1connect.VerbServiceClient
 
 	realT *testing.T
 }

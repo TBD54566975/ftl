@@ -122,6 +122,7 @@ func extractRoutes(ctx context.Context, sch *schema.Schema) RouteView {
 			logger.Warnf("Failed to parse endpoint URL for module %q: %v", module.Name, err)
 			continue
 		}
+		logger.Debugf("Adding route for %s/%s: %s", module.Name, rt.DeploymentKey, u)
 		moduleToDeployment[module.Name] = key
 		byDeployment[rt.DeploymentKey] = u
 	}
