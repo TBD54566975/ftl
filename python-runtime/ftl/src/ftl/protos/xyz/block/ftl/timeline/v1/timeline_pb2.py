@@ -26,7 +26,7 @@ from xyz.block.ftl.timeline.v1 import event_pb2 as xyz_dot_block_dot_ftl_dot_tim
 from xyz.block.ftl.v1 import ftl_pb2 as xyz_dot_block_dot_ftl_dot_v1_dot_ftl__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n(xyz/block/ftl/timeline/v1/timeline.proto\x12\x19xyz.block.ftl.timeline.v1\x1a%xyz/block/ftl/timeline/v1/event.proto\x1a\x1axyz/block/ftl/v1/ftl.proto\"\xd4\x01\n\x12GetTimelineRequest\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12\x1e\n\x08since_id\x18\x02 \x01(\x03H\x00R\x07sinceId\x88\x01\x01\x12\x19\n\x05limit\x18\x03 \x01(\x05H\x01R\x05limit\x88\x01\x01\x12\x45\n\x0b\x65vent_types\x18\x04 \x03(\x0e\x32$.xyz.block.ftl.timeline.v1.EventTypeR\neventTypesB\x0b\n\t_since_idB\x08\n\x06_limit\"O\n\x13GetTimelineResponse\x12\x38\n\x06\x65vents\x18\x01 \x03(\x0b\x32 .xyz.block.ftl.timeline.v1.EventR\x06\x65vents\"~\n\x16\x44\x65leteOldEventsRequest\x12\x43\n\nevent_type\x18\x01 \x01(\x0e\x32$.xyz.block.ftl.timeline.v1.EventTypeR\teventType\x12\x1f\n\x0b\x61ge_seconds\x18\x02 \x01(\x03R\nageSeconds\">\n\x17\x44\x65leteOldEventsResponse\x12#\n\rdeleted_count\x18\x01 \x01(\x03R\x0c\x64\x65letedCount2\xcc\x02\n\x0fTimelineService\x12J\n\x04Ping\x12\x1d.xyz.block.ftl.v1.PingRequest\x1a\x1e.xyz.block.ftl.v1.PingResponse\"\x03\x90\x02\x01\x12q\n\x0bGetTimeline\x12-.xyz.block.ftl.timeline.v1.GetTimelineRequest\x1a..xyz.block.ftl.timeline.v1.GetTimelineResponse\"\x03\x90\x02\x01\x12z\n\x0f\x44\x65leteOldEvents\x12\x31.xyz.block.ftl.timeline.v1.DeleteOldEventsRequest\x1a\x32.xyz.block.ftl.timeline.v1.DeleteOldEventsResponse\"\x00\x42RP\x01ZNgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1;timelinev1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n(xyz/block/ftl/timeline/v1/timeline.proto\x12\x19xyz.block.ftl.timeline.v1\x1a%xyz/block/ftl/timeline/v1/event.proto\x1a\x1axyz/block/ftl/v1/ftl.proto\"\xd4\x01\n\x12GetTimelineRequest\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12\x1e\n\x08since_id\x18\x02 \x01(\x03H\x00R\x07sinceId\x88\x01\x01\x12\x19\n\x05limit\x18\x03 \x01(\x05H\x01R\x05limit\x88\x01\x01\x12\x45\n\x0b\x65vent_types\x18\x04 \x03(\x0e\x32$.xyz.block.ftl.timeline.v1.EventTypeR\neventTypesB\x0b\n\t_since_idB\x08\n\x06_limit\"O\n\x13GetTimelineResponse\x12\x38\n\x06\x65vents\x18\x01 \x03(\x0b\x32 .xyz.block.ftl.timeline.v1.EventR\x06\x65vents\"\xfc\x05\n\x12\x43reateEventRequest\x12\x37\n\x03log\x18\x01 \x01(\x0b\x32#.xyz.block.ftl.timeline.v1.LogEventH\x00R\x03log\x12:\n\x04\x63\x61ll\x18\x02 \x01(\x0b\x32$.xyz.block.ftl.timeline.v1.CallEventH\x00R\x04\x63\x61ll\x12\x62\n\x12\x64\x65ployment_created\x18\x03 \x01(\x0b\x32\x31.xyz.block.ftl.timeline.v1.DeploymentCreatedEventH\x00R\x11\x64\x65ploymentCreated\x12\x62\n\x12\x64\x65ployment_updated\x18\x04 \x01(\x0b\x32\x31.xyz.block.ftl.timeline.v1.DeploymentUpdatedEventH\x00R\x11\x64\x65ploymentUpdated\x12\x43\n\x07ingress\x18\x05 \x01(\x0b\x32\'.xyz.block.ftl.timeline.v1.IngressEventH\x00R\x07ingress\x12V\n\x0e\x63ron_scheduled\x18\x06 \x01(\x0b\x32-.xyz.block.ftl.timeline.v1.CronScheduledEventH\x00R\rcronScheduled\x12S\n\rasync_execute\x18\x07 \x01(\x0b\x32,.xyz.block.ftl.timeline.v1.AsyncExecuteEventH\x00R\x0c\x61syncExecute\x12V\n\x0epubsub_publish\x18\x08 \x01(\x0b\x32-.xyz.block.ftl.timeline.v1.PubSubPublishEventH\x00R\rpubsubPublish\x12V\n\x0epubsub_consume\x18\t \x01(\x0b\x32-.xyz.block.ftl.timeline.v1.PubSubConsumeEventH\x00R\rpubsubConsumeB\x07\n\x05\x65ntry\"\x15\n\x13\x43reateEventResponse\"~\n\x16\x44\x65leteOldEventsRequest\x12\x43\n\nevent_type\x18\x01 \x01(\x0e\x32$.xyz.block.ftl.timeline.v1.EventTypeR\teventType\x12\x1f\n\x0b\x61ge_seconds\x18\x02 \x01(\x03R\nageSeconds\">\n\x17\x44\x65leteOldEventsResponse\x12#\n\rdeleted_count\x18\x01 \x01(\x03R\x0c\x64\x65letedCount2\xbc\x03\n\x0fTimelineService\x12J\n\x04Ping\x12\x1d.xyz.block.ftl.v1.PingRequest\x1a\x1e.xyz.block.ftl.v1.PingResponse\"\x03\x90\x02\x01\x12q\n\x0bGetTimeline\x12-.xyz.block.ftl.timeline.v1.GetTimelineRequest\x1a..xyz.block.ftl.timeline.v1.GetTimelineResponse\"\x03\x90\x02\x01\x12n\n\x0b\x43reateEvent\x12-.xyz.block.ftl.timeline.v1.CreateEventRequest\x1a..xyz.block.ftl.timeline.v1.CreateEventResponse\"\x00\x12z\n\x0f\x44\x65leteOldEvents\x12\x31.xyz.block.ftl.timeline.v1.DeleteOldEventsRequest\x1a\x32.xyz.block.ftl.timeline.v1.DeleteOldEventsResponse\"\x00\x42RP\x01ZNgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1;timelinev1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -42,10 +42,14 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_GETTIMELINEREQUEST']._serialized_end=351
   _globals['_GETTIMELINERESPONSE']._serialized_start=353
   _globals['_GETTIMELINERESPONSE']._serialized_end=432
-  _globals['_DELETEOLDEVENTSREQUEST']._serialized_start=434
-  _globals['_DELETEOLDEVENTSREQUEST']._serialized_end=560
-  _globals['_DELETEOLDEVENTSRESPONSE']._serialized_start=562
-  _globals['_DELETEOLDEVENTSRESPONSE']._serialized_end=624
-  _globals['_TIMELINESERVICE']._serialized_start=627
-  _globals['_TIMELINESERVICE']._serialized_end=959
+  _globals['_CREATEEVENTREQUEST']._serialized_start=435
+  _globals['_CREATEEVENTREQUEST']._serialized_end=1199
+  _globals['_CREATEEVENTRESPONSE']._serialized_start=1201
+  _globals['_CREATEEVENTRESPONSE']._serialized_end=1222
+  _globals['_DELETEOLDEVENTSREQUEST']._serialized_start=1224
+  _globals['_DELETEOLDEVENTSREQUEST']._serialized_end=1350
+  _globals['_DELETEOLDEVENTSRESPONSE']._serialized_start=1352
+  _globals['_DELETEOLDEVENTSRESPONSE']._serialized_end=1414
+  _globals['_TIMELINESERVICE']._serialized_start=1417
+  _globals['_TIMELINESERVICE']._serialized_end=1861
 # @@protoc_insertion_point(module_scope)
