@@ -3,6 +3,7 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	_ "github.com/go-sql-driver/mysql"
@@ -60,6 +61,24 @@ func provisionRunner(scaling scaling.RunnerScaling) InMemResourceProvisionerFn {
 		}
 		ep := endpoint.MustGet()
 		endpointURI := ep.String()
+
+		runnerClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, endpointURI, log.Error)
+		// TODO: a proper timeout
+		timeout := time.After(1 * time.Minute)
+		for {
+			_, err := runnerClient.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
+			if err == nil {
+				break
+			}
+			select {
+			case <-ctx.Done():
+				return nil, fmt.Errorf("context cancelled %w", ctx.Err())
+			case <-timeout:
+				return nil, fmt.Errorf("timed out waiting for runner to be ready")
+			case <-time.After(time.Millisecond * 100):
+			}
+		}
+
 		runner.Runner.Output = &provisioner.RunnerResource_RunnerResourceOutput{
 			RunnerUri:     endpointURI,
 			DeploymentKey: deployment,

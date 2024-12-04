@@ -22,27 +22,31 @@ func TestRouting(t *testing.T) {
 			Name: "time",
 			Runtime: &schema.ModuleRuntime{
 				Deployment: &schema.ModuleRuntimeDeployment{
-					Endpoint: "http://time.ftl",
+					Endpoint:      "http://time.ftl",
+					DeploymentKey: "dpl-time-sjkfislfjslfas",
 				},
 			},
 		},
 	})
 
 	rt := New(log.ContextWithNewDefaultLogger(context.TODO()), events)
-	assert.Equal(t, optional.Some(must.Get(url.Parse("http://time.ftl"))), rt.GetForModule("time"))
-	assert.Equal(t, optional.None[*url.URL](), rt.GetForModule("echo"))
+	current := rt.Current()
+	assert.Equal(t, optional.Ptr(must.Get(url.Parse("http://time.ftl"))), current.GetForModule("time"))
+	assert.Equal(t, optional.None[url.URL](), current.GetForModule("echo"))
 
 	events.Publish(schemaeventsource.EventUpsert{
 		Module: &schema.Module{
 			Name: "echo",
 			Runtime: &schema.ModuleRuntime{
 				Deployment: &schema.ModuleRuntimeDeployment{
-					Endpoint: "http://echo.ftl",
+					Endpoint:      "http://echo.ftl",
+					DeploymentKey: "dpl-echo-sjkfiaslfjslfs",
 				},
 			},
 		},
 	})
 
 	time.Sleep(time.Millisecond * 250)
-	assert.Equal(t, optional.Some(must.Get(url.Parse("http://echo.ftl"))), rt.GetForModule("echo"))
+	current = rt.Current()
+	assert.Equal(t, optional.Ptr(must.Get(url.Parse("http://echo.ftl"))), current.GetForModule("echo"))
 }
