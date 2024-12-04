@@ -540,18 +540,6 @@ func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.U
 			return nil, fmt.Errorf("could not set deployment replicas: %w", err)
 		}
 	}
-	if req.Msg.Endpoint != nil {
-		err = s.dal.SetDeploymentEndpoint(ctx, deploymentKey, *req.Msg.Endpoint)
-		if err != nil {
-			if errors.Is(err, libdal.ErrNotFound) {
-				logger.Errorf(err, "Deployment not found: %s", deploymentKey)
-				return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
-			}
-			logger.Errorf(err, "Could not set deployment endpoint: %s", deploymentKey)
-			return nil, fmt.Errorf("could not set deployment endpoint: %w", err)
-		}
-	}
-
 	return connect.NewResponse(&ftlv1.UpdateDeployResponse{}), nil
 }
 
@@ -1681,12 +1669,12 @@ func (s *Service) syncRoutesAndSchema(ctx context.Context) (ret time.Duration, e
 		// And we set its replicas to zero
 		// It may seem a bit odd to do this here but this is where we are actually updating the routing table
 		// Which is what makes as a deployment 'live' from a clients POV
-		if v.Schema.Runtime == nil {
+		if v.Schema.Runtime == nil || v.Schema.Runtime.Deployment == nil {
 			deploymentLogger.Debugf("Deployment %s has no runtime metadata", v.Key.String())
 			continue
 		}
-		targetEndpoint, ok := v.Endpoint.Get()
-		if !ok {
+		targetEndpoint := v.Schema.Runtime.Deployment.Endpoint
+		if targetEndpoint == "" {
 			deploymentLogger.Debugf("Failed to get updated endpoint for deployment %s", v.Key.String())
 			continue
 		}

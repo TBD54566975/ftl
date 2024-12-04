@@ -91,7 +91,6 @@ message RegisterRunnerResponse {}
 message UpdateDeployRequest {
   string deployment_key = 1;
   optional int32 min_replicas = 2;
-  optional string endpoint = 3;
 }
 message UpdateDeployResponse {}
 

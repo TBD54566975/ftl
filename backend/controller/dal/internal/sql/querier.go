@@ -69,7 +69,6 @@ type Querier interface {
 	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
 	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
-	SetDeploymentEndpoint(ctx context.Context, key model.DeploymentKey, endpoint optional.Option[string]) error
 	SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error
 	SucceedAsyncCall(ctx context.Context, response api.OptionalEncryptedAsyncColumn, iD int64) (bool, error)
 	// Note that this can result in a race condition if the deployment is being updated by another process. This will go

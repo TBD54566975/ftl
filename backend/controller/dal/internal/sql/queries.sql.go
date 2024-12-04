@@ -411,7 +411,7 @@ func (q *Queries) GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDe
 }
 
 const getActiveDeployments = `-- name: GetActiveDeployments :many
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, d.endpoint, m.name AS module_name, m.language, COUNT(r.id) AS replicas, d.endpoint
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, m.name AS module_name, m.language, COUNT(r.id) AS replicas
 FROM deployments d
   JOIN modules m ON d.module_id = m.id
   LEFT JOIN runners r ON d.id = r.deployment_id
@@ -425,7 +425,6 @@ type GetActiveDeploymentsRow struct {
 	ModuleName string
 	Language   string
 	Replicas   int64
-	Endpoint   optional.Option[string]
 }
 
 func (q *Queries) GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error) {
@@ -446,11 +445,9 @@ func (q *Queries) GetActiveDeployments(ctx context.Context) ([]GetActiveDeployme
 			&i.Deployment.Labels,
 			&i.Deployment.MinReplicas,
 			&i.Deployment.LastActivatedAt,
-			&i.Deployment.Endpoint,
 			&i.ModuleName,
 			&i.Language,
 			&i.Replicas,
-			&i.Endpoint,
 		); err != nil {
 			return nil, err
 		}
@@ -547,7 +544,7 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([][
 }
 
 const getDeployment = `-- name: GetDeployment :one
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, d.endpoint, m.language, m.name AS module_name, d.min_replicas
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, m.language, m.name AS module_name, d.min_replicas
 FROM deployments d
          INNER JOIN modules m ON m.id = d.module_id
 WHERE d.key = $1::deployment_key
@@ -572,7 +569,6 @@ func (q *Queries) GetDeployment(ctx context.Context, key model.DeploymentKey) (G
 		&i.Deployment.Labels,
 		&i.Deployment.MinReplicas,
 		&i.Deployment.LastActivatedAt,
-		&i.Deployment.Endpoint,
 		&i.Language,
 		&i.ModuleName,
 		&i.MinReplicas,
@@ -625,7 +621,7 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 }
 
 const getDeploymentsByID = `-- name: GetDeploymentsByID :many
-SELECT id, created_at, module_id, key, schema, labels, min_replicas, last_activated_at, endpoint
+SELECT id, created_at, module_id, key, schema, labels, min_replicas, last_activated_at
 FROM deployments
 WHERE id = ANY ($1::BIGINT[])
 `
@@ -648,7 +644,6 @@ func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deploy
 			&i.Labels,
 			&i.MinReplicas,
 			&i.LastActivatedAt,
-			&i.Endpoint,
 		); err != nil {
 			return nil, err
 		}
@@ -715,7 +710,7 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 }
 
 const getDeploymentsWithMinReplicas = `-- name: GetDeploymentsWithMinReplicas :many
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, d.endpoint, m.name AS module_name, m.language
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, m.name AS module_name, m.language
 FROM deployments d
   INNER JOIN modules m on d.module_id = m.id
 WHERE min_replicas > 0
@@ -746,7 +741,6 @@ func (q *Queries) GetDeploymentsWithMinReplicas(ctx context.Context) ([]GetDeplo
 			&i.Deployment.Labels,
 			&i.Deployment.MinReplicas,
 			&i.Deployment.LastActivatedAt,
-			&i.Deployment.Endpoint,
 			&i.ModuleName,
 			&i.Language,
 		); err != nil {
@@ -764,7 +758,7 @@ func (q *Queries) GetDeploymentsWithMinReplicas(ctx context.Context) ([]GetDeplo
 }
 
 const getExistingDeploymentForModule = `-- name: GetExistingDeploymentForModule :one
-SELECT d.id, created_at, module_id, key, schema, labels, min_replicas, last_activated_at, endpoint, m.id, language, name
+SELECT d.id, created_at, module_id, key, schema, labels, min_replicas, last_activated_at, m.id, language, name
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
 WHERE m.name = $1
@@ -781,7 +775,6 @@ type GetExistingDeploymentForModuleRow struct {
 	Labels          json.RawMessage
 	MinReplicas     int32
 	LastActivatedAt time.Time
-	Endpoint        optional.Option[string]
 	ID_2            int64
 	Language        string
 	Name            string
@@ -799,7 +792,6 @@ func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name strin
 		&i.Labels,
 		&i.MinReplicas,
 		&i.LastActivatedAt,
-		&i.Endpoint,
 		&i.ID_2,
 		&i.Language,
 		&i.Name,
@@ -1011,7 +1003,7 @@ func (q *Queries) GetRunner(ctx context.Context, key model.RunnerKey) (GetRunner
 }
 
 const getRunnersForDeployment = `-- name: GetRunnersForDeployment :many
-SELECT r.id, r.key, created, last_seen, r.endpoint, module_name, deployment_id, r.labels, d.id, created_at, module_id, d.key, schema, d.labels, min_replicas, last_activated_at, d.endpoint
+SELECT r.id, r.key, created, last_seen, endpoint, module_name, deployment_id, r.labels, d.id, created_at, module_id, d.key, schema, d.labels, min_replicas, last_activated_at
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
 WHERE d.key = $1::deployment_key
@@ -1034,7 +1026,6 @@ type GetRunnersForDeploymentRow struct {
 	Labels_2        json.RawMessage
 	MinReplicas     int32
 	LastActivatedAt time.Time
-	Endpoint_2      optional.Option[string]
 }
 
 func (q *Queries) GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error) {
@@ -1063,7 +1054,6 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, key model.Deploym
 			&i.Labels_2,
 			&i.MinReplicas,
 			&i.LastActivatedAt,
-			&i.Endpoint_2,
 		); err != nil {
 			return nil, err
 		}
@@ -1458,18 +1448,6 @@ RETURNING 1
 
 func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error {
 	_, err := q.db.ExecContext(ctx, setDeploymentDesiredReplicas, key, minReplicas)
-	return err
-}
-
-const setDeploymentEndpoint = `-- name: SetDeploymentEndpoint :exec
-UPDATE deployments
-SET endpoint = $2
-WHERE key = $1::deployment_key
-RETURNING 1
-`
-
-func (q *Queries) SetDeploymentEndpoint(ctx context.Context, key model.DeploymentKey, endpoint optional.Option[string]) error {
-	_, err := q.db.ExecContext(ctx, setDeploymentEndpoint, key, endpoint)
 	return err
 }
 

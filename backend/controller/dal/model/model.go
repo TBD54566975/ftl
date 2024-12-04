@@ -80,7 +80,6 @@ type Deployment struct {
 	Schema      *schema.Module
 	CreatedAt   time.Time
 	Labels      model.Labels
-	Endpoint    optional.Option[string]
 }
 
 func (d Deployment) String() string { return d.Key.String() }

@@ -95,7 +95,7 @@ func provisionerIDToProvisioner(ctx context.Context, id string, controller ftlv1
 		return NewControllerProvisioner(controller), nil
 	case "kubernetes":
 		// TODO: move this into a plugin
-		return NewRunnerScalingProvisioner(scaling, controller), nil
+		return NewRunnerScalingProvisioner(scaling), nil
 	case "noop":
 		return &NoopProvisioner{}, nil
 	default:
