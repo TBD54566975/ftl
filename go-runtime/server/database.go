@@ -14,8 +14,8 @@ import (
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/modulecontext"
 )
 
 func DatabaseHandle[T ftl.DatabaseConfig](dbtype string) reflection.VerbResource {
@@ -35,19 +35,19 @@ func DatabaseHandle[T ftl.DatabaseConfig](dbtype string) reflection.VerbResource
 }
 
 func InitPostgres(ref reflection.Ref) *reflection.ReflectedDatabaseHandle {
-	return InitDatabase(ref, "postgres", modulecontext.DBTypePostgres, "pgx")
+	return InitDatabase(ref, "postgres", deploymentcontext.DBTypePostgres, "pgx")
 }
 func InitMySQL(ref reflection.Ref) *reflection.ReflectedDatabaseHandle {
-	return InitDatabase(ref, "mysql", modulecontext.DBTypeMySQL, "mysql")
+	return InitDatabase(ref, "mysql", deploymentcontext.DBTypeMySQL, "mysql")
 }
 
-func InitDatabase(ref reflection.Ref, dbtype string, protoDBtype modulecontext.DBType, driver string) *reflection.ReflectedDatabaseHandle {
+func InitDatabase(ref reflection.Ref, dbtype string, protoDBtype deploymentcontext.DBType, driver string) *reflection.ReflectedDatabaseHandle {
 	return &reflection.ReflectedDatabaseHandle{
 		Name:   ref.Name,
 		DBType: dbtype,
 		DB: once.Once(func(ctx context.Context) (*sql.DB, error) {
 			logger := log.FromContext(ctx)
-			provider := modulecontext.FromContext(ctx).CurrentContext()
+			provider := deploymentcontext.FromContext(ctx).CurrentContext()
 			dsn, testDB, err := provider.GetDatabase(ref.Name, protoDBtype)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get database %q: %w", ref.Name, err)

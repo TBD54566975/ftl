@@ -1,4 +1,4 @@
-package modulecontext
+package deploymentcontext
 
 import (
 	"context"
@@ -17,8 +17,8 @@ import (
 	"github.com/jpillora/backoff"
 	"golang.org/x/sync/errgroup"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/internal/reflect"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -30,10 +30,10 @@ import (
 // It is used for definitions of mock verbs as well as real implementations of verbs to directly execute
 type Verb func(ctx context.Context, req any) (resp any, err error)
 
-// ModuleContext holds the context needed for a module, including configs, secrets and DSNs
+// DeploymentContext holds the context needed for a module, including configs, secrets and DSNs
 //
-// ModuleContext is immutable
-type ModuleContext struct {
+// DeploymentContext is immutable
+type DeploymentContext struct {
 	module    string
 	configs   map[string][]byte
 	secrets   map[string][]byte
@@ -46,17 +46,17 @@ type ModuleContext struct {
 	leaseClient                   optional.Option[LeaseClient]
 }
 
-// DynamicModuleContext provides up-to-date ModuleContext instances supplied by the controller
-type DynamicModuleContext struct {
-	current atomic.Value[ModuleContext]
+// DynamicDeploymentContext provides up-to-date DeploymentContext instances supplied by the controller
+type DynamicDeploymentContext struct {
+	current atomic.Value[DeploymentContext]
 }
 
-// Builder is used to build a ModuleContext
-type Builder ModuleContext
+// Builder is used to build a DeploymentContext
+type Builder DeploymentContext
 
-type contextKeyDynamicModuleContext struct{}
+type contextKeyDynamicDeploymentContext struct{}
 
-func Empty(module string) ModuleContext {
+func Empty(module string) DeploymentContext {
 	return NewBuilder(module).Build()
 }
 
@@ -71,7 +71,7 @@ func NewBuilder(module string) *Builder {
 	}
 }
 
-func NewBuilderFromContext(ctx ModuleContext) *Builder {
+func NewBuilderFromContext(ctx DeploymentContext) *Builder {
 	return &Builder{
 		module:                        ctx.module,
 		configs:                       ctx.configs,
@@ -126,14 +126,14 @@ func (b *Builder) UpdateForTesting(mockVerbs map[schema.RefKey]Verb, allowDirect
 	return b
 }
 
-func (b *Builder) Build() ModuleContext {
-	return ModuleContext(reflect.DeepCopy(*b))
+func (b *Builder) Build() DeploymentContext {
+	return DeploymentContext(reflect.DeepCopy(*b))
 }
 
 // GetConfig reads a configuration value for the module.
 //
 // "value" must be a pointer to a Go type that can be unmarshalled from JSON.
-func (m ModuleContext) GetConfig(name string, value any) error {
+func (m DeploymentContext) GetConfig(name string, value any) error {
 	data, ok := m.configs[name]
 	if !ok {
 		return fmt.Errorf("no config value for %q", name)
@@ -144,7 +144,7 @@ func (m ModuleContext) GetConfig(name string, value any) error {
 // GetSecret reads a secret value for the module.
 //
 // "value" must be a pointer to a Go type that can be unmarshalled from JSON.
-func (m ModuleContext) GetSecret(name string, value any) error {
+func (m DeploymentContext) GetSecret(name string, value any) error {
 	data, ok := m.secrets[name]
 	if !ok {
 		return fmt.Errorf("no secret value for %q", name)
@@ -157,7 +157,7 @@ func (m ModuleContext) GetSecret(name string, value any) error {
 // Returns an error if no database with that name is found or it is not the
 // expected type. When in a testing context (via ftltest), an error is returned
 // if the database is not a test database.
-func (m ModuleContext) GetDatabase(name string, dbType DBType) (string, bool, error) {
+func (m DeploymentContext) GetDatabase(name string, dbType DBType) (string, bool, error) {
 	db, ok := m.databases[name]
 	// TODO: Remove databases from the context once we have a way to inject test dbs in some other way
 	if !ok {
@@ -188,7 +188,7 @@ type LeaseClient interface {
 }
 
 // MockLeaseClient provides a mock lease client when testing
-func (m ModuleContext) MockLeaseClient() optional.Option[LeaseClient] {
+func (m DeploymentContext) MockLeaseClient() optional.Option[LeaseClient] {
 	return m.leaseClient
 }
 
@@ -196,7 +196,7 @@ func (m ModuleContext) MockLeaseClient() optional.Option[LeaseClient] {
 //
 // This allows module context to dictate behavior based on testing options
 // Returning optional.Nil indicates the verb should be executed normally via the controller
-func (m ModuleContext) BehaviorForVerb(ref schema.Ref) (optional.Option[VerbBehavior], error) {
+func (m DeploymentContext) BehaviorForVerb(ref schema.Ref) (optional.Option[VerbBehavior], error) {
 	if mock, ok := m.mockVerbs[ref.ToRefKey()]; ok {
 		return optional.Some(VerbBehavior(MockBehavior{Mock: mock})), nil
 	} else if (m.allowDirectVerbBehaviorGlobal || m.allowDirectVerb == ref.ToRefKey()) && ref.Module == m.module {
@@ -210,21 +210,21 @@ func (m ModuleContext) BehaviorForVerb(ref schema.Ref) (optional.Option[VerbBeha
 	return optional.None[VerbBehavior](), nil
 }
 
-type ModuleContextSupplier interface {
-	Subscribe(ctx context.Context, moduleName string, sink func(ctx context.Context, moduleContext ModuleContext), errorRetryCallback func(err error) bool)
+type DeploymentContextSupplier interface {
+	Subscribe(ctx context.Context, moduleName string, sink func(ctx context.Context, moduleContext DeploymentContext), errorRetryCallback func(err error) bool)
 }
 
-type grpcModuleContextSupplier struct {
-	client ftlv1connect.ModuleServiceClient
+type grpcDeploymentContextSupplier struct {
+	client ftlv1connect.DeploymentServiceClient
 }
 
-func NewModuleContextSupplier(client ftlv1connect.ModuleServiceClient) ModuleContextSupplier {
-	return ModuleContextSupplier(grpcModuleContextSupplier{client})
+func NewDeploymentContextSupplier(client ftlv1connect.DeploymentServiceClient) DeploymentContextSupplier {
+	return DeploymentContextSupplier(grpcDeploymentContextSupplier{client})
 }
 
-func (g grpcModuleContextSupplier) Subscribe(ctx context.Context, moduleName string, sink func(ctx context.Context, moduleContext ModuleContext), errorRetryCallback func(err error) bool) {
-	request := &ftlv1.GetModuleContextRequest{Module: moduleName}
-	callback := func(_ context.Context, resp *ftlv1.GetModuleContextResponse) error {
+func (g grpcDeploymentContextSupplier) Subscribe(ctx context.Context, deploymentName string, sink func(ctx context.Context, moduleContext DeploymentContext), errorRetryCallback func(err error) bool) {
+	request := &ftlv1.GetDeploymentContextRequest{Deployment: deploymentName}
+	callback := func(_ context.Context, resp *ftlv1.GetDeploymentContextResponse) error {
 		mc, err := FromProto(resp)
 		if err != nil {
 			return err
@@ -232,17 +232,17 @@ func (g grpcModuleContextSupplier) Subscribe(ctx context.Context, moduleName str
 		sink(ctx, mc)
 		return nil
 	}
-	go rpc.RetryStreamingServerStream(ctx, "module-context", backoff.Backoff{}, request, g.client.GetModuleContext, callback, errorRetryCallback)
+	go rpc.RetryStreamingServerStream(ctx, "module-context", backoff.Backoff{}, request, g.client.GetDeploymentContext, callback, errorRetryCallback)
 }
 
-// NewDynamicContext creates a new DynamicModuleContext. This operation blocks
-// until the first ModuleContext is supplied by the controller.
+// NewDynamicContext creates a new DynamicDeploymentContext. This operation blocks
+// until the first DeploymentContext is supplied by the controller.
 //
-// The DynamicModuleContext will continually update as updated ModuleContext's
+// The DynamicDeploymentContext will continually update as updated DeploymentContext's
 // are streamed from the controller. This operation may time out if the first
 // module context is not supplied quickly enough (fixed at 5 seconds).
-func NewDynamicContext(ctx context.Context, supplier ModuleContextSupplier, moduleName string) (*DynamicModuleContext, error) {
-	result := &DynamicModuleContext{}
+func NewDynamicContext(ctx context.Context, supplier DeploymentContextSupplier, deploymentName string) (*DynamicDeploymentContext, error) {
+	result := &DynamicDeploymentContext{}
 
 	await := sync.WaitGroup{}
 	await.Add(1)
@@ -253,11 +253,11 @@ func NewDynamicContext(ctx context.Context, supplier ModuleContextSupplier, modu
 	g, _ := errgroup.WithContext(deadline)
 	defer timeoutCancel()
 
-	// asynchronously consumes a subscription of ModuleContext changes and signals the arrival of the first
+	// asynchronously consumes a subscription of DeploymentContext changes and signals the arrival of the first
 	supplier.Subscribe(
 		ctx,
-		moduleName,
-		func(ctx context.Context, moduleContext ModuleContext) {
+		deploymentName,
+		func(ctx context.Context, moduleContext DeploymentContext) {
 			result.current.Store(moduleContext)
 			releaseOnce.Do(func() {
 				await.Done()
@@ -278,7 +278,7 @@ func NewDynamicContext(ctx context.Context, supplier ModuleContextSupplier, modu
 		})
 
 	// await the WaitGroup's completion which either signals the availability of the
-	// first ModuleContext or an error
+	// first DeploymentContext or an error
 	g.Go(func() error {
 		await.Wait()
 		select {
@@ -290,29 +290,29 @@ func NewDynamicContext(ctx context.Context, supplier ModuleContextSupplier, modu
 	})
 
 	if err := g.Wait(); err != nil {
-		return nil, fmt.Errorf("error waiting for first ModuleContext: %w", err)
+		return nil, fmt.Errorf("error waiting for first DeploymentContext: %w", err)
 	}
 
 	return result, nil
 }
 
-// CurrentContext immediately returns the most recently updated ModuleContext
-func (m *DynamicModuleContext) CurrentContext() ModuleContext {
+// CurrentContext immediately returns the most recently updated DeploymentContext
+func (m *DynamicDeploymentContext) CurrentContext() DeploymentContext {
 	return m.current.Load()
 }
 
-// FromContext returns the DynamicModuleContext attached to a context.
-func FromContext(ctx context.Context) *DynamicModuleContext {
-	m, ok := ctx.Value(contextKeyDynamicModuleContext{}).(*DynamicModuleContext)
+// FromContext returns the DynamicDeploymentContext attached to a context.
+func FromContext(ctx context.Context) *DynamicDeploymentContext {
+	m, ok := ctx.Value(contextKeyDynamicDeploymentContext{}).(*DynamicDeploymentContext)
 	if !ok {
-		panic("no ModuleContext in context")
+		panic("no DeploymentContext in context")
 	}
 	return m
 }
 
-// ApplyToContext returns a Go context.Context with DynamicModuleContext added.
-func (m *DynamicModuleContext) ApplyToContext(ctx context.Context) context.Context {
-	return context.WithValue(ctx, contextKeyDynamicModuleContext{}, m)
+// ApplyToContext returns a Go context.Context with DynamicDeploymentContext added.
+func (m *DynamicDeploymentContext) ApplyToContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, contextKeyDynamicDeploymentContext{}, m)
 }
 
 // VerbBehavior indicates how to execute a verb

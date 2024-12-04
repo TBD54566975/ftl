@@ -13,11 +13,11 @@ import (
 	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/modulecontext"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
@@ -35,7 +35,7 @@ type leaseState struct {
 }
 
 type LeaseHandle struct {
-	client modulecontext.LeaseClient
+	client deploymentcontext.LeaseClient
 	module string
 	key    []string
 	state  *leaseState
@@ -143,8 +143,8 @@ func Lease(ctx context.Context, ttl time.Duration, key ...string) (LeaseHandle, 
 // newClient creates a new lease client
 //
 // It allows module context to override the client with a mock if appropriate
-func newClient(ctx context.Context) modulecontext.LeaseClient {
-	moduleCtx := modulecontext.FromContext(ctx).CurrentContext()
+func newClient(ctx context.Context) deploymentcontext.LeaseClient {
+	moduleCtx := deploymentcontext.FromContext(ctx).CurrentContext()
 	if mock, ok := moduleCtx.MockLeaseClient().Get(); ok {
 		return mock
 	}
@@ -158,10 +158,10 @@ type leaseClient struct {
 	stream *connect.BidiStreamForClient[ftlv1.AcquireLeaseRequest, ftlv1.AcquireLeaseResponse]
 }
 
-var _ modulecontext.LeaseClient = &leaseClient{}
+var _ deploymentcontext.LeaseClient = &leaseClient{}
 
 func (c *leaseClient) Acquire(ctx context.Context, module string, key []string, ttl time.Duration) error {
-	c.stream = rpc.ClientFromContext[ftlv1connect.ModuleServiceClient](ctx).AcquireLease(ctx)
+	c.stream = rpc.ClientFromContext[ftlv1connect.LeaseServiceClient](ctx).AcquireLease(ctx)
 	req := &ftlv1.AcquireLeaseRequest{Key: key, Module: module, Ttl: durationpb.New(ttl)}
 	if err := c.stream.Send(req); err != nil {
 		if connect.CodeOf(err) == connect.CodeResourceExhausted {

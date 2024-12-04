@@ -1,4 +1,4 @@
-package modulecontext
+package deploymentcontext
 
 import (
 	"context" //nolint:depguard
@@ -6,7 +6,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	ftlv2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -21,11 +21,11 @@ func TestFromSecrets(t *testing.T) {
 	assert.NoError(t, err)
 
 	response := NewBuilder("echo").AddDatabases(databases).Build().ToProto()
-	assert.Equal(t, &ftlv1.GetModuleContextResponse{
+	assert.Equal(t, &ftlv2.GetDeploymentContextResponse{
 		Module:  "echo",
 		Configs: map[string][]byte{},
 		Secrets: map[string][]byte{},
-		Databases: []*ftlv1.GetModuleContextResponse_DSN{
+		Databases: []*ftlv2.GetDeploymentContextResponse_DSN{
 			{Name: "echo", Dsn: `postgres://echo:echo@localhost:5432/echo?sslmode=disable&user=echo&password=echo`},
 		},
 	}, response)

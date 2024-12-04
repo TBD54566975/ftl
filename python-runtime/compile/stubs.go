@@ -15,13 +15,13 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
-type ExternalModuleContext struct {
+type ExternalDeploymentContext struct {
 	Name   string
 	Module *schema.Module
 }
 
 func GenerateStubs(ctx context.Context, dir string, moduleSch *schema.Module, config moduleconfig.AbsModuleConfig, nativeConfig optional.Option[moduleconfig.AbsModuleConfig]) error {
-	context := ExternalModuleContext{
+	context := ExternalDeploymentContext{
 		Name:   moduleSch.Name,
 		Module: moduleSch,
 	}

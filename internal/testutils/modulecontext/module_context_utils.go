@@ -5,24 +5,24 @@ package modulecontext
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/internal/modulecontext"
+	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 )
 
 type SingleContextSupplier struct {
-	moduleCtx modulecontext.ModuleContext
+	moduleCtx deploymentcontext.DeploymentContext
 }
 
-// MakeDynamic converts the specified ModuleContext to a DynamicModuleContext whose underlying
+// MakeDynamic converts the specified DeploymentContext to a DynamicDeploymentContext whose underlying
 // current context never updates.
-func MakeDynamic(ctx context.Context, m modulecontext.ModuleContext) *modulecontext.DynamicModuleContext {
-	supplier := modulecontext.ModuleContextSupplier(SingleContextSupplier{m})
-	result, err := modulecontext.NewDynamicContext(ctx, supplier, "test")
+func MakeDynamic(ctx context.Context, m deploymentcontext.DeploymentContext) *deploymentcontext.DynamicDeploymentContext {
+	supplier := deploymentcontext.DeploymentContextSupplier(SingleContextSupplier{m})
+	result, err := deploymentcontext.NewDynamicContext(ctx, supplier, "test")
 	if err != nil {
 		panic(err)
 	}
 	return result
 }
 
-func (smc SingleContextSupplier) Subscribe(ctx context.Context, _ string, sink func(ctx context.Context, mCtx modulecontext.ModuleContext), _ func(error) bool) {
+func (smc SingleContextSupplier) Subscribe(ctx context.Context, _ string, sink func(ctx context.Context, mCtx deploymentcontext.DeploymentContext), _ func(error) bool) {
 	sink(ctx, smc.moduleCtx)
 }

@@ -1,11 +1,11 @@
-package modulecontext
+package deploymentcontext
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
 )
 
 // Database represents a database connection based on a DSN
@@ -16,7 +16,7 @@ type Database struct {
 	isTestDB bool
 }
 
-// NewDatabase creates a Database that can be added to ModuleContext
+// NewDatabase creates a Database that can be added to DeploymentContext
 func NewDatabase(dbType DBType, dsn string) (Database, error) {
 	return Database{
 		DSN:    dsn,
@@ -24,7 +24,7 @@ func NewDatabase(dbType DBType, dsn string) (Database, error) {
 	}, nil
 }
 
-// NewTestDatabase creates a Database that can be added to ModuleContext
+// NewTestDatabase creates a Database that can be added to DeploymentContext
 //
 // Test databases can be used within module tests
 func NewTestDatabase(dbType DBType, dsn string) (Database, error) {
@@ -36,12 +36,12 @@ func NewTestDatabase(dbType DBType, dsn string) (Database, error) {
 	return db, nil
 }
 
-type DBType ftlv1.GetModuleContextResponse_DbType
+type DBType ftlv1.GetDeploymentContextResponse_DbType
 
 const (
-	DBTypeUnspecified DBType = DBType(ftlv1.GetModuleContextResponse_DB_TYPE_UNSPECIFIED)
-	DBTypePostgres    DBType = DBType(ftlv1.GetModuleContextResponse_DB_TYPE_POSTGRES)
-	DBTypeMySQL       DBType = DBType(ftlv1.GetModuleContextResponse_DB_TYPE_MYSQL)
+	DBTypeUnspecified DBType = DBType(ftlv1.GetDeploymentContextResponse_DB_TYPE_UNSPECIFIED)
+	DBTypePostgres    DBType = DBType(ftlv1.GetDeploymentContextResponse_DB_TYPE_POSTGRES)
+	DBTypeMySQL       DBType = DBType(ftlv1.GetDeploymentContextResponse_DB_TYPE_MYSQL)
 )
 
 func DBTypeFromString(dt string) (DBType, error) {

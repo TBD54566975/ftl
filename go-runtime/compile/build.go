@@ -48,7 +48,7 @@ type MainWorkContext struct {
 	IncludeMainPackage bool
 }
 
-type mainModuleContext struct {
+type mainDeploymentContext struct {
 	GoVersion          string
 	FTLVersion         string
 	Name               string
@@ -60,12 +60,12 @@ type mainModuleContext struct {
 	TypesCtx           typesFileContext
 }
 
-func (c *mainModuleContext) withImports(mainModuleImport string) {
+func (c *mainDeploymentContext) withImports(mainModuleImport string) {
 	c.MainCtx.Imports = c.generateMainImports()
 	c.TypesCtx.Imports = c.generateTypesImports(mainModuleImport)
 }
 
-func (c *mainModuleContext) generateMainImports() []string {
+func (c *mainDeploymentContext) generateMainImports() []string {
 	imports := sets.NewSet[string]()
 	imports.Add(`"context"`)
 	imports.Add(`"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"`)
@@ -92,7 +92,7 @@ func (c *mainModuleContext) generateMainImports() []string {
 	return out
 }
 
-func (c *mainModuleContext) generateTypesImports(mainModuleImport string) []string {
+func (c *mainDeploymentContext) generateTypesImports(mainModuleImport string) []string {
 	imports := sets.NewSet[string]()
 	if len(c.TypesCtx.SumTypes) > 0 || len(c.TypesCtx.ExternalTypes) > 0 {
 		imports.Add(`"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"`)
@@ -338,7 +338,7 @@ func buildDir(moduleDir string) string {
 // OngoingState maintains state between builds, allowing the Build function to skip steps if nothing has changed.
 type OngoingState struct {
 	imports   []string
-	moduleCtx mainModuleContext
+	moduleCtx mainDeploymentContext
 }
 
 func (s *OngoingState) checkIfImportsChanged(imports []string) (changed bool) {
@@ -349,7 +349,7 @@ func (s *OngoingState) checkIfImportsChanged(imports []string) (changed bool) {
 	return true
 }
 
-func (s *OngoingState) checkIfMainModuleContextChanged(moduleCtx mainModuleContext) (changed bool) {
+func (s *OngoingState) checkIfMainDeploymentContextChanged(moduleCtx mainDeploymentContext) (changed bool) {
 	if stdreflect.DeepEqual(s.moduleCtx, moduleCtx) {
 		return false
 	}
@@ -377,7 +377,7 @@ func (s *OngoingState) DetectedFileChanges(config moduleconfig.AbsModuleConfig, 
 
 func (s *OngoingState) reset() {
 	s.imports = nil
-	s.moduleCtx = mainModuleContext{}
+	s.moduleCtx = mainDeploymentContext{}
 }
 
 // Build the given module.
@@ -489,11 +489,11 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 		}
 		projectName = pc.Name
 	}
-	mctx, err := buildMainModuleContext(sch, extractResult, goModVersion, projectName, sharedModulesPaths, replacements)
+	mctx, err := buildMainDeploymentContext(sch, extractResult, goModVersion, projectName, sharedModulesPaths, replacements)
 	if err != nil {
 		return moduleSch, nil, err
 	}
-	mainModuleCtxChanged := ongoingState.checkIfMainModuleContextChanged(mctx)
+	mainModuleCtxChanged := ongoingState.checkIfMainDeploymentContextChanged(mctx)
 	if err := scaffoldBuildTemplateAndTidy(ctx, config, mainDir, importsChanged, mainModuleCtxChanged, mctx, funcs, filesTransaction); err != nil {
 		return moduleSch, nil, err // nolint:wrapcheck
 	}
@@ -560,7 +560,7 @@ func compile(ctx context.Context, mainDir string, buildEnv []string, devMode boo
 }
 
 func scaffoldBuildTemplateAndTidy(ctx context.Context, config moduleconfig.AbsModuleConfig, mainDir string, importsChanged,
-	mainModuleCtxChanged bool, mctx mainModuleContext, funcs scaffolder.FuncMap, filesTransaction watch.ModifyFilesTransaction) error {
+	mainModuleCtxChanged bool, mctx mainDeploymentContext, funcs scaffolder.FuncMap, filesTransaction watch.ModifyFilesTransaction) error {
 	logger := log.FromContext(ctx)
 	if mainModuleCtxChanged {
 		if err := internal.ScaffoldZip(buildTemplateFiles(), config.Dir, mctx, scaffolder.Exclude("^go.mod$"),
@@ -611,7 +611,7 @@ func scaffoldBuildTemplateAndTidy(ctx context.Context, config moduleconfig.AbsMo
 	return wg.Wait() //nolint:wrapcheck
 }
 
-type mainModuleContextBuilder struct {
+type mainDeploymentContextBuilder struct {
 	sch                     *schema.Schema
 	mainModule              *schema.Module
 	nativeNames             extract.NativeNames
@@ -620,8 +620,8 @@ type mainModuleContextBuilder struct {
 	imports                 map[string]string
 }
 
-func buildMainModuleContext(sch *schema.Schema, result extract.Result, goModVersion, projectName string,
-	sharedModulesPaths []string, replacements []*modfile.Replace) (mainModuleContext, error) {
+func buildMainDeploymentContext(sch *schema.Schema, result extract.Result, goModVersion, projectName string,
+	sharedModulesPaths []string, replacements []*modfile.Replace) (mainDeploymentContext, error) {
 	ftlVersion := ""
 	if ftl.IsRelease(ftl.Version) {
 		ftlVersion = ftl.Version
@@ -629,7 +629,7 @@ func buildMainModuleContext(sch *schema.Schema, result extract.Result, goModVers
 	combinedSch := &schema.Schema{
 		Modules: append(sch.Modules, result.Module),
 	}
-	builder := &mainModuleContextBuilder{
+	builder := &mainDeploymentContextBuilder{
 		sch:                     combinedSch,
 		mainModule:              result.Module,
 		nativeNames:             result.NativeNames,
@@ -640,9 +640,9 @@ func buildMainModuleContext(sch *schema.Schema, result extract.Result, goModVers
 	return builder.build(goModVersion, ftlVersion, projectName, sharedModulesPaths, replacements)
 }
 
-func (b *mainModuleContextBuilder) build(goModVersion, ftlVersion, projectName string,
-	sharedModulesPaths []string, replacements []*modfile.Replace) (mainModuleContext, error) {
-	ctx := &mainModuleContext{
+func (b *mainDeploymentContextBuilder) build(goModVersion, ftlVersion, projectName string,
+	sharedModulesPaths []string, replacements []*modfile.Replace) (mainDeploymentContext, error) {
+	ctx := &mainDeploymentContext{
 		GoVersion:          goModVersion,
 		FTLVersion:         ftlVersion,
 		Name:               b.mainModule.Name,
@@ -664,7 +664,7 @@ func (b *mainModuleContextBuilder) build(goModVersion, ftlVersion, projectName s
 	visited := sets.NewSet[string]()
 	err := b.visit(ctx, b.mainModule, b.mainModule, visited)
 	if err != nil {
-		return mainModuleContext{}, err
+		return mainDeploymentContext{}, err
 	}
 
 	slices.SortFunc(ctx.MainCtx.SumTypes, func(a, b goSumType) int {
@@ -698,8 +698,8 @@ func writeLaunchScript(buildDir string) error {
 	return nil
 }
 
-func (b *mainModuleContextBuilder) visit(
-	ctx *mainModuleContext,
+func (b *mainDeploymentContextBuilder) visit(
+	ctx *mainDeploymentContext,
 	module *schema.Module,
 	node schema.Node,
 	visited sets.Set[string],
@@ -757,7 +757,7 @@ func (b *mainModuleContextBuilder) visit(
 	return nil
 }
 
-func (b *mainModuleContextBuilder) getGoType(module *schema.Module, node schema.Node) (gotype optional.Option[goType], isLocal bool, err error) {
+func (b *mainDeploymentContextBuilder) getGoType(module *schema.Module, node schema.Node) (gotype optional.Option[goType], isLocal bool, err error) {
 	isLocal = b.visitingMainModule(module.Name)
 	switch n := node.(type) {
 	case *schema.Verb:
@@ -800,11 +800,11 @@ func (b *mainModuleContextBuilder) getGoType(module *schema.Module, node schema.
 	return optional.None[goType](), isLocal, nil
 }
 
-func (b *mainModuleContextBuilder) visitingMainModule(moduleName string) bool {
+func (b *mainDeploymentContextBuilder) visitingMainModule(moduleName string) bool {
 	return moduleName == b.mainModule.Name
 }
 
-func (b *mainModuleContextBuilder) processSumType(module *schema.Module, enum *schema.Enum) (goSumType, error) {
+func (b *mainDeploymentContextBuilder) processSumType(module *schema.Module, enum *schema.Enum) (goSumType, error) {
 	moduleName := module.Name
 	var nt nativeType
 	var err error
@@ -849,7 +849,7 @@ func (b *mainModuleContextBuilder) processSumType(module *schema.Module, enum *s
 	}, nil
 }
 
-func (b *mainModuleContextBuilder) processExternalTypeAlias(alias *schema.TypeAlias) optional.Option[goType] {
+func (b *mainDeploymentContextBuilder) processExternalTypeAlias(alias *schema.TypeAlias) optional.Option[goType] {
 	for _, m := range alias.Metadata {
 		if m, ok := m.(*schema.MetadataTypeMap); ok && m.Runtime == "go" {
 			nt, ok := nativeTypeForWidenedType(alias)
@@ -864,7 +864,7 @@ func (b *mainModuleContextBuilder) processExternalTypeAlias(alias *schema.TypeAl
 	return optional.None[goType]()
 }
 
-func (b *mainModuleContextBuilder) processVerb(verb *schema.Verb) (goVerb, error) {
+func (b *mainDeploymentContextBuilder) processVerb(verb *schema.Verb) (goVerb, error) {
 	var resources []verbResource
 	verbResourceParams, ok := b.verbResourceParamOrders[verb]
 	if !ok {
@@ -884,7 +884,7 @@ func (b *mainModuleContextBuilder) processVerb(verb *schema.Verb) (goVerb, error
 	return b.getGoVerb(nativeName, verb, resources...)
 }
 
-func (b *mainModuleContextBuilder) getVerbResource(verb *schema.Verb, param common.VerbResourceParam) (verbResource, error) {
+func (b *mainDeploymentContextBuilder) getVerbResource(verb *schema.Verb, param common.VerbResourceParam) (verbResource, error) {
 	ref := param.Ref
 	resolved, ok := b.sch.Resolve(ref).Get()
 	if !ok {
@@ -944,7 +944,7 @@ func (b *mainModuleContextBuilder) getVerbResource(verb *schema.Verb, param comm
 	}
 }
 
-func (b *mainModuleContextBuilder) processConfig(moduleName string, ref *schema.Ref, config *schema.Config) (goConfigHandle, error) {
+func (b *mainDeploymentContextBuilder) processConfig(moduleName string, ref *schema.Ref, config *schema.Config) (goConfigHandle, error) {
 	nn, ok := b.nativeNames[ref]
 	if !ok {
 		return goConfigHandle{}, fmt.Errorf("missing native name for config %s.%s", moduleName, config.Name)
@@ -967,7 +967,7 @@ func (b *mainModuleContextBuilder) processConfig(moduleName string, ref *schema.
 	}, nil
 }
 
-func (b *mainModuleContextBuilder) processSecret(moduleName string, ref *schema.Ref, secret *schema.Secret) (goSecretHandle, error) {
+func (b *mainDeploymentContextBuilder) processSecret(moduleName string, ref *schema.Ref, secret *schema.Secret) (goSecretHandle, error) {
 	nn, ok := b.nativeNames[ref]
 	if !ok {
 		return goSecretHandle{}, fmt.Errorf("missing native name for secret %s.%s", moduleName, secret.Name)
@@ -990,7 +990,7 @@ func (b *mainModuleContextBuilder) processSecret(moduleName string, ref *schema.
 	}, nil
 }
 
-func (b *mainModuleContextBuilder) processDatabase(moduleName string, db *schema.Database) (goDBHandle, error) {
+func (b *mainDeploymentContextBuilder) processDatabase(moduleName string, db *schema.Database) (goDBHandle, error) {
 	nn, ok := b.nativeNames[db]
 	if !ok {
 		return goDBHandle{}, fmt.Errorf("missing native name for database %s.%s", moduleName, db.Name)
@@ -1008,7 +1008,7 @@ func (b *mainModuleContextBuilder) processDatabase(moduleName string, db *schema
 	}, nil
 }
 
-func (b *mainModuleContextBuilder) processTopic(moduleName string, ref *schema.Ref, topic *schema.Topic) (goTopicHandle, error) {
+func (b *mainDeploymentContextBuilder) processTopic(moduleName string, ref *schema.Ref, topic *schema.Topic) (goTopicHandle, error) {
 	nn, ok := b.nativeNames[ref]
 	if !ok {
 		return goTopicHandle{}, fmt.Errorf("missing native name for topic %s.%s", moduleName, topic.Name)
@@ -1050,7 +1050,7 @@ func (b *mainModuleContextBuilder) processTopic(moduleName string, ref *schema.R
 	}, nil
 }
 
-func (b *mainModuleContextBuilder) getGoVerb(nativeName string, verb *schema.Verb, resources ...verbResource) (goVerb, error) {
+func (b *mainDeploymentContextBuilder) getGoVerb(nativeName string, verb *schema.Verb, resources ...verbResource) (goVerb, error) {
 	nt, err := b.getNativeType(nativeName)
 	if err != nil {
 		return goVerb{}, err
@@ -1071,7 +1071,7 @@ func (b *mainModuleContextBuilder) getGoVerb(nativeName string, verb *schema.Ver
 	}, nil
 }
 
-func (b *mainModuleContextBuilder) getGoSchemaType(typ schema.Type) (goSchemaType, error) {
+func (b *mainDeploymentContextBuilder) getGoSchemaType(typ schema.Type) (goSchemaType, error) {
 	result := goSchemaType{
 		TypeName:      genTypeWithNativeNames(nil, typ, b.nativeNames),
 		LocalTypeName: genTypeWithNativeNames(b.mainModule, typ, b.nativeNames),
@@ -1122,7 +1122,7 @@ func (b *mainModuleContextBuilder) getGoSchemaType(typ schema.Type) (goSchemaTyp
 	return result, nil
 }
 
-func (b *mainModuleContextBuilder) getNativeType(qualifiedName string) (nativeType, error) {
+func (b *mainDeploymentContextBuilder) getNativeType(qualifiedName string) (nativeType, error) {
 	nt, err := nativeTypeFromQualifiedName(qualifiedName)
 	if err != nil {
 		return nativeType{}, err

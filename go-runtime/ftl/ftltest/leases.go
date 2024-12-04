@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/internal/modulecontext"
+	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 )
 
 // fakeLeaseClient is a simple in-memory lease client for testing.
@@ -19,7 +19,7 @@ type fakeLeaseClient struct {
 	deadlines map[string]time.Time
 }
 
-var _ modulecontext.LeaseClient = &fakeLeaseClient{}
+var _ deploymentcontext.LeaseClient = &fakeLeaseClient{}
 
 func newFakeLeaseClient() *fakeLeaseClient {
 	return &fakeLeaseClient{

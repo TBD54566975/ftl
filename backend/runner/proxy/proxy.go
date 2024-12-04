@@ -6,29 +6,35 @@ import (
 
 	"connectrpc.com/connect"
 
+	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
+	ftldeploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
+	ftllease "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1"
+	ftlleaseconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 )
 
 var _ ftlv1connect.VerbServiceHandler = &Service{}
-var _ ftlv1connect.ModuleServiceHandler = &Service{}
+var _ ftldeploymentconnect.DeploymentServiceHandler = &Service{}
 
 type Service struct {
-	controllerVerbService   ftlv1connect.VerbServiceClient
-	controllerModuleService ftlv1connect.ModuleServiceClient
+	controllerVerbService       ftlv1connect.VerbServiceClient
+	controllerDeploymentService ftldeploymentconnect.DeploymentServiceClient
+	controllerLeaseService      ftlleaseconnect.LeaseServiceClient
 }
 
-func New(controllerVerbService ftlv1connect.VerbServiceClient, controllerModuleService ftlv1connect.ModuleServiceClient) *Service {
+func New(controllerVerbService ftlv1connect.VerbServiceClient, controllerModuleService ftldeploymentconnect.DeploymentServiceClient, controllerLeaseClient ftlleaseconnect.LeaseServiceClient) *Service {
 	proxy := &Service{
-		controllerVerbService:   controllerVerbService,
-		controllerModuleService: controllerModuleService,
+		controllerVerbService:       controllerVerbService,
+		controllerDeploymentService: controllerModuleService,
+		controllerLeaseService:      controllerLeaseClient,
 	}
 	return proxy
 }
 
-func (r *Service) GetModuleContext(ctx context.Context, c *connect.Request[ftlv1.GetModuleContextRequest], c2 *connect.ServerStream[ftlv1.GetModuleContextResponse]) error {
-	moduleContext, err := r.controllerModuleService.GetModuleContext(ctx, connect.NewRequest(c.Msg))
+func (r *Service) GetDeploymentContext(ctx context.Context, c *connect.Request[ftldeployment.GetDeploymentContextRequest], c2 *connect.ServerStream[ftldeployment.GetDeploymentContextResponse]) error {
+	moduleContext, err := r.controllerDeploymentService.GetDeploymentContext(ctx, connect.NewRequest(c.Msg))
 	if err != nil {
 		return fmt.Errorf("failed to get module context: %w", err)
 	}
@@ -46,8 +52,8 @@ func (r *Service) GetModuleContext(ctx context.Context, c *connect.Request[ftlv1
 
 }
 
-func (r *Service) AcquireLease(ctx context.Context, c *connect.BidiStream[ftlv1.AcquireLeaseRequest, ftlv1.AcquireLeaseResponse]) error {
-	lease := r.controllerModuleService.AcquireLease(ctx)
+func (r *Service) AcquireLease(ctx context.Context, c *connect.BidiStream[ftllease.AcquireLeaseRequest, ftllease.AcquireLeaseResponse]) error {
+	lease := r.controllerLeaseService.AcquireLease(ctx)
 	for {
 		req, err := c.Receive()
 		if err != nil {
@@ -69,8 +75,8 @@ func (r *Service) AcquireLease(ctx context.Context, c *connect.BidiStream[ftlv1.
 
 }
 
-func (r *Service) PublishEvent(ctx context.Context, c *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {
-	event, err := r.controllerModuleService.PublishEvent(ctx, connect.NewRequest(c.Msg))
+func (r *Service) PublishEvent(ctx context.Context, c *connect.Request[ftldeployment.PublishEventRequest]) (*connect.Response[ftldeployment.PublishEventResponse], error) {
+	event, err := r.controllerDeploymentService.PublishEvent(ctx, connect.NewRequest(c.Msg))
 	if err != nil {
 		return nil, fmt.Errorf("failed to proxy event: %w", err)
 	}

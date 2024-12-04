@@ -31,6 +31,8 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
+	ftldeploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
+	ftlleaseconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
 	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -409,9 +411,10 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 		}
 		s.pubSub = pubSub
 
-		moduleServiceClient := rpc.Dial(ftlv1connect.NewModuleServiceClient, s.config.ControllerEndpoint.String(), log.Error)
+		moduleServiceClient := rpc.Dial(ftldeploymentconnect.NewDeploymentServiceClient, s.config.ControllerEndpoint.String(), log.Error)
+		leaseServiceClient := rpc.Dial(ftlleaseconnect.NewLeaseServiceClient, s.config.ControllerEndpoint.String(), log.Error)
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, s.config.ControllerEndpoint.String(), log.Error)
-		s.proxy = proxy.New(verbServiceClient, moduleServiceClient)
+		s.proxy = proxy.New(verbServiceClient, moduleServiceClient, leaseServiceClient)
 
 		parse, err := url.Parse("http://127.0.0.1:0")
 		if err != nil {
@@ -419,7 +422,8 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 		}
 		proxyServer, err := rpc.NewServer(ctx, parse,
 			rpc.GRPC(ftlv1connect.NewVerbServiceHandler, s.proxy),
-			rpc.GRPC(ftlv1connect.NewModuleServiceHandler, s.proxy),
+			rpc.GRPC(ftldeploymentconnect.NewDeploymentServiceHandler, s.proxy),
+			rpc.GRPC(ftlleaseconnect.NewLeaseServiceHandler, s.proxy),
 			rpc.GRPC(pubconnect.NewPublishServiceHandler, s.pubSub),
 		)
 		if err != nil {
@@ -438,6 +442,7 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 		logger.Debugf("Setting FTL_ENDPOINT to %s", s.proxyBindAddress.String())
 		envVars := []string{"FTL_ENDPOINT=" + s.proxyBindAddress.String(),
 			"FTL_CONFIG=" + strings.Join(s.config.Config, ","),
+			"FTL_DEPLOYMENT=" + s.config.Deployment.String(),
 			"FTL_OBSERVABILITY_ENDPOINT=" + s.config.ControllerEndpoint.String()}
 		if s.config.DebugPort > 0 {
 			envVars = append(envVars, fmt.Sprintf("FTL_DEBUG_PORT=%d", s.config.DebugPort))

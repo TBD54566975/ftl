@@ -19,8 +19,8 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/server"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
+	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/modulecontext"
 	pc "github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
 	mcu "github.com/TBD54566975/ftl/internal/testutils/modulecontext"
@@ -30,8 +30,8 @@ import (
 var moduleGetter = reflection.Module
 
 type OptionsState struct {
-	databases               map[string]modulecontext.Database
-	mockVerbs               map[schema.RefKey]modulecontext.Verb
+	databases               map[string]deploymentcontext.Database
+	mockVerbs               map[schema.RefKey]deploymentcontext.Verb
 	allowDirectVerbBehavior bool
 }
 
@@ -56,8 +56,8 @@ func Context(options ...Option) context.Context {
 
 func newContext(ctx context.Context, module string, options ...Option) context.Context {
 	state := &OptionsState{
-		databases: make(map[string]modulecontext.Database),
-		mockVerbs: make(map[schema.RefKey]modulecontext.Verb),
+		databases: make(map[string]deploymentcontext.Database),
+		mockVerbs: make(map[schema.RefKey]deploymentcontext.Verb),
 	}
 
 	ctx = contextWithFakeFTL(ctx, options...)
@@ -73,7 +73,7 @@ func newContext(ctx context.Context, module string, options ...Option) context.C
 		}
 	}
 
-	builder := modulecontext.NewBuilder(module).AddDatabases(state.databases)
+	builder := deploymentcontext.NewBuilder(module).AddDatabases(state.databases)
 	builder = builder.UpdateForTesting(state.mockVerbs, state.allowDirectVerbBehavior, newFakeLeaseClient())
 
 	return mcu.MakeDynamic(ctx, builder.Build()).ApplyToContext(ctx)
@@ -237,7 +237,7 @@ func WithDatabase[T ftl.DatabaseConfig]() Option {
 					return fmt.Errorf("could not migrate database %q: %w", name, err)
 				}
 				// replace original database with test database
-				replacementDB, err := modulecontext.NewTestDatabase(modulecontext.DBTypePostgres, dsn)
+				replacementDB, err := deploymentcontext.NewTestDatabase(deploymentcontext.DBTypePostgres, dsn)
 				if err != nil {
 					return fmt.Errorf("could not create database %q with DSN %q: %w", name, dsn, err)
 				}
@@ -256,7 +256,7 @@ func WithDatabase[T ftl.DatabaseConfig]() Option {
 					return fmt.Errorf("could not migrate database %q: %w", name, err)
 				}
 				// replace original database with test database
-				replacementDB, err := modulecontext.NewTestDatabase(modulecontext.DBTypeMySQL, dsn)
+				replacementDB, err := deploymentcontext.NewTestDatabase(deploymentcontext.DBTypeMySQL, dsn)
 				if err != nil {
 					return fmt.Errorf("could not create database %q with DSN %q: %w", name, dsn, err)
 				}
@@ -477,8 +477,8 @@ func GetDatabaseHandle[T ftl.DatabaseConfig]() (ftl.DatabaseHandle[T], error) {
 func call[VerbClient, Req, Resp any](ctx context.Context, req Req) (resp Resp, err error) {
 	ref := reflection.ClientRef[VerbClient]()
 	// always allow direct behavior for the verb triggered by this call
-	moduleCtx := modulecontext.NewBuilderFromContext(
-		modulecontext.FromContext(ctx).CurrentContext(),
+	moduleCtx := deploymentcontext.NewBuilderFromContext(
+		deploymentcontext.FromContext(ctx).CurrentContext(),
 	).AddAllowedDirectVerb(ref).Build()
 	ctx = mcu.MakeDynamic(ctx, moduleCtx).ApplyToContext(ctx)
 
@@ -488,7 +488,7 @@ func call[VerbClient, Req, Resp any](ctx context.Context, req Req) (resp Resp, e
 		return resp, fmt.Errorf("test harness failed to retrieve behavior for verb %s: %w", ref, err)
 	}
 	if behavior, ok := override.Get(); ok {
-		uncheckedResp, err := behavior.Call(ctx, modulecontext.Verb(widenVerb(inline)), req)
+		uncheckedResp, err := behavior.Call(ctx, deploymentcontext.Verb(widenVerb(inline)), req)
 		if err != nil {
 			return resp, fmt.Errorf("test harness failed to call verb %s: %w", ref, err)
 		}

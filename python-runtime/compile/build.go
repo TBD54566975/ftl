@@ -23,7 +23,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
 
-type mainModuleContext struct {
+type mainDeploymentContext struct {
 	Name string
 }
 
@@ -38,7 +38,7 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	logger := log.FromContext(ctx)
 	logger.Debugf("Generating python main module")
 
-	mctx := mainModuleContext{
+	mctx := mainDeploymentContext{
 		Name: config.Module,
 	}
 

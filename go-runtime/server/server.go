@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"reflect"
 	"runtime/debug"
 	"strings"
@@ -11,6 +12,8 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
 
+	deploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
+	ftlv1connect2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
 	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -19,9 +22,9 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/internal"
+	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
-	"github.com/TBD54566975/ftl/internal/modulecontext"
 	"github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -38,15 +41,18 @@ type UserVerbConfig struct {
 // This function is intended to be used by the code generator.
 func NewUserVerbServer(projectName string, moduleName string, handlers ...Handler) plugin.Constructor[ftlv1connect.VerbServiceHandler, UserVerbConfig] {
 	return func(ctx context.Context, uc UserVerbConfig) (context.Context, ftlv1connect.VerbServiceHandler, error) {
-		moduleServiceClient := rpc.Dial(ftlv1connect.NewModuleServiceClient, uc.FTLEndpoint.String(), log.Error)
+		moduleServiceClient := rpc.Dial(deploymentconnect.NewDeploymentServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, moduleServiceClient)
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 		pubClient := rpc.Dial(pubconnect.NewPublishServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, pubClient)
+		leaseClient := rpc.Dial(ftlv1connect2.NewLeaseServiceClient, uc.FTLEndpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, leaseClient)
 
-		moduleContextSupplier := modulecontext.NewModuleContextSupplier(moduleServiceClient)
-		dynamicCtx, err := modulecontext.NewDynamicContext(ctx, moduleContextSupplier, moduleName)
+		moduleContextSupplier := deploymentcontext.NewDeploymentContextSupplier(moduleServiceClient)
+		// FTL_DEPLOYMENT is set by the FTL runtime.
+		dynamicCtx, err := deploymentcontext.NewDynamicContext(ctx, moduleContextSupplier, os.Getenv("FTL_DEPLOYMENT"))
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get config: %w", err)
 		}
@@ -186,13 +192,13 @@ func call[Verb, Req, Resp any]() func(ctx context.Context, req Req) (resp Resp, 
 	callee.Name = strings.TrimSuffix(callee.Name, "Client")
 	return func(ctx context.Context, req Req) (resp Resp, err error) {
 		ref := reflection.Ref{Module: callee.Module, Name: callee.Name}
-		moduleCtx := modulecontext.FromContext(ctx).CurrentContext()
+		moduleCtx := deploymentcontext.FromContext(ctx).CurrentContext()
 		override, err := moduleCtx.BehaviorForVerb(schema.Ref{Module: ref.Module, Name: ref.Name})
 		if err != nil {
 			return resp, fmt.Errorf("%s: %w", ref, err)
 		}
 		if behavior, ok := override.Get(); ok {
-			uncheckedResp, err := behavior.Call(ctx, modulecontext.Verb(widenVerb(InvokeVerb[Req, Resp](ref))), req)
+			uncheckedResp, err := behavior.Call(ctx, deploymentcontext.Verb(widenVerb(InvokeVerb[Req, Resp](ref))), req)
 			if err != nil {
 				return resp, fmt.Errorf("%s: %w", ref, err)
 			}

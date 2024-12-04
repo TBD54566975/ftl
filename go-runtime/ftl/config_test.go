@@ -9,8 +9,8 @@ import (
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/internal"
+	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/modulecontext"
 	. "github.com/TBD54566975/ftl/internal/testutils/modulecontext"
 )
 
@@ -25,7 +25,7 @@ func TestConfig(t *testing.T) {
 	data, err := json.Marshal(C{"one", "two"})
 	assert.NoError(t, err)
 
-	moduleCtx := modulecontext.NewBuilder("test").AddConfigs(map[string][]byte{"test": data}).Build()
+	moduleCtx := deploymentcontext.NewBuilder("test").AddConfigs(map[string][]byte{"test": data}).Build()
 	ctx = internal.WithContext(ctx, internal.New(MakeDynamic(ctx, moduleCtx)))
 
 	config := Config[C]{Ref: reflection.Ref{Module: "test", Name: "test"}}
