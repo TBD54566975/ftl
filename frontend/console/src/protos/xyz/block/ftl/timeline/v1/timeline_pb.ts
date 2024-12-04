@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { Event, EventType } from "./event_pb.js";
+import { AsyncExecuteEvent, CallEvent, CronScheduledEvent, DeploymentCreatedEvent, DeploymentUpdatedEvent, Event, EventType, IngressEvent, LogEvent, PubSubConsumeEvent, PubSubPublishEvent } from "./event_pb.js";
 
 /**
  * @generated from message xyz.block.ftl.timeline.v1.GetTimelineRequest
@@ -96,6 +96,136 @@ export class GetTimelineResponse extends Message<GetTimelineResponse> {
 
   static equals(a: GetTimelineResponse | PlainMessage<GetTimelineResponse> | undefined, b: GetTimelineResponse | PlainMessage<GetTimelineResponse> | undefined): boolean {
     return proto3.util.equals(GetTimelineResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.timeline.v1.CreateEventRequest
+ */
+export class CreateEventRequest extends Message<CreateEventRequest> {
+  /**
+   * @generated from oneof xyz.block.ftl.timeline.v1.CreateEventRequest.entry
+   */
+  entry: {
+    /**
+     * @generated from field: xyz.block.ftl.timeline.v1.LogEvent log = 1;
+     */
+    value: LogEvent;
+    case: "log";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.timeline.v1.CallEvent call = 2;
+     */
+    value: CallEvent;
+    case: "call";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.timeline.v1.DeploymentCreatedEvent deployment_created = 3;
+     */
+    value: DeploymentCreatedEvent;
+    case: "deploymentCreated";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.timeline.v1.DeploymentUpdatedEvent deployment_updated = 4;
+     */
+    value: DeploymentUpdatedEvent;
+    case: "deploymentUpdated";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.timeline.v1.IngressEvent ingress = 5;
+     */
+    value: IngressEvent;
+    case: "ingress";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.timeline.v1.CronScheduledEvent cron_scheduled = 6;
+     */
+    value: CronScheduledEvent;
+    case: "cronScheduled";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.timeline.v1.AsyncExecuteEvent async_execute = 7;
+     */
+    value: AsyncExecuteEvent;
+    case: "asyncExecute";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.timeline.v1.PubSubPublishEvent pubsub_publish = 8;
+     */
+    value: PubSubPublishEvent;
+    case: "pubsubPublish";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.timeline.v1.PubSubConsumeEvent pubsub_consume = 9;
+     */
+    value: PubSubConsumeEvent;
+    case: "pubsubConsume";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<CreateEventRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.timeline.v1.CreateEventRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "log", kind: "message", T: LogEvent, oneof: "entry" },
+    { no: 2, name: "call", kind: "message", T: CallEvent, oneof: "entry" },
+    { no: 3, name: "deployment_created", kind: "message", T: DeploymentCreatedEvent, oneof: "entry" },
+    { no: 4, name: "deployment_updated", kind: "message", T: DeploymentUpdatedEvent, oneof: "entry" },
+    { no: 5, name: "ingress", kind: "message", T: IngressEvent, oneof: "entry" },
+    { no: 6, name: "cron_scheduled", kind: "message", T: CronScheduledEvent, oneof: "entry" },
+    { no: 7, name: "async_execute", kind: "message", T: AsyncExecuteEvent, oneof: "entry" },
+    { no: 8, name: "pubsub_publish", kind: "message", T: PubSubPublishEvent, oneof: "entry" },
+    { no: 9, name: "pubsub_consume", kind: "message", T: PubSubConsumeEvent, oneof: "entry" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateEventRequest {
+    return new CreateEventRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateEventRequest {
+    return new CreateEventRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateEventRequest {
+    return new CreateEventRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateEventRequest | PlainMessage<CreateEventRequest> | undefined, b: CreateEventRequest | PlainMessage<CreateEventRequest> | undefined): boolean {
+    return proto3.util.equals(CreateEventRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.timeline.v1.CreateEventResponse
+ */
+export class CreateEventResponse extends Message<CreateEventResponse> {
+  constructor(data?: PartialMessage<CreateEventResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.timeline.v1.CreateEventResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateEventResponse {
+    return new CreateEventResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateEventResponse {
+    return new CreateEventResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateEventResponse {
+    return new CreateEventResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateEventResponse | PlainMessage<CreateEventResponse> | undefined, b: CreateEventResponse | PlainMessage<CreateEventResponse> | undefined): boolean {
+    return proto3.util.equals(CreateEventResponse, a, b);
   }
 }
 

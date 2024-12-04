@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "../../v1/ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { DeleteOldEventsRequest, DeleteOldEventsResponse, GetTimelineRequest, GetTimelineResponse } from "./timeline_pb.js";
+import { CreateEventRequest, CreateEventResponse, DeleteOldEventsRequest, DeleteOldEventsResponse, GetTimelineRequest, GetTimelineResponse } from "./timeline_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.timeline.v1.TimelineService
@@ -36,6 +36,15 @@ export const TimelineService = {
       O: GetTimelineResponse,
       kind: MethodKind.Unary,
       idempotency: MethodIdempotency.NoSideEffects,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.timeline.v1.TimelineService.CreateEvent
+     */
+    createEvent: {
+      name: "CreateEvent",
+      I: CreateEventRequest,
+      O: CreateEventResponse,
+      kind: MethodKind.Unary,
     },
     /**
      * Delete old events of a specific type

@@ -19,6 +19,22 @@ message GetTimelineResponse {
   repeated timeline.v1.Event events = 1;
 }
 
+message CreateEventRequest {
+  oneof entry {
+    LogEvent log = 1;
+    CallEvent call = 2;
+    DeploymentCreatedEvent deployment_created = 3;
+    DeploymentUpdatedEvent deployment_updated = 4;
+    IngressEvent ingress = 5;
+    CronScheduledEvent cron_scheduled = 6;
+    AsyncExecuteEvent async_execute = 7;
+    PubSubPublishEvent pubsub_publish = 8;
+    PubSubConsumeEvent pubsub_consume = 9;
+  }
+}
+
+message CreateEventResponse {}
+
 message DeleteOldEventsRequest {
   timeline.v1.EventType event_type = 1;
   int64 age_seconds = 2;
@@ -38,6 +54,8 @@ service TimelineService {
   rpc GetTimeline(GetTimelineRequest) returns (GetTimelineResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
+
+  rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse) {}
 
   // Delete old events of a specific type
   rpc DeleteOldEvents(DeleteOldEventsRequest) returns (DeleteOldEventsResponse) {}
