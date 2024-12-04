@@ -23,12 +23,12 @@ PROTOS_IN := "backend/protos"
 PROTOS_OUT := "backend/protos/xyz/block/ftl/console/v1/console.pb.go " + \
               "backend/protos/xyz/block/ftl//v1/ftl.pb.go " + \
               "backend/protos/xyz/block/ftl/timeline/v1/timeline.pb.go " + \
-              "backend/protos/xyz/block/ftl//timeline/v1/schemaservice.pb.go " + \
+              "backend/protos/xyz/block/ftl//v1/schemaservice.pb.go " + \
               "backend/protos/xyz/block/ftl/schema/v1/schema.pb.go " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/console/v1/console_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/timeline/v1/timeline_pb.ts " + \
-              CONSOLE_ROOT + "/src/protos/xyz/block/ftl/timeline/v1/schemaservice_pb.ts " + \
+              CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schemaservice_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/schema/v1/schema_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/publish/v1/publish_pb.ts"
 GO_SCHEMA_ROOTS := "./internal/schema.Schema ./internal/schema.ModuleRuntimeEvent"
@@ -280,7 +280,7 @@ docs:
 
 # Generate LSP hover help text
 lsp-generate:
-  @mk lsp/hoveritems.go : lsp docs/content -- "scripts/ftl-gen-lsp"
+  @mk internal/lsp/hoveritems.go : internal/lsp docs/content -- "scripts/ftl-gen-lsp"
 
 # Run `ftl dev` providing a Delve endpoint for attaching a debugger.
 debug *args:
