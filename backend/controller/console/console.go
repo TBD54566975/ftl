@@ -554,6 +554,7 @@ func (c *ConsoleService) StreamEvents(ctx context.Context, req *connect.Request[
 	}
 }
 
+//nolint:maintidx
 func eventsQueryProtoToDAL(query *pbconsole.GetEventsRequest) ([]timeline.TimelineFilter, error) {
 	var result []timeline.TimelineFilter
 
@@ -622,6 +623,7 @@ func eventsQueryProtoToDAL(query *pbconsole.GetEventsRequest) ([]timeline.Timeli
 	return result, nil
 }
 
+//nolint:maintidx
 func eventDALToProto(event timeline.Event) *ftlv1.Event {
 	switch event := event.(type) {
 	case *timeline.CallEvent:

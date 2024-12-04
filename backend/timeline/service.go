@@ -2,6 +2,7 @@ package timeline
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 
 	"connectrpc.com/connect"
@@ -35,9 +36,13 @@ func Start(ctx context.Context, config Config, schemaEventSource schemaeventsour
 	svc := &service{}
 
 	logger.Debugf("Timeline service listening on: %s", config.Bind)
-	return rpc.Serve(ctx, config.Bind,
+	err := rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewTimelineServiceHandler, svc),
 	)
+	if err != nil {
+		return fmt.Errorf("timeline service stopped serving: %w", err)
+	}
+	return nil
 }
 
 func (s *service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
