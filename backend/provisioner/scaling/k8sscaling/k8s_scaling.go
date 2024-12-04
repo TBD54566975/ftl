@@ -33,6 +33,7 @@ import (
 )
 
 const controllerDeploymentName = "ftl-controller"
+const provisionerDeploymentName = "ftl-provisioner"
 const configMapName = "ftl-controller-deployment-config"
 const deploymentTemplate = "deploymentTemplate"
 const serviceTemplate = "serviceTemplate"
@@ -280,7 +281,6 @@ func (r *k8sScaling) thisContainerImage(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to get deployment %s: %w", controllerDeploymentName, err)
 	}
 	return thisDeployment.Spec.Template.Spec.Containers[0].Image, nil
-
 }
 
 func (r *k8sScaling) handleNewDeployment(ctx context.Context, module string, name string, sch *schema.Module) error {
@@ -291,11 +291,14 @@ func (r *k8sScaling) handleNewDeployment(ctx context.Context, module string, nam
 		return fmt.Errorf("failed to get configMap %s: %w", configMapName, err)
 	}
 	deploymentClient := r.client.AppsV1().Deployments(r.namespace)
-	thisDeployment, err := deploymentClient.Get(ctx, controllerDeploymentName, v1.GetOptions{})
+	controllerDeployment, err := deploymentClient.Get(ctx, controllerDeploymentName, v1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get deployment %s: %w", controllerDeploymentName, err)
 	}
-
+	provisionerDeployment, err := deploymentClient.Get(ctx, provisionerDeploymentName, v1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get deployment %s: %w", provisionerDeploymentName, err)
+	}
 	// First create a Service, this will be the root owner of all the other resources
 	// Only create if it does not exist already
 	servicesClient := r.client.CoreV1().Services(r.namespace)
@@ -310,7 +313,7 @@ func (r *k8sScaling) handleNewDeployment(ctx context.Context, module string, nam
 			return fmt.Errorf("failed to decode service from configMap %s: %w", configMapName, err)
 		}
 		service.Name = name
-		service.OwnerReferences = []v1.OwnerReference{{APIVersion: "apps/v1", Kind: "deployment", Name: controllerDeploymentName, UID: thisDeployment.UID}}
+		service.OwnerReferences = []v1.OwnerReference{{APIVersion: "apps/v1", Kind: "deployment", Name: controllerDeploymentName, UID: controllerDeployment.UID}}
 		service.Spec.Selector = map[string]string{"app": name}
 		addLabels(&service.ObjectMeta, module, name)
 		service, err = servicesClient.Create(ctx, service, v1.CreateOptions{})
@@ -352,7 +355,7 @@ func (r *k8sScaling) handleNewDeployment(ctx context.Context, module string, nam
 
 	// Sync the istio policy if applicable
 	if sec, ok := r.istioSecurity.Get(); ok {
-		err = r.syncIstioPolicy(ctx, sec, module, name, service, thisDeployment, sch)
+		err = r.syncIstioPolicy(ctx, sec, module, name, service, controllerDeployment, provisionerDeployment, sch)
 		if err != nil {
 			return err
 		}
@@ -545,7 +548,7 @@ func (r *k8sScaling) updateEnvVar(deployment *kubeapps.Deployment, envVerName st
 	return changes
 }
 
-func (r *k8sScaling) syncIstioPolicy(ctx context.Context, sec istioclient.Clientset, module string, name string, service *kubecore.Service, controllerDeployment *kubeapps.Deployment, sch *schema.Module) error {
+func (r *k8sScaling) syncIstioPolicy(ctx context.Context, sec istioclient.Clientset, module string, name string, service *kubecore.Service, controllerDeployment *kubeapps.Deployment, provisionerDeployment *kubeapps.Deployment, sch *schema.Module) error {
 	logger := log.FromContext(ctx)
 	logger.Debugf("Creating new istio policy for %s", name)
 
@@ -582,7 +585,10 @@ func (r *k8sScaling) syncIstioPolicy(ctx context.Context, sec istioclient.Client
 				From: []*istiosecmodel.Rule_From{
 					{
 						Source: &istiosecmodel.Source{
-							Principals: []string{"cluster.local/ns/" + r.namespace + "/sa/" + controllerDeployment.Spec.Template.Spec.ServiceAccountName},
+							Principals: []string{
+								"cluster.local/ns/" + r.namespace + "/sa/" + controllerDeployment.Spec.Template.Spec.ServiceAccountName,
+								"cluster.local/ns/" + r.namespace + "/sa/" + provisionerDeployment.Spec.Template.Spec.ServiceAccountName,
+							},
 						},
 					},
 				},

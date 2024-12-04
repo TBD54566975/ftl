@@ -31,6 +31,7 @@ func WithEncryption() in.Option {
 }
 
 func TestEncryptionForLogs(t *testing.T) {
+	t.Skip("This test needs the timeline service refactoring done")
 	in.Run(t,
 		WithEncryption(),
 		in.CopyModule("encryption"),

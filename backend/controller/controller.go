@@ -772,6 +772,9 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 				routeTable[module] = route.String()
 			}
 		}
+		if deployment.Schema.Runtime != nil && deployment.Schema.Runtime.Deployment != nil {
+			routeTable[module] = deployment.Schema.Runtime.Deployment.Endpoint
+		}
 
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
@@ -996,8 +999,13 @@ func (s *Service) callWithRequest(
 		}
 	}
 
+	deployment, ok := routes.GetDeployment(module).Get()
+	if !ok {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("failed to find deployment"))
+		return nil, fmt.Errorf("deployment not found for module %q", module)
+	}
 	callEvent := &timeline.Call{
-		DeploymentKey:    routes.GetDeployment(module).Default(model.NewDeploymentKey("unkown")),
+		DeploymentKey:    deployment,
 		RequestKey:       requestKey,
 		ParentRequestKey: parentKey,
 		StartTime:        start,

@@ -47,7 +47,7 @@ func main() {
 
 	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.SchemaServerEndpoint.String(), log.Error)
 	eventSource := schemaeventsource.New(ctx, schemaClient)
-	routeManager := routing.NewClientManager(ctx, schemaeventsource.New(ctx, schemaClient))
+	routeManager := routing.NewVerbRouter(ctx, schemaeventsource.New(ctx, schemaClient))
 	err = ingress.Start(ctx, cli.HTTPIngressConfig, eventSource, routeManager)
 	kctx.FatalIfErrorf(err, "failed to start HTTP ingress")
 }

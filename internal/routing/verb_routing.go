@@ -15,19 +15,19 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
-var _ CallClient = (*RouteClientManager)(nil)
+var _ CallClient = (*VerbCallRouter)(nil)
 
 type CallClient interface {
 	Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error)
 }
 
-// RouteClientManager managed clients for the routing service, so calls to a given module can be routed to the correct instance.
-type RouteClientManager struct {
+// VerbCallRouter managed clients for the routing service, so calls to a given module can be routed to the correct instance.
+type VerbCallRouter struct {
 	routingTable  *RouteTable
 	moduleClients *xsync.MapOf[string, optional.Option[ftlv1connect.VerbServiceClient]]
 }
 
-func (s *RouteClientManager) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
+func (s *VerbCallRouter) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
 	client, ok := s.LookupClient(req.Msg.Verb.Module).Get()
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("module not found"))
@@ -36,11 +36,11 @@ func (s *RouteClientManager) Call(ctx context.Context, req *connect.Request[ftlv
 	if err != nil {
 		return nil, fmt.Errorf("failed to call module %s: %w", req.Msg.Verb.Module, err)
 	}
-	return call, err
+	return call, nil
 }
 
-func NewClientManager(ctx context.Context, changes schemaeventsource.EventSource) *RouteClientManager {
-	svc := &RouteClientManager{
+func NewVerbRouter(ctx context.Context, changes schemaeventsource.EventSource) *VerbCallRouter {
+	svc := &VerbCallRouter{
 		routingTable:  New(ctx, changes),
 		moduleClients: xsync.NewMapOf[string, optional.Option[ftlv1connect.VerbServiceClient]](),
 	}
@@ -58,7 +58,7 @@ func NewClientManager(ctx context.Context, changes schemaeventsource.EventSource
 	return svc
 }
 
-func (s *RouteClientManager) LookupClient(module string) optional.Option[ftlv1connect.VerbServiceClient] {
+func (s *VerbCallRouter) LookupClient(module string) optional.Option[ftlv1connect.VerbServiceClient] {
 	res, _ := s.moduleClients.LoadOrCompute(module, func() optional.Option[ftlv1connect.VerbServiceClient] {
 		route, ok := s.routingTable.Current().GetForModule(module).Get()
 		if !ok {
