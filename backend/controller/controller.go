@@ -494,31 +494,27 @@ func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.Pul
 	})
 }
 
-func (s *Service) UpdateModuleRuntime(ctx context.Context, req *connect.Request[ftlv1.UpdateModuleRuntimeRequest]) (*connect.Response[ftlv1.UpdateModuleRuntimeResponse], error) {
-	schemas, err := s.dal.GetActiveDeploymentSchemasByDeploymentKey(ctx)
+func (s *Service) UpdateDeploymentRuntime(ctx context.Context, req *connect.Request[ftlv1.UpdateDeploymentRuntimeRequest]) (*connect.Response[ftlv1.UpdateDeploymentRuntimeResponse], error) {
+	deployment, err := model.ParseDeploymentKey(req.Msg.Deployment)
 	if err != nil {
-		return nil, fmt.Errorf("could not get schemas: %w", err)
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deployment key: %w", err))
 	}
-	for deployment, module := range schemas {
-		if module.Name != req.Msg.Module {
-			continue
-		}
-		key, err := model.ParseDeploymentKey(deployment)
-		if err != nil {
-			return nil, fmt.Errorf("invalid deployment key: %w", err)
-		}
-		if module.Runtime == nil {
-			module.Runtime = &schema.ModuleRuntime{}
-		}
-		event := schema.ModuleRuntimeEventFromProto(req.Msg.Event)
-		module.Runtime.ApplyEvent(event)
-		err = s.dal.UpdateModuleSchema(ctx, key, module)
-		if err != nil {
-			return nil, fmt.Errorf("could not update schema for module %s: %w", module.Name, err)
-		}
-		break
+	dep, err := s.dal.GetDeployment(ctx, deployment)
+	if err != nil {
+		return nil, fmt.Errorf("could not get schema: %w", err)
 	}
-	return connect.NewResponse(&ftlv1.UpdateModuleRuntimeResponse{}), nil
+	module := dep.Schema
+	if module.Runtime == nil {
+		module.Runtime = &schema.ModuleRuntime{}
+	}
+	event := schema.ModuleRuntimeEventFromProto(req.Msg.Event)
+	module.Runtime.ApplyEvent(event)
+	err = s.dal.UpdateModuleSchema(ctx, deployment, module)
+	if err != nil {
+		return nil, fmt.Errorf("could not update schema for module %s: %w", module.Name, err)
+	}
+
+	return connect.NewResponse(&ftlv1.UpdateDeploymentRuntimeResponse{}), nil
 }
 
 func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.UpdateDeployRequest]) (response *connect.Response[ftlv1.UpdateDeployResponse], err error) {
@@ -540,18 +536,6 @@ func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.U
 			return nil, fmt.Errorf("could not set deployment replicas: %w", err)
 		}
 	}
-	if req.Msg.Endpoint != nil {
-		err = s.dal.SetDeploymentEndpoint(ctx, deploymentKey, *req.Msg.Endpoint)
-		if err != nil {
-			if errors.Is(err, libdal.ErrNotFound) {
-				logger.Errorf(err, "Deployment not found: %s", deploymentKey)
-				return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
-			}
-			logger.Errorf(err, "Could not set deployment endpoint: %s", deploymentKey)
-			return nil, fmt.Errorf("could not set deployment endpoint: %w", err)
-		}
-	}
-
 	return connect.NewResponse(&ftlv1.UpdateDeployResponse{}), nil
 }
 
@@ -1681,12 +1665,12 @@ func (s *Service) syncRoutesAndSchema(ctx context.Context) (ret time.Duration, e
 		// And we set its replicas to zero
 		// It may seem a bit odd to do this here but this is where we are actually updating the routing table
 		// Which is what makes as a deployment 'live' from a clients POV
-		if v.Schema.Runtime == nil {
+		if v.Schema.Runtime == nil || v.Schema.Runtime.Deployment == nil {
 			deploymentLogger.Debugf("Deployment %s has no runtime metadata", v.Key.String())
 			continue
 		}
-		targetEndpoint, ok := v.Endpoint.Get()
-		if !ok {
+		targetEndpoint := v.Schema.Runtime.Deployment.Endpoint
+		if targetEndpoint == "" {
 			deploymentLogger.Debugf("Failed to get updated endpoint for deployment %s", v.Key.String())
 			continue
 		}

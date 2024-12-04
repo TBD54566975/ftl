@@ -734,11 +734,6 @@ export class UpdateDeployRequest extends Message<UpdateDeployRequest> {
    */
   minReplicas?: number;
 
-  /**
-   * @generated from field: optional string endpoint = 3;
-   */
-  endpoint?: string;
-
   constructor(data?: PartialMessage<UpdateDeployRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -749,7 +744,6 @@ export class UpdateDeployRequest extends Message<UpdateDeployRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
-    { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateDeployRequest {

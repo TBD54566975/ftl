@@ -45,7 +45,15 @@ func ModuleRuntimeFromProto(s *schemapb.ModuleRuntime) *ModuleRuntime {
 }
 
 func (m *ModuleRuntime) ToProto() protoreflect.ProtoMessage {
-	return &schemapb.ModuleRuntime{}
+	s := &schemapb.ModuleRuntime{}
+	s.Base = m.Base.ToProto()
+	if m.Deployment != nil {
+		s.Deployment = m.Deployment.ToProto()
+	}
+	if m.Scaling != nil {
+		s.Scaling = m.Scaling.ToProto()
+	}
+	return s
 }
 
 func ModuleRuntimeEventFromProto(s *schemapb.ModuleRuntimeEvent) ModuleRuntimeEvent {

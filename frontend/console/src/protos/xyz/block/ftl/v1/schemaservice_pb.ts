@@ -215,76 +215,76 @@ export class PullSchemaResponse extends Message<PullSchemaResponse> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.UpdateModuleRuntimeRequest
+ * @generated from message xyz.block.ftl.v1.UpdateDeploymentRuntimeRequest
  */
-export class UpdateModuleRuntimeRequest extends Message<UpdateModuleRuntimeRequest> {
+export class UpdateDeploymentRuntimeRequest extends Message<UpdateDeploymentRuntimeRequest> {
   /**
-   * @generated from field: string module = 1;
+   * @generated from field: string deployment = 1;
    */
-  module = "";
+  deployment = "";
 
   /**
    * @generated from field: xyz.block.ftl.schema.v1.ModuleRuntimeEvent event = 2;
    */
   event?: ModuleRuntimeEvent;
 
-  constructor(data?: PartialMessage<UpdateModuleRuntimeRequest>) {
+  constructor(data?: PartialMessage<UpdateDeploymentRuntimeRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.UpdateModuleRuntimeRequest";
+  static readonly typeName = "xyz.block.ftl.v1.UpdateDeploymentRuntimeRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "event", kind: "message", T: ModuleRuntimeEvent },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateModuleRuntimeRequest {
-    return new UpdateModuleRuntimeRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateDeploymentRuntimeRequest {
+    return new UpdateDeploymentRuntimeRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateModuleRuntimeRequest {
-    return new UpdateModuleRuntimeRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateDeploymentRuntimeRequest {
+    return new UpdateDeploymentRuntimeRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateModuleRuntimeRequest {
-    return new UpdateModuleRuntimeRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateDeploymentRuntimeRequest {
+    return new UpdateDeploymentRuntimeRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UpdateModuleRuntimeRequest | PlainMessage<UpdateModuleRuntimeRequest> | undefined, b: UpdateModuleRuntimeRequest | PlainMessage<UpdateModuleRuntimeRequest> | undefined): boolean {
-    return proto3.util.equals(UpdateModuleRuntimeRequest, a, b);
+  static equals(a: UpdateDeploymentRuntimeRequest | PlainMessage<UpdateDeploymentRuntimeRequest> | undefined, b: UpdateDeploymentRuntimeRequest | PlainMessage<UpdateDeploymentRuntimeRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateDeploymentRuntimeRequest, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.UpdateModuleRuntimeResponse
+ * @generated from message xyz.block.ftl.v1.UpdateDeploymentRuntimeResponse
  */
-export class UpdateModuleRuntimeResponse extends Message<UpdateModuleRuntimeResponse> {
-  constructor(data?: PartialMessage<UpdateModuleRuntimeResponse>) {
+export class UpdateDeploymentRuntimeResponse extends Message<UpdateDeploymentRuntimeResponse> {
+  constructor(data?: PartialMessage<UpdateDeploymentRuntimeResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.UpdateModuleRuntimeResponse";
+  static readonly typeName = "xyz.block.ftl.v1.UpdateDeploymentRuntimeResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateModuleRuntimeResponse {
-    return new UpdateModuleRuntimeResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateDeploymentRuntimeResponse {
+    return new UpdateDeploymentRuntimeResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateModuleRuntimeResponse {
-    return new UpdateModuleRuntimeResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateDeploymentRuntimeResponse {
+    return new UpdateDeploymentRuntimeResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateModuleRuntimeResponse {
-    return new UpdateModuleRuntimeResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateDeploymentRuntimeResponse {
+    return new UpdateDeploymentRuntimeResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UpdateModuleRuntimeResponse | PlainMessage<UpdateModuleRuntimeResponse> | undefined, b: UpdateModuleRuntimeResponse | PlainMessage<UpdateModuleRuntimeResponse> | undefined): boolean {
-    return proto3.util.equals(UpdateModuleRuntimeResponse, a, b);
+  static equals(a: UpdateDeploymentRuntimeResponse | PlainMessage<UpdateDeploymentRuntimeResponse> | undefined, b: UpdateDeploymentRuntimeResponse | PlainMessage<UpdateDeploymentRuntimeResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateDeploymentRuntimeResponse, a, b);
   }
 }
 

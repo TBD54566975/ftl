@@ -277,7 +277,7 @@ func (s *serveCommonConfig) run(
 					ID:          "controller",
 				},
 				{
-					Provisioner: provisioner.NewRunnerScalingProvisioner(runnerScaling, controllerClient),
+					Provisioner: provisioner.NewRunnerScalingProvisioner(runnerScaling),
 					Types:       []schema.ResourceType{schema.ResourceTypeRunner},
 					ID:          "runner",
 				},
