@@ -21,12 +21,12 @@ import (
 )
 
 var cli struct {
-	Version             kong.VersionFlag     `help:"Show version."`
-	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
-	LogConfig           log.Config           `embed:"" prefix:"log-"`
-	TimelineConfig      timeline.Config      `embed:"" prefix:"timeline-"`
-	ConfigFlag          string               `name:"config" short:"C" help:"Path to FTL project cf file." env:"FTL_CONFIG" placeholder:"FILE"`
-	ControllerEndpoint  *url.URL             `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
+	Version               kong.VersionFlag     `help:"Show version."`
+	ObservabilityConfig   observability.Config `embed:"" prefix:"o11y-"`
+	LogConfig             log.Config           `embed:"" prefix:"log-"`
+	TimelineConfig        timeline.Config      `embed:"" prefix:"timeline-"`
+	ConfigFlag            string               `name:"config" short:"C" help:"Path to FTL project cf file." env:"FTL_CONFIG" placeholder:"FILE"`
+	SchemaServiceEndpoint *url.URL             `name:"ftl-endpoint" help:"SchemaService endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
 }
 
 func main() {
@@ -35,7 +35,7 @@ func main() {
 		panic(fmt.Sprintf("invalid timestamp %q: %s", ftl.Timestamp, err))
 	}
 	kctx := kong.Parse(&cli,
-		kong.Description(`FTL - HTTP Ingress`),
+		kong.Description(`FTL - Timeline`),
 		kong.UsageOnError(),
 		kong.Vars{"version": ftl.Version, "timestamp": time.Unix(t, 0).Format(time.RFC3339)},
 	)

@@ -16,7 +16,7 @@ import (
 )
 
 type Config struct {
-	Bind *url.URL `help:"Socket to bind to." default:"http://127.0.0.1:8894" env:"FTL_TIMELINE_BIND"`
+	Bind *url.URL `help:"Socket to bind to." default:"http://127.0.0.1:8894" env:"FTL_BIND"`
 }
 
 func (c *Config) SetDefaults() {
