@@ -44,7 +44,7 @@ func main() {
 	err = observability.Init(ctx, false, "", "ftl-timeline", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
-	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.ControllerEndpoint.String(), log.Error)
+	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.SchemaServiceEndpoint.String(), log.Error)
 	schemaEventSource := schemaeventsource.New(ctx, schemaClient)
 
 	err = timeline.Start(ctx, cli.TimelineConfig, schemaEventSource)

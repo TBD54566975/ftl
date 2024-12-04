@@ -8,8 +8,9 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/kong"
 
+	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
+	timelineconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
@@ -37,7 +38,7 @@ func Start(ctx context.Context, config Config, schemaEventSource schemaeventsour
 
 	logger.Debugf("Timeline service listening on: %s", config.Bind)
 	err := rpc.Serve(ctx, config.Bind,
-		rpc.GRPC(ftlv1connect.NewTimelineServiceHandler, svc),
+		rpc.GRPC(timelineconnect.NewTimelineServiceHandler, svc),
 	)
 	if err != nil {
 		return fmt.Errorf("timeline service stopped serving: %w", err)
@@ -49,10 +50,10 @@ func (s *service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 	panic("not implemented")
 }
 
-func (s *service) GetTimeline(ctx context.Context, req *connect.Request[ftlv1.GetTimelineRequest]) (*connect.Response[ftlv1.GetTimelineResponse], error) {
+func (s *service) GetTimeline(ctx context.Context, req *connect.Request[timelinepb.GetTimelineRequest]) (*connect.Response[timelinepb.GetTimelineResponse], error) {
 	panic("not implemented")
 }
 
-func (s *service) DeleteOldEvents(ctx context.Context, req *connect.Request[ftlv1.DeleteOldEventsRequest]) (*connect.Response[ftlv1.DeleteOldEventsResponse], error) {
+func (s *service) DeleteOldEvents(ctx context.Context, req *connect.Request[timelinepb.DeleteOldEventsRequest]) (*connect.Response[timelinepb.DeleteOldEventsResponse], error) {
 	panic("not implemented")
 }

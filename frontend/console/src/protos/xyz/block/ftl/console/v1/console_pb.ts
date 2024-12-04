@@ -6,7 +6,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Duration, Message, proto3, Timestamp } from "@bufbuild/protobuf";
 import { Config as Config$1, Data as Data$1, Database as Database$1, Enum as Enum$1, Ref, Secret as Secret$1, Topic as Topic$1, TypeAlias as TypeAlias$1, Verb as Verb$1 } from "../../schema/v1/schema_pb.js";
-import { Event, EventType, LogLevel } from "../../v1/event_pb.js";
+import { Event, EventType, LogLevel } from "../../timeline/v1/event_pb.js";
 
 /**
  * @generated from message xyz.block.ftl.console.v1.Config
@@ -818,7 +818,7 @@ export class GetEventsRequest_LimitFilter extends Message<GetEventsRequest_Limit
  */
 export class GetEventsRequest_LogLevelFilter extends Message<GetEventsRequest_LogLevelFilter> {
   /**
-   * @generated from field: xyz.block.ftl.v1.LogLevel log_level = 1;
+   * @generated from field: xyz.block.ftl.timeline.v1.LogLevel log_level = 1;
    */
   logLevel = LogLevel.UNSPECIFIED;
 
@@ -935,7 +935,7 @@ export class GetEventsRequest_RequestFilter extends Message<GetEventsRequest_Req
  */
 export class GetEventsRequest_EventTypeFilter extends Message<GetEventsRequest_EventTypeFilter> {
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.EventType event_types = 1;
+   * @generated from field: repeated xyz.block.ftl.timeline.v1.EventType event_types = 1;
    */
   eventTypes: EventType[] = [];
 
@@ -1261,7 +1261,7 @@ export class GetEventsRequest_Filter extends Message<GetEventsRequest_Filter> {
  */
 export class GetEventsResponse extends Message<GetEventsResponse> {
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.Event events = 1;
+   * @generated from field: repeated xyz.block.ftl.timeline.v1.Event events = 1;
    */
   events: Event[] = [];
 
@@ -1681,7 +1681,7 @@ export class StreamEventsRequest extends Message<StreamEventsRequest> {
  */
 export class StreamEventsResponse extends Message<StreamEventsResponse> {
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.Event events = 1;
+   * @generated from field: repeated xyz.block.ftl.timeline.v1.Event events = 1;
    */
   events: Event[] = [];
 

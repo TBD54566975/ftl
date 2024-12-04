@@ -1,4 +1,4 @@
-from xyz.block.ftl.v1 import event_pb2 as _event_pb2
+from xyz.block.ftl.timeline.v1 import event_pb2 as _event_pb2
 from xyz.block.ftl.v1 import ftl_pb2 as _ftl_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor

@@ -10,7 +10,7 @@ import {
   GetEventsRequest_RequestFilter,
   GetEventsRequest_TimeFilter,
 } from '../../protos/xyz/block/ftl/console/v1/console_pb'
-import type { EventType, LogLevel } from '../../protos/xyz/block/ftl/v1/event_pb'
+import type { EventType, LogLevel } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
 
 export const requestKeysFilter = (requestKeys: string[]): GetEventsRequest_Filter => {
   const filter = new GetEventsRequest_Filter()

@@ -19,6 +19,7 @@ import (
 	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	pbtimeline "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -624,7 +625,7 @@ func eventsQueryProtoToDAL(query *pbconsole.GetEventsRequest) ([]timeline.Timeli
 }
 
 //nolint:maintidx
-func eventDALToProto(event timeline.Event) *ftlv1.Event {
+func eventDALToProto(event timeline.Event) *pbtimeline.Event {
 	switch event := event.(type) {
 	case *timeline.CallEvent:
 		var requestKey *string
@@ -636,11 +637,11 @@ func eventDALToProto(event timeline.Event) *ftlv1.Event {
 		if sourceVerb, ok := event.SourceVerb.Get(); ok {
 			sourceVerbRef = sourceVerb.ToProto().(*schemapb.Ref) //nolint:forcetypeassert
 		}
-		return &ftlv1.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &ftlv1.Event_Call{
-				Call: &ftlv1.CallEvent{
+			Entry: &pbtimeline.Event_Call{
+				Call: &pbtimeline.CallEvent{
 					RequestKey:    requestKey,
 					DeploymentKey: event.DeploymentKey.String(),
 					TimeStamp:     timestamppb.New(event.Time),
@@ -664,11 +665,11 @@ func eventDALToProto(event timeline.Event) *ftlv1.Event {
 			rstr := r.String()
 			requestKey = &rstr
 		}
-		return &ftlv1.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &ftlv1.Event_Log{
-				Log: &ftlv1.LogEvent{
+			Entry: &pbtimeline.Event_Log{
+				Log: &pbtimeline.LogEvent{
 					DeploymentKey: event.DeploymentKey.String(),
 					RequestKey:    requestKey,
 					TimeStamp:     timestamppb.New(event.Time),
@@ -686,11 +687,11 @@ func eventDALToProto(event timeline.Event) *ftlv1.Event {
 			rstr := r.String()
 			replaced = &rstr
 		}
-		return &ftlv1.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &ftlv1.Event_DeploymentCreated{
-				DeploymentCreated: &ftlv1.DeploymentCreatedEvent{
+			Entry: &pbtimeline.Event_DeploymentCreated{
+				DeploymentCreated: &pbtimeline.DeploymentCreatedEvent{
 					Key:         event.DeploymentKey.String(),
 					Language:    event.Language,
 					ModuleName:  event.ModuleName,
@@ -700,11 +701,11 @@ func eventDALToProto(event timeline.Event) *ftlv1.Event {
 			},
 		}
 	case *timeline.DeploymentUpdatedEvent:
-		return &ftlv1.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &ftlv1.Event_DeploymentUpdated{
-				DeploymentUpdated: &ftlv1.DeploymentUpdatedEvent{
+			Entry: &pbtimeline.Event_DeploymentUpdated{
+				DeploymentUpdated: &pbtimeline.DeploymentUpdatedEvent{
 					Key:             event.DeploymentKey.String(),
 					MinReplicas:     int32(event.MinReplicas),
 					PrevMinReplicas: int32(event.PrevMinReplicas),
@@ -719,11 +720,11 @@ func eventDALToProto(event timeline.Event) *ftlv1.Event {
 			requestKey = &rstr
 		}
 
-		return &ftlv1.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &ftlv1.Event_Ingress{
-				Ingress: &ftlv1.IngressEvent{
+			Entry: &pbtimeline.Event_Ingress{
+				Ingress: &pbtimeline.IngressEvent{
 					DeploymentKey: event.DeploymentKey.String(),
 					RequestKey:    requestKey,
 					VerbRef: &schemapb.Ref{
@@ -745,11 +746,11 @@ func eventDALToProto(event timeline.Event) *ftlv1.Event {
 		}
 
 	case *timeline.CronScheduledEvent:
-		return &ftlv1.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &ftlv1.Event_CronScheduled{
-				CronScheduled: &ftlv1.CronScheduledEvent{
+			Entry: &pbtimeline.Event_CronScheduled{
+				CronScheduled: &pbtimeline.CronScheduledEvent{
 					DeploymentKey: event.DeploymentKey.String(),
 					VerbRef: &schemapb.Ref{
 						Module: event.Verb.Module,
@@ -770,21 +771,21 @@ func eventDALToProto(event timeline.Event) *ftlv1.Event {
 			requestKey = &rstr
 		}
 
-		var asyncEventType ftlv1.AsyncExecuteEventType
+		var asyncEventType pbtimeline.AsyncExecuteEventType
 		switch event.EventType {
 		case timeline.AsyncExecuteEventTypeUnkown:
-			asyncEventType = ftlv1.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_UNSPECIFIED
+			asyncEventType = pbtimeline.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_UNSPECIFIED
 		case timeline.AsyncExecuteEventTypeCron:
-			asyncEventType = ftlv1.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_CRON
+			asyncEventType = pbtimeline.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_CRON
 		case timeline.AsyncExecuteEventTypePubSub:
-			asyncEventType = ftlv1.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_PUBSUB
+			asyncEventType = pbtimeline.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_PUBSUB
 		}
 
-		return &ftlv1.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &ftlv1.Event_AsyncExecute{
-				AsyncExecute: &ftlv1.AsyncExecuteEvent{
+			Entry: &pbtimeline.Event_AsyncExecute{
+				AsyncExecute: &pbtimeline.AsyncExecuteEvent{
 					DeploymentKey:  event.DeploymentKey.String(),
 					RequestKey:     requestKey,
 					TimeStamp:      timestamppb.New(event.Time),
@@ -805,11 +806,11 @@ func eventDALToProto(event timeline.Event) *ftlv1.Event {
 			requestKey = &r
 		}
 
-		return &ftlv1.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &ftlv1.Event_PubsubPublish{
-				PubsubPublish: &ftlv1.PubSubPublishEvent{
+			Entry: &pbtimeline.Event_PubsubPublish{
+				PubsubPublish: &pbtimeline.PubSubPublishEvent{
 					DeploymentKey: event.DeploymentKey.String(),
 					RequestKey:    requestKey,
 					VerbRef:       event.SourceVerb.ToProto().(*schemapb.Ref), //nolint:forcetypeassert
@@ -835,11 +836,11 @@ func eventDALToProto(event timeline.Event) *ftlv1.Event {
 			destVerbName = destVerb.Name
 		}
 
-		return &ftlv1.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &ftlv1.Event_PubsubConsume{
-				PubsubConsume: &ftlv1.PubSubConsumeEvent{
+			Entry: &pbtimeline.Event_PubsubConsume{
+				PubsubConsume: &pbtimeline.PubSubConsumeEvent{
 					DeploymentKey:  event.DeploymentKey.String(),
 					RequestKey:     requestKey,
 					DestVerbModule: &destVerbModule,

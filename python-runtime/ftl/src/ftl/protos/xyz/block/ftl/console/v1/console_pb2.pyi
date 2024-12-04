@@ -1,7 +1,7 @@
 from google.protobuf import duration_pb2 as _duration_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from xyz.block.ftl.schema.v1 import schema_pb2 as _schema_pb2
-from xyz.block.ftl.v1 import event_pb2 as _event_pb2
+from xyz.block.ftl.timeline.v1 import event_pb2 as _event_pb2
 from xyz.block.ftl.v1 import ftl_pb2 as _ftl_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper

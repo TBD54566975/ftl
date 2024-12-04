@@ -2,7 +2,7 @@ import { AttributeBadge } from '../../../components/AttributeBadge'
 import { DeploymentCard } from '../../../features/deployments/DeploymentCard'
 import { TraceGraph } from '../../../features/traces/TraceGraph'
 import { TraceGraphHeader } from '../../../features/traces/TraceGraphHeader'
-import type { Event, PubSubPublishEvent } from '../../../protos/xyz/block/ftl/v1/event_pb'
+import type { Event, PubSubPublishEvent } from '../../../protos/xyz/block/ftl/timeline/v1/event_pb'
 import { formatDuration } from '../../../utils/date.utils'
 import { refString } from '../../modules/decls/verb/verb.utils'
 

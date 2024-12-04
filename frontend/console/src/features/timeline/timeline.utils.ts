@@ -1,5 +1,5 @@
-import { AsyncExecuteEventType } from '../../protos/xyz/block/ftl/v1/event_pb'
-import type { Event } from '../../protos/xyz/block/ftl/v1/event_pb'
+import { AsyncExecuteEventType } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
+import type { Event } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
 
 const eventBackgroundColorMap: Record<string, string> = {
   log: 'bg-gray-500',

@@ -1,4 +1,4 @@
-import type { Event } from '../../protos/xyz/block/ftl/v1/event_pb'
+import type { Event } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
 import { formatTimestampShort } from '../../utils'
 import { deploymentTextColor } from '../deployments/deployment.utils'
 import { TimelineAsyncExecute } from './TimelineAsyncExecute'

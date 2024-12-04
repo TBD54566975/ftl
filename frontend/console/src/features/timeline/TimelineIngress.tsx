@@ -1,4 +1,4 @@
-import type { IngressEvent } from '../../protos/xyz/block/ftl/v1/event_pb'
+import type { IngressEvent } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
 import { refString } from '../modules/decls/verb/verb.utils'
 
 export const TimelineIngress = ({ ingress }: { ingress: IngressEvent }) => {

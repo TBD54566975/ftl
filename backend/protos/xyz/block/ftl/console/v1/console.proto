@@ -5,7 +5,7 @@ package xyz.block.ftl.console.v1;
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "xyz/block/ftl/schema/v1/schema.proto";
-import "xyz/block/ftl/v1/event.proto";
+import "xyz/block/ftl/timeline/v1/event.proto";
 import "xyz/block/ftl/v1/ftl.proto";
 
 option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1;pbconsole";
@@ -97,7 +97,7 @@ message GetEventsRequest {
   }
   // Filters events by log level.
   message LogLevelFilter {
-    ftl.v1.LogLevel log_level = 1;
+    timeline.v1.LogLevel log_level = 1;
   }
   // Filters events by deployment key.
   message DeploymentFilter {
@@ -109,7 +109,7 @@ message GetEventsRequest {
   }
   // Filters events by event type.
   message EventTypeFilter {
-    repeated ftl.v1.EventType event_types = 1;
+    repeated timeline.v1.EventType event_types = 1;
   }
   // Filters events by time.
   //
@@ -163,7 +163,7 @@ message GetEventsRequest {
 }
 
 message GetEventsResponse {
-  repeated ftl.v1.Event events = 1;
+  repeated timeline.v1.Event events = 1;
 
   // For pagination, this cursor is where we should start our next query
   optional int64 cursor = 2;
@@ -213,7 +213,7 @@ message StreamEventsRequest {
 }
 
 message StreamEventsResponse {
-  repeated ftl.v1.Event events = 1;
+  repeated timeline.v1.Event events = 1;
 }
 
 service ConsoleService {
