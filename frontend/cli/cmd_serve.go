@@ -315,8 +315,7 @@ func (s *serveCommonConfig) run(
 	})
 	// Start Cron
 	wg.Go(func() error {
-		rt := routing.New(ctx, schemaEventSourceFactory())
-		err := cron.Start(ctx, schemaEventSourceFactory(), rt)
+		err := cron.Start(ctx, schemaEventSourceFactory(), routing.NewClientManager(ctx, schemaEventSourceFactory()))
 		if err != nil {
 			return fmt.Errorf("cron failed: %w", err)
 		}
@@ -324,7 +323,8 @@ func (s *serveCommonConfig) run(
 	})
 	// Start Ingress
 	wg.Go(func() error {
-		err := ingress.Start(ctx, s.Ingress, schemaEventSourceFactory())
+		routeManager := routing.NewClientManager(ctx, schemaEventSourceFactory())
+		err := ingress.Start(ctx, s.Ingress, schemaEventSourceFactory(), routeManager)
 		if err != nil {
 			return fmt.Errorf("ingress failed: %w", err)
 		}

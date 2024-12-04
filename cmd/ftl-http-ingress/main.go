@@ -16,6 +16,7 @@ import (
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
+	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
@@ -46,7 +47,7 @@ func main() {
 
 	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.SchemaServerEndpoint.String(), log.Error)
 	eventSource := schemaeventsource.New(ctx, schemaClient)
-
-	err = ingress.Start(ctx, cli.HTTPIngressConfig, eventSource)
+	routeManager := routing.NewClientManager(ctx, schemaeventsource.New(ctx, schemaClient))
+	err = ingress.Start(ctx, cli.HTTPIngressConfig, eventSource, routeManager)
 	kctx.FatalIfErrorf(err, "failed to start HTTP ingress")
 }
