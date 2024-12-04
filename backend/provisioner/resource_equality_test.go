@@ -69,4 +69,5 @@ func TestResourceEqual(t *testing.T) {
 			t.Errorf("expected messages to be equal, but they are not")
 		}
 	})
+	// TODO: add tests for pubsub
 }

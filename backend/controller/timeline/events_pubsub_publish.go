@@ -11,7 +11,7 @@ import (
 	ftlencryption "github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/timeline/internal/sql"
 	"github.com/TBD54566975/ftl/backend/libdal"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	pubpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publisher/v1"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
@@ -32,7 +32,7 @@ type PubSubPublish struct {
 	Time          time.Time
 	SourceVerb    schema.Ref
 	Topic         string
-	Request       *ftlv1.PublishEventRequest
+	Request       *pubpb.PublishEventRequest
 	Error         optional.Option[string]
 }
 

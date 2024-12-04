@@ -29,10 +29,24 @@ func New(module *schema.Module) (*Service, error) {
 		publishers[t.Name] = publisher
 	}
 
+	subscriptions := map[string]*subscription{}
+	for v := range sl.FilterVariants[*schema.Verb](module.Decls) {
+		subscriber, ok := slices.FindVariant[*schema.MetadataSubscriber](v.Metadata)
+		if !ok {
+			continue
+		}
+		subscription, err := newSubscription(ctx, module.Name, v, subscriber, client)
+		if err != nil {
+			return nil, err
+		}
+		subscriptions[v.Name] = subscription
+	}
+
 	// TODO: topic producers needs to be closed eventually
 
 	svc := &Service{
-		publishers: publishers,
+		topics:        topics,
+		subscriptions: subscriptions,
 	}
 	return svc, nil
 }
