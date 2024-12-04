@@ -1,6 +1,4 @@
-import {
-  type GetEventsRequest_Filter,
-} from '../../protos/xyz/block/ftl/console/v1/console_pb.ts'
+import { type GetEventsRequest_Filter } from '../../protos/xyz/block/ftl/console/v1/console_pb.ts'
 import {
   type AsyncExecuteEvent,
   type CallEvent,
