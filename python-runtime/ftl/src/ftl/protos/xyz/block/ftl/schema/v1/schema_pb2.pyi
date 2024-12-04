@@ -418,22 +418,28 @@ class Module(_message.Message):
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., builtin: bool = ..., name: _Optional[str] = ..., decls: _Optional[_Iterable[_Union[Decl, _Mapping]]] = ..., runtime: _Optional[_Union[ModuleRuntime, _Mapping]] = ...) -> None: ...
 
 class ModuleRuntime(_message.Message):
-    __slots__ = ("create_time", "language", "os", "arch", "image", "scaling", "deployment")
+    __slots__ = ("base", "scaling", "deployment")
+    BASE_FIELD_NUMBER: _ClassVar[int]
+    SCALING_FIELD_NUMBER: _ClassVar[int]
+    DEPLOYMENT_FIELD_NUMBER: _ClassVar[int]
+    base: ModuleRuntimeBase
+    scaling: ModuleRuntimeScaling
+    deployment: ModuleRuntimeDeployment
+    def __init__(self, base: _Optional[_Union[ModuleRuntimeBase, _Mapping]] = ..., scaling: _Optional[_Union[ModuleRuntimeScaling, _Mapping]] = ..., deployment: _Optional[_Union[ModuleRuntimeDeployment, _Mapping]] = ...) -> None: ...
+
+class ModuleRuntimeBase(_message.Message):
+    __slots__ = ("create_time", "language", "os", "arch", "image")
     CREATE_TIME_FIELD_NUMBER: _ClassVar[int]
     LANGUAGE_FIELD_NUMBER: _ClassVar[int]
     OS_FIELD_NUMBER: _ClassVar[int]
     ARCH_FIELD_NUMBER: _ClassVar[int]
     IMAGE_FIELD_NUMBER: _ClassVar[int]
-    SCALING_FIELD_NUMBER: _ClassVar[int]
-    DEPLOYMENT_FIELD_NUMBER: _ClassVar[int]
     create_time: _timestamp_pb2.Timestamp
     language: str
     os: str
     arch: str
     image: str
-    scaling: ModuleRuntimeScaling
-    deployment: ModuleRuntimeDeployment
-    def __init__(self, create_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., language: _Optional[str] = ..., os: _Optional[str] = ..., arch: _Optional[str] = ..., image: _Optional[str] = ..., scaling: _Optional[_Union[ModuleRuntimeScaling, _Mapping]] = ..., deployment: _Optional[_Union[ModuleRuntimeDeployment, _Mapping]] = ...) -> None: ...
+    def __init__(self, create_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., language: _Optional[str] = ..., os: _Optional[str] = ..., arch: _Optional[str] = ..., image: _Optional[str] = ...) -> None: ...
 
 class ModuleRuntimeDeployment(_message.Message):
     __slots__ = ("endpoint", "deployment_key")
@@ -444,12 +450,14 @@ class ModuleRuntimeDeployment(_message.Message):
     def __init__(self, endpoint: _Optional[str] = ..., deployment_key: _Optional[str] = ...) -> None: ...
 
 class ModuleRuntimeEvent(_message.Message):
-    __slots__ = ("module_runtime_deployment", "module_runtime_scaling")
+    __slots__ = ("module_runtime_base", "module_runtime_deployment", "module_runtime_scaling")
+    MODULE_RUNTIME_BASE_FIELD_NUMBER: _ClassVar[int]
     MODULE_RUNTIME_DEPLOYMENT_FIELD_NUMBER: _ClassVar[int]
     MODULE_RUNTIME_SCALING_FIELD_NUMBER: _ClassVar[int]
+    module_runtime_base: ModuleRuntimeBase
     module_runtime_deployment: ModuleRuntimeDeployment
     module_runtime_scaling: ModuleRuntimeScaling
-    def __init__(self, module_runtime_deployment: _Optional[_Union[ModuleRuntimeDeployment, _Mapping]] = ..., module_runtime_scaling: _Optional[_Union[ModuleRuntimeScaling, _Mapping]] = ...) -> None: ...
+    def __init__(self, module_runtime_base: _Optional[_Union[ModuleRuntimeBase, _Mapping]] = ..., module_runtime_deployment: _Optional[_Union[ModuleRuntimeDeployment, _Mapping]] = ..., module_runtime_scaling: _Optional[_Union[ModuleRuntimeScaling, _Mapping]] = ...) -> None: ...
 
 class ModuleRuntimeScaling(_message.Message):
     __slots__ = ("min_replicas",)

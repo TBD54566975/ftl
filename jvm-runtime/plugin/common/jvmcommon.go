@@ -488,9 +488,11 @@ func readSchema(bctx buildContext) (*schemapb.Module, error) {
 	}
 
 	moduleSchema.Runtime = &schema.ModuleRuntime{
-		CreateTime: time.Now(),
-		Language:   bctx.Config.Language,
-		Image:      "ftl0/ftl-runner-jvm",
+		Base: schema.ModuleRuntimeBase{
+			CreateTime: time.Now(),
+			Language:   bctx.Config.Language,
+			Image:      "ftl0/ftl-runner-jvm",
+		},
 		Scaling: &schema.ModuleRuntimeScaling{
 			MinReplicas: 1,
 		},

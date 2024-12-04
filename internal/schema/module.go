@@ -26,7 +26,7 @@ type Module struct {
 	Name     string   `parser:"'module' @Ident '{'" protobuf:"4"`
 	Decls    []Decl   `parser:"@@* '}'" protobuf:"5"`
 
-	Runtime *ModuleRuntime `protobuf:"6" parser:""`
+	Runtime *ModuleRuntime `protobuf:"31634" parser:""`
 }
 
 var _ Node = (*Module)(nil)

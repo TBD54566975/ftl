@@ -378,7 +378,7 @@ func (r *k8sScaling) handleNewDeployment(ctx context.Context, module string, nam
 	}
 
 	// runner images use the same tag as the controller
-	rawRunnerImage := sch.Runtime.Image
+	rawRunnerImage := sch.Runtime.Base.Image
 	if rawRunnerImage == "" {
 		rawRunnerImage = "ftl0/ftl-runner"
 	}

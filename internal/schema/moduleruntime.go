@@ -12,19 +12,11 @@ import (
 
 var _ Runtime = (*ModuleRuntime)(nil)
 
-// ModuleRuntime is the base runtime for a module, plus any additional dynamic runtime configuration.
+// ModuleRuntime is runtime configuration for a module that can be dynamically updated.
 type ModuleRuntime struct {
-	CreateTime time.Time `protobuf:"1"`
-	Language   string    `protobuf:"2"`
-	OS         string    `protobuf:"3,optional"`
-	Arch       string    `protobuf:"4,optional"`
-	// Image is the name of the runner image. Defaults to "ftl0/ftl-runner".
-	// Must not include a tag, as FTL's version will be used as the tag.
-	Image string `protobuf:"5,optional"`
-
-	// Configuration that can be dynamically added to a module and updated after creation.
-	Scaling    *ModuleRuntimeScaling    `protobuf:"7,optional"`
-	Deployment *ModuleRuntimeDeployment `protobuf:"8,optional"`
+	Base       ModuleRuntimeBase        `protobuf:"1"` // Base is always present.
+	Scaling    *ModuleRuntimeScaling    `protobuf:"2,optional"`
+	Deployment *ModuleRuntimeDeployment `protobuf:"3,optional"`
 }
 
 func (*ModuleRuntime) runtime() {}
@@ -32,6 +24,8 @@ func (*ModuleRuntime) runtime() {}
 // ApplyEvent applies a ModuleRuntimeEvent to the ModuleRuntime.
 func (m *ModuleRuntime) ApplyEvent(event ModuleRuntimeEvent) {
 	switch event := event.(type) {
+	case *ModuleRuntimeBase:
+		m.Base = *event
 	case *ModuleRuntimeScaling:
 		m.Scaling = event
 	case *ModuleRuntimeDeployment:
@@ -44,35 +38,21 @@ func ModuleRuntimeFromProto(s *schemapb.ModuleRuntime) *ModuleRuntime {
 		return nil
 	}
 	return &ModuleRuntime{
-		CreateTime: s.GetCreateTime().AsTime(),
-		Language:   s.Language,
-		OS:         s.GetOs(),
-		Arch:       s.GetArch(),
-		Image:      s.GetImage(),
+		Base:       ModuleRuntimeBaseFromProto(s.Base),
 		Scaling:    ModuleRuntimeScalingFromProto(s.Scaling),
 		Deployment: ModuleRuntimeDeploymentFromProto(s.Deployment),
 	}
 }
 
 func (m *ModuleRuntime) ToProto() protoreflect.ProtoMessage {
-	out := &schemapb.ModuleRuntime{
-		CreateTime: timestamppb.New(m.CreateTime),
-		Language:   m.Language,
-	}
-	if m.OS != "" {
-		out.Os = &m.OS
-	}
-	if m.Arch != "" {
-		out.Arch = &m.Arch
-	}
-	if m.Image != "" {
-		out.Image = &m.Image
-	}
-	return out
+	return &schemapb.ModuleRuntime{}
 }
 
 func ModuleRuntimeEventFromProto(s *schemapb.ModuleRuntimeEvent) ModuleRuntimeEvent {
 	switch s.Value.(type) {
+	case *schemapb.ModuleRuntimeEvent_ModuleRuntimeBase:
+		return ModuleRuntimeBaseFromProto(s.GetModuleRuntimeBase())
+
 	case *schemapb.ModuleRuntimeEvent_ModuleRuntimeScaling:
 		return ModuleRuntimeScalingFromProto(s.GetModuleRuntimeScaling())
 
@@ -90,6 +70,52 @@ type ModuleRuntimeEvent interface {
 }
 
 //protobuf:1
+type ModuleRuntimeBase struct {
+	CreateTime time.Time `protobuf:"1"`
+	Language   string    `protobuf:"2"`
+	OS         string    `protobuf:"3,optional"`
+	Arch       string    `protobuf:"4,optional"`
+	// Image is the name of the runner image. Defaults to "ftl0/ftl-runner".
+	// Must not include a tag, as FTL's version will be used as the tag.
+	Image string `protobuf:"5,optional"`
+}
+
+func (ModuleRuntimeBase) moduleRuntime() {}
+
+func ModuleRuntimeBaseFromProto(s *schemapb.ModuleRuntimeBase) ModuleRuntimeBase {
+	if s == nil {
+		return ModuleRuntimeBase{}
+	}
+	return ModuleRuntimeBase{
+		CreateTime: s.GetCreateTime().AsTime(),
+		Language:   s.GetLanguage(),
+		OS:         s.GetOs(),
+		Arch:       s.GetArch(),
+		Image:      s.GetImage(),
+	}
+}
+
+func (m *ModuleRuntimeBase) ToProto() *schemapb.ModuleRuntimeBase {
+	if m == nil {
+		return nil
+	}
+	out := &schemapb.ModuleRuntimeBase{
+		CreateTime: timestamppb.New(m.CreateTime),
+		Language:   m.Language,
+	}
+	if m.OS != "" {
+		out.Os = &m.OS
+	}
+	if m.Arch != "" {
+		out.Arch = &m.Arch
+	}
+	if m.Image != "" {
+		out.Image = &m.Image
+	}
+	return out
+}
+
+//protobuf:2
 type ModuleRuntimeScaling struct {
 	MinReplicas int32 `protobuf:"1"`
 }
@@ -114,7 +140,7 @@ func (m *ModuleRuntimeScaling) ToProto() *schemapb.ModuleRuntimeScaling {
 	}
 }
 
-//protobuf:2
+//protobuf:3
 type ModuleRuntimeDeployment struct {
 	// Endpoint is the endpoint of the deployed module.
 	Endpoint      string `protobuf:"1"`

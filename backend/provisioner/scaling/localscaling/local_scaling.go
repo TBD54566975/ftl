@@ -54,7 +54,7 @@ func (l *localScaling) StartDeployment(ctx context.Context, module string, deplo
 	if sch.Runtime == nil {
 		return nil
 	}
-	return l.setReplicas(module, deployment, sch.Runtime.Language, 1)
+	return l.setReplicas(module, deployment, sch.Runtime.Base.Language, 1)
 }
 
 func (l *localScaling) setReplicas(module string, deployment string, language string, replicas int32) error {
