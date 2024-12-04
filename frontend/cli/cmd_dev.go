@@ -50,6 +50,9 @@ func (d *devCmd) Run(
 	verbClient ftlv1connect.VerbServiceClient,
 ) error {
 	startTime := time.Now()
+	logger := log.FromContext(ctx)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	if len(d.Build.Dirs) == 0 {
 		d.Build.Dirs = projConfig.AbsModuleDirs()
 	}
@@ -78,6 +81,7 @@ func (d *devCmd) Run(
 		return nil
 	}
 	statusManager := terminal.FromContext(ctx)
+	defer statusManager.Close()
 	starting := statusManager.NewStatus("\u001B[92mStarting FTL Server 🚀\u001B[39m")
 
 	bindAllocator, err := bind.NewBindAllocator(d.ServeCmd.Bind, 1)
@@ -102,7 +106,9 @@ func (d *devCmd) Run(
 		}
 
 		g.Go(func() error {
-			return d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, controllerClient, provisionerClient, schemaEventSourceFactory, verbClient, true, devModeEndpointUpdates)
+			err := d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, controllerClient, provisionerClient, schemaEventSourceFactory, verbClient, true, devModeEndpointUpdates)
+			cancel()
+			return err
 		})
 	}
 
@@ -133,5 +139,10 @@ func (d *devCmd) Run(
 		return engine.Dev(ctx, d.Watch)
 	})
 
-	return g.Wait()
+	err = g.Wait()
+	if err != nil {
+		logger.Errorf(err, "error during dev")
+		return fmt.Errorf("error during dev: %w", err)
+	}
+	return nil
 }
