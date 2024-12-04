@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { GetSchemaRequest, GetSchemaResponse, PullSchemaRequest, PullSchemaResponse, UpdateModuleRuntimeRequest, UpdateModuleRuntimeResponse } from "./schemaservice_pb.js";
+import { GetSchemaRequest, GetSchemaResponse, PullSchemaRequest, PullSchemaResponse, UpdateDeploymentRuntimeRequest, UpdateDeploymentRuntimeResponse } from "./schemaservice_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.v1.SchemaService
@@ -55,12 +55,12 @@ export const SchemaService = {
     /**
      * UpdateModuleRuntime is used to update the runtime configuration of a module.
      *
-     * @generated from rpc xyz.block.ftl.v1.SchemaService.UpdateModuleRuntime
+     * @generated from rpc xyz.block.ftl.v1.SchemaService.UpdateDeploymentRuntime
      */
-    updateModuleRuntime: {
-      name: "UpdateModuleRuntime",
-      I: UpdateModuleRuntimeRequest,
-      O: UpdateModuleRuntimeResponse,
+    updateDeploymentRuntime: {
+      name: "UpdateDeploymentRuntime",
+      I: UpdateDeploymentRuntimeRequest,
+      O: UpdateDeploymentRuntimeResponse,
       kind: MethodKind.Unary,
     },
   }

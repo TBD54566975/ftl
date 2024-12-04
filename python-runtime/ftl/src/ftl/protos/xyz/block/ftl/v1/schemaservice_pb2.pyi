@@ -48,14 +48,14 @@ class PullSchemaResponse(_message.Message):
     module_removed: bool
     def __init__(self, deployment_key: _Optional[str] = ..., module_name: _Optional[str] = ..., schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., more: bool = ..., change_type: _Optional[_Union[DeploymentChangeType, str]] = ..., module_removed: bool = ...) -> None: ...
 
-class UpdateModuleRuntimeRequest(_message.Message):
-    __slots__ = ("module", "event")
-    MODULE_FIELD_NUMBER: _ClassVar[int]
+class UpdateDeploymentRuntimeRequest(_message.Message):
+    __slots__ = ("deployment", "event")
+    DEPLOYMENT_FIELD_NUMBER: _ClassVar[int]
     EVENT_FIELD_NUMBER: _ClassVar[int]
-    module: str
+    deployment: str
     event: _schema_pb2.ModuleRuntimeEvent
-    def __init__(self, module: _Optional[str] = ..., event: _Optional[_Union[_schema_pb2.ModuleRuntimeEvent, _Mapping]] = ...) -> None: ...
+    def __init__(self, deployment: _Optional[str] = ..., event: _Optional[_Union[_schema_pb2.ModuleRuntimeEvent, _Mapping]] = ...) -> None: ...
 
-class UpdateModuleRuntimeResponse(_message.Message):
+class UpdateDeploymentRuntimeResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
