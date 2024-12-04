@@ -22,7 +22,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
-type ExternalModuleContext struct {
+type ExternalDeploymentContext struct {
 	GoVersion    string
 	FTLVersion   string
 	Module       *schema.Module
@@ -67,7 +67,7 @@ func GenerateStubs(ctx context.Context, dir string, moduleSch *schema.Module, co
 		ftlVersion = ftl.Version
 	}
 
-	context := ExternalModuleContext{
+	context := ExternalDeploymentContext{
 		GoVersion:    goModVersion,
 		FTLVersion:   ftlVersion,
 		Module:       moduleSch,

@@ -1,4 +1,4 @@
-package modulecontext_test
+package deploymentcontext_test
 
 import (
 	"context" //nolint:depguard
@@ -6,14 +6,14 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
+	. "github.com/TBD54566975/ftl/internal/deploymentcontext"
 	"github.com/TBD54566975/ftl/internal/log"
-	. "github.com/TBD54566975/ftl/internal/modulecontext"
 	. "github.com/TBD54566975/ftl/internal/testutils/modulecontext"
 )
 
 type manualContextSupplier struct {
-	initialCtx ModuleContext
-	sink       func(ctx context.Context, mCtx ModuleContext)
+	initialCtx DeploymentContext
+	sink       func(ctx context.Context, mCtx DeploymentContext)
 }
 
 func TestGettingAndSettingFromContext(t *testing.T) {
@@ -28,7 +28,7 @@ func TestDynamicContextUpdate(t *testing.T) {
 	mc1 := NewBuilder("test").AddConfigs(map[string][]byte{"value": {0}}).Build()
 	mc2 := NewBuilder("test").AddConfigs(map[string][]byte{"value": {1}}).Build()
 	mcs := &manualContextSupplier{initialCtx: mc1}
-	dynamic, err := NewDynamicContext(ctx, ModuleContextSupplier(mcs), "test")
+	dynamic, err := NewDynamicContext(ctx, DeploymentContextSupplier(mcs), "test")
 	assert.NoError(t, err)
 	assert.NotEqual(t, nil, dynamic)
 	assert.Equal(t, mc1, dynamic.CurrentContext())
@@ -36,7 +36,7 @@ func TestDynamicContextUpdate(t *testing.T) {
 	assert.Equal(t, mc2, dynamic.CurrentContext())
 }
 
-func (mcs *manualContextSupplier) Subscribe(ctx context.Context, _ string, sink func(ctx context.Context, mCtx ModuleContext), _ func(error) bool) {
+func (mcs *manualContextSupplier) Subscribe(ctx context.Context, _ string, sink func(ctx context.Context, mCtx DeploymentContext), _ func(error) bool) {
 	sink(ctx, mcs.initialCtx)
 	mcs.sink = sink
 }

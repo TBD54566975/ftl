@@ -68,7 +68,7 @@ public class ModuleProcessor {
         ret.registerBlockingMethod("call");
         ret.registerBlockingMethod("publishEvent");
         ret.registerBlockingMethod("acquireLease");
-        ret.registerBlockingMethod("getModuleContext");
+        ret.registerBlockingMethod("getDeploymentContext");
         ret.registerBlockingMethod("ping");
         return ret;
     }

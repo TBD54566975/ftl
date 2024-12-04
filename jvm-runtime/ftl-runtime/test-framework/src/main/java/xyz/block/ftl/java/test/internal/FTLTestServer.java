@@ -15,7 +15,7 @@ public class FTLTestServer {
         var addr = new InetSocketAddress("127.0.0.1", 0);
         grpcServer = NettyServerBuilder.forAddress(addr)
                 .addService(new TestVerbServer())
-                .addService(new TestModuleServer())
+                .addService(new TestDeploymentServer())
                 .build();
         try {
             grpcServer.start();

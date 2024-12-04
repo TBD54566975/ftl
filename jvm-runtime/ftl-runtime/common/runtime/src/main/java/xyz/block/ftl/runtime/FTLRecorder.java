@@ -15,10 +15,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.arc.Arc;
 import io.quarkus.runtime.ShutdownContext;
 import io.quarkus.runtime.annotations.Recorder;
+import xyz.block.ftl.deployment.v1.GetDeploymentContextResponse;
 import xyz.block.ftl.runtime.http.FTLHttpHandler;
 import xyz.block.ftl.runtime.http.HTTPVerbInvoker;
 import xyz.block.ftl.v1.CallRequest;
-import xyz.block.ftl.v1.GetModuleContextResponse;
 
 @Recorder
 public class FTLRecorder {
@@ -173,7 +173,7 @@ public class FTLRecorder {
         });
     }
 
-    public void registerDatabase(String dbKind, GetModuleContextResponse.DbType name) {
+    public void registerDatabase(String dbKind, GetDeploymentContextResponse.DbType name) {
         FTLController.instance().registerDatabase(dbKind, name);
     }
 }

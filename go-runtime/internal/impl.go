@@ -10,14 +10,14 @@ import (
 	"connectrpc.com/connect"
 	"github.com/puzpuzpuz/xsync/v3"
 
+	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
+	deploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
 	pubpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1"
 	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
-	"github.com/TBD54566975/ftl/internal/modulecontext"
+	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
@@ -29,13 +29,13 @@ type mapCacheEntry struct {
 
 // RealFTL is the real implementation of the [internal.FTL] interface using the Controller.
 type RealFTL struct {
-	dmctx *modulecontext.DynamicModuleContext
+	dmctx *deploymentcontext.DynamicDeploymentContext
 	// Cache for Map() calls
 	mapped *xsync.MapOf[uintptr, mapCacheEntry]
 }
 
 // New creates a new [RealFTL]
-func New(dmctx *modulecontext.DynamicModuleContext) *RealFTL {
+func New(dmctx *deploymentcontext.DynamicDeploymentContext) *RealFTL {
 	return &RealFTL{
 		dmctx:  dmctx,
 		mapped: xsync.NewMapOf[uintptr, mapCacheEntry](),
@@ -66,12 +66,12 @@ func (r *RealFTL) PublishEvent(ctx context.Context, topic *schema.Ref, event any
 func publishToFTL(ctx context.Context, topic *schema.Ref, event any, caller schema.RefKey) error {
 	// TODO: remove this once we have other pubsub moved over to kafka
 	// For now we are publishing to both systems.
-	client := rpc.ClientFromContext[ftlv1connect.ModuleServiceClient](ctx)
+	client := rpc.ClientFromContext[deploymentconnect.DeploymentServiceClient](ctx)
 	body, err := encoding.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event to controller: %w", err)
 	}
-	_, err = client.PublishEvent(ctx, connect.NewRequest(&ftlv1.PublishEventRequest{
+	_, err = client.PublishEvent(ctx, connect.NewRequest(&ftldeployment.PublishEventRequest{
 		Topic:  topic.ToProto().(*schemapb.Ref), //nolint: forcetypeassert
 		Caller: caller.Name,
 		Body:   body,
