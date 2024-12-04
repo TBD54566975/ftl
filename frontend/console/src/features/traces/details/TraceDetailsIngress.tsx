@@ -1,6 +1,6 @@
 import { AttributeBadge } from '../../../components/AttributeBadge'
 import { CodeBlock } from '../../../components/CodeBlock'
-import type { Event, IngressEvent } from '../../../protos/xyz/block/ftl/console/v1/console_pb'
+import type { Event, IngressEvent } from '../../../protos/xyz/block/ftl/timeline/v1/event_pb'
 import { formatDuration } from '../../../utils/date.utils'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
 import { refString } from '../../modules/decls/verb/verb.utils'

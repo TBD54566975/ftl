@@ -1,13 +1,6 @@
 import { useState } from 'react'
 import { type TraceEvent, useRequestTraceEvents } from '../../api/timeline/use-request-trace-events'
-import {
-  AsyncExecuteEvent,
-  CallEvent,
-  type Event,
-  IngressEvent,
-  PubSubConsumeEvent,
-  PubSubPublishEvent,
-} from '../../protos/xyz/block/ftl/console/v1/console_pb'
+import { AsyncExecuteEvent, CallEvent, type Event, IngressEvent, PubSubConsumeEvent, PubSubPublishEvent } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
 import { classNames, durationToMillis } from '../../utils'
 import { eventBackgroundColor } from '../timeline/timeline.utils'
 import { eventBarLeftOffsetPercentage, requestStartTime, totalDurationForRequest } from './traces.utils'

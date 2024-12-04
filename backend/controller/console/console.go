@@ -19,6 +19,7 @@ import (
 	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	pbtimeline "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -554,6 +555,7 @@ func (c *ConsoleService) StreamEvents(ctx context.Context, req *connect.Request[
 	}
 }
 
+//nolint:maintidx
 func eventsQueryProtoToDAL(query *pbconsole.GetEventsRequest) ([]timeline.TimelineFilter, error) {
 	var result []timeline.TimelineFilter
 
@@ -622,7 +624,8 @@ func eventsQueryProtoToDAL(query *pbconsole.GetEventsRequest) ([]timeline.Timeli
 	return result, nil
 }
 
-func eventDALToProto(event timeline.Event) *pbconsole.Event {
+//nolint:maintidx
+func eventDALToProto(event timeline.Event) *pbtimeline.Event {
 	switch event := event.(type) {
 	case *timeline.CallEvent:
 		var requestKey *string
@@ -634,11 +637,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 		if sourceVerb, ok := event.SourceVerb.Get(); ok {
 			sourceVerbRef = sourceVerb.ToProto().(*schemapb.Ref) //nolint:forcetypeassert
 		}
-		return &pbconsole.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_Call{
-				Call: &pbconsole.CallEvent{
+			Entry: &pbtimeline.Event_Call{
+				Call: &pbtimeline.CallEvent{
 					RequestKey:    requestKey,
 					DeploymentKey: event.DeploymentKey.String(),
 					TimeStamp:     timestamppb.New(event.Time),
@@ -662,11 +665,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			rstr := r.String()
 			requestKey = &rstr
 		}
-		return &pbconsole.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_Log{
-				Log: &pbconsole.LogEvent{
+			Entry: &pbtimeline.Event_Log{
+				Log: &pbtimeline.LogEvent{
 					DeploymentKey: event.DeploymentKey.String(),
 					RequestKey:    requestKey,
 					TimeStamp:     timestamppb.New(event.Time),
@@ -684,11 +687,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			rstr := r.String()
 			replaced = &rstr
 		}
-		return &pbconsole.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_DeploymentCreated{
-				DeploymentCreated: &pbconsole.DeploymentCreatedEvent{
+			Entry: &pbtimeline.Event_DeploymentCreated{
+				DeploymentCreated: &pbtimeline.DeploymentCreatedEvent{
 					Key:         event.DeploymentKey.String(),
 					Language:    event.Language,
 					ModuleName:  event.ModuleName,
@@ -698,11 +701,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			},
 		}
 	case *timeline.DeploymentUpdatedEvent:
-		return &pbconsole.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_DeploymentUpdated{
-				DeploymentUpdated: &pbconsole.DeploymentUpdatedEvent{
+			Entry: &pbtimeline.Event_DeploymentUpdated{
+				DeploymentUpdated: &pbtimeline.DeploymentUpdatedEvent{
 					Key:             event.DeploymentKey.String(),
 					MinReplicas:     int32(event.MinReplicas),
 					PrevMinReplicas: int32(event.PrevMinReplicas),
@@ -717,11 +720,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			requestKey = &rstr
 		}
 
-		return &pbconsole.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_Ingress{
-				Ingress: &pbconsole.IngressEvent{
+			Entry: &pbtimeline.Event_Ingress{
+				Ingress: &pbtimeline.IngressEvent{
 					DeploymentKey: event.DeploymentKey.String(),
 					RequestKey:    requestKey,
 					VerbRef: &schemapb.Ref{
@@ -743,11 +746,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 		}
 
 	case *timeline.CronScheduledEvent:
-		return &pbconsole.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_CronScheduled{
-				CronScheduled: &pbconsole.CronScheduledEvent{
+			Entry: &pbtimeline.Event_CronScheduled{
+				CronScheduled: &pbtimeline.CronScheduledEvent{
 					DeploymentKey: event.DeploymentKey.String(),
 					VerbRef: &schemapb.Ref{
 						Module: event.Verb.Module,
@@ -768,21 +771,21 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			requestKey = &rstr
 		}
 
-		var asyncEventType pbconsole.AsyncExecuteEventType
+		var asyncEventType pbtimeline.AsyncExecuteEventType
 		switch event.EventType {
 		case timeline.AsyncExecuteEventTypeUnkown:
-			asyncEventType = pbconsole.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_UNSPECIFIED
+			asyncEventType = pbtimeline.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_UNSPECIFIED
 		case timeline.AsyncExecuteEventTypeCron:
-			asyncEventType = pbconsole.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_CRON
+			asyncEventType = pbtimeline.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_CRON
 		case timeline.AsyncExecuteEventTypePubSub:
-			asyncEventType = pbconsole.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_PUBSUB
+			asyncEventType = pbtimeline.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_PUBSUB
 		}
 
-		return &pbconsole.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_AsyncExecute{
-				AsyncExecute: &pbconsole.AsyncExecuteEvent{
+			Entry: &pbtimeline.Event_AsyncExecute{
+				AsyncExecute: &pbtimeline.AsyncExecuteEvent{
 					DeploymentKey:  event.DeploymentKey.String(),
 					RequestKey:     requestKey,
 					TimeStamp:      timestamppb.New(event.Time),
@@ -803,11 +806,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			requestKey = &r
 		}
 
-		return &pbconsole.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_PubsubPublish{
-				PubsubPublish: &pbconsole.PubSubPublishEvent{
+			Entry: &pbtimeline.Event_PubsubPublish{
+				PubsubPublish: &pbtimeline.PubSubPublishEvent{
 					DeploymentKey: event.DeploymentKey.String(),
 					RequestKey:    requestKey,
 					VerbRef:       event.SourceVerb.ToProto().(*schemapb.Ref), //nolint:forcetypeassert
@@ -833,11 +836,11 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			destVerbName = destVerb.Name
 		}
 
-		return &pbconsole.Event{
+		return &pbtimeline.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
-			Entry: &pbconsole.Event_PubsubConsume{
-				PubsubConsume: &pbconsole.PubSubConsumeEvent{
+			Entry: &pbtimeline.Event_PubsubConsume{
+				PubsubConsume: &pbtimeline.PubSubConsumeEvent{
 					DeploymentKey:  event.DeploymentKey.String(),
 					RequestKey:     requestKey,
 					DestVerbModule: &destVerbModule,

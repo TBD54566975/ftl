@@ -1,6 +1,5 @@
 import type { Timestamp } from '@bufbuild/protobuf'
 import {
-  type EventType,
   GetEventsRequest_CallFilter,
   GetEventsRequest_DeploymentFilter,
   GetEventsRequest_EventTypeFilter,
@@ -10,8 +9,8 @@ import {
   GetEventsRequest_ModuleFilter,
   GetEventsRequest_RequestFilter,
   GetEventsRequest_TimeFilter,
-  type LogLevel,
 } from '../../protos/xyz/block/ftl/console/v1/console_pb'
+import type { EventType, LogLevel } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
 
 export const requestKeysFilter = (requestKeys: string[]): GetEventsRequest_Filter => {
   const filter = new GetEventsRequest_Filter()

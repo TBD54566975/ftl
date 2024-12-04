@@ -10,6 +10,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
+	pbtimeline "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -43,8 +44,8 @@ func TestEncryptionForLogs(t *testing.T) {
 				Limit: 10,
 			}))
 			assert.NoError(t, err, "could not get events")
-			_, ok := slices.Find(resp.Msg.Events, func(e *pbconsole.Event) bool {
-				call, ok := e.Entry.(*pbconsole.Event_Call)
+			_, ok := slices.Find(resp.Msg.Events, func(e *pbtimeline.Event) bool {
+				call, ok := e.Entry.(*pbtimeline.Event_Call)
 				if !ok {
 					return false
 				}

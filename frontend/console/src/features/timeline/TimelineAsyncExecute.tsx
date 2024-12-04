@@ -1,4 +1,4 @@
-import type { AsyncExecuteEvent } from '../../protos/xyz/block/ftl/console/v1/console_pb'
+import type { AsyncExecuteEvent } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
 import { refString } from '../modules/decls/verb/verb.utils'
 import { asyncEventTypeString } from './timeline.utils'
 

@@ -9,7 +9,7 @@ import {
   SatelliteIcon,
   TimeQuarterPassIcon,
 } from 'hugeicons-react'
-import type { Event } from '../../protos/xyz/block/ftl/console/v1/console_pb'
+import type { Event } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
 import { LogLevelBadgeSmall } from '../logs/LogLevelBadgeSmall'
 import { eventTextColor } from './timeline.utils'
 

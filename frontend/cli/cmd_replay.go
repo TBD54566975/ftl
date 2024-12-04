@@ -11,6 +11,7 @@ import (
 
 	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
+	pbtimeline "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
@@ -90,7 +91,7 @@ func (c *replayCmd) Run(
 			{
 				Filter: &pbconsole.GetEventsRequest_Filter_EventTypes{
 					EventTypes: &pbconsole.GetEventsRequest_EventTypeFilter{
-						EventTypes: []pbconsole.EventType{pbconsole.EventType_EVENT_TYPE_CALL},
+						EventTypes: []pbtimeline.EventType{pbtimeline.EventType_EVENT_TYPE_CALL},
 					},
 				},
 			},

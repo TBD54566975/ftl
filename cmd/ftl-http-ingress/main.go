@@ -41,7 +41,7 @@ func main() {
 	)
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
-	err = observability.Init(ctx, false, "", "ftl-cron", ftl.Version, cli.ObservabilityConfig)
+	err = observability.Init(ctx, false, "", "ftl-http-ingress", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
 	verbClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.ControllerEndpoint.String(), log.Error)

@@ -1,6 +1,6 @@
 import { useContext, useMemo, useState } from 'react'
 import { useModuleTraceEvents } from '../../api/timeline/use-module-trace-events'
-import type { Event } from '../../protos/xyz/block/ftl/console/v1/console_pb'
+import type { Event } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
 import { SidePanelContext } from '../../providers/side-panel-provider'
 import TimelineEventList from '../timeline/TimelineEventList'
 import { TimelineCallDetails } from '../timeline/details/TimelineCallDetails'

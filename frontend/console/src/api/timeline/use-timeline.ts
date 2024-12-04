@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useClient } from '../../hooks/use-client'
 import { useVisibility } from '../../hooks/use-visibility'
 import { ConsoleService } from '../../protos/xyz/block/ftl/console/v1/console_connect'
-import { type Event, type GetEventsRequest_Filter, GetEventsRequest_Order } from '../../protos/xyz/block/ftl/console/v1/console_pb'
+import { type GetEventsRequest_Filter, GetEventsRequest_Order } from '../../protos/xyz/block/ftl/console/v1/console_pb'
+import type { Event } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
 
 const timelineKey = 'timeline'
 const maxTimelineEntries = 1000

@@ -1,6 +1,6 @@
 import { AttributeBadge } from '../../../components/AttributeBadge'
 import { CodeBlock } from '../../../components/CodeBlock'
-import type { Event, LogEvent } from '../../../protos/xyz/block/ftl/console/v1/console_pb'
+import type { Event, LogEvent } from '../../../protos/xyz/block/ftl/timeline/v1/event_pb'
 import { textColor } from '../../../utils/style.utils'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
 

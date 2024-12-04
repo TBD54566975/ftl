@@ -1,5 +1,5 @@
 import type { TraceEvent } from '../../api/timeline/use-request-trace-events'
-import { AsyncExecuteEvent, CallEvent, type Event, IngressEvent, PubSubPublishEvent } from '../../protos/xyz/block/ftl/console/v1/console_pb'
+import { AsyncExecuteEvent, CallEvent, type Event, IngressEvent, PubSubPublishEvent } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
 import { classNames } from '../../utils'
 import { TimelineIcon } from '../timeline/TimelineIcon'
 import { eventBackgroundColor } from '../timeline/timeline.utils'

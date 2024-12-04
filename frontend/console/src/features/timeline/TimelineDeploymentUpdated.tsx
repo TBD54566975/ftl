@@ -1,4 +1,4 @@
-import type { DeploymentUpdatedEvent } from '../../protos/xyz/block/ftl/console/v1/console_pb'
+import type { DeploymentUpdatedEvent } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
 
 export const TimelineDeploymentUpdated = ({ deployment }: { deployment: DeploymentUpdatedEvent }) => {
   const title = `Updated deployment ${deployment.key} min replicas to ${deployment.minReplicas} (previously ${deployment.prevMinReplicas})`
