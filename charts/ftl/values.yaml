@@ -371,7 +371,7 @@ lease:
     - name: LOG_JSON
       value: "true"
   ports:
-    - name: http
+    - name: http2
       containerPort: 8892
       protocol: TCP
       port: 8892
@@ -400,7 +400,7 @@ lease:
     type: ClusterIP
     annotations: null
     ports:
-      - name: "http-8892"
+      - name: "http2"
         port: 8892
         protocol: TCP
         targetPort: 8892
