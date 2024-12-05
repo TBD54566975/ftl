@@ -176,30 +176,6 @@ WHERE d.key = sqlc.arg('key')::deployment_key;
 INSERT INTO requests (origin, "key", source_addr)
 VALUES ($1, $2, $3);
 
--- name: UpsertController :one
-INSERT INTO controllers (key, endpoint)
-VALUES ($1, $2)
-ON CONFLICT (key) DO UPDATE SET state     = 'live',
-                                endpoint  = $2,
-                                last_seen = NOW() AT TIME ZONE 'utc'
-RETURNING id;
-
--- name: KillStaleControllers :one
--- Mark any controller entries that haven't been updated recently as dead.
-WITH matches AS (
-    UPDATE controllers
-        SET state = 'dead'
-        WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - sqlc.arg('timeout')::INTERVAL
-        RETURNING 1)
-SELECT COUNT(*)
-FROM matches;
-
--- name: GetActiveControllers :many
-SELECT *
-FROM controllers c
-WHERE c.state <> 'dead'
-ORDER BY c.key;
-
 -- name: SucceedAsyncCall :one
 UPDATE async_calls
 SET

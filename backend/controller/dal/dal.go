@@ -88,24 +88,7 @@ type DAL struct {
 	DeploymentChanges *inprocesspubsub.Topic[DeploymentNotification]
 }
 
-func (d *DAL) GetActiveControllers(ctx context.Context) ([]dalmodel.Controller, error) {
-	controllers, err := d.db.GetActiveControllers(ctx)
-	if err != nil {
-		return nil, libdal.TranslatePGError(err)
-	}
-	return slices.Map(controllers, func(in dalsql.Controller) dalmodel.Controller {
-		return dalmodel.Controller{
-			Key:      in.Key,
-			Endpoint: in.Endpoint,
-		}
-	}), nil
-}
-
-func (d *DAL) GetStatus(ctx context.Context) (dalmodel.Status, error) {
-	controllers, err := d.GetActiveControllers(ctx)
-	if err != nil {
-		return dalmodel.Status{}, fmt.Errorf("could not get control planes: %w", libdal.TranslatePGError(err))
-	}
+func (d *DAL) GetStatus(ctx context.Context, controller dalmodel.Controller) (dalmodel.Status, error) {
 	runners, err := d.db.GetActiveRunners(ctx)
 	if err != nil {
 		return dalmodel.Status{}, fmt.Errorf("could not get active runners: %w", libdal.TranslatePGError(err))
@@ -149,7 +132,7 @@ func (d *DAL) GetStatus(ctx context.Context) (dalmodel.Status, error) {
 		return dalmodel.Status{}, fmt.Errorf("could not parse runners: %w", err)
 	}
 	return dalmodel.Status{
-		Controllers: controllers,
+		Controllers: []dalmodel.Controller{controller},
 		Deployments: statusDeployments,
 		Runners:     domainRunners,
 	}, nil
@@ -303,12 +286,6 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner dalmodel.Runner) error {
 // KillStaleRunners deletes runners that have not had heartbeats for the given duration.
 func (d *DAL) KillStaleRunners(ctx context.Context, age time.Duration) (int64, error) {
 	count, err := d.db.KillStaleRunners(ctx, sqltypes.Duration(age))
-	return count, err
-}
-
-// KillStaleControllers deletes controllers that have not had heartbeats for the given duration.
-func (d *DAL) KillStaleControllers(ctx context.Context, age time.Duration) (int64, error) {
-	count, err := d.db.KillStaleControllers(ctx, sqltypes.Duration(age))
 	return count, err
 }
 
@@ -674,11 +651,6 @@ func (d *DAL) CreateRequest(ctx context.Context, key model.RequestKey, addr stri
 		return libdal.TranslatePGError(err)
 	}
 	return nil
-}
-
-func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, addr string) (int64, error) {
-	id, err := d.db.UpsertController(ctx, key, addr)
-	return id, libdal.TranslatePGError(err)
 }
 
 func (d *DAL) GetActiveRunners(ctx context.Context) ([]dalmodel.Runner, error) {

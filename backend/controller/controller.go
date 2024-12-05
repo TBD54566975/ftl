@@ -321,8 +321,6 @@ func New(
 
 	// Parallel tasks.
 	parallelTask(svc.syncRoutesAndSchema, "sync-routes-and-schema", time.Second, time.Second, time.Second*5)
-	parallelTask(svc.heartbeatController, "controller-heartbeat", time.Second, time.Second*3, time.Second*5)
-	parallelTask(svc.updateControllersList, "update-controllers-list", time.Second, time.Second*5, time.Second*5)
 	parallelTask(svc.executeAsyncCalls, "execute-async-calls", time.Second, time.Second*5, time.Second*10)
 
 	// This should be a singleton task, but because this is the task that
@@ -331,7 +329,6 @@ func New(
 	parallelTask(svc.expireStaleLeases, "expire-stale-leases", time.Second*2, time.Second, time.Second*5)
 
 	// Singleton tasks use leases to only run on a single controller.
-	singletonTask(svc.reapStaleControllers, "reap-stale-controllers", time.Second*2, time.Second*20, time.Second*20)
 	singletonTask(svc.reapStaleRunners, "reap-stale-runners", time.Second*2, time.Second, time.Second*10)
 	singletonTask(svc.reapCallEvents, "reap-call-events", time.Minute*5, time.Minute, time.Minute*30)
 	singletonTask(svc.reapAsyncCalls, "reap-async-calls", time.Second*5, time.Second, time.Second*5)
@@ -374,7 +371,7 @@ func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.Pr
 }
 
 func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error) {
-	status, err := s.dal.GetStatus(ctx)
+	status, err := s.dal.GetStatus(ctx, dalmodel.Controller{Key: s.key, Endpoint: s.config.Bind.String()})
 	if err != nil {
 		return nil, fmt.Errorf("could not get status: %w", err)
 	}
@@ -1452,38 +1449,6 @@ func (s *Service) expireStaleLeases(ctx context.Context) (time.Duration, error) 
 		return 0, fmt.Errorf("failed to expire leases: %w", err)
 	}
 	return time.Second * 1, nil
-}
-
-// Periodically remove stale (ie. have not heartbeat recently) controllers from the database.
-func (s *Service) reapStaleControllers(ctx context.Context) (time.Duration, error) {
-	logger := log.FromContext(ctx)
-	count, err := s.dal.KillStaleControllers(context.Background(), s.config.ControllerTimeout)
-	if err != nil {
-		return 0, fmt.Errorf("failed to delete stale controllers: %w", err)
-	} else if count > 0 {
-		logger.Debugf("Reaped %d stale controllers", count)
-	}
-	return time.Second * 10, nil
-}
-
-// Periodically update the DB with the current state of the controller.
-func (s *Service) heartbeatController(ctx context.Context) (time.Duration, error) {
-	_, err := s.dal.UpsertController(ctx, s.key, s.config.Advertise.String())
-	if err != nil {
-		return 0, fmt.Errorf("failed to heartbeat controller: %w", err)
-	}
-	return time.Second * 3, nil
-}
-
-func (s *Service) updateControllersList(ctx context.Context) (time.Duration, error) {
-	controllers, err := s.dal.GetActiveControllers(ctx)
-	if err != nil {
-		return 0, err
-	}
-	for _, listener := range s.controllerListListeners {
-		listener.UpdatedControllerList(ctx, controllers)
-	}
-	return time.Second * 5, nil
 }
 
 func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(response *ftlv1.PullSchemaResponse) error) error {

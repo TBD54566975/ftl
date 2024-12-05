@@ -7,7 +7,6 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -57,19 +56,7 @@ type Reconciliation struct {
 
 type ControllerState string
 
-// Controller states.
-const (
-	ControllerStateLive = ControllerState(sql.ControllerStateLive)
-	ControllerStateDead = ControllerState(sql.ControllerStateDead)
-)
-
 type RequestOrigin string
-
-const (
-	RequestOriginIngress = RequestOrigin(sql.OriginIngress)
-	RequestOriginCron    = RequestOrigin(sql.OriginCron)
-	RequestOriginPubsub  = RequestOrigin(sql.OriginPubsub)
-)
 
 type Deployment struct {
 	Key         model.DeploymentKey

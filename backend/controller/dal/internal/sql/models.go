@@ -62,48 +62,6 @@ func (ns NullAsyncCallState) Value() (driver.Value, error) {
 	return string(ns.AsyncCallState), nil
 }
 
-type ControllerState string
-
-const (
-	ControllerStateLive ControllerState = "live"
-	ControllerStateDead ControllerState = "dead"
-)
-
-func (e *ControllerState) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = ControllerState(s)
-	case string:
-		*e = ControllerState(s)
-	default:
-		return fmt.Errorf("unsupported scan type for ControllerState: %T", src)
-	}
-	return nil
-}
-
-type NullControllerState struct {
-	ControllerState ControllerState
-	Valid           bool // Valid is true if ControllerState is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullControllerState) Scan(value interface{}) error {
-	if value == nil {
-		ns.ControllerState, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.ControllerState.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullControllerState) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.ControllerState), nil
-}
-
 type Origin string
 
 const (
@@ -207,15 +165,6 @@ type AsyncCall struct {
 	Catching          bool
 	ParentRequestKey  optional.Option[string]
 	TraceContext      pqtype.NullRawMessage
-}
-
-type Controller struct {
-	ID       int64
-	Key      model.ControllerKey
-	Created  time.Time
-	LastSeen time.Time
-	State    ControllerState
-	Endpoint string
 }
 
 type Deployment struct {

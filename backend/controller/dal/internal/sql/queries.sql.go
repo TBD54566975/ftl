@@ -341,43 +341,6 @@ func (q *Queries) FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallW
 	return column_1, err
 }
 
-const getActiveControllers = `-- name: GetActiveControllers :many
-SELECT id, key, created, last_seen, state, endpoint
-FROM controllers c
-WHERE c.state <> 'dead'
-ORDER BY c.key
-`
-
-func (q *Queries) GetActiveControllers(ctx context.Context) ([]Controller, error) {
-	rows, err := q.db.QueryContext(ctx, getActiveControllers)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Controller
-	for rows.Next() {
-		var i Controller
-		if err := rows.Scan(
-			&i.ID,
-			&i.Key,
-			&i.Created,
-			&i.LastSeen,
-			&i.State,
-			&i.Endpoint,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getActiveDeploymentSchemas = `-- name: GetActiveDeploymentSchemas :many
 SELECT key, schema FROM deployments WHERE min_replicas > 0
 `
@@ -1326,24 +1289,6 @@ func (q *Queries) InsertSubscriber(ctx context.Context, arg InsertSubscriberPara
 	return err
 }
 
-const killStaleControllers = `-- name: KillStaleControllers :one
-WITH matches AS (
-    UPDATE controllers
-        SET state = 'dead'
-        WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
-        RETURNING 1)
-SELECT COUNT(*)
-FROM matches
-`
-
-// Mark any controller entries that haven't been updated recently as dead.
-func (q *Queries) KillStaleControllers(ctx context.Context, timeout sqltypes.Duration) (int64, error) {
-	row := q.db.QueryRowContext(ctx, killStaleControllers, timeout)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const killStaleRunners = `-- name: KillStaleRunners :one
 WITH matches AS (
     DELETE FROM runners
@@ -1496,22 +1441,6 @@ RETURNING 1
 func (q *Queries) UpdateDeploymentSchema(ctx context.Context, schema *schema.Module, key model.DeploymentKey) error {
 	_, err := q.db.ExecContext(ctx, updateDeploymentSchema, schema, key)
 	return err
-}
-
-const upsertController = `-- name: UpsertController :one
-INSERT INTO controllers (key, endpoint)
-VALUES ($1, $2)
-ON CONFLICT (key) DO UPDATE SET state     = 'live',
-                                endpoint  = $2,
-                                last_seen = NOW() AT TIME ZONE 'utc'
-RETURNING id
-`
-
-func (q *Queries) UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, upsertController, key, endpoint)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
 }
 
 const upsertModule = `-- name: UpsertModule :one
