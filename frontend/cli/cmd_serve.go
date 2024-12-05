@@ -28,6 +28,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/provisioner"
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling/localscaling"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
@@ -62,6 +63,7 @@ type serveCommonConfig struct {
 	GrafanaImage        string               `help:"The container image to start for the automatic Grafana instance" default:"grafana/otel-lgtm" env:"FTL_GRAFANA_IMAGE" hidden:""`
 	DisableGrafana      bool                 `help:"Disable the automatic Grafana that is started if no telemetry collector is specified." default:"false"`
 	Ingress             ingress.Config       `embed:"" prefix:"ingress-"`
+	Timeline            timeline.Config      `embed:"" prefix:"timeline-"`
 	Recreate            bool                 `help:"Recreate any stateful resources if they already exist." default:"false"`
 	controller.CommonConfig
 	provisioner.CommonProvisionerConfig
@@ -302,6 +304,14 @@ func (s *serveCommonConfig) run(
 		})
 	}
 
+	// Start Timeline
+	wg.Go(func() error {
+		err := timeline.Start(ctx, s.Timeline, schemaEventSourceFactory())
+		if err != nil {
+			return fmt.Errorf("timeline failed: %w", err)
+		}
+		return nil
+	})
 	// Start Cron
 	wg.Go(func() error {
 		err := cron.Start(ctx, schemaEventSourceFactory(), verbClient)
