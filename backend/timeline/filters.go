@@ -5,9 +5,10 @@ import (
 	"reflect"
 	"slices"
 
+	"github.com/alecthomas/types/optional"
+
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	islices "github.com/TBD54566975/ftl/internal/slices"
-	"github.com/alecthomas/types/optional"
 )
 
 type TimelineFilter func(event *timelinepb.Event) bool
