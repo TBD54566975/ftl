@@ -410,7 +410,7 @@ type HotReloadServiceClient interface {
 	//
 	// As lots of functionality such as database connections rely on proxying through the runner, this
 	// allows the long running live reload process to know where to proxy to
-	RunnerStarted(context.Context, *connect.Request[v11.RunnerStartedRequest]) (*connect.ServerStreamForClient[v11.RunnerStartedResponse], error)
+	RunnerStarted(context.Context, *connect.Request[v11.RunnerStartedRequest]) (*connect.Response[v11.RunnerStartedResponse], error)
 }
 
 // NewHotReloadServiceClient constructs a client for the xyz.block.ftl.language.v1.HotReloadService
@@ -449,8 +449,8 @@ func (c *hotReloadServiceClient) Ping(ctx context.Context, req *connect.Request[
 }
 
 // RunnerStarted calls xyz.block.ftl.language.v1.HotReloadService.RunnerStarted.
-func (c *hotReloadServiceClient) RunnerStarted(ctx context.Context, req *connect.Request[v11.RunnerStartedRequest]) (*connect.ServerStreamForClient[v11.RunnerStartedResponse], error) {
-	return c.runnerStarted.CallServerStream(ctx, req)
+func (c *hotReloadServiceClient) RunnerStarted(ctx context.Context, req *connect.Request[v11.RunnerStartedRequest]) (*connect.Response[v11.RunnerStartedResponse], error) {
+	return c.runnerStarted.CallUnary(ctx, req)
 }
 
 // HotReloadServiceHandler is an implementation of the xyz.block.ftl.language.v1.HotReloadService
@@ -461,7 +461,7 @@ type HotReloadServiceHandler interface {
 	//
 	// As lots of functionality such as database connections rely on proxying through the runner, this
 	// allows the long running live reload process to know where to proxy to
-	RunnerStarted(context.Context, *connect.Request[v11.RunnerStartedRequest], *connect.ServerStream[v11.RunnerStartedResponse]) error
+	RunnerStarted(context.Context, *connect.Request[v11.RunnerStartedRequest]) (*connect.Response[v11.RunnerStartedResponse], error)
 }
 
 // NewHotReloadServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -476,7 +476,7 @@ func NewHotReloadServiceHandler(svc HotReloadServiceHandler, opts ...connect.Han
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
-	hotReloadServiceRunnerStartedHandler := connect.NewServerStreamHandler(
+	hotReloadServiceRunnerStartedHandler := connect.NewUnaryHandler(
 		HotReloadServiceRunnerStartedProcedure,
 		svc.RunnerStarted,
 		opts...,
@@ -500,6 +500,6 @@ func (UnimplementedHotReloadServiceHandler) Ping(context.Context, *connect.Reque
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.language.v1.HotReloadService.Ping is not implemented"))
 }
 
-func (UnimplementedHotReloadServiceHandler) RunnerStarted(context.Context, *connect.Request[v11.RunnerStartedRequest], *connect.ServerStream[v11.RunnerStartedResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.language.v1.HotReloadService.RunnerStarted is not implemented"))
+func (UnimplementedHotReloadServiceHandler) RunnerStarted(context.Context, *connect.Request[v11.RunnerStartedRequest]) (*connect.Response[v11.RunnerStartedResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.language.v1.HotReloadService.RunnerStarted is not implemented"))
 }

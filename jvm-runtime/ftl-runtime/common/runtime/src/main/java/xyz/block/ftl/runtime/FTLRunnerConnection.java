@@ -3,7 +3,9 @@ package xyz.block.ftl.runtime;
 import java.io.Closeable;
 import java.net.URI;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -141,7 +143,7 @@ class FTLRunnerConnection implements Closeable {
         }
     }
 
-    LeaseHandle acquireLease(Duration duration, String... keys) throws LeaseFailedException {
+    public LeaseHandle acquireLease(Duration duration, String... keys) throws LeaseFailedException {
         CompletableFuture<?> cf = new CompletableFuture<>();
         var client = leaseService.acquireLease(new StreamObserver<AcquireLeaseResponse>() {
             @Override
@@ -161,8 +163,12 @@ class FTLRunnerConnection implements Closeable {
                 }
             }
         });
-        client.onNext(AcquireLeaseRequest.newBuilder().setModule(moduleName)
-                .addAllKey(Arrays.asList(keys))
+        List<String> realKeys = new ArrayList<>();
+        realKeys.add("module");
+        realKeys.add(moduleName);
+        realKeys.addAll(Arrays.asList(keys));
+        client.onNext(AcquireLeaseRequest.newBuilder()
+                .addAllKey(realKeys)
                 .setTtl(com.google.protobuf.Duration.newBuilder()
                         .setSeconds(duration.toSeconds()))
                 .build());

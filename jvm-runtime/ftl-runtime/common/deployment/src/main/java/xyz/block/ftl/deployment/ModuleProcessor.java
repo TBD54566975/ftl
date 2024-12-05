@@ -45,6 +45,7 @@ import xyz.block.ftl.language.v1.Error;
 import xyz.block.ftl.language.v1.ErrorList;
 import xyz.block.ftl.runtime.FTLDatasourceCredentials;
 import xyz.block.ftl.runtime.FTLRecorder;
+import xyz.block.ftl.runtime.HotReloadHandler;
 import xyz.block.ftl.runtime.JsonSerializationConfig;
 import xyz.block.ftl.runtime.TopicHelper;
 import xyz.block.ftl.runtime.VerbClientHelper;
@@ -69,6 +70,14 @@ public class ModuleProcessor {
         ret.registerBlockingMethod("publishEvent");
         ret.registerBlockingMethod("acquireLease");
         ret.registerBlockingMethod("getDeploymentContext");
+        ret.registerBlockingMethod("ping");
+        return ret;
+    }
+
+    @BuildStep
+    BindableServiceBuildItem hotReloadService() {
+        var ret = new BindableServiceBuildItem(DotName.createSimple(HotReloadHandler.class));
+        ret.registerBlockingMethod("runnerStarted");
         ret.registerBlockingMethod("ping");
         return ret;
     }
@@ -242,7 +251,7 @@ public class ModuleProcessor {
     @BuildStep
     AdditionalBeanBuildItem beans() {
         return AdditionalBeanBuildItem.builder()
-                .addBeanClasses(VerbHandler.class,
+                .addBeanClasses(VerbHandler.class, HotReloadHandler.class,
                         VerbRegistry.class, FTLHttpHandler.class,
                         TopicHelper.class, VerbClientHelper.class, JsonSerializationConfig.class,
                         FTLDatasourceCredentials.class)
