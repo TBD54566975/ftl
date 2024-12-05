@@ -19,7 +19,7 @@ func TestPubSub(t *testing.T) {
 	calls := 20
 	events := calls * 10
 	in.Run(t,
-		in.WithLanguages("go"),
+		in.WithLanguages("java", "go", "kotlin"),
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
@@ -45,7 +45,7 @@ func TestPubSub(t *testing.T) {
 
 func TestConsumptionDelay(t *testing.T) {
 	in.Run(t,
-		in.WithLanguages("go"),
+		in.WithLanguages("go", "java"),
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
@@ -89,7 +89,7 @@ func TestConsumptionDelay(t *testing.T) {
 func TestRetry(t *testing.T) {
 	retriesPerCall := 2
 	in.Run(t,
-		in.WithLanguages("go"),
+		in.WithLanguages("java", "go"),
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
