@@ -351,3 +351,28 @@ service LanguageService {
   // It is optional to do anything with this call.
   rpc SyncStubReferences(SyncStubReferencesRequest) returns (SyncStubReferencesResponse);
 }
+
+message RunnerStartedRequest {
+  message Database {
+    string name = 1;
+    string url = 2;
+  }
+  // The address of the runner
+  string address = 1;
+  repeated Database databases = 2;
+}
+
+message RunnerStartedResponse {}
+
+// Service exposed by hot reload runtimes to allow runners to notify them of changes.
+service HotReloadService {
+  rpc Ping(xyz.block.ftl.v1.PingRequest) returns (xyz.block.ftl.v1.PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // RunnerStarted is called when a runner has started, to tell a live reload server the runner address
+  //
+  // As lots of functionality such as database connections rely on proxying through the runner, this
+  // allows the long running live reload process to know where to proxy to
+  rpc RunnerStarted(RunnerStartedRequest) returns (stream RunnerStartedResponse);
+}

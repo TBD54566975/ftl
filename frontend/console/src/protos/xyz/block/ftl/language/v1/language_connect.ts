@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "../../v1/ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { BuildContextUpdatedRequest, BuildContextUpdatedResponse, BuildRequest, BuildResponse, CreateModuleRequest, CreateModuleResponse, GenerateStubsRequest, GenerateStubsResponse, GetCreateModuleFlagsRequest, GetCreateModuleFlagsResponse, GetDependenciesRequest, GetDependenciesResponse, ModuleConfigDefaultsRequest, ModuleConfigDefaultsResponse, SyncStubReferencesRequest, SyncStubReferencesResponse } from "./language_pb.js";
+import { BuildContextUpdatedRequest, BuildContextUpdatedResponse, BuildRequest, BuildResponse, CreateModuleRequest, CreateModuleResponse, GenerateStubsRequest, GenerateStubsResponse, GetCreateModuleFlagsRequest, GetCreateModuleFlagsResponse, GetDependenciesRequest, GetDependenciesResponse, ModuleConfigDefaultsRequest, ModuleConfigDefaultsResponse, RunnerStartedRequest, RunnerStartedResponse, SyncStubReferencesRequest, SyncStubReferencesResponse } from "./language_pb.js";
 
 /**
  * LanguageService allows a plugin to add support for a programming language.
@@ -142,6 +142,41 @@ export const LanguageService = {
       I: SyncStubReferencesRequest,
       O: SyncStubReferencesResponse,
       kind: MethodKind.Unary,
+    },
+  }
+} as const;
+
+/**
+ * Service exposed by hot reload runtimes to allow runners to notify them of changes.
+ *
+ * @generated from service xyz.block.ftl.language.v1.HotReloadService
+ */
+export const HotReloadService = {
+  typeName: "xyz.block.ftl.language.v1.HotReloadService",
+  methods: {
+    /**
+     * @generated from rpc xyz.block.ftl.language.v1.HotReloadService.Ping
+     */
+    ping: {
+      name: "Ping",
+      I: PingRequest,
+      O: PingResponse,
+      kind: MethodKind.Unary,
+      idempotency: MethodIdempotency.NoSideEffects,
+    },
+    /**
+     * RunnerStarted is called when a runner has started, to tell a live reload server the runner address
+     *
+     * As lots of functionality such as database connections rely on proxying through the runner, this
+     * allows the long running live reload process to know where to proxy to
+     *
+     * @generated from rpc xyz.block.ftl.language.v1.HotReloadService.RunnerStarted
+     */
+    runnerStarted: {
+      name: "RunnerStarted",
+      I: RunnerStartedRequest,
+      O: RunnerStartedResponse,
+      kind: MethodKind.ServerStreaming,
     },
   }
 } as const;
