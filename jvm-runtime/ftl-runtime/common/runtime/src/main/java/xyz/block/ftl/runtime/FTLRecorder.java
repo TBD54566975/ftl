@@ -162,7 +162,7 @@ public class FTLRecorder {
         t.schedule(new TimerTask() {
             @Override
             public void run() {
-                HotReloadSetup.doScan();
+                HotReloadSetup.doScan(false);
             }
         }, 1000, 1000);
         shutdownContext.addShutdownTask(new Runnable() {

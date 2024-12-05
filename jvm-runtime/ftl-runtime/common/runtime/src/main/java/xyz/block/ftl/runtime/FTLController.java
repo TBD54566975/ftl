@@ -3,11 +3,6 @@ package xyz.block.ftl.runtime;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
-<<<<<<< HEAD
-import java.util.ArrayList;
-import java.util.Arrays;
-=======
->>>>>>> c1bb89efa (fix: hot reload endpoint uses runner proxy)
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,13 +40,6 @@ public class FTLController implements LeaseClient {
         return controller;
     }
 
-    void updateRunnerConnection(String address, Map<String, String> dynamicDatabaseAddresses) {
-        var old = runnerConnection;
-        this.runnerConnection = new FTLRunnerConnection(address, deploymentName, moduleName);
-        this.dynamicDatabaseAddresses = dynamicDatabaseAddresses;
-        old.close();
-    }
-
     FTLController() {
         String endpoint = System.getenv("FTL_ENDPOINT");
         String ftlDeployment = System.getenv("FTL_DEPLOYMENT");
@@ -67,16 +55,33 @@ public class FTLController implements LeaseClient {
         runnerConnection = new FTLRunnerConnection(endpoint, deploymentName, moduleName);
     }
 
+    synchronized void updateRunnerConnection(String address, Map<String, String> dynamicDatabaseAddresses) {
+        var old = runnerConnection;
+        var dbChange = !dynamicDatabaseAddresses.equals(this.dynamicDatabaseAddresses);
+        this.runnerConnection = new FTLRunnerConnection(address, deploymentName, moduleName);
+        this.dynamicDatabaseAddresses = dynamicDatabaseAddresses;
+        if (old != null) {
+            old.close();
+        }
+        if (dbChange) {
+            HotReloadSetup.doScan(true);
+        }
+    }
+
     public void registerDatabase(String name, GetDeploymentContextResponse.DbType type) {
         databases.put(name, type);
     }
 
     public byte[] getSecret(String secretName) {
-        return runnerConnection.getSecret(secretName);
+        return getRunnerConnection().getSecret(secretName);
+    }
+
+    private FTLRunnerConnection getRunnerConnection() {
+        return runnerConnection;
     }
 
     public byte[] getConfig(String config) {
-        return runnerConnection.getConfig(config);
+        return getRunnerConnection().getConfig(config);
     }
 
     public Datasource getDatasource(String name) {
@@ -91,7 +96,7 @@ public class FTLController implements LeaseClient {
             var proxyAddress = System.getenv("FTL_PROXY_MYSQL_ADDRESS_" + name.toUpperCase());
             return new Datasource("jdbc:mysql://" + proxyAddress + "/" + name, "ftl", "ftl");
         }
-        List<GetDeploymentContextResponse.DSN> databasesList = runnerConnection.getDeploymentContext().getDatabasesList();
+        List<GetDeploymentContextResponse.DSN> databasesList = getRunnerConnection().getDeploymentContext().getDatabasesList();
         for (var i : databasesList) {
             if (i.getName().equals(name)) {
                 return Datasource.fromDSN(i.getDsn(), i.getType());
@@ -101,15 +106,15 @@ public class FTLController implements LeaseClient {
     }
 
     public byte[] callVerb(String name, String module, byte[] payload) {
-        return runnerConnection.callVerb(name, module, payload);
+        return getRunnerConnection().callVerb(name, module, payload);
     }
 
     public void publishEvent(String topic, String callingVerbName, byte[] event, String key) {
-        runnerConnection.publishEvent(topic, callingVerbName, event, key);
+        getRunnerConnection().publishEvent(topic, callingVerbName, event, key);
     }
 
     public LeaseHandle acquireLease(Duration duration, String... keys) throws LeaseFailedException {
-        return runnerConnection.acquireLease(duration, keys);
+        return getRunnerConnection().acquireLease(duration, keys);
     }
 
     public record Datasource(String connectionString, String username, String password) {

@@ -394,15 +394,17 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 		for {
 			_, err := endpoint.RunnerStarted(ctx, connect.NewRequest(message))
 			if err == nil {
+				logger.Infof("Notified hot reload endpoint runner started")
 				break
 			}
+			logger.Errorf(err, "Failed to notify hot reload endpoint runner started")
 			select {
 			case <-ctx.Done():
 				break
 			case <-timeout:
 				logger.Warnf("failed to notify hot reload endpoint runner started")
 				break
-			case <-time.After(time.Second):
+			case <-time.After(time.Millisecond * 100):
 
 			}
 		}
@@ -647,7 +649,11 @@ func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, start
 	go func() {
 		select {
 		case pgProxy := <-channel:
-			os.Setenv("FTL_PROXY_POSTGRES_ADDRESS", fmt.Sprintf("127.0.0.1:%d", pgProxy.Address.Port))
+			address := fmt.Sprintf("127.0.0.1:%d", pgProxy.Address.Port)
+			for db := range databases {
+				addresses.Store(db, address)
+			}
+			os.Setenv("FTL_PROXY_POSTGRES_ADDRESS", address)
 			started.Done()
 		case <-ctx.Done():
 			started.Done()
@@ -716,7 +722,9 @@ func (s *Service) startMySQLProxy(ctx context.Context, module *schema.Module, la
 		case port = <-portC:
 		}
 
-		os.Setenv(strings.ToUpper("FTL_PROXY_MYSQL_ADDRESS_"+decl.Name), fmt.Sprintf("127.0.0.1:%d", port))
+		address := fmt.Sprintf("127.0.0.1:%d", port)
+		addresses.Store(decl.Name, address)
+		os.Setenv(strings.ToUpper("FTL_PROXY_MYSQL_ADDRESS_"+decl.Name), address)
 	}
 	return nil
 }
