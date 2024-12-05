@@ -34,7 +34,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/testutils"
 )
 
-func setUp(ctx context.Context, t *testing.T, router optional.Option[configuration.Router[configuration.Secrets]]) (*manager.Manager[configuration.Secrets], ASM, *asmLeader, *secretsmanager.Client, *providerstest.ManualSyncProvider[configuration.Secrets], *leases.FakeLeaser) {
+func setUp(ctx context.Context, t *testing.T, router optional.Option[configuration.Router[configuration.Secrets]]) (*manager.Manager[configuration.Secrets], ASM, *asmManager, *secretsmanager.Client, *providerstest.ManualSyncProvider[configuration.Secrets], *leases.FakeLeaser) {
 	t.Helper()
 
 	if _, ok := router.Get(); !ok {
@@ -57,7 +57,7 @@ func setUp(ctx context.Context, t *testing.T, router optional.Option[configurati
 
 	leaderOrFollower, err := asm.coordinator.Get()
 	assert.NoError(t, err)
-	leader, ok := leaderOrFollower.(*asmLeader)
+	leader, ok := leaderOrFollower.(*asmManager)
 	assert.True(t, ok, "expected test to get an asm leader not a follower")
 	return sm, asm, leader, externalClient, manualSyncProvider, leaser
 }

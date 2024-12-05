@@ -13,7 +13,6 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
-	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	cfdal "github.com/TBD54566975/ftl/internal/configuration/dal"
@@ -58,7 +57,6 @@ func main() {
 	conn, err := cli.ControllerConfig.OpenDBAndInstrument()
 	kctx.FatalIfErrorf(err)
 
-	dal := dbleaser.NewDatabaseLeaser(conn)
 	kctx.FatalIfErrorf(err)
 
 	configDal := cfdal.New(conn)
@@ -70,7 +68,7 @@ func main() {
 	// The FTL controller currently only supports AWS Secrets Manager as a secrets provider.
 	awsConfig, err := config.LoadDefaultConfig(ctx)
 	kctx.FatalIfErrorf(err)
-	asmSecretProvider := providers.NewASM(ctx, secretsmanager.NewFromConfig(awsConfig), cli.ControllerConfig.Advertise, dal)
+	asmSecretProvider := providers.NewASM(secretsmanager.NewFromConfig(awsConfig))
 	dbSecretResolver := routers.NewDatabaseSecrets(configDal)
 	sm, err := manager.New[cf.Secrets](ctx, dbSecretResolver, asmSecretProvider)
 	kctx.FatalIfErrorf(err)
