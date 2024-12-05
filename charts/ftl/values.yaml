@@ -15,7 +15,7 @@ dbMigration:
 
 controller:
   controllersRoleArn: arn:aws:iam::ftl-controllers-irsa-role
-  replicas: 2
+  replicas: 1
   revisionHistoryLimit: 0
 
   image:

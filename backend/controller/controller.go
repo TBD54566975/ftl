@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
@@ -63,9 +62,11 @@ import (
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
 	internalobservability "github.com/TBD54566975/ftl/internal/observability"
+	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 	status "github.com/TBD54566975/ftl/internal/terminal"
@@ -179,7 +180,6 @@ func Start(
 }
 
 var _ ftlv1connect.ControllerServiceHandler = (*Service)(nil)
-var _ ftlv1connect.VerbServiceHandler = (*Service)(nil)
 var _ ftlv1connect.SchemaServiceHandler = (*Service)(nil)
 
 type clients struct {
@@ -211,8 +211,6 @@ type Service struct {
 	// Map from runnerKey.String() to client.
 	clients *ttlcache.Cache[string, clients]
 
-	// Complete schema synchronised from the database.
-	schemaState    atomic.Value[schemaState]
 	schemaSyncLock sync.Mutex
 
 	config Config
@@ -221,6 +219,7 @@ type Service struct {
 	asyncCallsLock          sync.Mutex
 
 	clientLock sync.Mutex
+	routeTable *routing.RouteTable
 }
 
 func New(
@@ -251,6 +250,8 @@ func New(
 	ldb := dbleaser.NewDatabaseLeaser(conn)
 	scheduler := scheduledtask.New(ctx, key, ldb)
 
+	routingTable := routing.New(ctx, schemaeventsource.New(ctx, rpc.Dial[ftlv1connect.SchemaServiceClient](ftlv1connect.NewSchemaServiceClient, config.Bind.String(), log.Error)))
+
 	svc := &Service{
 		cm:                      cm,
 		sm:                      sm,
@@ -261,8 +262,8 @@ func New(
 		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
 		config:                  config,
 		increaseReplicaFailures: map[string]int{},
+		routeTable:              routingTable,
 	}
-	svc.schemaState.Store(schemaState{routes: map[string]Route{}, schema: &schema.Schema{}})
 
 	storage, err := artefacts.NewOCIRegistryStorage(config.Registry)
 	if err != nil {
@@ -320,7 +321,6 @@ func New(
 	}
 
 	// Parallel tasks.
-	parallelTask(svc.syncRoutesAndSchema, "sync-routes-and-schema", time.Second, time.Second, time.Second*5)
 	parallelTask(svc.executeAsyncCalls, "execute-async-calls", time.Second, time.Second*5, time.Second*10)
 
 	// This should be a singleton task, but because this is the task that
@@ -375,12 +375,18 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	if err != nil {
 		return nil, fmt.Errorf("could not get status: %w", err)
 	}
-	sroutes := s.schemaState.Load().routes
-	routes := slices.Map(maps.Values(sroutes), func(route Route) (out *ftlv1.StatusResponse_Route) {
+	allModules := s.routeTable.Current()
+	routes := slices.Map(allModules.Schema().Modules, func(module *schema.Module) (out *ftlv1.StatusResponse_Route) {
+		key := ""
+		endpoint := ""
+		if module.Runtime != nil && module.Runtime.Deployment != nil {
+			key = module.Runtime.Deployment.DeploymentKey
+			endpoint = module.Runtime.Deployment.Endpoint
+		}
 		return &ftlv1.StatusResponse_Route{
-			Module:     route.Module,
-			Deployment: route.Deployment.String(),
-			Endpoint:   route.Endpoint,
+			Module:     module.Name,
+			Deployment: key,
+			Endpoint:   endpoint,
 		}
 	})
 	replicas := map[string]int32{}
@@ -614,7 +620,6 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 			}()
 			deferredDeregistration = true
 		}
-		_, err = s.syncRoutesAndSchema(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not sync routes: %w", err)
 		}
@@ -688,11 +693,11 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 		return connect.NewResponse(&ftlv1.PingResponse{}), nil
 	}
 
+	routeView := s.routeTable.Current()
 	// It's not actually ready until it is in the routes table
-	routes := s.schemaState.Load().routes
 	var missing []string
 	for _, module := range s.config.WaitFor {
-		if _, ok := routes[module]; !ok {
+		if _, ok := routeView.GetForModule(module).Get(); !ok {
 			missing = append(missing, module)
 		}
 	}
@@ -706,6 +711,10 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 
 // GetDeploymentContext retrieves config, secrets and DSNs for a module.
 func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request[ftldeployment.GetDeploymentContextRequest], resp *connect.ServerStream[ftldeployment.GetDeploymentContextResponse]) error {
+
+	logger := log.FromContext(ctx)
+	updates := s.routeTable.Subscribe()
+	defer s.routeTable.Unsubscribe(updates)
 	depName := req.Msg.Deployment
 	if !strings.HasPrefix(depName, "dpl-") {
 		// For hot reload endponts we might not have a deployment key
@@ -733,10 +742,40 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 	// Initialize checksum to -1; a zero checksum does occur when the context contains no settings
 	lastChecksum := int64(-1)
 
+	callableModules := map[string]bool{}
+	for _, decl := range deployment.Schema.Decls {
+		switch entry := decl.(type) {
+		case *schema.Verb:
+			for _, md := range entry.Metadata {
+				if calls, ok := md.(*schema.MetadataCalls); ok {
+					for _, call := range calls.Calls {
+						callableModules[call.Module] = true
+					}
+				}
+			}
+		default:
+
+		}
+	}
+	callableModuleNames := maps.Keys(callableModules)
+	callableModuleNames = slices.Sort(callableModuleNames)
+	logger.Debugf("Modules %s can call %v", module, callableModuleNames)
 	for {
+		logger.Debugf("Checking for updated deployment context for: %s", key.String())
 		h := sha.New()
 
+		routeView := s.routeTable.Current()
 		configs, err := s.cm.MapForModule(ctx, module)
+		routeTable := map[string]string{}
+		for _, module := range callableModuleNames {
+			if route, ok := routeView.GetForModule(module).Get(); ok {
+				routeTable[module] = route.String()
+			}
+		}
+		if deployment.Schema.Runtime != nil && deployment.Schema.Runtime.Deployment != nil {
+			routeTable[module] = deployment.Schema.Runtime.Deployment.Endpoint
+		}
+
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
 		}
@@ -751,11 +790,15 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 		if err := hashConfigurationMap(h, secrets); err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not detect change on secrets: %w", err))
 		}
+		if err := hashRoutesTable(h, routeTable); err != nil {
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not detect change on routes: %w", err))
+		}
 
 		checksum := int64(binary.BigEndian.Uint64((h.Sum(nil))[0:8]))
 
 		if checksum != lastChecksum {
-			response := deploymentcontext.NewBuilder(module).AddConfigs(configs).AddSecrets(secrets).Build().ToProto()
+			logger.Debugf("Sending module context for: %s routes: %v", module, routeTable)
+			response := deploymentcontext.NewBuilder(module).AddConfigs(configs).AddSecrets(secrets).AddRoutes(routeTable).Build().ToProto()
 
 			if err := resp.Send(response); err != nil {
 				return connect.NewError(connect.CodeInternal, fmt.Errorf("could not send response: %w", err))
@@ -768,6 +811,8 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 		case <-ctx.Done():
 			return nil
 		case <-time.After(s.config.ModuleUpdateFrequency):
+		case <-updates:
+
 		}
 	}
 }
@@ -781,6 +826,19 @@ func hashConfigurationMap(h hash.Hash, m map[string][]byte) error {
 		_, err := h.Write(append([]byte(k), m[k]...))
 		if err != nil {
 			return fmt.Errorf("error hashing configuration: %w", err)
+		}
+	}
+	return nil
+}
+
+// hashRoutesTable computes an order invariant checksum on the routes
+func hashRoutesTable(h hash.Hash, m map[string]string) error {
+	keys := maps.Keys(m)
+	sort.Strings(keys)
+	for _, k := range keys {
+		_, err := h.Write(append([]byte(k), m[k]...))
+		if err != nil {
+			return fmt.Errorf("error hashing routes: %w", err)
 		}
 	}
 	return nil
@@ -837,12 +895,12 @@ func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftldepl
 	}
 
 	// Add to timeline.
-	sstate := s.schemaState.Load()
 	module := req.Msg.Topic.Module
-	route, ok := sstate.routes[module]
+	routes := s.routeTable.Current()
+	route, ok := routes.GetDeployment(module).Get()
 	if ok {
 		s.timeline.EnqueueEvent(ctx, &timeline.PubSubPublish{
-			DeploymentKey: route.Deployment,
+			DeploymentKey: route,
 			RequestKey:    requestKey,
 			Time:          now,
 			SourceVerb:    schema.Ref{Name: req.Msg.Caller, Module: req.Msg.Topic.Module},
@@ -879,8 +937,8 @@ func (s *Service) callWithRequest(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("body is required"))
 	}
 
-	sstate := s.schemaState.Load()
-	sch := sstate.schema
+	routes := s.routeTable.Current()
+	sch := routes.Schema()
 
 	verbRef := schema.RefFromProto(req.Msg.Verb)
 	verb := &schema.Verb{}
@@ -907,7 +965,7 @@ func (s *Service) callWithRequest(
 	}
 
 	module := verbRef.Module
-	route, ok := sstate.routes[module]
+	route, ok := routes.GetForModule(module).Get()
 	if !ok {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("no routes for module"))
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no routes for module %q", module))
@@ -940,8 +998,13 @@ func (s *Service) callWithRequest(
 		}
 	}
 
+	deployment, ok := routes.GetDeployment(module).Get()
+	if !ok {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("failed to find deployment"))
+		return nil, fmt.Errorf("deployment not found for module %q", module)
+	}
 	callEvent := &timeline.Call{
-		DeploymentKey:    route.Deployment,
+		DeploymentKey:    deployment,
 		RequestKey:       requestKey,
 		ParentRequestKey: parentKey,
 		StartTime:        start,
@@ -966,7 +1029,7 @@ func (s *Service) callWithRequest(
 		return nil, err
 	}
 
-	client := s.clientsForEndpoint(route.Endpoint)
+	client := s.clientsForEndpoint(route.String())
 
 	if pk, ok := parentKey.Get(); ok {
 		ctx = rpc.WithParentRequestKey(ctx, pk)
@@ -984,7 +1047,7 @@ func (s *Service) callWithRequest(
 	} else {
 		callEvent.Response = either.RightOf[*ftlv1.CallResponse](err)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
-		logger.Errorf(err, "Call failed to verb %s for deployment %s", verbRef.String(), route.Deployment)
+		logger.Errorf(err, "Call failed to verb %s for module %s", verbRef.String(), module)
 	}
 
 	s.timeline.EnqueueEvent(ctx, callEvent)
@@ -1173,11 +1236,11 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 	logger.Tracef("Acquiring async call")
 
 	now := time.Now().UTC()
-	sstate := s.schemaState.Load()
+	sstate := s.routeTable.Current()
 
 	enqueueTimelineEvent := func(call *dal.AsyncCall, err optional.Option[error]) {
 		module := call.Verb.Module
-		route, ok := sstate.routes[module]
+		deployment, ok := sstate.GetDeployment(module).Get()
 		if ok {
 			eventType := timeline.AsyncExecuteEventTypeUnkown
 			switch call.Origin.(type) {
@@ -1195,7 +1258,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 				errStr = optional.Some(e.Error())
 			}
 			s.timeline.EnqueueEvent(ctx, &timeline.AsyncExecute{
-				DeploymentKey: route.Deployment,
+				DeploymentKey: deployment,
 				RequestKey:    call.ParentRequestKey,
 				EventType:     eventType,
 				Verb:          *call.Verb.ToRef(),
@@ -1317,7 +1380,8 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 	}
 	logger.Debugf("Catching async call %s with %s", call.Verb, catchVerb)
 
-	sch := s.schemaState.Load().schema
+	routeView := s.routeTable.Current()
+	sch := routeView.Schema()
 
 	verb := &schema.Verb{}
 	if err := sch.ResolveToType(call.Verb.ToRef(), verb); err != nil {
@@ -1457,9 +1521,9 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 		hash        []byte
 		minReplicas int
 	}
-	moduleState := map[string]moduleStateEntry{}
+	deploymentState := map[string]moduleStateEntry{}
 	moduleByDeploymentKey := map[string]string{}
-	mostRecentDeploymentByModule := map[string]string{}
+	aliveDeploymentsForModule := map[string]map[string]bool{}
 	schemaByDeploymentKey := map[string]*schemapb.Module{}
 
 	// Seed the notification channel with the current deployments.
@@ -1502,7 +1566,14 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 			if deletion, ok := notification.Deleted.Get(); ok {
 				name := moduleByDeploymentKey[deletion.String()]
 				schema := schemaByDeploymentKey[deletion.String()]
-				moduleRemoved := mostRecentDeploymentByModule[name] == deletion.String()
+				moduleRemoved := true
+				if aliveDeploymentsForModule[name] != nil {
+					delete(aliveDeploymentsForModule[name], deletion.String())
+					moduleRemoved = len(aliveDeploymentsForModule[name]) == 0
+					if moduleRemoved {
+						delete(aliveDeploymentsForModule, name)
+					}
+				}
 				response = &ftlv1.PullSchemaResponse{
 					ModuleName:    name,
 					DeploymentKey: proto.String(deletion.String()),
@@ -1510,12 +1581,9 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 					ModuleRemoved: moduleRemoved,
 					Schema:        schema,
 				}
-				delete(moduleState, name)
+				delete(deploymentState, deletion.String())
 				delete(moduleByDeploymentKey, deletion.String())
 				delete(schemaByDeploymentKey, deletion.String())
-				if moduleRemoved {
-					delete(mostRecentDeploymentByModule, name)
-				}
 			} else if message, ok := notification.Message.Get(); ok {
 				if message.Schema.Runtime == nil {
 					message.Schema.Runtime = &schema.ModuleRuntime{}
@@ -1527,7 +1595,11 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 
 				moduleSchema := message.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 				hasher := sha.New()
-				data := []byte(moduleSchema.String())
+				data, err := schema.ModuleToBytes(message.Schema)
+				if err != nil {
+					logger.Errorf(err, "Could not serialize module schema")
+					return fmt.Errorf("could not serialize module schema: %w", err)
+				}
 				if _, err := hasher.Write(data); err != nil {
 					return err
 				}
@@ -1536,14 +1608,25 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 					hash:        hasher.Sum(nil),
 					minReplicas: message.MinReplicas,
 				}
-				if current, ok := moduleState[message.Schema.Name]; ok {
+				if current, ok := deploymentState[message.Key.String()]; ok {
 					if !bytes.Equal(current.hash, newState.hash) || current.minReplicas != newState.minReplicas {
+						alive := aliveDeploymentsForModule[moduleSchema.Name]
+						if alive == nil {
+							alive = map[string]bool{}
+							aliveDeploymentsForModule[moduleSchema.Name] = alive
+						}
+						if newState.minReplicas > 0 {
+							alive[message.Key.String()] = true
+						} else {
+							delete(alive, message.Key.String())
+						}
 						changeType := ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_CHANGED
 						// A deployment is considered removed if its minReplicas is set to 0.
 						moduleRemoved := false
 						if current.minReplicas > 0 && message.MinReplicas == 0 {
 							changeType = ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED
-							moduleRemoved = mostRecentDeploymentByModule[message.Schema.Name] == message.Key.String()
+							moduleRemoved = len(alive) == 0
+							logger.Infof("Deployment %s was deleted via update notfication with module removed %v", deletion, moduleRemoved)
 						}
 						response = &ftlv1.PullSchemaResponse{
 							ModuleName:    moduleSchema.Name,
@@ -1554,7 +1637,12 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 						}
 					}
 				} else {
-					mostRecentDeploymentByModule[message.Schema.Name] = message.Key.String()
+					alive := aliveDeploymentsForModule[moduleSchema.Name]
+					if alive == nil {
+						alive = map[string]bool{}
+						aliveDeploymentsForModule[moduleSchema.Name] = alive
+					}
+					alive[message.Key.String()] = true
 					response = &ftlv1.PullSchemaResponse{
 						ModuleName:    moduleSchema.Name,
 						DeploymentKey: proto.String(message.Key.String()),
@@ -1566,9 +1654,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 						initialCount--
 					}
 				}
-				moduleState[message.Schema.Name] = newState
-				delete(moduleByDeploymentKey, message.Key.String()) // The deployment may have changed.
-				delete(schemaByDeploymentKey, message.Key.String())
+				deploymentState[message.Key.String()] = newState
 				moduleByDeploymentKey[message.Key.String()] = message.Schema.Name
 				schemaByDeploymentKey[message.Key.String()] = moduleSchema
 			}
@@ -1593,86 +1679,6 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 	}
 
 	return log.FromContext(ctx).AddSink(s.deploymentLogsSink).Attrs(attrs)
-}
-
-// Periodically sync the routing table and schema from the DB.
-// We do this in a single function so the routing table and schema are always consistent
-// And they both need the same info from the DB
-func (s *Service) syncRoutesAndSchema(ctx context.Context) (ret time.Duration, err error) {
-	s.schemaSyncLock.Lock() // This can result in confusing log messages if it is called concurrently
-	defer s.schemaSyncLock.Unlock()
-	deployments, err := s.dal.GetActiveDeployments(ctx)
-	if errors.Is(err, libdal.ErrNotFound) {
-		deployments = []dalmodel.Deployment{}
-	} else if err != nil {
-		return 0, err
-	}
-	tx, err := s.dal.Begin(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("failed to start transaction %w", err)
-	}
-	defer tx.CommitOrRollback(ctx, &err)
-
-	old := s.schemaState.Load().routes
-	newRoutes := map[string]Route{}
-	modulesByName := map[string]*schema.Module{}
-
-	builtins := schema.Builtins().ToProto().(*schemapb.Module) //nolint:forcetypeassert
-	modulesByName[builtins.Name], err = schema.ModuleFromProto(builtins)
-	if err != nil {
-		return 0, fmt.Errorf("failed to convert builtins to schema: %w", err)
-	}
-	for _, v := range deployments {
-		deploymentLogger := s.getDeploymentLogger(ctx, v.Key)
-		deploymentLogger.Tracef("processing deployment %s for route table", v.Key.String())
-		// Deployments are in order, oldest to newest
-		// If we see a newer one overwrite an old one that means the new one is read
-		// And we set its replicas to zero
-		// It may seem a bit odd to do this here but this is where we are actually updating the routing table
-		// Which is what makes as a deployment 'live' from a clients POV
-		if v.Schema.Runtime == nil || v.Schema.Runtime.Deployment == nil {
-			deploymentLogger.Debugf("Deployment %s has no runtime metadata", v.Key.String())
-			continue
-		}
-		targetEndpoint := v.Schema.Runtime.Deployment.Endpoint
-		if targetEndpoint == "" {
-			deploymentLogger.Debugf("Failed to get updated endpoint for deployment %s", v.Key.String())
-			continue
-		}
-		// Check if this is a new route
-		if oldRoute, oldRouteExists := old[v.Module]; !oldRouteExists || oldRoute.Deployment.String() != v.Key.String() {
-			// If it is a new route we only add it if we can ping it
-			// Kube deployments can take a while to come up, so we don't want to add them to the routing table until they are ready.
-			_, err := s.clientsForEndpoint(targetEndpoint).verb.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
-			if err != nil {
-				deploymentLogger.Tracef("Unable to ping %s, not adding to route table", v.Key.String())
-				continue
-			}
-			deploymentLogger.Infof("Deployed %s", v.Key.String())
-			status.UpdateModuleState(ctx, v.Module, status.BuildStateDeployed)
-		}
-		if prev, ok := newRoutes[v.Module]; ok {
-			// We have already seen a route for this module, the existing route must be an old one
-			// as the deployments are in order
-			// We have a new route ready to go, so we can just set the old one to 0 replicas
-			// Do this in a TX so it doesn't happen until the route table is updated
-			deploymentLogger.Debugf("Setting %s to zero replicas", prev.Deployment)
-			err := tx.SetDeploymentReplicas(ctx, prev.Deployment, 0)
-			if err != nil {
-				deploymentLogger.Errorf(err, "Failed to set replicas to 0 for deployment %s", prev.Deployment.String())
-			}
-		}
-		newRoutes[v.Module] = Route{Module: v.Module, Deployment: v.Key, Endpoint: targetEndpoint}
-		modulesByName[v.Module] = v.Schema
-	}
-
-	orderedModules := maps.Values(modulesByName)
-	sort.SliceStable(orderedModules, func(i, j int) bool {
-		return orderedModules[i].Name < orderedModules[j].Name
-	})
-	combined := &schema.Schema{Modules: orderedModules}
-	s.schemaState.Store(schemaState{schema: combined, routes: newRoutes})
-	return time.Second, nil
 }
 
 func (s *Service) reapCallEvents(ctx context.Context) (time.Duration, error) {
@@ -1720,19 +1726,4 @@ func validateCallBody(body []byte, verb *schema.Verb, sch *schema.Schema) error 
 		return fmt.Errorf("could not validate call request body: %w", err)
 	}
 	return nil
-}
-
-type Route struct {
-	Module     string
-	Deployment model.DeploymentKey
-	Endpoint   string
-}
-
-type schemaState struct {
-	schema *schema.Schema
-	routes map[string]Route
-}
-
-func (r Route) String() string {
-	return fmt.Sprintf("%s -> %s", r.Deployment, r.Endpoint)
 }

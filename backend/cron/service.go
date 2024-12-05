@@ -15,14 +15,11 @@ import (
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
-
-type CallClient interface {
-	Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error)
-}
 
 type cronJob struct {
 	module  string
@@ -33,7 +30,7 @@ type cronJob struct {
 }
 
 type Config struct {
-	ControllerEndpoint *url.URL `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
+	SchemaServiceEndpoint *url.URL `name:"ftl-endpoint" help:"Schema Service endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
 }
 
 func (c cronJob) String() string {
@@ -46,7 +43,7 @@ func (c cronJob) String() string {
 }
 
 // Start the cron service. Blocks until the context is cancelled.
-func Start(ctx context.Context, eventSource schemaeventsource.EventSource, verbClient CallClient) error {
+func Start(ctx context.Context, eventSource schemaeventsource.EventSource, client routing.CallClient) error {
 	logger := log.FromContext(ctx).Scope("cron")
 	// Map of cron jobs for each module.
 	cronJobs := map[string][]cronJob{}
@@ -98,7 +95,7 @@ func Start(ctx context.Context, eventSource schemaeventsource.EventSource, verbC
 				NextExecution: job.next,
 			}
 			observability.Cron.JobStarted(ctx, cronModel)
-			if err := callCronJob(ctx, verbClient, job); err != nil {
+			if err := callCronJob(ctx, client, job); err != nil {
 				observability.Cron.JobFailed(ctx, cronModel)
 				logger.Errorf(err, "Failed to execute cron job")
 			} else {
@@ -108,7 +105,7 @@ func Start(ctx context.Context, eventSource schemaeventsource.EventSource, verbC
 	}
 }
 
-func callCronJob(ctx context.Context, verbClient CallClient, cronJob cronJob) error {
+func callCronJob(ctx context.Context, verbClient routing.CallClient, cronJob cronJob) error {
 	logger := log.FromContext(ctx).Scope("cron")
 	ref := schema.Ref{Module: cronJob.module, Name: cronJob.verb.Name}
 	logger.Debugf("Calling cron job %s", cronJob)

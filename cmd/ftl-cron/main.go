@@ -15,6 +15,7 @@ import (
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
+	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
@@ -42,10 +43,10 @@ func main() {
 	err = observability.Init(ctx, false, "", "ftl-cron", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
-	verbClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.CronConfig.ControllerEndpoint.String(), log.Error)
-	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.CronConfig.ControllerEndpoint.String(), log.Error)
+	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.CronConfig.SchemaServiceEndpoint.String(), log.Error)
 	eventSource := schemaeventsource.New(ctx, schemaClient)
 
-	err = cron.Start(ctx, eventSource, verbClient)
+	routeManager := routing.NewVerbRouter(ctx, schemaeventsource.New(ctx, schemaClient))
+	err = cron.Start(ctx, eventSource, routeManager)
 	kctx.FatalIfErrorf(err, "failed to start cron")
 }

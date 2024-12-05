@@ -37,6 +37,7 @@ type DeploymentContext struct {
 	module    string
 	configs   map[string][]byte
 	secrets   map[string][]byte
+	routes    map[string]string
 	databases map[string]Database
 
 	isTesting                     bool
@@ -68,6 +69,7 @@ func NewBuilder(module string) *Builder {
 		secrets:   map[string][]byte{},
 		databases: map[string]Database{},
 		mockVerbs: map[schema.RefKey]Verb{},
+		routes:    map[string]string{},
 	}
 }
 
@@ -93,10 +95,17 @@ func (b *Builder) AddConfigs(configs map[string][]byte) *Builder {
 	return b
 }
 
-// AddSecrets adds configuration values (as bytes) to the builder
+// AddSecrets adds secrets values (as bytes) to the builder
 func (b *Builder) AddSecrets(secrets map[string][]byte) *Builder {
 	for name, data := range secrets {
 		b.secrets[name] = data
+	}
+	return b
+}
+
+func (b *Builder) AddRoutes(routes map[string]string) *Builder {
+	for name, data := range routes {
+		b.routes[name] = data
 	}
 	return b
 }

@@ -8,25 +8,20 @@ import (
 	"strings"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/types/optional"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/cors"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
-
-type CallClient interface {
-	Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error)
-}
 
 type Config struct {
 	Bind         *url.URL   `help:"Socket to bind to for ingress." default:"http://127.0.0.1:8891" env:"FTL_BIND"`
@@ -43,16 +38,16 @@ func (c *Config) Validate() error {
 
 type service struct {
 	// Complete schema synchronised from the database.
-	view       *atomic.Value[materialisedView]
-	callClient CallClient
+	view   *atomic.Value[materialisedView]
+	client routing.CallClient
 }
 
 // Start the HTTP ingress service. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, schemaEventSource schemaeventsource.EventSource, verbClient CallClient) error {
+func Start(ctx context.Context, config Config, schemaEventSource schemaeventsource.EventSource, client routing.CallClient) error {
 	logger := log.FromContext(ctx).Scope("http-ingress")
 	svc := &service{
-		view:       syncView(ctx, schemaEventSource),
-		callClient: verbClient,
+		view:   syncView(ctx, schemaEventSource),
+		client: client,
 	}
 
 	ingressHandler := otelhttp.NewHandler(http.Handler(svc), "ftl.ingress")
@@ -89,5 +84,5 @@ func (s *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("route not found in dal"))
 		return
 	}
-	handleHTTP(start, state.schema, requestKey, routes, w, r, s.callClient)
+	handleHTTP(start, state.schema, requestKey, routes, w, r, s.client)
 }

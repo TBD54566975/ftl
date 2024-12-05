@@ -3,6 +3,7 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	_ "github.com/go-sql-driver/mysql"
@@ -49,7 +50,7 @@ func provisionRunner(scaling scaling.RunnerScaling) InMemResourceProvisionerFn {
 			return nil, fmt.Errorf("failed to parse schema: %w", err)
 		}
 		logger.Debugf("provisioning runner: %s.%s for deployment %s", module, id, deployment)
-		err = scaling.StartDeployment(ctx, module, deployment, schema)
+		err = scaling.StartDeployment(ctx, module, deployment, schema, false, false)
 		if err != nil {
 			logger.Infof("failed to start deployment: %v", err)
 			return nil, fmt.Errorf("failed to start deployment: %w", err)
@@ -60,18 +61,43 @@ func provisionRunner(scaling scaling.RunnerScaling) InMemResourceProvisionerFn {
 		}
 		ep := endpoint.MustGet()
 		endpointURI := ep.String()
+
+		runnerClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, endpointURI, log.Error)
+		// TODO: a proper timeout
+		timeout := time.After(1 * time.Minute)
+		for {
+			_, err := runnerClient.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
+			if err == nil {
+				break
+			}
+			logger.Debugf("waiting for runner to be ready: %v", err)
+			select {
+			case <-ctx.Done():
+				return nil, fmt.Errorf("context cancelled %w", ctx.Err())
+			case <-timeout:
+				return nil, fmt.Errorf("timed out waiting for runner to be ready")
+			case <-time.After(time.Millisecond * 100):
+			}
+		}
+
+		schemaClient := rpc.ClientFromContext[ftlv1connect.SchemaServiceClient](ctx)
+		controllerClient := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 		runner.Runner.Output = &provisioner.RunnerResource_RunnerResourceOutput{
 			RunnerUri:     endpointURI,
 			DeploymentKey: deployment,
 		}
-		if previous != nil && previous.GetRunner().GetOutput().GetDeploymentKey() != deployment {
-			logger.Debugf("terminating previous deployment: %s", previous.GetRunner().GetOutput().GetDeploymentKey())
-			err := scaling.TerminateDeployment(ctx, module, previous.GetRunner().GetOutput().GetDeploymentKey())
-			if err != nil {
-				logger.Errorf(err, "failed to terminate previous deployment")
+		deps, err := scaling.TerminatePreviousDeployments(ctx, module, deployment)
+		if err != nil {
+			logger.Errorf(err, "failed to terminate previous deployments")
+		} else {
+			var zero int32
+			for _, dep := range deps {
+				_, err := controllerClient.UpdateDeploy(ctx, connect.NewRequest(&ftlv1.UpdateDeployRequest{DeploymentKey: dep, MinReplicas: &zero}))
+				if err != nil {
+					logger.Errorf(err, "failed to update deployment %s", dep)
+				}
 			}
 		}
-		schemaClient := rpc.ClientFromContext[ftlv1connect.SchemaServiceClient](ctx)
 
 		logger.Infof("updating module runtime for %s with endpoint %s", module, endpointURI)
 		_, err = schemaClient.UpdateDeploymentRuntime(ctx, connect.NewRequest(&ftlv1.UpdateDeploymentRuntimeRequest{Deployment: deployment, Event: &schemapb.ModuleRuntimeEvent{Value: &schemapb.ModuleRuntimeEvent_ModuleRuntimeDeployment{ModuleRuntimeDeployment: &schemapb.ModuleRuntimeDeployment{DeploymentKey: deployment, Endpoint: endpointURI}}}}))

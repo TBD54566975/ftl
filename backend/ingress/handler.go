@@ -18,11 +18,12 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // handleHTTP HTTP ingress routes.
-func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.RequestKey, routesForMethod []ingressRoute, w http.ResponseWriter, r *http.Request, verbClient CallClient) {
+func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.RequestKey, routesForMethod []ingressRoute, w http.ResponseWriter, r *http.Request, client routing.CallClient) {
 	logger := log.FromContext(r.Context()).Scope(fmt.Sprintf("ingress:%s:%s", r.Method, r.URL.Path))
 	logger.Debugf("Start ingress request")
 
@@ -69,7 +70,7 @@ func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.Reques
 		Body:     body,
 	})
 
-	resp, err := verbClient.Call(r.Context(), creq)
+	resp, err := client.Call(r.Context(), creq)
 	if err != nil {
 		logger.Errorf(err, "failed to call verb")
 		if connectErr := new(connect.Error); errors.As(err, &connectErr) {

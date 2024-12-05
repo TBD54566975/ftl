@@ -3,7 +3,8 @@ ARG RUNTIME=scratch-runtime
 
 # Get certificates from Alpine (smaller than Ubuntu)
 FROM alpine:latest AS certs
-RUN apk --update add ca-certificates
+# No need to update here, we just use this for the certs
+RUN apk add ca-certificates
 
 # Used for everything except ftl-runner
 FROM scratch AS scratch-runtime
