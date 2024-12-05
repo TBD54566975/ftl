@@ -42,9 +42,24 @@ func TestGetTimelineWithLimit(t *testing.T) {
 		110,
 	} {
 		resp, err := service.GetTimeline(ctx, connect.NewRequest(&timelinepb.GetTimelineRequest{
-			Limit: &limit,
-			EventTypes: []timelinepb.EventType{
-				timelinepb.EventType_EVENT_TYPE_CALL,
+			Order: timelinepb.GetTimelineRequest_ORDER_DESC,
+			Filters: []*timelinepb.GetTimelineRequest_Filter{
+				{
+					Filter: &timelinepb.GetTimelineRequest_Filter_EventTypes{
+						EventTypes: &timelinepb.GetTimelineRequest_EventTypeFilter{
+							EventTypes: []timelinepb.EventType{
+								timelinepb.EventType_EVENT_TYPE_CALL,
+							},
+						},
+					},
+				},
+				{
+					Filter: &timelinepb.GetTimelineRequest_Filter_Limit{
+						Limit: &timelinepb.GetTimelineRequest_LimitFilter{
+							Limit: limit,
+						},
+					},
+				},
 			},
 		}))
 		assert.NoError(t, err)

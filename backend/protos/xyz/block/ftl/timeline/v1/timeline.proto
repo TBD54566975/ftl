@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package xyz.block.ftl.timeline.v1;
 
+import "google/protobuf/timestamp.proto";
 import "xyz/block/ftl/timeline/v1/event.proto";
 import "xyz/block/ftl/v1/ftl.proto";
 
@@ -9,10 +10,75 @@ option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/tim
 option java_multiple_files = true;
 
 message GetTimelineRequest {
-  string deployment_key = 1;
-  optional int64 since_id = 2;
-  optional int32 limit = 3;
-  repeated timeline.v1.EventType event_types = 4;
+  // Limit the number of events returned.
+  message LimitFilter {
+    int32 limit = 1;
+  }
+  // Filters events by log level.
+  message LogLevelFilter {
+    timeline.v1.LogLevel log_level = 1;
+  }
+  // Filters events by deployment key.
+  message DeploymentFilter {
+    repeated string deployments = 1;
+  }
+  // Filters events by request key.
+  message RequestFilter {
+    repeated string requests = 1;
+  }
+  // Filters events by event type.
+  message EventTypeFilter {
+    repeated timeline.v1.EventType event_types = 1;
+  }
+  // Filters events by time.
+  //
+  // Either end of the time range can be omitted to indicate no bound.
+  message TimeFilter {
+    optional google.protobuf.Timestamp older_than = 1;
+    optional google.protobuf.Timestamp newer_than = 2;
+  }
+  // Filters events by ID.
+  //
+  // Either end of the ID range can be omitted to indicate no bound.
+  message IDFilter {
+    optional int64 lower_than = 1;
+    optional int64 higher_than = 2;
+  }
+  // Filters events by call.
+  message CallFilter {
+    string dest_module = 1;
+    optional string dest_verb = 2;
+    optional string source_module = 3;
+  }
+  message ModuleFilter {
+    string module = 1;
+    optional string verb = 2;
+  }
+
+  enum Order {
+    ORDER_UNSPECIFIED = 0;
+    ORDER_ASC = 1;
+    ORDER_DESC = 2;
+  }
+
+  message Filter {
+    // These map 1:1 with filters in backend/timeline/filters.go
+    oneof filter {
+      LimitFilter limit = 1;
+      LogLevelFilter log_level = 2;
+      DeploymentFilter deployments = 3;
+      RequestFilter requests = 4;
+      EventTypeFilter event_types = 5;
+      TimeFilter time = 6;
+      IDFilter id = 7;
+      CallFilter call = 8;
+      ModuleFilter module = 9;
+    }
+  }
+
+  repeated Filter filters = 1;
+  int32 limit = 2;
+  Order order = 3;
 }
 
 message GetTimelineResponse {
