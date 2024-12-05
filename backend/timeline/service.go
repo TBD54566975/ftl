@@ -17,6 +17,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type Config struct {
@@ -110,15 +111,34 @@ func (s *service) GetTimeline(ctx context.Context, req *connect.Request[timeline
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
+	filters, limit, ascending, err := filtersFromRequest(req.Msg)
+	if err != nil {
+		return nil, err
+	}
+
 	results := []*timelinepb.Event{}
-	// TODO: handle sinceId
-	for i := len(s.events) - 1; i >= 0; i-- {
+
+	var firstIdx, step int
+	var idxCheck func(int) bool
+	if ascending {
+		firstIdx = 0
+		step = 1
+		idxCheck = func(i int) bool { return i < len(s.events) }
+	} else {
+		firstIdx = len(s.events) - 1
+		step = -1
+		idxCheck = func(i int) bool { return i >= 0 }
+	}
+	for i := firstIdx; idxCheck(i); i += step {
 		event := s.events[i]
-		if !filter(event, req.Msg.DeploymentKey, req.Msg.EventTypes) {
+		_, didNotMatchAFilter := slices.Find(filters, func(filter TimelineFilter) bool {
+			return !filter(event)
+		})
+		for didNotMatchAFilter {
 			continue
 		}
 		results = append(results, s.events[i])
-		if req.Msg.Limit != nil && *req.Msg.Limit != 0 && len(results) >= int(*req.Msg.Limit) {
+		if limit, ok := limit.Get(); ok && limit != 0 && len(results) >= int(limit) {
 			break
 		}
 	}
@@ -130,14 +150,25 @@ func (s *service) GetTimeline(ctx context.Context, req *connect.Request[timeline
 func (s *service) DeleteOldEvents(ctx context.Context, req *connect.Request[timelinepb.DeleteOldEventsRequest]) (*connect.Response[timelinepb.DeleteOldEventsResponse], error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-
+	// Events that match all these filters will be deleted
 	cutoff := time.Now().Add(-1 * time.Duration(req.Msg.AgeSeconds) * time.Second)
+	deletionFilters := []TimelineFilter{
+		FilterTypes(&timelinepb.GetTimelineRequest_EventTypeFilter{
+			EventTypes: []timelinepb.EventType{req.Msg.EventType},
+		}),
+		FilterTimeRange(&timelinepb.GetTimelineRequest_TimeFilter{
+			OlderThan: timestamppb.New(cutoff),
+		}),
+	}
+
 	filtered := []*timelinepb.Event{}
 	for _, event := range s.events {
-		if event.TimeStamp.AsTime().Before(cutoff) && (req.Msg.EventType == timelinepb.EventType_EVENT_TYPE_UNSPECIFIED || req.Msg.EventType != eventType(event)) {
-			continue
+		_, didNotMatchAFilter := slices.Find(deletionFilters, func(filter TimelineFilter) bool {
+			return !filter(event)
+		})
+		if didNotMatchAFilter {
+			filtered = append(filtered, event)
 		}
-		filtered = append(filtered, event)
 	}
 	s.events = filtered
 	return connect.NewResponse(&timelinepb.DeleteOldEventsResponse{}), nil
