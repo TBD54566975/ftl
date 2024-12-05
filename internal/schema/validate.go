@@ -224,7 +224,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named,
 				*MetadataSubscriber, *Topic, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher,
 				*MetadataSQLMigration, *DSNDatabaseConnector, *DatabaseRuntime, DatabaseConnector,
-				*AWSIAMAuthDatabaseConnector:
+				*AWSIAMAuthDatabaseConnector, *DatabaseRuntimeConnections:
 			}
 			return next()
 		})
@@ -367,7 +367,7 @@ func ValidateModule(module *Module) error {
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
 			*Config, *Secret, *MetadataSubscriber, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher,
 			*MetadataSQLMigration, *DSNDatabaseConnector, *DatabaseRuntime, *AWSIAMAuthDatabaseConnector,
-			DatabaseConnector:
+			DatabaseConnector, *DatabaseRuntimeConnections:
 
 		case Named, Symbol, Type, Metadata, Value, Decl: // Union types.
 		}

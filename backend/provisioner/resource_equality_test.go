@@ -3,8 +3,8 @@ package provisioner
 import (
 	"testing"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 func TestResourceEqual(t *testing.T) {
@@ -54,10 +54,12 @@ func TestResourceEqual(t *testing.T) {
 			Resource: &provisioner.Resource_Postgres{
 				Postgres: &provisioner.PostgresResource{
 					Output: &schemapb.DatabaseRuntime{
-						WriteConnector: &schemapb.DatabaseConnector{
-							Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
-								DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
-									Dsn: "foo",
+						Connections: &schemapb.DatabaseRuntimeConnections{
+							Write: &schemapb.DatabaseConnector{
+								Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
+									DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
+										Dsn: "foo",
+									},
 								},
 							},
 						},

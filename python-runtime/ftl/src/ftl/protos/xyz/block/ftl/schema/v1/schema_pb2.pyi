@@ -124,12 +124,30 @@ class DatabaseConnector(_message.Message):
     def __init__(self, awsiam_auth_database_connector: _Optional[_Union[AWSIAMAuthDatabaseConnector, _Mapping]] = ..., dsn_database_connector: _Optional[_Union[DSNDatabaseConnector, _Mapping]] = ...) -> None: ...
 
 class DatabaseRuntime(_message.Message):
-    __slots__ = ("read_connector", "write_connector")
-    READ_CONNECTOR_FIELD_NUMBER: _ClassVar[int]
-    WRITE_CONNECTOR_FIELD_NUMBER: _ClassVar[int]
-    read_connector: DatabaseConnector
-    write_connector: DatabaseConnector
-    def __init__(self, read_connector: _Optional[_Union[DatabaseConnector, _Mapping]] = ..., write_connector: _Optional[_Union[DatabaseConnector, _Mapping]] = ...) -> None: ...
+    __slots__ = ("connections",)
+    CONNECTIONS_FIELD_NUMBER: _ClassVar[int]
+    connections: DatabaseRuntimeConnections
+    def __init__(self, connections: _Optional[_Union[DatabaseRuntimeConnections, _Mapping]] = ...) -> None: ...
+
+class DatabaseRuntimeConnections(_message.Message):
+    __slots__ = ("read", "write")
+    READ_FIELD_NUMBER: _ClassVar[int]
+    WRITE_FIELD_NUMBER: _ClassVar[int]
+    read: DatabaseConnector
+    write: DatabaseConnector
+    def __init__(self, read: _Optional[_Union[DatabaseConnector, _Mapping]] = ..., write: _Optional[_Union[DatabaseConnector, _Mapping]] = ...) -> None: ...
+
+class DatabaseRuntimeConnectionsEvent(_message.Message):
+    __slots__ = ("connections",)
+    CONNECTIONS_FIELD_NUMBER: _ClassVar[int]
+    connections: DatabaseRuntimeConnections
+    def __init__(self, connections: _Optional[_Union[DatabaseRuntimeConnections, _Mapping]] = ...) -> None: ...
+
+class DatabaseRuntimeEvent(_message.Message):
+    __slots__ = ("database_runtime_connections_event",)
+    DATABASE_RUNTIME_CONNECTIONS_EVENT_FIELD_NUMBER: _ClassVar[int]
+    database_runtime_connections_event: DatabaseRuntimeConnectionsEvent
+    def __init__(self, database_runtime_connections_event: _Optional[_Union[DatabaseRuntimeConnectionsEvent, _Mapping]] = ...) -> None: ...
 
 class Decl(_message.Message):
     __slots__ = ("config", "data", "database", "enum", "secret", "topic", "type_alias", "verb")

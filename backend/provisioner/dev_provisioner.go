@@ -100,17 +100,19 @@ func establishMySQLDB(ctx context.Context, rc *provisioner.ResourceContext, mysq
 	}
 	dsn := dsn.MySQLDSN(dbName, dsn.Port(mysqlPort))
 	mysql.Mysql.Output = &schemapb.DatabaseRuntime{
-		WriteConnector: &schemapb.DatabaseConnector{
-			Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
-				DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
-					Dsn: dsn,
+		Connections: &schemapb.DatabaseRuntimeConnections{
+			Write: &schemapb.DatabaseConnector{
+				Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
+					DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
+						Dsn: dsn,
+					},
 				},
 			},
-		},
-		ReadConnector: &schemapb.DatabaseConnector{
-			Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
-				DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
-					Dsn: dsn,
+			Read: &schemapb.DatabaseConnector{
+				Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
+					DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
+						Dsn: dsn,
+					},
 				},
 			},
 		},
@@ -128,7 +130,7 @@ func ProvisionPostgresForTest(ctx context.Context, module string, id string) (st
 		return "", err
 	}
 
-	return res.GetPostgres().GetOutput().WriteConnector.GetDsnDatabaseConnector().GetDsn(), nil
+	return res.GetPostgres().GetOutput().Connections.Write.GetDsnDatabaseConnector().GetDsn(), nil
 }
 
 func ProvisionMySQLForTest(ctx context.Context, module string, id string) (string, error) {
@@ -140,7 +142,7 @@ func ProvisionMySQLForTest(ctx context.Context, module string, id string) (strin
 	if err != nil {
 		return "", err
 	}
-	return res.GetMysql().GetOutput().WriteConnector.GetDsnDatabaseConnector().GetDsn(), nil
+	return res.GetMysql().GetOutput().Connections.Write.GetDsnDatabaseConnector().GetDsn(), nil
 }
 
 func provisionPostgres(postgresPort int, recreate bool) func(ctx context.Context, rc *provisioner.ResourceContext, module string, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
@@ -197,17 +199,19 @@ func provisionPostgres(postgresPort int, recreate bool) func(ctx context.Context
 		}
 		dsn := dsn.PostgresDSN(dbName, dsn.Port(postgresPort))
 		pg.Postgres.Output = &schemapb.DatabaseRuntime{
-			WriteConnector: &schemapb.DatabaseConnector{
-				Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
-					DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
-						Dsn: dsn,
+			Connections: &schemapb.DatabaseRuntimeConnections{
+				Write: &schemapb.DatabaseConnector{
+					Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
+						DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
+							Dsn: dsn,
+						},
 					},
 				},
-			},
-			ReadConnector: &schemapb.DatabaseConnector{
-				Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
-					DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
-						Dsn: dsn,
+				Read: &schemapb.DatabaseConnector{
+					Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
+						DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
+							Dsn: dsn,
+						},
 					},
 				},
 			},
