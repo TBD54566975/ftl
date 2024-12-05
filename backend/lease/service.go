@@ -11,15 +11,18 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/kong"
 
+	"github.com/TBD54566975/ftl"
 	ftllease "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1"
 	leaseconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/log"
+	ftlobservability "github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 type Config struct {
-	Bind *url.URL `help:"Socket to bind to." default:"http://127.0.0.1:8895" env:"FTL_BIND"`
+	Bind                *url.URL                `help:"Socket to bind to." default:"http://127.0.0.1:8895" env:"FTL_BIND"`
+	ObservabilityConfig ftlobservability.Config `embed:"" prefix:"o11y-"`
 }
 
 func (c *Config) SetDefaults() {
@@ -35,6 +38,10 @@ type service struct {
 
 func Start(ctx context.Context, config Config) error {
 	config.SetDefaults()
+	err := ftlobservability.Init(ctx, false, "", "ftl-runner", ftl.Version, config.ObservabilityConfig)
+	if err != nil {
+		return fmt.Errorf("could not initialize observability: %w", err)
+	}
 
 	logger := log.FromContext(ctx).Scope("lease")
 	svc := &service{
@@ -42,7 +49,7 @@ func Start(ctx context.Context, config Config) error {
 	}
 
 	logger.Debugf("Lease service listening on: %s", config.Bind)
-	err := rpc.Serve(ctx, config.Bind,
+	err = rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(leaseconnect.NewLeaseServiceHandler, svc),
 	)
 	if err != nil {
@@ -56,17 +63,20 @@ func (s *service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 }
 
 func (s *service) AcquireLease(ctx context.Context, stream *connect.BidiStream[ftllease.AcquireLeaseRequest, ftllease.AcquireLeaseResponse]) error {
-
+	logger := log.FromContext(ctx)
+	logger.Debugf("AcquireLease called")
 	c := &leaseClient{
 		leases:  make(map[string]*time.Time),
 		service: s,
 	}
+	defer c.clearLeases()
 	for {
 		msg, err := stream.Receive()
 		if err != nil {
-			c.clearLeases()
+			logger.Errorf(err, "Could not receive lease request")
 			return fmt.Errorf("could not receive lease request: %w", err)
 		}
+		logger.Debugf("Acquiring lease for: %v", msg.Key)
 		success := c.handleMessage(msg.Key, msg.Ttl.AsDuration())
 
 		if !success {

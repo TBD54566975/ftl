@@ -13,7 +13,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -95,6 +94,7 @@ type Config struct {
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 	MaxOpenDBConnections         int                 `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
 	MaxIdleDBConnections         int                 `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
+	LeaseEndpoint                *url.URL            `name:"ftl-lease-endpoint" help:"Lease endpoint endpoint." env:"FTL_LEASE_ENDPOINT" default:"http://127.0.0.1:8894"`
 	CommonConfig
 }
 
@@ -240,7 +240,8 @@ func New(
 		config.RunnerTimeout = time.Second * 5
 		config.ControllerTimeout = time.Second * 5
 	}
-	
+
+	ldb := leases.NewClientLeaser(config.LeaseEndpoint.String())
 	scheduler := scheduledtask.New(ctx, key, ldb)
 
 	routingTable := routing.New(ctx, schemaeventsource.New(ctx, rpc.Dial[ftlv1connect.SchemaServiceClient](ftlv1connect.NewSchemaServiceClient, config.Bind.String(), log.Error)))

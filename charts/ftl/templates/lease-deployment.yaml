@@ -1,0 +1,80 @@
+{{ $version := printf "v%s" .Chart.Version -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ftl.fullname" . }}-lease
+  labels:
+    {{- include "ftl.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.lease.replicas }}
+  revisionHistoryLimit: {{ .Values.lease.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "ftl-lease.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ftl-lease.selectorLabels" . | nindent 8 }}
+      {{- if .Values.lease.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.lease.podAnnotations | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.lease.serviceAccountName }}
+      containers:
+        - name: app
+          image: "{{ .Values.lease.image.repository }}:{{ .Values.lease.image.tag | default $version }}"
+          imagePullPolicy: {{ .Values.lease.image.pullPolicy }}
+          resources:
+            limits:
+              cpu: "{{ .Values.lease.resources.limits.cpu }}"
+              memory: "{{ .Values.lease.resources.limits.memory }}"
+            requests:
+              cpu: "{{ .Values.lease.resources.requests.cpu }}"
+              memory: "{{ .Values.lease.resources.requests.memory }}"
+          {{- if .Values.lease.envFrom }}
+          envFrom:
+            {{- if .Values.lease.envFrom }}
+            {{- toYaml .Values.lease.envFrom | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          env:
+            {{- if .Values.lease.env }}
+            {{- toYaml .Values.lease.env | nindent 12 }}
+            {{- end }}
+
+          ports:
+            {{- range .Values.lease.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .containerPort }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+          readinessProbe:
+            {{- if .Values.lease.readinessProbe }}
+            {{- toYaml .Values.lease.readinessProbe | nindent 12 }}
+            {{- else }}
+            httpGet:
+              path: /healthz
+              port: 8892
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 15
+            {{- end }}
+      {{- if .Values.lease.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.lease.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.lease.affinity }}
+      affinity:
+        {{- toYaml .Values.lease.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.lease.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.lease.topologySpreadConstraints | nindent 8 }}
+      {{- end }}
+      {{- if .Values.lease.tolerations }}
+      tolerations:
+        {{- toYaml .Values.lease.tolerations | nindent 8 }}
+      {{- end }}
