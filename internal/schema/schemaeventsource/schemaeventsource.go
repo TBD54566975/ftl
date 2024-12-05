@@ -191,6 +191,9 @@ func New(ctx context.Context, client ftlv1connect.SchemaServiceClient) EventSour
 		more = more && resp.More
 		switch resp.ChangeType {
 		case ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED:
+			if !resp.ModuleRemoved {
+				return nil
+			}
 			logger.Debugf("Module %s removed", sch.Name)
 			event := EventRemove{
 				Deployment: someDeploymentKey,

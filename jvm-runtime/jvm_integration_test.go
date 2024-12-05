@@ -12,8 +12,8 @@ import (
 
 	"github.com/alecthomas/repr"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -65,7 +65,6 @@ func TestLifecycleJVM(t *testing.T) {
 			assert.Equal(t, "Bye, Bob!", response)
 		}),
 		in.VerifyControllerStatus(func(ctx context.Context, t testing.TB, status *ftlv1.StatusResponse) {
-			// Non structurally changing edits should not trigger a new deployment.
 			assert.Equal(t, 1, len(status.Deployments))
 			assert.NotEqual(t, deployment, status.Deployments[0].Key)
 		}),

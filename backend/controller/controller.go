@@ -831,8 +831,7 @@ func hashConfigurationMap(h hash.Hash, m map[string][]byte) error {
 	return nil
 }
 
-// hashRoutesTable computes an order invariant checksum on the configuration
-// settings supplied in the map.
+// hashRoutesTable computes an order invariant checksum on the routes
 func hashRoutesTable(h hash.Hash, m map[string]string) error {
 	keys := maps.Keys(m)
 	sort.Strings(keys)
@@ -1522,9 +1521,9 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 		hash        []byte
 		minReplicas int
 	}
-	moduleState := map[string]moduleStateEntry{}
+	deploymentState := map[string]moduleStateEntry{}
 	moduleByDeploymentKey := map[string]string{}
-	mostRecentDeploymentByModule := map[string]string{}
+	aliveDeploymentsForModule := map[string]map[string]bool{}
 	schemaByDeploymentKey := map[string]*schemapb.Module{}
 
 	// Seed the notification channel with the current deployments.
@@ -1567,7 +1566,14 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 			if deletion, ok := notification.Deleted.Get(); ok {
 				name := moduleByDeploymentKey[deletion.String()]
 				schema := schemaByDeploymentKey[deletion.String()]
-				moduleRemoved := mostRecentDeploymentByModule[name] == deletion.String()
+				moduleRemoved := true
+				if aliveDeploymentsForModule[name] != nil {
+					delete(aliveDeploymentsForModule[name], deletion.String())
+					moduleRemoved = len(aliveDeploymentsForModule[name]) == 0
+					if moduleRemoved {
+						delete(aliveDeploymentsForModule, name)
+					}
+				}
 				response = &ftlv1.PullSchemaResponse{
 					ModuleName:    name,
 					DeploymentKey: proto.String(deletion.String()),
@@ -1575,12 +1581,9 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 					ModuleRemoved: moduleRemoved,
 					Schema:        schema,
 				}
-				delete(moduleState, name)
+				delete(deploymentState, deletion.String())
 				delete(moduleByDeploymentKey, deletion.String())
 				delete(schemaByDeploymentKey, deletion.String())
-				if moduleRemoved {
-					delete(mostRecentDeploymentByModule, name)
-				}
 			} else if message, ok := notification.Message.Get(); ok {
 				if message.Schema.Runtime == nil {
 					message.Schema.Runtime = &schema.ModuleRuntime{}
@@ -1605,14 +1608,25 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 					hash:        hasher.Sum(nil),
 					minReplicas: message.MinReplicas,
 				}
-				if current, ok := moduleState[message.Schema.Name]; ok {
+				if current, ok := deploymentState[message.Key.String()]; ok {
 					if !bytes.Equal(current.hash, newState.hash) || current.minReplicas != newState.minReplicas {
+						alive := aliveDeploymentsForModule[moduleSchema.Name]
+						if alive == nil {
+							alive = map[string]bool{}
+							aliveDeploymentsForModule[moduleSchema.Name] = alive
+						}
+						if newState.minReplicas > 0 {
+							alive[message.Key.String()] = true
+						} else {
+							delete(alive, message.Key.String())
+						}
 						changeType := ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_CHANGED
 						// A deployment is considered removed if its minReplicas is set to 0.
 						moduleRemoved := false
 						if current.minReplicas > 0 && message.MinReplicas == 0 {
 							changeType = ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED
-							moduleRemoved = mostRecentDeploymentByModule[message.Schema.Name] == message.Key.String()
+							moduleRemoved = len(alive) == 0
+							logger.Infof("Deployment %s was deleted via update notfication with module removed %v", deletion, moduleRemoved)
 						}
 						response = &ftlv1.PullSchemaResponse{
 							ModuleName:    moduleSchema.Name,
@@ -1623,7 +1637,12 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 						}
 					}
 				} else {
-					mostRecentDeploymentByModule[message.Schema.Name] = message.Key.String()
+					alive := aliveDeploymentsForModule[moduleSchema.Name]
+					if alive == nil {
+						alive = map[string]bool{}
+						aliveDeploymentsForModule[moduleSchema.Name] = alive
+					}
+					alive[message.Key.String()] = true
 					response = &ftlv1.PullSchemaResponse{
 						ModuleName:    moduleSchema.Name,
 						DeploymentKey: proto.String(message.Key.String()),
@@ -1635,9 +1654,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 						initialCount--
 					}
 				}
-				moduleState[message.Schema.Name] = newState
-				delete(moduleByDeploymentKey, message.Key.String()) // The deployment may have changed.
-				delete(schemaByDeploymentKey, message.Key.String())
+				deploymentState[message.Key.String()] = newState
 				moduleByDeploymentKey[message.Key.String()] = message.Schema.Name
 				schemaByDeploymentKey[message.Key.String()] = moduleSchema
 			}

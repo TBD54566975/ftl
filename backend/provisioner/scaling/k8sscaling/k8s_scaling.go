@@ -59,7 +59,7 @@ func NewK8sScaling(disableIstio bool, controllerURL string) scaling.RunnerScalin
 	return &k8sScaling{disableIstio: disableIstio, controller: controllerURL}
 }
 
-func (r *k8sScaling) StartDeployment(ctx context.Context, module string, deploymentKey string, sch *schema.Module) error {
+func (r *k8sScaling) StartDeployment(ctx context.Context, module string, deploymentKey string, sch *schema.Module, hasCron bool, hasIngress bool) error {
 	logger := log.FromContext(ctx)
 	logger = logger.Module(module)
 	ctx = log.ContextWithLogger(ctx, logger)
@@ -84,7 +84,7 @@ func (r *k8sScaling) StartDeployment(ctx context.Context, module string, deploym
 		return r.handleExistingDeployment(ctx, deployment)
 
 	}
-	err = r.handleNewDeployment(ctx, module, deploymentKey, sch)
+	err = r.handleNewDeployment(ctx, module, deploymentKey, sch, hasCron, hasIngress)
 	if err != nil {
 		return err
 	}
@@ -92,49 +92,37 @@ func (r *k8sScaling) StartDeployment(ctx context.Context, module string, deploym
 	if err != nil {
 		return err
 	}
-	delCtx := log.ContextWithLogger(context.Background(), logger)
-	go func() {
-		time.Sleep(time.Second * 20)
-		err := r.deleteOldDeployments(delCtx, module, deploymentKey)
-		if err != nil {
-			logger.Errorf(err, "Failed to delete old deployments")
-		}
-	}()
+
 	return nil
 }
 
-func (r *k8sScaling) TerminateDeployment(ctx context.Context, module string, deploymentKey string) error {
+func (r *k8sScaling) TerminatePreviousDeployments(ctx context.Context, module string, deploymentKey string) ([]string, error) {
 	logger := log.FromContext(ctx)
 	logger = logger.Module(module)
-	logger.Debugf("Handling schema change for %s", deploymentKey)
+	delCtx := log.ContextWithLogger(context.Background(), logger)
 	deploymentClient := r.client.AppsV1().Deployments(r.namespace)
-	_, err := deploymentClient.Get(ctx, deploymentKey, v1.GetOptions{})
-	deploymentExists := true
+	deployments, err := deploymentClient.List(ctx, v1.ListOptions{LabelSelector: moduleLabel + "=" + module})
+	var ret []string
 	if err != nil {
-		if errors.IsNotFound(err) {
-			deploymentExists = false
-		} else {
-			return fmt.Errorf("failed to get deployment %s: %w", deploymentKey, err)
+		return nil, fmt.Errorf("failed to list deployments: %w", err)
+	}
+	for _, deploy := range deployments.Items {
+		if deploy.Name != deploymentKey {
+			logger.Debugf("Queing old deployment %s for deletion", deploy.Name)
+			ret = append(ret, deploy.Name)
 		}
 	}
-
-	if deploymentExists {
-		go func() {
-
-			// Nasty hack, we want all the controllers to have updated their route tables before we kill the runner
-			// so we add a slight delay here
-			time.Sleep(time.Second * 10)
-			r.knownDeployments.Delete(deploymentKey)
-			logger.Debugf("Deleting service %s", module)
-			err = r.client.CoreV1().Services(r.namespace).Delete(ctx, deploymentKey, v1.DeleteOptions{})
+	// So hacky, all this needs to change when the provisioner is a proper schema observer
+	go func() {
+		time.Sleep(time.Second * 20)
+		for _, dep := range ret {
+			err = deploymentClient.Delete(delCtx, dep, v1.DeleteOptions{})
 			if err != nil {
-				if !errors.IsNotFound(err) {
-					logger.Errorf(err, "Failed to delete service %s", module)
-				}
+				logger.Errorf(err, "Failed to delete deployment %s", dep)
 			}
-		}()
-	}
-	return nil
+		}
+	}()
+	return ret, nil
 }
 
 func (r *k8sScaling) Start(ctx context.Context) error {
@@ -283,7 +271,7 @@ func (r *k8sScaling) thisContainerImage(ctx context.Context) (string, error) {
 	return thisDeployment.Spec.Template.Spec.Containers[0].Image, nil
 }
 
-func (r *k8sScaling) handleNewDeployment(ctx context.Context, module string, name string, sch *schema.Module) error {
+func (r *k8sScaling) handleNewDeployment(ctx context.Context, module string, name string, sch *schema.Module, cron bool, ingress bool) error {
 	logger := log.FromContext(ctx)
 
 	cm, err := r.client.CoreV1().ConfigMaps(r.namespace).Get(ctx, configMapName, v1.GetOptions{})
@@ -355,7 +343,7 @@ func (r *k8sScaling) handleNewDeployment(ctx context.Context, module string, nam
 
 	// Sync the istio policy if applicable
 	if sec, ok := r.istioSecurity.Get(); ok {
-		err = r.syncIstioPolicy(ctx, sec, module, name, service, controllerDeployment, provisionerDeployment, sch)
+		err = r.syncIstioPolicy(ctx, sec, module, name, service, controllerDeployment, provisionerDeployment, sch, cron, ingress)
 		if err != nil {
 			return err
 		}
@@ -548,7 +536,7 @@ func (r *k8sScaling) updateEnvVar(deployment *kubeapps.Deployment, envVerName st
 	return changes
 }
 
-func (r *k8sScaling) syncIstioPolicy(ctx context.Context, sec istioclient.Clientset, module string, name string, service *kubecore.Service, controllerDeployment *kubeapps.Deployment, provisionerDeployment *kubeapps.Deployment, sch *schema.Module) error {
+func (r *k8sScaling) syncIstioPolicy(ctx context.Context, sec istioclient.Clientset, module string, name string, service *kubecore.Service, controllerDeployment *kubeapps.Deployment, provisionerDeployment *kubeapps.Deployment, sch *schema.Module, hasCron bool, hasIngress bool) error {
 	logger := log.FromContext(ctx)
 	logger.Debugf("Creating new istio policy for %s", name)
 
@@ -580,15 +568,26 @@ func (r *k8sScaling) syncIstioPolicy(ctx context.Context, sec istioclient.Client
 		// At present we only allow ingress from the controller
 		policy.Spec.Selector = &v1beta1.WorkloadSelector{MatchLabels: map[string]string{"app": name}}
 		policy.Spec.Action = istiosecmodel.AuthorizationPolicy_ALLOW
+		principals := []string{
+			"cluster.local/ns/" + r.namespace + "/sa/" + controllerDeployment.Spec.Template.Spec.ServiceAccountName,
+			"cluster.local/ns/" + r.namespace + "/sa/" + provisionerDeployment.Spec.Template.Spec.ServiceAccountName,
+		}
+		// TODO: fix hard coded service account names
+		if hasIngress {
+			// Allow ingress from the ingress gateway
+			principals = append(principals, "cluster.local/ns/"+r.namespace+"/sa/ftl-http-ingress")
+		}
+
+		if hasCron {
+			// Allow cron invocations
+			principals = append(principals, "cluster.local/ns/"+r.namespace+"/sa/ftl-cron")
+		}
 		policy.Spec.Rules = []*istiosecmodel.Rule{
 			{
 				From: []*istiosecmodel.Rule_From{
 					{
 						Source: &istiosecmodel.Source{
-							Principals: []string{
-								"cluster.local/ns/" + r.namespace + "/sa/" + controllerDeployment.Spec.Template.Spec.ServiceAccountName,
-								"cluster.local/ns/" + r.namespace + "/sa/" + provisionerDeployment.Spec.Template.Spec.ServiceAccountName,
-							},
+							Principals: principals,
 						},
 					},
 				},
@@ -690,25 +689,6 @@ func (r *k8sScaling) waitForDeploymentReady(ctx context.Context, key string, tim
 		case <-watch.ResultChan():
 		}
 	}
-}
-
-func (r *k8sScaling) deleteOldDeployments(ctx context.Context, module string, deployment string) error {
-	logger := log.FromContext(ctx)
-	deploymentClient := r.client.AppsV1().Deployments(r.namespace)
-	deployments, err := deploymentClient.List(ctx, v1.ListOptions{LabelSelector: moduleLabel + "=" + module})
-	if err != nil {
-		return fmt.Errorf("failed to list deployments: %w", err)
-	}
-	for _, deploy := range deployments.Items {
-		if deploy.Name != deployment {
-			logger.Debugf("Deleting old deployment %s", deploy.Name)
-			err = deploymentClient.Delete(ctx, deploy.Name, v1.DeleteOptions{})
-			if err != nil {
-				logger.Errorf(err, "Failed to delete deployment %s", deploy.Name)
-			}
-		}
-	}
-	return nil
 }
 
 func extractTag(image string) (string, error) {

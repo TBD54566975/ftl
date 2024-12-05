@@ -50,7 +50,7 @@ type localScaling struct {
 	devModeEndpoints        map[string]*devModeRunner
 }
 
-func (l *localScaling) StartDeployment(ctx context.Context, module string, deployment string, sch *schema.Module) error {
+func (l *localScaling) StartDeployment(ctx context.Context, module string, deployment string, sch *schema.Module, hasCron bool, hasIngress bool) error {
 	if sch.Runtime == nil {
 		return nil
 	}
@@ -83,8 +83,21 @@ func (l *localScaling) setReplicas(module string, deployment string, language st
 	return l.reconcileRunners(ctx, deploymentRunners)
 }
 
-func (l *localScaling) TerminateDeployment(ctx context.Context, module string, deployment string) error {
-	return l.setReplicas(module, deployment, "", 0)
+func (l *localScaling) TerminatePreviousDeployments(ctx context.Context, module string, deployment string) ([]string, error) {
+	logger := log.FromContext(ctx)
+	var ret []string
+	// So hacky, all this needs to change when the provisioner is a proper schema observer
+	logger.Debugf("Terminating previous deployments for %s", deployment)
+	for dep := range l.runners[module] {
+		if dep != deployment {
+			ret = append(ret, dep)
+			logger.Debugf("Terminating deployment %s", dep)
+			if err := l.setReplicas(module, dep, "", 0); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return ret, nil
 }
 
 type devModeRunner struct {
