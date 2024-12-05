@@ -39,6 +39,7 @@ type localScaling struct {
 	// Module -> Port, most recent runner is present in the map
 	portAllocator       *bind.BindAllocator
 	controllerAddresses []*url.URL
+	leaseAddress        *url.URL
 
 	prevRunnerSuffix int
 	ideSupport       optional.Option[localdebug.IDEIntegration]
@@ -182,6 +183,7 @@ func NewLocalScaling(
 	ctx context.Context,
 	portAllocator *bind.BindAllocator,
 	controllerAddresses []*url.URL,
+	leaseAddress *url.URL,
 	configPath string,
 	enableIDEIntegration bool,
 	storage *artefacts.OCIArtefactService,
@@ -199,6 +201,7 @@ func NewLocalScaling(
 		runners:                 map[string]map[string]*deploymentInfo{},
 		portAllocator:           portAllocator,
 		controllerAddresses:     controllerAddresses,
+		leaseAddress:            leaseAddress,
 		prevRunnerSuffix:        -1,
 		debugPorts:              map[string]*localdebug.DebugInfo{},
 		storage:                 storage,
@@ -297,6 +300,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey model.Depl
 	config := runner.Config{
 		Bind:               bind,
 		ControllerEndpoint: controllerEndpoint,
+		LeaseEndpoint:      l.leaseAddress,
 		Key:                model.NewLocalRunnerKey(keySuffix),
 		Deployment:         deploymentKey,
 		DebugPort:          debugPort,

@@ -236,7 +236,6 @@ WHERE id = @id;
 SELECT *
 FROM async_calls
 WHERE state = 'executing'
-  AND lease_id IS NULL
 ORDER BY created_at ASC
 LIMIT sqlc.arg('limit')::INT;
 
@@ -253,19 +252,12 @@ WITH pending_calls AS (
   FROM pending_calls
   LIMIT 1
   FOR UPDATE SKIP LOCKED
-), lease AS (
-  INSERT INTO leases (idempotency_key, key, expires_at)
-  SELECT gen_random_uuid(), '/system/async_call/' || (SELECT id FROM async_call), (NOW() AT TIME ZONE 'utc') + @ttl::interval
-  WHERE (SELECT id FROM async_call) IS NOT NULL
-  RETURNING *
 )
 UPDATE async_calls
-SET state = 'executing', lease_id = (SELECT id FROM lease)
+SET state = 'executing'
 WHERE id = (SELECT id FROM async_call)
 RETURNING
   id AS async_call_id,
-  (SELECT idempotency_key FROM lease) AS lease_idempotency_key,
-  (SELECT key FROM lease) AS lease_key,
   (SELECT count(*) FROM pending_calls) AS queue_depth,
   origin,
   verb,

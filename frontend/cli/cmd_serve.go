@@ -23,6 +23,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/cron"
 	"github.com/TBD54566975/ftl/backend/ingress"
+	"github.com/TBD54566975/ftl/backend/lease"
 	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -65,6 +66,7 @@ type serveCommonConfig struct {
 	DisableGrafana      bool                 `help:"Disable the automatic Grafana that is started if no telemetry collector is specified." default:"false"`
 	Ingress             ingress.Config       `embed:"" prefix:"ingress-"`
 	Timeline            timeline.Config      `embed:"" prefix:"timeline-"`
+	Lease               lease.Config         `embed:"" prefix:"lease-"`
 	Recreate            bool                 `help:"Recreate any stateful resources if they already exist." default:"false"`
 	controller.CommonConfig
 	provisioner.CommonProvisionerConfig
@@ -214,6 +216,7 @@ func (s *serveCommonConfig) run(
 		ctx,
 		bindAllocator,
 		controllerAddresses,
+		s.Lease.Bind,
 		projConfig.Path,
 		devMode && !projConfig.DisableIDEIntegration,
 		storage,
@@ -339,6 +342,14 @@ func (s *serveCommonConfig) run(
 		err := ingress.Start(ctx, s.Ingress, schemaEventSourceFactory(), routeManager)
 		if err != nil {
 			return fmt.Errorf("ingress failed: %w", err)
+		}
+		return nil
+	})
+	// Start Leases
+	wg.Go(func() error {
+		err := lease.Start(ctx, s.Lease)
+		if err != nil {
+			return fmt.Errorf("lease failed: %w", err)
 		}
 		return nil
 	})

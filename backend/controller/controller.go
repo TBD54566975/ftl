@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -39,7 +40,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
-	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
@@ -47,8 +47,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
 	deploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
-	ftllease "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1"
-	leaseconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
@@ -165,7 +163,6 @@ func Start(
 		return rpc.Serve(ctx, config.Bind,
 			rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 			rpc.GRPC(deploymentconnect.NewDeploymentServiceHandler, svc),
-			rpc.GRPC(leaseconnect.NewLeaseServiceHandler, svc),
 			rpc.GRPC(ftlv1connect.NewControllerServiceHandler, svc),
 			rpc.GRPC(ftlv1connect.NewSchemaServiceHandler, svc),
 			rpc.GRPC(ftlv1connect.NewAdminServiceHandler, admin),
@@ -196,7 +193,7 @@ type ControllerListListener interface {
 
 type Service struct {
 	conn               *sql.DB
-	dbleaser           *dbleaser.DatabaseLeaser
+	leaser             leases.Leaser
 	dal                *dal.DAL
 	key                model.ControllerKey
 	deploymentLogsSink *deploymentLogsSink
@@ -243,8 +240,7 @@ func New(
 		config.RunnerTimeout = time.Second * 5
 		config.ControllerTimeout = time.Second * 5
 	}
-
-	ldb := dbleaser.NewDatabaseLeaser(conn)
+	
 	scheduler := scheduledtask.New(ctx, key, ldb)
 
 	routingTable := routing.New(ctx, schemaeventsource.New(ctx, rpc.Dial[ftlv1connect.SchemaServiceClient](ftlv1connect.NewSchemaServiceClient, config.Bind.String(), log.Error)))
@@ -253,7 +249,7 @@ func New(
 		cm:                      cm,
 		sm:                      sm,
 		tasks:                   scheduler,
-		dbleaser:                ldb,
+		leaser:                  ldb,
 		conn:                    conn,
 		key:                     key,
 		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
@@ -312,11 +308,6 @@ func New(
 
 	// Parallel tasks.
 	parallelTask(svc.executeAsyncCalls, "execute-async-calls", time.Second, time.Second*5, time.Second*10)
-
-	// This should be a singleton task, but because this is the task that
-	// actually expires the leases used to run singleton tasks, it must be
-	// parallel.
-	parallelTask(svc.expireStaleLeases, "expire-stale-leases", time.Second*2, time.Second, time.Second*5)
 
 	// Singleton tasks use leases to only run on a single controller.
 	singletonTask(svc.reapStaleRunners, "reap-stale-runners", time.Second*2, time.Second, time.Second*10)
@@ -829,36 +820,6 @@ func hashRoutesTable(h hash.Hash, m map[string]string) error {
 	return nil
 }
 
-// AcquireLease acquires a lease on behalf of a module.
-//
-// This is a bidirectional stream where each request from the client must be
-// responded to with an empty response.
-func (s *Service) AcquireLease(ctx context.Context, stream *connect.BidiStream[ftllease.AcquireLeaseRequest, ftllease.AcquireLeaseResponse]) error {
-	var lease leases.Lease
-	for {
-		msg, err := stream.Receive()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				return nil
-			}
-			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not receive lease request: %w", err))
-		}
-		if lease == nil {
-			lease, _, err = s.dbleaser.AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration(), optional.None[any]())
-			if err != nil {
-				if errors.Is(err, leases.ErrConflict) {
-					return connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("lease is held: %w", err))
-				}
-				return connect.NewError(connect.CodeInternal, fmt.Errorf("could not acquire lease: %w", err))
-			}
-			defer lease.Release() //nolint:errcheck
-		}
-		if err = stream.Send(&ftllease.AcquireLeaseResponse{}); err != nil {
-			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not send lease response: %w", err))
-		}
-	}
-}
-
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
 	return s.callWithRequest(ctx, headers.CopyRequestForForwarding(req), optional.None[model.RequestKey](), optional.None[model.RequestKey](), "")
 }
@@ -1304,8 +1265,6 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 				break
 			}
 		}
-
-		call.Release() //nolint:errcheck
 	}()
 
 	logger = logger.Scope(fmt.Sprintf("%s:%s", call.Origin, call.Verb)).Module(call.Verb.Module)
@@ -1490,14 +1449,6 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.DAL, call *dal.
 		panic(fmt.Errorf("unsupported async call origin: %v", call.Origin))
 	}
 	return nil
-}
-
-func (s *Service) expireStaleLeases(ctx context.Context) (time.Duration, error) {
-	err := s.dbleaser.ExpireLeases(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("failed to expire leases: %w", err)
-	}
-	return time.Second * 1, nil
 }
 
 func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(response *ftlv1.PullSchemaResponse) error) error {
