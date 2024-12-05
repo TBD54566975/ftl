@@ -4,6 +4,7 @@ package xyz.block.ftl.v1;
 
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
+import "xyz/block/ftl/artefacts/v1/artefacts.proto";
 import "xyz/block/ftl/schema/v1/schema.proto";
 import "xyz/block/ftl/v1/ftl.proto";
 
@@ -36,25 +37,12 @@ message GetArtefactDiffsRequest {
 message GetArtefactDiffsResponse {
   repeated string missing_digests = 1;
   // Artefacts that the client already has, and their path+executable status.
-  repeated DeploymentArtefact client_artefacts = 2;
-}
-
-message UploadArtefactRequest {
-  bytes content = 1;
-}
-message UploadArtefactResponse {
-  bytes digest = 2;
-}
-
-message DeploymentArtefact {
-  string digest = 1;
-  string path = 2;
-  bool executable = 3;
+  repeated artefacts.v1.DeploymentArtefact client_artefacts = 2;
 }
 
 message CreateDeploymentRequest {
   ftl.schema.v1.Module schema = 1;
-  repeated DeploymentArtefact artefacts = 2;
+  repeated artefacts.v1.DeploymentArtefact artefacts = 2;
 }
 message CreateDeploymentResponse {
   string deployment_key = 1;
@@ -64,10 +52,10 @@ message CreateDeploymentResponse {
 
 message GetDeploymentArtefactsRequest {
   string deployment_key = 1;
-  repeated DeploymentArtefact have_artefacts = 2;
+  repeated artefacts.v1.DeploymentArtefact have_artefacts = 2;
 }
 message GetDeploymentArtefactsResponse {
-  DeploymentArtefact artefact = 1;
+  artefacts.v1.DeploymentArtefact artefact = 1;
   bytes chunk = 2;
 }
 
@@ -76,7 +64,7 @@ message GetDeploymentRequest {
 }
 message GetDeploymentResponse {
   ftl.schema.v1.Module schema = 1;
-  repeated DeploymentArtefact artefacts = 2;
+  repeated artefacts.v1.DeploymentArtefact artefacts = 2;
 }
 
 message RegisterRunnerRequest {
@@ -184,9 +172,6 @@ service ControllerService {
 
   // Get list of artefacts that differ between the server and client.
   rpc GetArtefactDiffs(GetArtefactDiffsRequest) returns (GetArtefactDiffsResponse);
-
-  // Upload an artefact to the server.
-  rpc UploadArtefact(UploadArtefactRequest) returns (UploadArtefactResponse);
 
   // Create a deployment.
   rpc CreateDeployment(CreateDeploymentRequest) returns (CreateDeploymentResponse);

@@ -1,3 +1,4 @@
+from xyz.block.ftl.artefacts.v1 import artefacts_pb2 as _artefacts_pb2
 from xyz.block.ftl.v1 import controller_pb2 as _controller_pb2
 from xyz.block.ftl.v1 import ftl_pb2 as _ftl_pb2
 from google.protobuf import descriptor as _descriptor

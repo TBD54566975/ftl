@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package xyz.block.ftl.artefacts.v1;
+
+import "xyz/block/ftl/v1/ftl.proto";
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/artefacts/v1;artefactspb";
+option java_multiple_files = true;
+
+message UploadArtefactRequest {
+  bytes content = 1;
+}
+message UploadArtefactResponse {
+  bytes digest = 2;
+}
+
+message DeploymentArtefact {
+  string digest = 1;
+  string path = 2;
+  bool executable = 3;
+}
+
+message GetArtefactDiffsRequest {
+  repeated string client_digests = 1;
+}
+message GetArtefactDiffsResponse {
+  repeated string missing_digests = 1;
+  // Artefacts that the client already has, and their path+executable status.
+  repeated DeploymentArtefact client_artefacts = 2;
+}
+
+service ArtefactsService {
+  // Ping service for readiness.
+  rpc Ping(ftl.v1.PingRequest) returns (ftl.v1.PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Upload an artefact to the server.
+  rpc UploadArtefact(UploadArtefactRequest) returns (UploadArtefactResponse);
+}

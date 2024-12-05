@@ -1,5 +1,6 @@
 from google.protobuf import struct_pb2 as _struct_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from xyz.block.ftl.artefacts.v1 import artefacts_pb2 as _artefacts_pb2
 from xyz.block.ftl.schema.v1 import schema_pb2 as _schema_pb2
 from xyz.block.ftl.v1 import ftl_pb2 as _ftl_pb2
 from google.protobuf.internal import containers as _containers
@@ -50,38 +51,16 @@ class GetArtefactDiffsResponse(_message.Message):
     MISSING_DIGESTS_FIELD_NUMBER: _ClassVar[int]
     CLIENT_ARTEFACTS_FIELD_NUMBER: _ClassVar[int]
     missing_digests: _containers.RepeatedScalarFieldContainer[str]
-    client_artefacts: _containers.RepeatedCompositeFieldContainer[DeploymentArtefact]
-    def __init__(self, missing_digests: _Optional[_Iterable[str]] = ..., client_artefacts: _Optional[_Iterable[_Union[DeploymentArtefact, _Mapping]]] = ...) -> None: ...
-
-class UploadArtefactRequest(_message.Message):
-    __slots__ = ("content",)
-    CONTENT_FIELD_NUMBER: _ClassVar[int]
-    content: bytes
-    def __init__(self, content: _Optional[bytes] = ...) -> None: ...
-
-class UploadArtefactResponse(_message.Message):
-    __slots__ = ("digest",)
-    DIGEST_FIELD_NUMBER: _ClassVar[int]
-    digest: bytes
-    def __init__(self, digest: _Optional[bytes] = ...) -> None: ...
-
-class DeploymentArtefact(_message.Message):
-    __slots__ = ("digest", "path", "executable")
-    DIGEST_FIELD_NUMBER: _ClassVar[int]
-    PATH_FIELD_NUMBER: _ClassVar[int]
-    EXECUTABLE_FIELD_NUMBER: _ClassVar[int]
-    digest: str
-    path: str
-    executable: bool
-    def __init__(self, digest: _Optional[str] = ..., path: _Optional[str] = ..., executable: bool = ...) -> None: ...
+    client_artefacts: _containers.RepeatedCompositeFieldContainer[_artefacts_pb2.DeploymentArtefact]
+    def __init__(self, missing_digests: _Optional[_Iterable[str]] = ..., client_artefacts: _Optional[_Iterable[_Union[_artefacts_pb2.DeploymentArtefact, _Mapping]]] = ...) -> None: ...
 
 class CreateDeploymentRequest(_message.Message):
     __slots__ = ("schema", "artefacts")
     SCHEMA_FIELD_NUMBER: _ClassVar[int]
     ARTEFACTS_FIELD_NUMBER: _ClassVar[int]
     schema: _schema_pb2.Module
-    artefacts: _containers.RepeatedCompositeFieldContainer[DeploymentArtefact]
-    def __init__(self, schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., artefacts: _Optional[_Iterable[_Union[DeploymentArtefact, _Mapping]]] = ...) -> None: ...
+    artefacts: _containers.RepeatedCompositeFieldContainer[_artefacts_pb2.DeploymentArtefact]
+    def __init__(self, schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., artefacts: _Optional[_Iterable[_Union[_artefacts_pb2.DeploymentArtefact, _Mapping]]] = ...) -> None: ...
 
 class CreateDeploymentResponse(_message.Message):
     __slots__ = ("deployment_key", "active_deployment_key")
@@ -96,16 +75,16 @@ class GetDeploymentArtefactsRequest(_message.Message):
     DEPLOYMENT_KEY_FIELD_NUMBER: _ClassVar[int]
     HAVE_ARTEFACTS_FIELD_NUMBER: _ClassVar[int]
     deployment_key: str
-    have_artefacts: _containers.RepeatedCompositeFieldContainer[DeploymentArtefact]
-    def __init__(self, deployment_key: _Optional[str] = ..., have_artefacts: _Optional[_Iterable[_Union[DeploymentArtefact, _Mapping]]] = ...) -> None: ...
+    have_artefacts: _containers.RepeatedCompositeFieldContainer[_artefacts_pb2.DeploymentArtefact]
+    def __init__(self, deployment_key: _Optional[str] = ..., have_artefacts: _Optional[_Iterable[_Union[_artefacts_pb2.DeploymentArtefact, _Mapping]]] = ...) -> None: ...
 
 class GetDeploymentArtefactsResponse(_message.Message):
     __slots__ = ("artefact", "chunk")
     ARTEFACT_FIELD_NUMBER: _ClassVar[int]
     CHUNK_FIELD_NUMBER: _ClassVar[int]
-    artefact: DeploymentArtefact
+    artefact: _artefacts_pb2.DeploymentArtefact
     chunk: bytes
-    def __init__(self, artefact: _Optional[_Union[DeploymentArtefact, _Mapping]] = ..., chunk: _Optional[bytes] = ...) -> None: ...
+    def __init__(self, artefact: _Optional[_Union[_artefacts_pb2.DeploymentArtefact, _Mapping]] = ..., chunk: _Optional[bytes] = ...) -> None: ...
 
 class GetDeploymentRequest(_message.Message):
     __slots__ = ("deployment_key",)
@@ -118,8 +97,8 @@ class GetDeploymentResponse(_message.Message):
     SCHEMA_FIELD_NUMBER: _ClassVar[int]
     ARTEFACTS_FIELD_NUMBER: _ClassVar[int]
     schema: _schema_pb2.Module
-    artefacts: _containers.RepeatedCompositeFieldContainer[DeploymentArtefact]
-    def __init__(self, schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., artefacts: _Optional[_Iterable[_Union[DeploymentArtefact, _Mapping]]] = ...) -> None: ...
+    artefacts: _containers.RepeatedCompositeFieldContainer[_artefacts_pb2.DeploymentArtefact]
+    def __init__(self, schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., artefacts: _Optional[_Iterable[_Union[_artefacts_pb2.DeploymentArtefact, _Mapping]]] = ...) -> None: ...
 
 class RegisterRunnerRequest(_message.Message):
     __slots__ = ("key", "endpoint", "deployment", "labels")

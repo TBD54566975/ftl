@@ -33,7 +33,6 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/admin"
-	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/controller/async"
 	"github.com/TBD54566975/ftl/backend/controller/console"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
@@ -45,6 +44,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/timeline"
+	"github.com/TBD54566975/ftl/backend/internal/artefacts"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
@@ -204,7 +204,7 @@ type Service struct {
 
 	tasks                   *scheduledtask.Scheduler
 	pubSub                  *pubsub.Service
-	registry                artefacts.Service
+	registry                *artefacts.OCIArtefactService
 	timeline                *timeline.Service
 	controllerListListeners []ControllerListListener
 
@@ -251,6 +251,11 @@ func New(
 	ldb := dbleaser.NewDatabaseLeaser(conn)
 	scheduler := scheduledtask.New(ctx, key, ldb)
 
+	storage, err := artefacts.NewOCIRegistryStorage(config.Registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OCI registry storage: %w", err)
+	}
+
 	svc := &Service{
 		cm:                      cm,
 		sm:                      sm,
@@ -258,17 +263,12 @@ func New(
 		dbleaser:                ldb,
 		conn:                    conn,
 		key:                     key,
+		registry:                storage,
 		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
 		config:                  config,
 		increaseReplicaFailures: map[string]int{},
 	}
 	svc.schemaState.Store(schemaState{routes: map[string]Route{}, schema: &schema.Schema{}})
-
-	storage, err := artefacts.NewOCIRegistryStorage(config.Registry)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OCI registry storage: %w", err)
-	}
-	svc.registry = storage
 
 	timelineSvc := timeline.New(ctx, conn, encryption)
 	svc.timeline = timelineSvc
@@ -1003,16 +1003,6 @@ func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftl
 	return connect.NewResponse(&ftlv1.GetArtefactDiffsResponse{
 		MissingDigests: slices.Map(need, func(s sha256.SHA256) string { return s.String() }),
 	}), nil
-}
-
-func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1.UploadArtefactRequest]) (*connect.Response[ftlv1.UploadArtefactResponse], error) {
-	logger := log.FromContext(ctx)
-	digest, err := s.registry.Upload(ctx, artefacts.Artefact{Content: req.Msg.Content})
-	if err != nil {
-		return nil, err
-	}
-	logger.Debugf("Created new artefact %s", digest)
-	return connect.NewResponse(&ftlv1.UploadArtefactResponse{Digest: digest[:]}), nil
 }
 
 func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftlv1.CreateDeploymentRequest]) (*connect.Response[ftlv1.CreateDeploymentResponse], error) {

@@ -5,7 +5,8 @@
 
 import { PingRequest, PingResponse } from "../../v1/ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, ReplaceDeployRequest, ReplaceDeployResponse, StatusRequest, StatusResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "../../v1/controller_pb.js";
+import { CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, ReplaceDeployRequest, ReplaceDeployResponse, StatusRequest, StatusResponse, UpdateDeployRequest, UpdateDeployResponse } from "../../v1/controller_pb.js";
+import { UploadArtefactRequest, UploadArtefactResponse } from "../../artefacts/v1/artefacts_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.provisioner.v1beta1.ProvisionerService

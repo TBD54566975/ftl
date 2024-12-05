@@ -6,7 +6,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
 import { DatabaseRuntime, Module, Ref } from "../../schema/v1/schema_pb.js";
-import { DeploymentArtefact } from "../../v1/controller_pb.js";
+import { DeploymentArtefact } from "../../artefacts/v1/artefacts_pb.js";
 
 /**
  * Resource is an abstract resource extracted from FTL Schema.
@@ -266,7 +266,7 @@ export class ModuleResource extends Message<ModuleResource> {
   schema?: Module;
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.DeploymentArtefact artefacts = 3;
+   * @generated from field: repeated xyz.block.ftl.artefacts.v1.DeploymentArtefact artefacts = 3;
    */
   artefacts: DeploymentArtefact[] = [];
 

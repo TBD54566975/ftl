@@ -8,6 +8,7 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
+	v11 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/artefacts/v1"
 	_ "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
 	v1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	http "net/http"
@@ -62,7 +63,7 @@ type ProvisionerServiceClient interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	Status(context.Context, *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error)
 	GetArtefactDiffs(context.Context, *connect.Request[v1.GetArtefactDiffsRequest]) (*connect.Response[v1.GetArtefactDiffsResponse], error)
-	UploadArtefact(context.Context, *connect.Request[v1.UploadArtefactRequest]) (*connect.Response[v1.UploadArtefactResponse], error)
+	UploadArtefact(context.Context, *connect.Request[v11.UploadArtefactRequest]) (*connect.Response[v11.UploadArtefactResponse], error)
 	CreateDeployment(context.Context, *connect.Request[v1.CreateDeploymentRequest]) (*connect.Response[v1.CreateDeploymentResponse], error)
 	UpdateDeploy(context.Context, *connect.Request[v1.UpdateDeployRequest]) (*connect.Response[v1.UpdateDeployResponse], error)
 	ReplaceDeploy(context.Context, *connect.Request[v1.ReplaceDeployRequest]) (*connect.Response[v1.ReplaceDeployResponse], error)
@@ -95,7 +96,7 @@ func NewProvisionerServiceClient(httpClient connect.HTTPClient, baseURL string, 
 			baseURL+ProvisionerServiceGetArtefactDiffsProcedure,
 			opts...,
 		),
-		uploadArtefact: connect.NewClient[v1.UploadArtefactRequest, v1.UploadArtefactResponse](
+		uploadArtefact: connect.NewClient[v11.UploadArtefactRequest, v11.UploadArtefactResponse](
 			httpClient,
 			baseURL+ProvisionerServiceUploadArtefactProcedure,
 			opts...,
@@ -123,7 +124,7 @@ type provisionerServiceClient struct {
 	ping             *connect.Client[v1.PingRequest, v1.PingResponse]
 	status           *connect.Client[v1.StatusRequest, v1.StatusResponse]
 	getArtefactDiffs *connect.Client[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse]
-	uploadArtefact   *connect.Client[v1.UploadArtefactRequest, v1.UploadArtefactResponse]
+	uploadArtefact   *connect.Client[v11.UploadArtefactRequest, v11.UploadArtefactResponse]
 	createDeployment *connect.Client[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse]
 	updateDeploy     *connect.Client[v1.UpdateDeployRequest, v1.UpdateDeployResponse]
 	replaceDeploy    *connect.Client[v1.ReplaceDeployRequest, v1.ReplaceDeployResponse]
@@ -145,7 +146,7 @@ func (c *provisionerServiceClient) GetArtefactDiffs(ctx context.Context, req *co
 }
 
 // UploadArtefact calls xyz.block.ftl.provisioner.v1beta1.ProvisionerService.UploadArtefact.
-func (c *provisionerServiceClient) UploadArtefact(ctx context.Context, req *connect.Request[v1.UploadArtefactRequest]) (*connect.Response[v1.UploadArtefactResponse], error) {
+func (c *provisionerServiceClient) UploadArtefact(ctx context.Context, req *connect.Request[v11.UploadArtefactRequest]) (*connect.Response[v11.UploadArtefactResponse], error) {
 	return c.uploadArtefact.CallUnary(ctx, req)
 }
 
@@ -170,7 +171,7 @@ type ProvisionerServiceHandler interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	Status(context.Context, *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error)
 	GetArtefactDiffs(context.Context, *connect.Request[v1.GetArtefactDiffsRequest]) (*connect.Response[v1.GetArtefactDiffsResponse], error)
-	UploadArtefact(context.Context, *connect.Request[v1.UploadArtefactRequest]) (*connect.Response[v1.UploadArtefactResponse], error)
+	UploadArtefact(context.Context, *connect.Request[v11.UploadArtefactRequest]) (*connect.Response[v11.UploadArtefactResponse], error)
 	CreateDeployment(context.Context, *connect.Request[v1.CreateDeploymentRequest]) (*connect.Response[v1.CreateDeploymentResponse], error)
 	UpdateDeploy(context.Context, *connect.Request[v1.UpdateDeployRequest]) (*connect.Response[v1.UpdateDeployResponse], error)
 	ReplaceDeploy(context.Context, *connect.Request[v1.ReplaceDeployRequest]) (*connect.Response[v1.ReplaceDeployResponse], error)
@@ -255,7 +256,7 @@ func (UnimplementedProvisionerServiceHandler) GetArtefactDiffs(context.Context, 
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.provisioner.v1beta1.ProvisionerService.GetArtefactDiffs is not implemented"))
 }
 
-func (UnimplementedProvisionerServiceHandler) UploadArtefact(context.Context, *connect.Request[v1.UploadArtefactRequest]) (*connect.Response[v1.UploadArtefactResponse], error) {
+func (UnimplementedProvisionerServiceHandler) UploadArtefact(context.Context, *connect.Request[v11.UploadArtefactRequest]) (*connect.Response[v11.UploadArtefactResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.provisioner.v1beta1.ProvisionerService.UploadArtefact is not implemented"))
 }
 

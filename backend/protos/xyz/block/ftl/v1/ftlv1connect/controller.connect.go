@@ -47,9 +47,6 @@ const (
 	// ControllerServiceGetArtefactDiffsProcedure is the fully-qualified name of the ControllerService's
 	// GetArtefactDiffs RPC.
 	ControllerServiceGetArtefactDiffsProcedure = "/xyz.block.ftl.v1.ControllerService/GetArtefactDiffs"
-	// ControllerServiceUploadArtefactProcedure is the fully-qualified name of the ControllerService's
-	// UploadArtefact RPC.
-	ControllerServiceUploadArtefactProcedure = "/xyz.block.ftl.v1.ControllerService/UploadArtefact"
 	// ControllerServiceCreateDeploymentProcedure is the fully-qualified name of the ControllerService's
 	// CreateDeployment RPC.
 	ControllerServiceCreateDeploymentProcedure = "/xyz.block.ftl.v1.ControllerService/CreateDeployment"
@@ -87,8 +84,6 @@ type ControllerServiceClient interface {
 	GetCertification(context.Context, *connect.Request[v1.GetCertificationRequest]) (*connect.Response[v1.GetCertificationResponse], error)
 	// Get list of artefacts that differ between the server and client.
 	GetArtefactDiffs(context.Context, *connect.Request[v1.GetArtefactDiffsRequest]) (*connect.Response[v1.GetArtefactDiffsResponse], error)
-	// Upload an artefact to the server.
-	UploadArtefact(context.Context, *connect.Request[v1.UploadArtefactRequest]) (*connect.Response[v1.UploadArtefactResponse], error)
 	// Create a deployment.
 	CreateDeployment(context.Context, *connect.Request[v1.CreateDeploymentRequest]) (*connect.Response[v1.CreateDeploymentResponse], error)
 	// Get the schema and artefact metadata for a deployment.
@@ -152,11 +147,6 @@ func NewControllerServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			baseURL+ControllerServiceGetArtefactDiffsProcedure,
 			opts...,
 		),
-		uploadArtefact: connect.NewClient[v1.UploadArtefactRequest, v1.UploadArtefactResponse](
-			httpClient,
-			baseURL+ControllerServiceUploadArtefactProcedure,
-			opts...,
-		),
 		createDeployment: connect.NewClient[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse](
 			httpClient,
 			baseURL+ControllerServiceCreateDeploymentProcedure,
@@ -207,7 +197,6 @@ type controllerServiceClient struct {
 	status                 *connect.Client[v1.StatusRequest, v1.StatusResponse]
 	getCertification       *connect.Client[v1.GetCertificationRequest, v1.GetCertificationResponse]
 	getArtefactDiffs       *connect.Client[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse]
-	uploadArtefact         *connect.Client[v1.UploadArtefactRequest, v1.UploadArtefactResponse]
 	createDeployment       *connect.Client[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse]
 	getDeployment          *connect.Client[v1.GetDeploymentRequest, v1.GetDeploymentResponse]
 	getDeploymentArtefacts *connect.Client[v1.GetDeploymentArtefactsRequest, v1.GetDeploymentArtefactsResponse]
@@ -241,11 +230,6 @@ func (c *controllerServiceClient) GetCertification(ctx context.Context, req *con
 // GetArtefactDiffs calls xyz.block.ftl.v1.ControllerService.GetArtefactDiffs.
 func (c *controllerServiceClient) GetArtefactDiffs(ctx context.Context, req *connect.Request[v1.GetArtefactDiffsRequest]) (*connect.Response[v1.GetArtefactDiffsResponse], error) {
 	return c.getArtefactDiffs.CallUnary(ctx, req)
-}
-
-// UploadArtefact calls xyz.block.ftl.v1.ControllerService.UploadArtefact.
-func (c *controllerServiceClient) UploadArtefact(ctx context.Context, req *connect.Request[v1.UploadArtefactRequest]) (*connect.Response[v1.UploadArtefactResponse], error) {
-	return c.uploadArtefact.CallUnary(ctx, req)
 }
 
 // CreateDeployment calls xyz.block.ftl.v1.ControllerService.CreateDeployment.
@@ -299,8 +283,6 @@ type ControllerServiceHandler interface {
 	GetCertification(context.Context, *connect.Request[v1.GetCertificationRequest]) (*connect.Response[v1.GetCertificationResponse], error)
 	// Get list of artefacts that differ between the server and client.
 	GetArtefactDiffs(context.Context, *connect.Request[v1.GetArtefactDiffsRequest]) (*connect.Response[v1.GetArtefactDiffsResponse], error)
-	// Upload an artefact to the server.
-	UploadArtefact(context.Context, *connect.Request[v1.UploadArtefactRequest]) (*connect.Response[v1.UploadArtefactResponse], error)
 	// Create a deployment.
 	CreateDeployment(context.Context, *connect.Request[v1.CreateDeploymentRequest]) (*connect.Response[v1.CreateDeploymentResponse], error)
 	// Get the schema and artefact metadata for a deployment.
@@ -360,11 +342,6 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect.H
 		svc.GetArtefactDiffs,
 		opts...,
 	)
-	controllerServiceUploadArtefactHandler := connect.NewUnaryHandler(
-		ControllerServiceUploadArtefactProcedure,
-		svc.UploadArtefact,
-		opts...,
-	)
 	controllerServiceCreateDeploymentHandler := connect.NewUnaryHandler(
 		ControllerServiceCreateDeploymentProcedure,
 		svc.CreateDeployment,
@@ -417,8 +394,6 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect.H
 			controllerServiceGetCertificationHandler.ServeHTTP(w, r)
 		case ControllerServiceGetArtefactDiffsProcedure:
 			controllerServiceGetArtefactDiffsHandler.ServeHTTP(w, r)
-		case ControllerServiceUploadArtefactProcedure:
-			controllerServiceUploadArtefactHandler.ServeHTTP(w, r)
 		case ControllerServiceCreateDeploymentProcedure:
 			controllerServiceCreateDeploymentHandler.ServeHTTP(w, r)
 		case ControllerServiceGetDeploymentProcedure:
@@ -462,10 +437,6 @@ func (UnimplementedControllerServiceHandler) GetCertification(context.Context, *
 
 func (UnimplementedControllerServiceHandler) GetArtefactDiffs(context.Context, *connect.Request[v1.GetArtefactDiffsRequest]) (*connect.Response[v1.GetArtefactDiffsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.GetArtefactDiffs is not implemented"))
-}
-
-func (UnimplementedControllerServiceHandler) UploadArtefact(context.Context, *connect.Request[v1.UploadArtefactRequest]) (*connect.Response[v1.UploadArtefactResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.UploadArtefact is not implemented"))
 }
 
 func (UnimplementedControllerServiceHandler) CreateDeployment(context.Context, *connect.Request[v1.CreateDeploymentRequest]) (*connect.Response[v1.CreateDeploymentResponse], error) {

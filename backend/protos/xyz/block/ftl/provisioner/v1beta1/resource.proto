@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package xyz.block.ftl.provisioner.v1beta1;
 
+import "xyz/block/ftl/artefacts/v1/artefacts.proto";
 import "xyz/block/ftl/schema/v1/schema.proto";
-import "xyz/block/ftl/v1/controller.proto";
 
 option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1;provisionerpb";
 option java_multiple_files = true;
@@ -49,7 +49,7 @@ message ModuleResource {
   ModuleResourceOutput output = 1;
 
   ftl.schema.v1.Module schema = 2;
-  repeated ftl.v1.DeploymentArtefact artefacts = 3;
+  repeated artefacts.v1.DeploymentArtefact artefacts = 3;
 }
 
 message RunnerResource {

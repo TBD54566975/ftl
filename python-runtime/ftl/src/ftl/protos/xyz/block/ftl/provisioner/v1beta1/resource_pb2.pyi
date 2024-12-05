@@ -1,5 +1,5 @@
+from xyz.block.ftl.artefacts.v1 import artefacts_pb2 as _artefacts_pb2
 from xyz.block.ftl.schema.v1 import schema_pb2 as _schema_pb2
-from xyz.block.ftl.v1 import controller_pb2 as _controller_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -62,8 +62,8 @@ class ModuleResource(_message.Message):
     ARTEFACTS_FIELD_NUMBER: _ClassVar[int]
     output: ModuleResource.ModuleResourceOutput
     schema: _schema_pb2.Module
-    artefacts: _containers.RepeatedCompositeFieldContainer[_controller_pb2.DeploymentArtefact]
-    def __init__(self, output: _Optional[_Union[ModuleResource.ModuleResourceOutput, _Mapping]] = ..., schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., artefacts: _Optional[_Iterable[_Union[_controller_pb2.DeploymentArtefact, _Mapping]]] = ...) -> None: ...
+    artefacts: _containers.RepeatedCompositeFieldContainer[_artefacts_pb2.DeploymentArtefact]
+    def __init__(self, output: _Optional[_Union[ModuleResource.ModuleResourceOutput, _Mapping]] = ..., schema: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., artefacts: _Optional[_Iterable[_Union[_artefacts_pb2.DeploymentArtefact, _Mapping]]] = ...) -> None: ...
 
 class RunnerResource(_message.Message):
     __slots__ = ("output",)

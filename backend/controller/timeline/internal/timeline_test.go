@@ -12,8 +12,8 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	timeline2 "github.com/TBD54566975/ftl/backend/controller/timeline"
+	"github.com/TBD54566975/ftl/backend/internal/artefacts"
 
 	controllerdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"

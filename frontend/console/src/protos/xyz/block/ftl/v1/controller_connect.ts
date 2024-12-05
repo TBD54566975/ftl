@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetCertificationRequest, GetCertificationResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ProcessListRequest, ProcessListResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ResetSubscriptionRequest, ResetSubscriptionResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./controller_pb.js";
+import { CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetCertificationRequest, GetCertificationResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ProcessListRequest, ProcessListResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ResetSubscriptionRequest, ResetSubscriptionResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UpdateDeployRequest, UpdateDeployResponse } from "./controller_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.v1.ControllerService
@@ -65,17 +65,6 @@ export const ControllerService = {
       name: "GetArtefactDiffs",
       I: GetArtefactDiffsRequest,
       O: GetArtefactDiffsResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Upload an artefact to the server.
-     *
-     * @generated from rpc xyz.block.ftl.v1.ControllerService.UploadArtefact
-     */
-    uploadArtefact: {
-      name: "UploadArtefact",
-      I: UploadArtefactRequest,
-      O: UploadArtefactResponse,
       kind: MethodKind.Unary,
     },
     /**

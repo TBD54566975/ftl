@@ -22,11 +22,11 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from xyz.block.ftl.artefacts.v1 import artefacts_pb2 as xyz_dot_block_dot_ftl_dot_artefacts_dot_v1_dot_artefacts__pb2
 from xyz.block.ftl.schema.v1 import schema_pb2 as xyz_dot_block_dot_ftl_dot_schema_dot_v1_dot_schema__pb2
-from xyz.block.ftl.v1 import controller_pb2 as xyz_dot_block_dot_ftl_dot_v1_dot_controller__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n0xyz/block/ftl/provisioner/v1beta1/resource.proto\x12!xyz.block.ftl.provisioner.v1beta1\x1a$xyz/block/ftl/schema/v1/schema.proto\x1a!xyz/block/ftl/v1/controller.proto\"\xf7\x04\n\x08Resource\x12\x1f\n\x0bresource_id\x18\x01 \x01(\tR\nresourceId\x12Q\n\x08postgres\x18\x66 \x01(\x0b\x32\x33.xyz.block.ftl.provisioner.v1beta1.PostgresResourceH\x00R\x08postgres\x12H\n\x05mysql\x18g \x01(\x0b\x32\x30.xyz.block.ftl.provisioner.v1beta1.MysqlResourceH\x00R\x05mysql\x12K\n\x06module\x18h \x01(\x0b\x32\x31.xyz.block.ftl.provisioner.v1beta1.ModuleResourceH\x00R\x06module\x12^\n\rsql_migration\x18i \x01(\x0b\x32\x37.xyz.block.ftl.provisioner.v1beta1.SqlMigrationResourceH\x00R\x0csqlMigration\x12H\n\x05topic\x18j \x01(\x0b\x32\x30.xyz.block.ftl.provisioner.v1beta1.TopicResourceH\x00R\x05topic\x12]\n\x0csubscription\x18k \x01(\x0b\x32\x37.xyz.block.ftl.provisioner.v1beta1.SubscriptionResourceH\x00R\x0csubscription\x12K\n\x06runner\x18l \x01(\x0b\x32\x31.xyz.block.ftl.provisioner.v1beta1.RunnerResourceH\x00R\x06runnerB\n\n\x08resource\"T\n\x10PostgresResource\x12@\n\x06output\x18\x01 \x01(\x0b\x32(.xyz.block.ftl.schema.v1.DatabaseRuntimeR\x06output\"Q\n\rMysqlResource\x12@\n\x06output\x18\x01 \x01(\x0b\x32(.xyz.block.ftl.schema.v1.DatabaseRuntimeR\x06output\"\xb8\x01\n\x14SqlMigrationResource\x12j\n\x06output\x18\x01 \x01(\x0b\x32R.xyz.block.ftl.provisioner.v1beta1.SqlMigrationResource.SqlMigrationResourceOutputR\x06output\x12\x16\n\x06\x64igest\x18\x02 \x01(\tR\x06\x64igest\x1a\x1c\n\x1aSqlMigrationResourceOutput\"\xac\x02\n\x0eModuleResource\x12^\n\x06output\x18\x01 \x01(\x0b\x32\x46.xyz.block.ftl.provisioner.v1beta1.ModuleResource.ModuleResourceOutputR\x06output\x12\x37\n\x06schema\x18\x02 \x01(\x0b\x32\x1f.xyz.block.ftl.schema.v1.ModuleR\x06schema\x12\x42\n\tartefacts\x18\x03 \x03(\x0b\x32$.xyz.block.ftl.v1.DeploymentArtefactR\tartefacts\x1a=\n\x14ModuleResourceOutput\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\"\xce\x01\n\x0eRunnerResource\x12^\n\x06output\x18\x01 \x01(\x0b\x32\x46.xyz.block.ftl.provisioner.v1beta1.RunnerResource.RunnerResourceOutputR\x06output\x1a\\\n\x14RunnerResourceOutput\x12\x1d\n\nrunner_uri\x18\x01 \x01(\tR\trunnerUri\x12%\n\x0e\x64\x65ployment_key\x18\x02 \x01(\tR\rdeploymentKey\"\xc4\x01\n\rTopicResource\x12\\\n\x06output\x18\x01 \x01(\x0b\x32\x44.xyz.block.ftl.provisioner.v1beta1.TopicResource.TopicResourceOutputR\x06output\x1aU\n\x13TopicResourceOutput\x12#\n\rkafka_brokers\x18\x01 \x03(\tR\x0ckafkaBrokers\x12\x19\n\x08topic_id\x18\x02 \x01(\tR\x07topicId\"\xc1\x02\n\x14SubscriptionResource\x12j\n\x06output\x18\x01 \x01(\x0b\x32R.xyz.block.ftl.provisioner.v1beta1.SubscriptionResource.SubscriptionResourceOutputR\x06output\x12\x32\n\x05topic\x18\x02 \x01(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\x05topic\x1a\x88\x01\n\x1aSubscriptionResourceOutput\x12#\n\rkafka_brokers\x18\x01 \x03(\tR\x0ckafkaBrokers\x12\x19\n\x08topic_id\x18\x02 \x01(\tR\x07topicId\x12*\n\x11\x63onsumer_group_id\x18\x03 \x01(\tR\x0f\x63onsumerGroupIdB]P\x01ZYgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1;provisionerpbb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n0xyz/block/ftl/provisioner/v1beta1/resource.proto\x12!xyz.block.ftl.provisioner.v1beta1\x1a*xyz/block/ftl/artefacts/v1/artefacts.proto\x1a$xyz/block/ftl/schema/v1/schema.proto\"\xf7\x04\n\x08Resource\x12\x1f\n\x0bresource_id\x18\x01 \x01(\tR\nresourceId\x12Q\n\x08postgres\x18\x66 \x01(\x0b\x32\x33.xyz.block.ftl.provisioner.v1beta1.PostgresResourceH\x00R\x08postgres\x12H\n\x05mysql\x18g \x01(\x0b\x32\x30.xyz.block.ftl.provisioner.v1beta1.MysqlResourceH\x00R\x05mysql\x12K\n\x06module\x18h \x01(\x0b\x32\x31.xyz.block.ftl.provisioner.v1beta1.ModuleResourceH\x00R\x06module\x12^\n\rsql_migration\x18i \x01(\x0b\x32\x37.xyz.block.ftl.provisioner.v1beta1.SqlMigrationResourceH\x00R\x0csqlMigration\x12H\n\x05topic\x18j \x01(\x0b\x32\x30.xyz.block.ftl.provisioner.v1beta1.TopicResourceH\x00R\x05topic\x12]\n\x0csubscription\x18k \x01(\x0b\x32\x37.xyz.block.ftl.provisioner.v1beta1.SubscriptionResourceH\x00R\x0csubscription\x12K\n\x06runner\x18l \x01(\x0b\x32\x31.xyz.block.ftl.provisioner.v1beta1.RunnerResourceH\x00R\x06runnerB\n\n\x08resource\"T\n\x10PostgresResource\x12@\n\x06output\x18\x01 \x01(\x0b\x32(.xyz.block.ftl.schema.v1.DatabaseRuntimeR\x06output\"Q\n\rMysqlResource\x12@\n\x06output\x18\x01 \x01(\x0b\x32(.xyz.block.ftl.schema.v1.DatabaseRuntimeR\x06output\"\xb8\x01\n\x14SqlMigrationResource\x12j\n\x06output\x18\x01 \x01(\x0b\x32R.xyz.block.ftl.provisioner.v1beta1.SqlMigrationResource.SqlMigrationResourceOutputR\x06output\x12\x16\n\x06\x64igest\x18\x02 \x01(\tR\x06\x64igest\x1a\x1c\n\x1aSqlMigrationResourceOutput\"\xb6\x02\n\x0eModuleResource\x12^\n\x06output\x18\x01 \x01(\x0b\x32\x46.xyz.block.ftl.provisioner.v1beta1.ModuleResource.ModuleResourceOutputR\x06output\x12\x37\n\x06schema\x18\x02 \x01(\x0b\x32\x1f.xyz.block.ftl.schema.v1.ModuleR\x06schema\x12L\n\tartefacts\x18\x03 \x03(\x0b\x32..xyz.block.ftl.artefacts.v1.DeploymentArtefactR\tartefacts\x1a=\n\x14ModuleResourceOutput\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\"\xce\x01\n\x0eRunnerResource\x12^\n\x06output\x18\x01 \x01(\x0b\x32\x46.xyz.block.ftl.provisioner.v1beta1.RunnerResource.RunnerResourceOutputR\x06output\x1a\\\n\x14RunnerResourceOutput\x12\x1d\n\nrunner_uri\x18\x01 \x01(\tR\trunnerUri\x12%\n\x0e\x64\x65ployment_key\x18\x02 \x01(\tR\rdeploymentKey\"\xc4\x01\n\rTopicResource\x12\\\n\x06output\x18\x01 \x01(\x0b\x32\x44.xyz.block.ftl.provisioner.v1beta1.TopicResource.TopicResourceOutputR\x06output\x1aU\n\x13TopicResourceOutput\x12#\n\rkafka_brokers\x18\x01 \x03(\tR\x0ckafkaBrokers\x12\x19\n\x08topic_id\x18\x02 \x01(\tR\x07topicId\"\xc1\x02\n\x14SubscriptionResource\x12j\n\x06output\x18\x01 \x01(\x0b\x32R.xyz.block.ftl.provisioner.v1beta1.SubscriptionResource.SubscriptionResourceOutputR\x06output\x12\x32\n\x05topic\x18\x02 \x01(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\x05topic\x1a\x88\x01\n\x1aSubscriptionResourceOutput\x12#\n\rkafka_brokers\x18\x01 \x03(\tR\x0ckafkaBrokers\x12\x19\n\x08topic_id\x18\x02 \x01(\tR\x07topicId\x12*\n\x11\x63onsumer_group_id\x18\x03 \x01(\tR\x0f\x63onsumerGroupIdB]P\x01ZYgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1;provisionerpbb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,30 +34,30 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'xyz.block.ftl.provisioner.v
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'P\001ZYgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1;provisionerpb'
-  _globals['_RESOURCE']._serialized_start=161
-  _globals['_RESOURCE']._serialized_end=792
-  _globals['_POSTGRESRESOURCE']._serialized_start=794
-  _globals['_POSTGRESRESOURCE']._serialized_end=878
-  _globals['_MYSQLRESOURCE']._serialized_start=880
-  _globals['_MYSQLRESOURCE']._serialized_end=961
-  _globals['_SQLMIGRATIONRESOURCE']._serialized_start=964
-  _globals['_SQLMIGRATIONRESOURCE']._serialized_end=1148
-  _globals['_SQLMIGRATIONRESOURCE_SQLMIGRATIONRESOURCEOUTPUT']._serialized_start=1120
-  _globals['_SQLMIGRATIONRESOURCE_SQLMIGRATIONRESOURCEOUTPUT']._serialized_end=1148
-  _globals['_MODULERESOURCE']._serialized_start=1151
-  _globals['_MODULERESOURCE']._serialized_end=1451
-  _globals['_MODULERESOURCE_MODULERESOURCEOUTPUT']._serialized_start=1390
-  _globals['_MODULERESOURCE_MODULERESOURCEOUTPUT']._serialized_end=1451
-  _globals['_RUNNERRESOURCE']._serialized_start=1454
-  _globals['_RUNNERRESOURCE']._serialized_end=1660
-  _globals['_RUNNERRESOURCE_RUNNERRESOURCEOUTPUT']._serialized_start=1568
-  _globals['_RUNNERRESOURCE_RUNNERRESOURCEOUTPUT']._serialized_end=1660
-  _globals['_TOPICRESOURCE']._serialized_start=1663
-  _globals['_TOPICRESOURCE']._serialized_end=1859
-  _globals['_TOPICRESOURCE_TOPICRESOURCEOUTPUT']._serialized_start=1774
-  _globals['_TOPICRESOURCE_TOPICRESOURCEOUTPUT']._serialized_end=1859
-  _globals['_SUBSCRIPTIONRESOURCE']._serialized_start=1862
-  _globals['_SUBSCRIPTIONRESOURCE']._serialized_end=2183
-  _globals['_SUBSCRIPTIONRESOURCE_SUBSCRIPTIONRESOURCEOUTPUT']._serialized_start=2047
-  _globals['_SUBSCRIPTIONRESOURCE_SUBSCRIPTIONRESOURCEOUTPUT']._serialized_end=2183
+  _globals['_RESOURCE']._serialized_start=170
+  _globals['_RESOURCE']._serialized_end=801
+  _globals['_POSTGRESRESOURCE']._serialized_start=803
+  _globals['_POSTGRESRESOURCE']._serialized_end=887
+  _globals['_MYSQLRESOURCE']._serialized_start=889
+  _globals['_MYSQLRESOURCE']._serialized_end=970
+  _globals['_SQLMIGRATIONRESOURCE']._serialized_start=973
+  _globals['_SQLMIGRATIONRESOURCE']._serialized_end=1157
+  _globals['_SQLMIGRATIONRESOURCE_SQLMIGRATIONRESOURCEOUTPUT']._serialized_start=1129
+  _globals['_SQLMIGRATIONRESOURCE_SQLMIGRATIONRESOURCEOUTPUT']._serialized_end=1157
+  _globals['_MODULERESOURCE']._serialized_start=1160
+  _globals['_MODULERESOURCE']._serialized_end=1470
+  _globals['_MODULERESOURCE_MODULERESOURCEOUTPUT']._serialized_start=1409
+  _globals['_MODULERESOURCE_MODULERESOURCEOUTPUT']._serialized_end=1470
+  _globals['_RUNNERRESOURCE']._serialized_start=1473
+  _globals['_RUNNERRESOURCE']._serialized_end=1679
+  _globals['_RUNNERRESOURCE_RUNNERRESOURCEOUTPUT']._serialized_start=1587
+  _globals['_RUNNERRESOURCE_RUNNERRESOURCEOUTPUT']._serialized_end=1679
+  _globals['_TOPICRESOURCE']._serialized_start=1682
+  _globals['_TOPICRESOURCE']._serialized_end=1878
+  _globals['_TOPICRESOURCE_TOPICRESOURCEOUTPUT']._serialized_start=1793
+  _globals['_TOPICRESOURCE_TOPICRESOURCEOUTPUT']._serialized_end=1878
+  _globals['_SUBSCRIPTIONRESOURCE']._serialized_start=1881
+  _globals['_SUBSCRIPTIONRESOURCE']._serialized_end=2202
+  _globals['_SUBSCRIPTIONRESOURCE_SUBSCRIPTIONRESOURCEOUTPUT']._serialized_start=2066
+  _globals['_SUBSCRIPTIONRESOURCE_SUBSCRIPTIONRESOURCEOUTPUT']._serialized_end=2202
 # @@protoc_insertion_point(module_scope)

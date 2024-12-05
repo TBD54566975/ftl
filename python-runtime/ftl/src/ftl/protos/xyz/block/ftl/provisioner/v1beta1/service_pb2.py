@@ -22,11 +22,12 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from xyz.block.ftl.artefacts.v1 import artefacts_pb2 as xyz_dot_block_dot_ftl_dot_artefacts_dot_v1_dot_artefacts__pb2
 from xyz.block.ftl.v1 import controller_pb2 as xyz_dot_block_dot_ftl_dot_v1_dot_controller__pb2
 from xyz.block.ftl.v1 import ftl_pb2 as xyz_dot_block_dot_ftl_dot_v1_dot_ftl__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n/xyz/block/ftl/provisioner/v1beta1/service.proto\x12!xyz.block.ftl.provisioner.v1beta1\x1a!xyz/block/ftl/v1/controller.proto\x1a\x1axyz/block/ftl/v1/ftl.proto2\xa9\x05\n\x12ProvisionerService\x12J\n\x04Ping\x12\x1d.xyz.block.ftl.v1.PingRequest\x1a\x1e.xyz.block.ftl.v1.PingResponse\"\x03\x90\x02\x01\x12K\n\x06Status\x12\x1f.xyz.block.ftl.v1.StatusRequest\x1a .xyz.block.ftl.v1.StatusResponse\x12i\n\x10GetArtefactDiffs\x12).xyz.block.ftl.v1.GetArtefactDiffsRequest\x1a*.xyz.block.ftl.v1.GetArtefactDiffsResponse\x12\x63\n\x0eUploadArtefact\x12\'.xyz.block.ftl.v1.UploadArtefactRequest\x1a(.xyz.block.ftl.v1.UploadArtefactResponse\x12i\n\x10\x43reateDeployment\x12).xyz.block.ftl.v1.CreateDeploymentRequest\x1a*.xyz.block.ftl.v1.CreateDeploymentResponse\x12]\n\x0cUpdateDeploy\x12%.xyz.block.ftl.v1.UpdateDeployRequest\x1a&.xyz.block.ftl.v1.UpdateDeployResponse\x12`\n\rReplaceDeploy\x12&.xyz.block.ftl.v1.ReplaceDeployRequest\x1a\'.xyz.block.ftl.v1.ReplaceDeployResponseB]P\x01ZYgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1;provisionerpbb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n/xyz/block/ftl/provisioner/v1beta1/service.proto\x12!xyz.block.ftl.provisioner.v1beta1\x1a*xyz/block/ftl/artefacts/v1/artefacts.proto\x1a!xyz/block/ftl/v1/controller.proto\x1a\x1axyz/block/ftl/v1/ftl.proto2\xbd\x05\n\x12ProvisionerService\x12J\n\x04Ping\x12\x1d.xyz.block.ftl.v1.PingRequest\x1a\x1e.xyz.block.ftl.v1.PingResponse\"\x03\x90\x02\x01\x12K\n\x06Status\x12\x1f.xyz.block.ftl.v1.StatusRequest\x1a .xyz.block.ftl.v1.StatusResponse\x12i\n\x10GetArtefactDiffs\x12).xyz.block.ftl.v1.GetArtefactDiffsRequest\x1a*.xyz.block.ftl.v1.GetArtefactDiffsResponse\x12w\n\x0eUploadArtefact\x12\x31.xyz.block.ftl.artefacts.v1.UploadArtefactRequest\x1a\x32.xyz.block.ftl.artefacts.v1.UploadArtefactResponse\x12i\n\x10\x43reateDeployment\x12).xyz.block.ftl.v1.CreateDeploymentRequest\x1a*.xyz.block.ftl.v1.CreateDeploymentResponse\x12]\n\x0cUpdateDeploy\x12%.xyz.block.ftl.v1.UpdateDeployRequest\x1a&.xyz.block.ftl.v1.UpdateDeployResponse\x12`\n\rReplaceDeploy\x12&.xyz.block.ftl.v1.ReplaceDeployRequest\x1a\'.xyz.block.ftl.v1.ReplaceDeployResponseB]P\x01ZYgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1;provisionerpbb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -36,6 +37,6 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'P\001ZYgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1;provisionerpb'
   _globals['_PROVISIONERSERVICE'].methods_by_name['Ping']._loaded_options = None
   _globals['_PROVISIONERSERVICE'].methods_by_name['Ping']._serialized_options = b'\220\002\001'
-  _globals['_PROVISIONERSERVICE']._serialized_start=150
-  _globals['_PROVISIONERSERVICE']._serialized_end=831
+  _globals['_PROVISIONERSERVICE']._serialized_start=194
+  _globals['_PROVISIONERSERVICE']._serialized_end=895
 # @@protoc_insertion_point(module_scope)

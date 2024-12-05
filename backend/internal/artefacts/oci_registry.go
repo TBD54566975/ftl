@@ -25,7 +25,28 @@ import (
 	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
-var _ Service = &OCIArtefactService{}
+// Metadata container for an artefact's metadata
+type Metadata struct {
+	Executable bool
+	Path       string
+}
+
+// Artefact container for an artefact's payload and metadata
+type Artefact struct {
+	Digest   sha256.SHA256
+	Metadata Metadata
+	Content  []byte
+}
+
+type ArtefactKey struct {
+	Digest sha256.SHA256
+}
+
+type ReleaseArtefact struct {
+	Artefact   ArtefactKey
+	Path       string
+	Executable bool
+}
 
 type RegistryConfig struct {
 	Registry      string `help:"OCI container registry, in the form host[:port]/repository" env:"FTL_ARTEFACT_REGISTRY" required:""`
