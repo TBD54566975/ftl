@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    {{- include "ftl.labels" . | nindent 4 }}
+  name: {{ include "ftl.fullname" . }}-lease
+  {{- if .Values.lease.service.annotations }}
+  annotations:
+    {{- toYaml .Values.lease.service.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+    {{- range .Values.lease.service.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      protocol: {{ .protocol | default "TCP" }}
+      targetPort: {{ .targetPort }}
+    {{- end }}
+  selector:
+    {{- include "ftl-lease.selectorLabels" . | nindent 4 }}
+  type: {{ .Values.lease.service.type | default "ClusterIP" }}

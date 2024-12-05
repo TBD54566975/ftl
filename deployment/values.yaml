@@ -52,6 +52,12 @@ cron:
     repository: "ftl:5000/ftl-cron"
     tag: "latest"
     pullPolicy: Always
+
+lease:
+  image:
+    repository: "ftl:5000/ftl-lease"
+    tag: "latest"
+    pullPolicy: Always
 istio:
   enabled: true
 

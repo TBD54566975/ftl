@@ -26,10 +26,10 @@ type Service struct {
 	moduleVerbService           map[string]ftlv1connect.VerbServiceClient
 }
 
-func New(controllerModuleService ftldeploymentconnect.DeploymentServiceClient, controllerLeaseClient ftlleaseconnect.LeaseServiceClient) *Service {
+func New(controllerModuleService ftldeploymentconnect.DeploymentServiceClient, leaseClient ftlleaseconnect.LeaseServiceClient) *Service {
 	proxy := &Service{
 		controllerDeploymentService: controllerModuleService,
-		controllerLeaseService:      controllerLeaseClient,
+		controllerLeaseService:      leaseClient,
 		moduleVerbService:           map[string]ftlv1connect.VerbServiceClient{},
 	}
 	return proxy
@@ -69,6 +69,8 @@ func (r *Service) GetDeploymentContext(ctx context.Context, c *connect.Request[f
 
 func (r *Service) AcquireLease(ctx context.Context, c *connect.BidiStream[ftllease.AcquireLeaseRequest, ftllease.AcquireLeaseResponse]) error {
 	lease := r.controllerLeaseService.AcquireLease(ctx)
+	defer lease.CloseResponse() //nolint:errcheck
+	defer lease.CloseRequest()  //nolint:errcheck
 	for {
 		req, err := c.Receive()
 		if err != nil {
