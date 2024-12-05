@@ -55,7 +55,7 @@ func WithStartTimeout(timeout time.Duration) Option {
 // WithExtraClient connects to an additional gRPC service in the same plugin.
 //
 // The client instance is written to "out".
-func WithExtraClient[Client PingableClient](out *Client, makeClient rpc.ClientFactory[Client]) Option {
+func WithExtraClient[Client rpc.Pingable[Req, Resp, RespPtr], Req any, Resp any, RespPtr rpc.PingResponse[Resp]](out *Client, makeClient rpc.ClientFactory[Client, Req, Resp, RespPtr]) Option {
 	return func(po *pluginOptions) error {
 		po.additionalClients = append(po.additionalClients, func(baseURL string, opts ...connect.ClientOption) {
 			*out = rpc.Dial(makeClient, baseURL, log.Trace, opts...)
@@ -64,7 +64,7 @@ func WithExtraClient[Client PingableClient](out *Client, makeClient rpc.ClientFa
 	}
 }
 
-type Plugin[Client PingableClient] struct {
+type Plugin[Client rpc.Pingable[Req, Resp, RespPtr], Req any, Resp any, RespPtr rpc.PingResponse[Resp]] struct {
 	Cmd      *exec.Cmd
 	Endpoint *url.URL // The endpoint the plugin is listening on.
 	Client   Client
@@ -83,13 +83,13 @@ type Plugin[Client PingableClient] struct {
 //
 //	FTL_BIND - the endpoint URI to listen on
 //	FTL_WORKING_DIR - the path to a working directory that the plugin can write state to, if required.
-func Spawn[Client PingableClient](
+func Spawn[Client rpc.Pingable[Req, Resp, RespPtr], Req any, Resp any, RespPtr rpc.PingResponse[Resp]](
 	ctx context.Context,
 	defaultLevel log.Level,
 	name, dir, exe string,
-	makeClient rpc.ClientFactory[Client],
+	makeClient rpc.ClientFactory[Client, Req, Resp, RespPtr],
 	options ...Option,
-) (plugin *Plugin[Client], cmdCtx context.Context, err error) {
+) (plugin *Plugin[Client, Req, Resp, RespPtr], cmdCtx context.Context, err error) {
 	logger := log.FromContext(ctx).Scope(name)
 
 	opts := pluginOptions{
@@ -166,7 +166,7 @@ func Spawn[Client PingableClient](
 	pingErr := make(chan error)
 	go func() {
 		retry := backoff.Backoff{Min: pluginRetryDelay, Max: pluginRetryDelay}
-		err := rpc.Wait(ctx, retry, opts.startTimeout, client)
+		err := rpc.Wait[Req, Resp, RespPtr](ctx, retry, opts.startTimeout, client)
 		pingErr <- err
 		close(pingErr)
 	}()
@@ -186,6 +186,6 @@ func Spawn[Client PingableClient](
 	}
 
 	logger.Debugf("Online")
-	plugin = &Plugin[Client]{Cmd: cmd, Endpoint: pluginEndpoint, Client: client}
+	plugin = &Plugin[Client, Req, Resp, RespPtr]{Cmd: cmd, Endpoint: pluginEndpoint, Client: client}
 	return plugin, cmdCtx, nil
 }
