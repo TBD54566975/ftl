@@ -138,7 +138,7 @@ func (s *service) GetTimeline(ctx context.Context, req *connect.Request[timeline
 			continue
 		}
 		results = append(results, s.events[i])
-		if limit, ok := limit.Get(); ok && limit != 0 && len(results) >= int(limit) {
+		if limit, ok := limit.Get(); ok && limit != 0 && len(results) >= limit {
 			break
 		}
 	}

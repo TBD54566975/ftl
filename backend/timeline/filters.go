@@ -268,5 +268,5 @@ func filtersFromRequest(req *timelinepb.GetTimelineRequest) (outFilters []Timeli
 			panic(fmt.Sprintf("unexpected filter type: %T", filters[0].Filter))
 		}
 	}
-	return
+	return outFilters, limit, ascending, nil
 }
