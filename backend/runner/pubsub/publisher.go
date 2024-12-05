@@ -7,9 +7,9 @@ import (
 	"connectrpc.com/connect"
 	"github.com/IBM/sarama"
 
+	deploymentpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
+	ftldeploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
@@ -63,8 +63,8 @@ func (p *publisher) publish(ctx context.Context, data []byte, key string, caller
 //
 // This is to keep pubsub working while we transition fully to Kafka for pubsub.
 func (p *publisher) publishToController(ctx context.Context, data []byte, caller schema.RefKey) error {
-	client := rpc.ClientFromContext[ftlv1connect.ModuleServiceClient](ctx)
-	_, err := client.PublishEvent(ctx, connect.NewRequest(&ftlv1.PublishEventRequest{
+	client := rpc.ClientFromContext[ftldeploymentconnect.DeploymentServiceClient](ctx)
+	_, err := client.PublishEvent(ctx, connect.NewRequest(&deploymentpb.PublishEventRequest{
 		Topic:  &schemapb.Ref{Module: p.module, Name: p.topic.Name},
 		Caller: caller.Name,
 		Body:   data,
