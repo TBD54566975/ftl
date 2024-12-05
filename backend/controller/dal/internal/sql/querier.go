@@ -30,7 +30,6 @@ type Querier interface {
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
 	FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error)
 	FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallWithRetryParams) (bool, error)
-	GetActiveControllers(ctx context.Context) ([]Controller, error)
 	GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error)
 	GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error)
 	GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error)
@@ -63,8 +62,6 @@ type Querier interface {
 	InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error
 	InsertTimelineDeploymentCreatedEvent(ctx context.Context, arg InsertTimelineDeploymentCreatedEventParams) error
 	InsertTimelineDeploymentUpdatedEvent(ctx context.Context, arg InsertTimelineDeploymentUpdatedEventParams) error
-	// Mark any controller entries that haven't been updated recently as dead.
-	KillStaleControllers(ctx context.Context, timeout sqltypes.Duration) (int64, error)
 	KillStaleRunners(ctx context.Context, timeout sqltypes.Duration) (int64, error)
 	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
 	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error
@@ -75,7 +72,6 @@ type Querier interface {
 	// away once we ditch the DB.
 	//
 	UpdateDeploymentSchema(ctx context.Context, schema *schema.Module, key model.DeploymentKey) error
-	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.
 	UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (int64, error)
