@@ -470,8 +470,7 @@ export class GetTimelineRequest_ModuleFilter extends Message<GetTimelineRequest_
  */
 export class GetTimelineRequest_Filter extends Message<GetTimelineRequest_Filter> {
   /**
-   * TODO: update this comment
-   * These map 1:1 with filters in backend/controller/internal/dal/events.go
+   * These map 1:1 with filters in backend/timeline/filters.go
    *
    * @generated from oneof xyz.block.ftl.timeline.v1.GetTimelineRequest.Filter.filter
    */

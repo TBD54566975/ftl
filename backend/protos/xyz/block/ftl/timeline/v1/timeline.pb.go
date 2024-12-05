@@ -950,8 +950,7 @@ type GetTimelineRequest_Filter struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// TODO: update this comment
-	// These map 1:1 with filters in backend/controller/internal/dal/events.go
+	// These map 1:1 with filters in backend/timeline/filters.go
 	//
 	// Types that are assignable to Filter:
 	//
