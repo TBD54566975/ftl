@@ -136,7 +136,11 @@ func updatePostgresOutputs(_ context.Context, to *schemapb.DatabaseRuntime, reso
 		return fmt.Errorf("failed to group outputs by property name: %w", err)
 	}
 
-	to.WriteConnector = &schemapb.DatabaseConnector{
+	if to.Connections == nil {
+		to.Connections = &schemapb.DatabaseRuntimeConnections{}
+	}
+
+	to.Connections.Write = &schemapb.DatabaseConnector{
 		Value: &schemapb.DatabaseConnector_AwsiamAuthDatabaseConnector{
 			AwsiamAuthDatabaseConnector: &schemapb.AWSIAMAuthDatabaseConnector{
 				Endpoint: fmt.Sprintf("%s:%d", *byName[PropertyPsqlWriteEndpoint].OutputValue, 5432),
@@ -145,7 +149,7 @@ func updatePostgresOutputs(_ context.Context, to *schemapb.DatabaseRuntime, reso
 			},
 		},
 	}
-	to.ReadConnector = &schemapb.DatabaseConnector{
+	to.Connections.Read = &schemapb.DatabaseConnector{
 		Value: &schemapb.DatabaseConnector_AwsiamAuthDatabaseConnector{
 			AwsiamAuthDatabaseConnector: &schemapb.AWSIAMAuthDatabaseConnector{
 				Endpoint: fmt.Sprintf("%s:%d", *byName[PropertyPsqlReadEndpoint].OutputValue, 5432),

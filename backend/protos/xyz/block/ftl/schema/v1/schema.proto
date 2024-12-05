@@ -76,8 +76,22 @@ message DatabaseConnector {
 }
 
 message DatabaseRuntime {
-  DatabaseConnector read_connector = 1;
-  DatabaseConnector write_connector = 2;
+  optional DatabaseRuntimeConnections connections = 1;
+}
+
+message DatabaseRuntimeConnections {
+  DatabaseConnector read = 1;
+  DatabaseConnector write = 2;
+}
+
+message DatabaseRuntimeConnectionsEvent {
+  DatabaseRuntimeConnections connections = 1;
+}
+
+message DatabaseRuntimeEvent {
+  oneof value {
+    DatabaseRuntimeConnectionsEvent database_runtime_connections_event = 1;
+  }
 }
 
 message Decl {

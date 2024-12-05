@@ -64,12 +64,12 @@ func provisionSQLMigration(registryConfig artefacts.RegistryConfig) func(ctx con
 		resource := rc.Dependencies[0].Resource
 		switch res := resource.(type) {
 		case *provisioner.Resource_Postgres:
-			d, err = dsn.ResolvePostgresDSN(ctx, schema.DatabaseConnectorFromProto(res.Postgres.GetOutput().WriteConnector))
+			d, err = dsn.ResolvePostgresDSN(ctx, schema.DatabaseConnectorFromProto(res.Postgres.GetOutput().Connections.Write))
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve postgres DSN: %w", err)
 			}
 		case *provisioner.Resource_Mysql:
-			d, err = dsn.ResolveMySQLDSN(ctx, schema.DatabaseConnectorFromProto(res.Mysql.GetOutput().WriteConnector))
+			d, err = dsn.ResolveMySQLDSN(ctx, schema.DatabaseConnectorFromProto(res.Mysql.GetOutput().Connections.Write))
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve mysql DSN: %w", err)
 			}

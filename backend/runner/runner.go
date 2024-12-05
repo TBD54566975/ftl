@@ -628,7 +628,7 @@ func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, start
 			return "", fmt.Errorf("database %s not found", params["database"])
 		}
 
-		dsn, err := dsn.ResolvePostgresDSN(ctx, db.Runtime.WriteConnector)
+		dsn, err := dsn.ResolvePostgresDSN(ctx, db.Runtime.Connections.Write)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve postgres DSN: %w", err)
 		}
@@ -664,7 +664,7 @@ func (s *Service) startMySQLProxy(ctx context.Context, module *schema.Module, la
 		errorC := make(chan error)
 		databaseRuntime := decl.Runtime
 		var proxy *mysql.Proxy
-		switch db := databaseRuntime.WriteConnector.(type) {
+		switch db := databaseRuntime.Connections.Write.(type) {
 		case *schema.DSNDatabaseConnector:
 			proxy = mysql.NewProxy("localhost", 0, db.DSN, &mysqlLogger{logger: logger}, portC)
 		default:
