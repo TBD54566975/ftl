@@ -9,8 +9,7 @@ option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lea
 option java_multiple_files = true;
 
 message AcquireLeaseRequest {
-  string module = 1;
-  repeated string key = 2;
+  repeated string key = 1;
   google.protobuf.Duration ttl = 3;
 }
 

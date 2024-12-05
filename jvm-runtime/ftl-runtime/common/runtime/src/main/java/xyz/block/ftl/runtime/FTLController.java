@@ -3,6 +3,7 @@ package xyz.block.ftl.runtime;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -208,8 +209,12 @@ public class FTLController implements LeaseClient {
                 }
             }
         });
-        client.onNext(AcquireLeaseRequest.newBuilder().setModule(moduleName)
-                .addAllKey(Arrays.asList(keys))
+        List<String> realKeys = new ArrayList<>();
+        realKeys.add("module");
+        realKeys.add(moduleName);
+        realKeys.addAll(Arrays.asList(keys));
+        client.onNext(AcquireLeaseRequest.newBuilder()
+                .addAllKey(realKeys)
                 .setTtl(com.google.protobuf.Duration.newBuilder()
                         .setSeconds(duration.toSeconds()))
                 .build());

@@ -11,12 +11,7 @@ import { Duration, Message, proto3 } from "@bufbuild/protobuf";
  */
 export class AcquireLeaseRequest extends Message<AcquireLeaseRequest> {
   /**
-   * @generated from field: string module = 1;
-   */
-  module = "";
-
-  /**
-   * @generated from field: repeated string key = 2;
+   * @generated from field: repeated string key = 1;
    */
   key: string[] = [];
 
@@ -33,8 +28,7 @@ export class AcquireLeaseRequest extends Message<AcquireLeaseRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.lease.v1.AcquireLeaseRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "ttl", kind: "message", T: Duration },
   ]);
 
