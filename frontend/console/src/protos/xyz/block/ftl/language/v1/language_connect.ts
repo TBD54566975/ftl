@@ -176,7 +176,7 @@ export const HotReloadService = {
       name: "RunnerStarted",
       I: RunnerStartedRequest,
       O: RunnerStartedResponse,
-      kind: MethodKind.ServerStreaming,
+      kind: MethodKind.Unary,
     },
   }
 } as const;

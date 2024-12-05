@@ -374,5 +374,5 @@ service HotReloadService {
   //
   // As lots of functionality such as database connections rely on proxying through the runner, this
   // allows the long running live reload process to know where to proxy to
-  rpc RunnerStarted(RunnerStartedRequest) returns (stream RunnerStartedResponse);
+  rpc RunnerStarted(RunnerStartedRequest) returns (RunnerStartedResponse);
 }
