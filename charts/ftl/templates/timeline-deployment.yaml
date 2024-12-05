@@ -1,0 +1,83 @@
+{{- if .Values.timeline.enabled }}
+{{ $version := printf "v%s" .Chart.Version -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ftl.fullname" . }}-timeline
+  labels:
+    {{- include "ftl.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.timeline.replicas }}
+  revisionHistoryLimit: {{ .Values.timeline.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "ftl-timeline.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ftl-timeline.selectorLabels" . | nindent 8 }}
+      {{- if .Values.timeline.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.timeline.podAnnotations | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.timeline.serviceAccountName }}
+      containers:
+        - name: app
+          image: "{{ .Values.timeline.image.repository }}:{{ .Values.timeline.image.tag | default $version }}"
+          imagePullPolicy: {{ .Values.timeline.image.pullPolicy }}
+          resources:
+            limits:
+              cpu: "{{ .Values.timeline.resources.limits.cpu }}"
+              memory: "{{ .Values.timeline.resources.limits.memory }}"
+            requests:
+              cpu: "{{ .Values.timeline.resources.requests.cpu }}"
+              memory: "{{ .Values.timeline.resources.requests.memory }}"
+          {{- if .Values.timeline.envFrom }}
+          envFrom:
+            {{- if .Values.timeline.envFrom }}
+            {{- toYaml .Values.timeline.envFrom | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          env:
+            {{- if .Values.timeline.env }}
+            {{- toYaml .Values.timeline.env | nindent 12 }}
+            {{- end }}
+
+          ports:
+            {{- range .Values.timeline.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .containerPort }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+          readinessProbe:
+            {{- if .Values.timeline.readinessProbe }}
+            {{- toYaml .Values.timeline.readinessProbe | nindent 12 }}
+            {{- else }}
+            httpGet:
+              path: /healthz
+              port: 8892
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 15
+            {{- end }}
+      {{- if .Values.timeline.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.timeline.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.timeline.affinity }}
+      affinity:
+        {{- toYaml .Values.timeline.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.timeline.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.timeline.topologySpreadConstraints | nindent 8 }}
+      {{- end }}
+      {{- if .Values.timeline.tolerations }}
+      tolerations:
+        {{- toYaml .Values.timeline.tolerations | nindent 8 }}
+      {{- end }}
+
+      {{- end }}

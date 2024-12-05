@@ -30,6 +30,7 @@ func TestConfigCmdWithoutController(t *testing.T) {
 		in.WithFTLConfig("configs-ftl-project.toml"),
 		in.WithoutController(),
 		in.WithoutProvisioner(),
+		in.WithoutTimeline(),
 		in.ExecWithExpectedOutput("\"value\"\n", "ftl", "config", "get", "key"),
 	)
 }
@@ -56,6 +57,7 @@ func TestFindConfig(t *testing.T) {
 	in.Run(t,
 		in.WithoutController(),
 		in.WithoutProvisioner(),
+		in.WithoutTimeline(),
 		in.CopyModule("findconfig"),
 		checkConfig("findconfig"),
 		checkConfig("findconfig/subdir"),

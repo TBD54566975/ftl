@@ -54,6 +54,7 @@ func TestMigrate(t *testing.T) {
 	in.Run(t,
 		in.WithoutController(),
 		in.WithoutProvisioner(),
+		in.WithoutTimeline(),
 		in.DropDBAction(t, dbName),
 		in.Fail(q(), "Should fail because the database does not exist."),
 		in.Exec("ftl", "migrate", "--dsn", dbUri),

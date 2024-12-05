@@ -27,6 +27,7 @@ full-deploy: build-all-images setup-istio-cluster
   kubectl rollout restart deployment ftl-provisioner || true # if this exists already restart it to get the latest image
   kubectl rollout restart deployment ftl-cron || true # if this exists already restart it to get the latest image
   kubectl rollout restart deployment ftl-http-ingress || true # if this exists already restart it to get the latest image
+  kubectl rollout restart deployment ftl-timeline || true # if this exists already restart it to get the latest image
   just apply || sleep 5 # wait for CRDs to be created, the initial apply will usually fail
   just apply
 
@@ -35,6 +36,7 @@ wait-for-kube:
   #!/bin/bash
   while [ -z "$(kubectl get pod ftl-postgresql-0)" ]; do sleep 1; done
   kubectl wait --for=condition=ready pod/ftl-postgresql-0 --timeout=5m
+  kubectl wait --for=condition=available deployment/ftl-timeline --timeout=5m
   kubectl wait --for=condition=available deployment/ftl-controller --timeout=5m
   kubectl wait --for=condition=available deployment/ftl-http-ingress --timeout=5m
   kubectl wait --for=condition=available deployment/registry --timeout=5m
@@ -59,7 +61,7 @@ setup-cluster: setup-registry
   #!/bin/bash
   bash -c "cd ../ && just chart dep-update"
   if [ -z "$(k3d cluster list | grep ftl)" ]; then
-  k3d cluster create ftl --api-port 6550 -p "8892:80@loadbalancer" -p "8891:80@loadbalancer" -p "8893:80@loadbalancer"  --agents 2 \
+  k3d cluster create ftl --api-port 6550 -p "8892:80@loadbalancer" -p "8891:80@loadbalancer" -p "8893:80@loadbalancer" --agents 2 \
       --registry-use {{registry_full}} \
       --registry-config '{{mirrors}}'\
       --k3s-arg '--kubelet-arg=eviction-hard=imagefs.available<1%,nodefs.available<1%@agent:*' \
