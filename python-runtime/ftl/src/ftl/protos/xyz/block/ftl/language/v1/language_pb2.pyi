@@ -289,3 +289,22 @@ class SyncStubReferencesRequest(_message.Message):
 class SyncStubReferencesResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
+
+class RunnerStartedRequest(_message.Message):
+    __slots__ = ("address", "databases")
+    class Database(_message.Message):
+        __slots__ = ("name", "url")
+        NAME_FIELD_NUMBER: _ClassVar[int]
+        URL_FIELD_NUMBER: _ClassVar[int]
+        name: str
+        url: str
+        def __init__(self, name: _Optional[str] = ..., url: _Optional[str] = ...) -> None: ...
+    ADDRESS_FIELD_NUMBER: _ClassVar[int]
+    DATABASES_FIELD_NUMBER: _ClassVar[int]
+    address: str
+    databases: _containers.RepeatedCompositeFieldContainer[RunnerStartedRequest.Database]
+    def __init__(self, address: _Optional[str] = ..., databases: _Optional[_Iterable[_Union[RunnerStartedRequest.Database, _Mapping]]] = ...) -> None: ...
+
+class RunnerStartedResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
