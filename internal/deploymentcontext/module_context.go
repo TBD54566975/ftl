@@ -95,7 +95,7 @@ func (b *Builder) AddConfigs(configs map[string][]byte) *Builder {
 	return b
 }
 
-// AddSecrets adds configuration values (as bytes) to the builder
+// AddSecrets adds secrets values (as bytes) to the builder
 func (b *Builder) AddSecrets(secrets map[string][]byte) *Builder {
 	for name, data := range secrets {
 		b.secrets[name] = data
@@ -103,7 +103,6 @@ func (b *Builder) AddSecrets(secrets map[string][]byte) *Builder {
 	return b
 }
 
-// AddRoutes adds configuration values (as bytes) to the builder
 func (b *Builder) AddRoutes(routes map[string]string) *Builder {
 	for name, data := range routes {
 		b.routes[name] = data
