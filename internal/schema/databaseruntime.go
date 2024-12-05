@@ -3,8 +3,9 @@ package schema
 import (
 	"fmt"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"google.golang.org/protobuf/reflect/protoreflect"
+
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 type DatabaseRuntime struct {
