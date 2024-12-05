@@ -62,8 +62,7 @@ message GetTimelineRequest {
   }
 
   message Filter {
-    // TODO: update this comment
-    // These map 1:1 with filters in backend/controller/internal/dal/events.go
+    // These map 1:1 with filters in backend/timeline/filters.go
     oneof filter {
       LimitFilter limit = 1;
       LogLevelFilter log_level = 2;
