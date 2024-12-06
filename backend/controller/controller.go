@@ -763,7 +763,6 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 	callableModuleNames = slices.Sort(callableModuleNames)
 	logger.Debugf("Modules %s can call %v", module, callableModuleNames)
 	for {
-		logger.Debugf("Checking for updated deployment context for: %s", key.String())
 		h := sha.New()
 
 		routeView := s.routeTable.Current()
