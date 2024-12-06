@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetCertificationRequest, GetCertificationResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ProcessListRequest, ProcessListResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ResetSubscriptionRequest, ResetSubscriptionResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./controller_pb.js";
+import { CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ProcessListRequest, ProcessListResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ResetSubscriptionRequest, ResetSubscriptionResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./controller_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.v1.ControllerService
@@ -43,17 +43,6 @@ export const ControllerService = {
       name: "Status",
       I: StatusRequest,
       O: StatusResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Runner will initially call this to have the controller sign its public key.
-     *
-     * @generated from rpc xyz.block.ftl.v1.ControllerService.GetCertification
-     */
-    getCertification: {
-      name: "GetCertification",
-      I: GetCertificationRequest,
-      O: GetCertificationResponse,
       kind: MethodKind.Unary,
     },
     /**

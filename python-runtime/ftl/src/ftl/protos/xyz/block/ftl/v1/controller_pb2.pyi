@@ -9,36 +9,6 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
-class GetCertificationRequest(_message.Message):
-    __slots__ = ("request", "signature")
-    REQUEST_FIELD_NUMBER: _ClassVar[int]
-    SIGNATURE_FIELD_NUMBER: _ClassVar[int]
-    request: CertificateContent
-    signature: bytes
-    def __init__(self, request: _Optional[_Union[CertificateContent, _Mapping]] = ..., signature: _Optional[bytes] = ...) -> None: ...
-
-class GetCertificationResponse(_message.Message):
-    __slots__ = ("certificate",)
-    CERTIFICATE_FIELD_NUMBER: _ClassVar[int]
-    certificate: Certificate
-    def __init__(self, certificate: _Optional[_Union[Certificate, _Mapping]] = ...) -> None: ...
-
-class CertificateContent(_message.Message):
-    __slots__ = ("identity", "public_key")
-    IDENTITY_FIELD_NUMBER: _ClassVar[int]
-    PUBLIC_KEY_FIELD_NUMBER: _ClassVar[int]
-    identity: str
-    public_key: bytes
-    def __init__(self, identity: _Optional[str] = ..., public_key: _Optional[bytes] = ...) -> None: ...
-
-class Certificate(_message.Message):
-    __slots__ = ("content", "controller_signature")
-    CONTENT_FIELD_NUMBER: _ClassVar[int]
-    CONTROLLER_SIGNATURE_FIELD_NUMBER: _ClassVar[int]
-    content: CertificateContent
-    controller_signature: bytes
-    def __init__(self, content: _Optional[_Union[CertificateContent, _Mapping]] = ..., controller_signature: _Optional[bytes] = ...) -> None: ...
-
 class GetArtefactDiffsRequest(_message.Message):
     __slots__ = ("client_digests",)
     CLIENT_DIGESTS_FIELD_NUMBER: _ClassVar[int]
