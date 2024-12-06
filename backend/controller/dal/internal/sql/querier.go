@@ -25,12 +25,10 @@ type Querier interface {
 	CreateDeployment(ctx context.Context, moduleName string, schema *schema.Module, key model.DeploymentKey) error
 	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error)
 	DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriptionKey, error)
-	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
 	FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error)
 	FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallWithRetryParams) (bool, error)
 	GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error)
 	GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error)
-	GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error)
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([][]byte, error)
 	GetDeployment(ctx context.Context, key model.DeploymentKey) (GetDeploymentRow, error)
@@ -43,10 +41,7 @@ type Querier interface {
 	GetExistingDeploymentForModule(ctx context.Context, name string) (GetExistingDeploymentForModuleRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetNextEventForSubscription(ctx context.Context, consumptionDelay sqltypes.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
-	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)
 	GetRandomSubscriber(ctx context.Context, key model.SubscriptionKey) (GetRandomSubscriberRow, error)
-	GetRunner(ctx context.Context, key model.RunnerKey) (GetRunnerRow, error)
-	GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error)
 	GetSchemaForDeployment(ctx context.Context, key model.DeploymentKey) (*schema.Module, error)
 	GetSubscription(ctx context.Context, column1 string, column2 string) (TopicSubscription, error)
 	// Results may not be ready to be scheduled yet due to event consumption delay
@@ -58,7 +53,6 @@ type Querier interface {
 	GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent, error)
 	GetZombieAsyncCalls(ctx context.Context, limit int32) ([]AsyncCall, error)
 	InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error
-	KillStaleRunners(ctx context.Context, timeout sqltypes.Duration) (int64, error)
 	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
 	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
@@ -69,8 +63,6 @@ type Querier interface {
 	//
 	UpdateDeploymentSchema(ctx context.Context, schema *schema.Module, key model.DeploymentKey) error
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)
-	// Upsert a runner and return the deployment ID that it is assigned to, if any.
-	UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (int64, error)
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) (UpsertSubscriptionRow, error)
 	UpsertTopic(ctx context.Context, arg UpsertTopicParams) error
 }

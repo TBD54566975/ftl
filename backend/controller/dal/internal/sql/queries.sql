@@ -62,56 +62,10 @@ WHERE EXISTS (SELECT 1
               HAVING COUNT(*) = @count::BIGINT -- Number of unique digests provided
 );
 
--- name: UpsertRunner :one
--- Upsert a runner and return the deployment ID that it is assigned to, if any.
-WITH deployment_rel AS (
-    SELECT id FROM deployments d
-             WHERE d.key = sqlc.arg('deployment_key')::deployment_key
-             LIMIT 1)
-INSERT
-INTO runners (key, endpoint, labels, deployment_id, last_seen)
-VALUES ($1,
-        $2,
-        $3,
-        (SELECT id FROM deployment_rel),
-        NOW() AT TIME ZONE 'utc')
-ON CONFLICT (key) DO UPDATE SET endpoint      = $2,
-                                labels        = $3,
-                                last_seen     = NOW() AT TIME ZONE 'utc'
-RETURNING deployment_id;
-
--- name: KillStaleRunners :one
-WITH matches AS (
-    DELETE FROM runners
-        WHERE last_seen < (NOW() AT TIME ZONE 'utc') - sqlc.arg('timeout')::INTERVAL
-        RETURNING 1)
-SELECT COUNT(*)
-FROM matches;
-
--- name: DeregisterRunner :one
-WITH matches AS (
-    DELETE FROM runners
-        WHERE key = sqlc.arg('key')::runner_key
-        RETURNING 1)
-SELECT COUNT(*)
-FROM matches;
-
--- name: GetActiveRunners :many
-SELECT DISTINCT ON (r.key) r.key AS runner_key,
-                           r.endpoint,
-                           r.labels,
-                           r.last_seen,
-                           r.module_name,
-                           d.key AS deployment_key
-FROM runners r
-         INNER JOIN deployments d on d.id = r.deployment_id
-ORDER BY r.key;
-
 -- name: GetActiveDeployments :many
-SELECT sqlc.embed(d), m.name AS module_name, m.language, COUNT(r.id) AS replicas
+SELECT sqlc.embed(d), m.name AS module_name, m.language
 FROM deployments d
   JOIN modules m ON d.module_id = m.id
-  LEFT JOIN runners r ON d.id = r.deployment_id
 WHERE min_replicas > 0
 GROUP BY d.id, m.name, m.language
 ORDER BY d.last_activated_at;
@@ -129,18 +83,6 @@ SELECT key, schema FROM deployments WHERE min_replicas > 0;
 -- name: GetSchemaForDeployment :one
 SELECT schema FROM deployments WHERE key = sqlc.arg('key')::deployment_key;
 
--- name: GetProcessList :many
-SELECT d.min_replicas,
-       d.key   AS deployment_key,
-       d.labels    deployment_labels,
-       r.key    AS runner_key,
-       r.endpoint,
-       r.labels AS runner_labels
-FROM deployments d
-         LEFT JOIN runners r on d.id = r.deployment_id
-WHERE d.min_replicas > 0
-ORDER BY d.key;
-
 -- name: SetDeploymentDesiredReplicas :exec
 UPDATE deployments
 SET min_replicas = $2, last_activated_at = CASE WHEN min_replicas = 0 THEN (NOW() AT TIME ZONE 'utc') ELSE  last_activated_at END
@@ -154,23 +96,6 @@ FROM deployments d
 WHERE m.name = $1
   AND min_replicas > 0
 LIMIT 1;
-
--- name: GetRunner :one
-SELECT DISTINCT ON (r.key) r.key                                   AS runner_key,
-                           r.endpoint,
-                           r.labels,
-                           r.last_seen,
-                           r.module_name,
-                           d.key AS deployment_key
-FROM runners r
-         INNER JOIN deployments d on d.id = r.deployment_id
-WHERE r.key = sqlc.arg('key')::runner_key;
-
--- name: GetRunnersForDeployment :many
-SELECT *
-FROM runners r
-         INNER JOIN deployments d on r.deployment_id = d.id
-WHERE d.key = sqlc.arg('key')::deployment_key;
 
 -- name: SucceedAsyncCall :one
 UPDATE async_calls

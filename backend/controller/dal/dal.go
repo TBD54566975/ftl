@@ -27,27 +27,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
-func runnerFromDB(row dalsql.GetRunnerRow) dalmodel.Runner {
-	attrs := model.Labels{}
-	if err := json.Unmarshal(row.Labels, &attrs); err != nil {
-		return dalmodel.Runner{}
-	}
-
-	return dalmodel.Runner{
-		Key:        row.RunnerKey,
-		Endpoint:   row.Endpoint,
-		Deployment: row.DeploymentKey,
-		Labels:     attrs,
-	}
-}
-
-// A Reservation of a Runner.
-type Reservation interface {
-	Runner() dalmodel.Runner
-	Commit(ctx context.Context) error
-	Rollback(ctx context.Context) error
-}
-
 func New(ctx context.Context, conn libdal.Connection, pubsub *pubsub.Service, registry aregistry.Service) *DAL {
 	var d *DAL
 	db := dalsql.New(conn)
@@ -80,11 +59,7 @@ type DAL struct {
 	DeploymentChanges *inprocesspubsub.Topic[DeploymentNotification]
 }
 
-func (d *DAL) GetStatus(ctx context.Context, controller dalmodel.Controller) (dalmodel.Status, error) {
-	runners, err := d.db.GetActiveRunners(ctx)
-	if err != nil {
-		return dalmodel.Status{}, fmt.Errorf("could not get active runners: %w", libdal.TranslatePGError(err))
-	}
+func (d *DAL) GetStatus(ctx context.Context, controller dalmodel.Controller, EventStream) (dalmodel.Status, error) {
 	deployments, err := d.db.GetActiveDeployments(ctx)
 	if err != nil {
 		return dalmodel.Status{}, fmt.Errorf("could not get active deployments: %w", libdal.TranslatePGError(err))
@@ -107,19 +82,7 @@ func (d *DAL) GetStatus(ctx context.Context, controller dalmodel.Controller) (da
 	if err != nil {
 		return dalmodel.Status{}, fmt.Errorf("could not parse deployments: %w", err)
 	}
-	domainRunners, err := slices.MapErr(runners, func(in dalsql.GetActiveRunnersRow) (dalmodel.Runner, error) {
-		attrs := model.Labels{}
-		if err := json.Unmarshal(in.Labels, &attrs); err != nil {
-			return dalmodel.Runner{}, fmt.Errorf("invalid attributes JSON for runner %s: %w", in.RunnerKey, err)
-		}
 
-		return dalmodel.Runner{
-			Key:        in.RunnerKey,
-			Endpoint:   in.Endpoint,
-			Deployment: in.DeploymentKey,
-			Labels:     attrs,
-		}, nil
-	})
 	if err != nil {
 		return dalmodel.Status{}, fmt.Errorf("could not parse runners: %w", err)
 	}
@@ -128,28 +91,6 @@ func (d *DAL) GetStatus(ctx context.Context, controller dalmodel.Controller) (da
 		Deployments: statusDeployments,
 		Runners:     domainRunners,
 	}, nil
-}
-
-func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.DeploymentKey) ([]dalmodel.Runner, error) {
-	runners := []dalmodel.Runner{}
-	rows, err := d.db.GetRunnersForDeployment(ctx, deployment)
-	if err != nil {
-		return nil, libdal.TranslatePGError(err)
-	}
-	for _, row := range rows {
-		attrs := model.Labels{}
-		if err := json.Unmarshal(row.Labels, &attrs); err != nil {
-			return nil, fmt.Errorf("invalid attributes JSON for runner %d: %w", row.ID, err)
-		}
-
-		runners = append(runners, dalmodel.Runner{
-			Key:        row.Key,
-			Endpoint:   row.Endpoint,
-			Deployment: deployment,
-			Labels:     attrs,
-		})
-	}
-	return runners, nil
 }
 
 func (d *DAL) UpsertModule(ctx context.Context, language, name string) (err error) {
@@ -250,68 +191,6 @@ func (d *DAL) GetDeployment(ctx context.Context, key model.DeploymentKey) (*mode
 	}
 	return d.loadDeployment(ctx, deployment)
 }
-
-// UpsertRunner registers or updates a new runner.
-//
-// ErrConflict will be returned if a runner with the same endpoint and a
-// different key already exists.
-func (d *DAL) UpsertRunner(ctx context.Context, runner dalmodel.Runner) error {
-	attrBytes, err := json.Marshal(runner.Labels)
-	if err != nil {
-		return fmt.Errorf("failed to JSON encode runner labels: %w", err)
-	}
-	deploymentID, err := d.db.UpsertRunner(ctx, dalsql.UpsertRunnerParams{
-		Key:           runner.Key,
-		Endpoint:      runner.Endpoint,
-		DeploymentKey: runner.Deployment,
-		Labels:        attrBytes,
-	})
-	if err != nil {
-		return libdal.TranslatePGError(err)
-	}
-	if deploymentID < 0 {
-		return fmt.Errorf("deployment %s not found", runner.Deployment)
-	}
-	return nil
-}
-
-// KillStaleRunners deletes runners that have not had heartbeats for the given duration.
-func (d *DAL) KillStaleRunners(ctx context.Context, age time.Duration) (int64, error) {
-	count, err := d.db.KillStaleRunners(ctx, sqltypes.Duration(age))
-	return count, err
-}
-
-// DeregisterRunner deregisters the given runner.
-func (d *DAL) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
-	count, err := d.db.DeregisterRunner(ctx, key)
-	if err != nil {
-		return libdal.TranslatePGError(err)
-	}
-	if count == 0 {
-		return libdal.ErrNotFound
-	}
-	return nil
-}
-
-var _ Reservation = (*postgresClaim)(nil)
-
-type postgresClaim struct {
-	tx     *DAL
-	runner dalmodel.Runner
-	cancel context.CancelFunc
-}
-
-func (p *postgresClaim) Commit(ctx context.Context) error {
-	defer p.cancel()
-	return libdal.TranslatePGError(p.tx.Commit(ctx))
-}
-
-func (p *postgresClaim) Rollback(ctx context.Context) error {
-	defer p.cancel()
-	return libdal.TranslatePGError(p.tx.Rollback(ctx))
-}
-
-func (p *postgresClaim) Runner() dalmodel.Runner { return p.runner }
 
 // SetDeploymentReplicas activates the given deployment.
 func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) (err error) {
@@ -557,47 +436,6 @@ type Process struct {
 	Runner      optional.Option[ProcessRunner]
 }
 
-// GetProcessList returns a list of all "processes".
-func (d *DAL) GetProcessList(ctx context.Context) ([]Process, error) {
-	rows, err := d.db.GetProcessList(ctx)
-	if err != nil {
-		return nil, libdal.TranslatePGError(err)
-	}
-	return slices.MapErr(rows, func(row dalsql.GetProcessListRow) (Process, error) { //nolint:wrapcheck
-		var runner optional.Option[ProcessRunner]
-		if endpoint, ok := row.Endpoint.Get(); ok {
-			var labels model.Labels
-			if err := json.Unmarshal(row.RunnerLabels.RawMessage, &labels); err != nil {
-				return Process{}, fmt.Errorf("invalid labels JSON for runner %s: %w", row.RunnerKey, err)
-			}
-
-			runner = optional.Some(ProcessRunner{
-				Key:      row.RunnerKey.MustGet(),
-				Endpoint: endpoint,
-				Labels:   labels,
-			})
-		}
-		var labels model.Labels
-		if err := json.Unmarshal(row.DeploymentLabels, &labels); err != nil {
-			return Process{}, fmt.Errorf("invalid labels JSON for deployment %s: %w", row.DeploymentKey, err)
-		}
-		return Process{
-			Deployment:  row.DeploymentKey,
-			Labels:      labels,
-			MinReplicas: int(row.MinReplicas),
-			Runner:      runner,
-		}, nil
-	})
-}
-
-func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (dalmodel.Runner, error) {
-	row, err := d.db.GetRunner(ctx, runnerKey)
-	if err != nil {
-		return dalmodel.Runner{}, libdal.TranslatePGError(err)
-	}
-	return runnerFromDB(row), nil
-}
-
 func (d *DAL) loadDeployment(ctx context.Context, deployment dalsql.GetDeploymentRow) (*model.Deployment, error) {
 	out := &model.Deployment{
 		Module:   deployment.ModuleName,
@@ -617,16 +455,6 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment dalsql.GetDeploymen
 		}
 	})
 	return out, nil
-}
-
-func (d *DAL) GetActiveRunners(ctx context.Context) ([]dalmodel.Runner, error) {
-	rows, err := d.db.GetActiveRunners(ctx)
-	if err != nil {
-		return nil, libdal.TranslatePGError(err)
-	}
-	return slices.Map(rows, func(row dalsql.GetActiveRunnersRow) dalmodel.Runner {
-		return runnerFromDB(dalsql.GetRunnerRow(row))
-	}), nil
 }
 
 // Check if a deployment exists that exactly matches the given artefacts and schema.
