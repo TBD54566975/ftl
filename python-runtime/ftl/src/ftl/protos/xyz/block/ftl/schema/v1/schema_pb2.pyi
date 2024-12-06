@@ -266,8 +266,9 @@ class Map(_message.Message):
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., key: _Optional[_Union[Type, _Mapping]] = ..., value: _Optional[_Union[Type, _Mapping]] = ...) -> None: ...
 
 class Metadata(_message.Message):
-    __slots__ = ("alias", "calls", "config", "cron_job", "databases", "encoding", "ingress", "publisher", "retry", "sql_migration", "secrets", "subscriber", "type_map")
+    __slots__ = ("alias", "artefact", "calls", "config", "cron_job", "databases", "encoding", "ingress", "publisher", "retry", "sql_migration", "secrets", "subscriber", "type_map")
     ALIAS_FIELD_NUMBER: _ClassVar[int]
+    ARTEFACT_FIELD_NUMBER: _ClassVar[int]
     CALLS_FIELD_NUMBER: _ClassVar[int]
     CONFIG_FIELD_NUMBER: _ClassVar[int]
     CRON_JOB_FIELD_NUMBER: _ClassVar[int]
@@ -281,6 +282,7 @@ class Metadata(_message.Message):
     SUBSCRIBER_FIELD_NUMBER: _ClassVar[int]
     TYPE_MAP_FIELD_NUMBER: _ClassVar[int]
     alias: MetadataAlias
+    artefact: MetadataArtefact
     calls: MetadataCalls
     config: MetadataConfig
     cron_job: MetadataCronJob
@@ -293,7 +295,7 @@ class Metadata(_message.Message):
     secrets: MetadataSecrets
     subscriber: MetadataSubscriber
     type_map: MetadataTypeMap
-    def __init__(self, alias: _Optional[_Union[MetadataAlias, _Mapping]] = ..., calls: _Optional[_Union[MetadataCalls, _Mapping]] = ..., config: _Optional[_Union[MetadataConfig, _Mapping]] = ..., cron_job: _Optional[_Union[MetadataCronJob, _Mapping]] = ..., databases: _Optional[_Union[MetadataDatabases, _Mapping]] = ..., encoding: _Optional[_Union[MetadataEncoding, _Mapping]] = ..., ingress: _Optional[_Union[MetadataIngress, _Mapping]] = ..., publisher: _Optional[_Union[MetadataPublisher, _Mapping]] = ..., retry: _Optional[_Union[MetadataRetry, _Mapping]] = ..., sql_migration: _Optional[_Union[MetadataSQLMigration, _Mapping]] = ..., secrets: _Optional[_Union[MetadataSecrets, _Mapping]] = ..., subscriber: _Optional[_Union[MetadataSubscriber, _Mapping]] = ..., type_map: _Optional[_Union[MetadataTypeMap, _Mapping]] = ...) -> None: ...
+    def __init__(self, alias: _Optional[_Union[MetadataAlias, _Mapping]] = ..., artefact: _Optional[_Union[MetadataArtefact, _Mapping]] = ..., calls: _Optional[_Union[MetadataCalls, _Mapping]] = ..., config: _Optional[_Union[MetadataConfig, _Mapping]] = ..., cron_job: _Optional[_Union[MetadataCronJob, _Mapping]] = ..., databases: _Optional[_Union[MetadataDatabases, _Mapping]] = ..., encoding: _Optional[_Union[MetadataEncoding, _Mapping]] = ..., ingress: _Optional[_Union[MetadataIngress, _Mapping]] = ..., publisher: _Optional[_Union[MetadataPublisher, _Mapping]] = ..., retry: _Optional[_Union[MetadataRetry, _Mapping]] = ..., sql_migration: _Optional[_Union[MetadataSQLMigration, _Mapping]] = ..., secrets: _Optional[_Union[MetadataSecrets, _Mapping]] = ..., subscriber: _Optional[_Union[MetadataSubscriber, _Mapping]] = ..., type_map: _Optional[_Union[MetadataTypeMap, _Mapping]] = ...) -> None: ...
 
 class MetadataAlias(_message.Message):
     __slots__ = ("pos", "kind", "alias")
@@ -304,6 +306,18 @@ class MetadataAlias(_message.Message):
     kind: AliasKind
     alias: str
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., kind: _Optional[_Union[AliasKind, str]] = ..., alias: _Optional[str] = ...) -> None: ...
+
+class MetadataArtefact(_message.Message):
+    __slots__ = ("pos", "path", "digest", "executable")
+    POS_FIELD_NUMBER: _ClassVar[int]
+    PATH_FIELD_NUMBER: _ClassVar[int]
+    DIGEST_FIELD_NUMBER: _ClassVar[int]
+    EXECUTABLE_FIELD_NUMBER: _ClassVar[int]
+    pos: Position
+    path: str
+    digest: str
+    executable: bool
+    def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., path: _Optional[str] = ..., digest: _Optional[str] = ..., executable: bool = ...) -> None: ...
 
 class MetadataCalls(_message.Message):
     __slots__ = ("pos", "calls")
@@ -420,20 +434,22 @@ class MetadataTypeMap(_message.Message):
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., runtime: _Optional[str] = ..., native_name: _Optional[str] = ...) -> None: ...
 
 class Module(_message.Message):
-    __slots__ = ("pos", "comments", "builtin", "name", "decls", "runtime")
+    __slots__ = ("pos", "comments", "builtin", "name", "metadata", "decls", "runtime")
     POS_FIELD_NUMBER: _ClassVar[int]
     COMMENTS_FIELD_NUMBER: _ClassVar[int]
     BUILTIN_FIELD_NUMBER: _ClassVar[int]
     NAME_FIELD_NUMBER: _ClassVar[int]
+    METADATA_FIELD_NUMBER: _ClassVar[int]
     DECLS_FIELD_NUMBER: _ClassVar[int]
     RUNTIME_FIELD_NUMBER: _ClassVar[int]
     pos: Position
     comments: _containers.RepeatedScalarFieldContainer[str]
     builtin: bool
     name: str
+    metadata: _containers.RepeatedCompositeFieldContainer[Metadata]
     decls: _containers.RepeatedCompositeFieldContainer[Decl]
     runtime: ModuleRuntime
-    def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., builtin: bool = ..., name: _Optional[str] = ..., decls: _Optional[_Iterable[_Union[Decl, _Mapping]]] = ..., runtime: _Optional[_Union[ModuleRuntime, _Mapping]] = ...) -> None: ...
+    def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., builtin: bool = ..., name: _Optional[str] = ..., metadata: _Optional[_Iterable[_Union[Metadata, _Mapping]]] = ..., decls: _Optional[_Iterable[_Union[Decl, _Mapping]]] = ..., runtime: _Optional[_Union[ModuleRuntime, _Mapping]] = ...) -> None: ...
 
 class ModuleRuntime(_message.Message):
     __slots__ = ("base", "scaling", "deployment")
