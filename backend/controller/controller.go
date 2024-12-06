@@ -462,7 +462,7 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 			requestKey = optional.Some(rkey)
 		}
 
-		timeline.Publish(ctx, &timeline.Log{
+		timeline.Publish(ctx, timeline.Log{
 			DeploymentKey: deploymentKey,
 			RequestKey:    requestKey,
 			Time:          msg.TimeStamp.AsTime(),
@@ -899,7 +899,7 @@ func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftldepl
 	routes := s.routeTable.Current()
 	route, ok := routes.GetDeployment(module).Get()
 	if ok {
-		timeline.Publish(ctx, &timeline.PubSubPublish{
+		timeline.Publish(ctx, timeline.PubSubPublish{
 			DeploymentKey: route,
 			RequestKey:    requestKey,
 			Time:          now,
@@ -1257,7 +1257,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 			if e, ok := err.Get(); ok {
 				errStr = optional.Some(e.Error())
 			}
-			timeline.Publish(ctx, &timeline.AsyncExecute{
+			timeline.Publish(ctx, timeline.AsyncExecute{
 				DeploymentKey: deployment,
 				RequestKey:    call.ParentRequestKey,
 				EventType:     eventType,

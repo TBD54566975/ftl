@@ -108,10 +108,11 @@ func TestDeleteOldEvents(t *testing.T) {
 	}
 
 	// Delete half the events (everything older than 3 seconds)
-	_, err := service.DeleteOldEvents(ctx, connect.NewRequest(&timelinepb.DeleteOldEventsRequest{
+	resp, err := service.DeleteOldEvents(ctx, connect.NewRequest(&timelinepb.DeleteOldEventsRequest{
 		AgeSeconds: 3,
 		EventType:  timelinepb.EventType_EVENT_TYPE_UNSPECIFIED,
 	}))
 	assert.NoError(t, err)
 	assert.Equal(t, len(service.events), 150, "expected only half the events to be deleted")
+	assert.Equal(t, resp.Msg.DeletedCount, 150, "expected half the events to be in the deletion count")
 }
