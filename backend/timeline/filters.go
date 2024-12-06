@@ -5,8 +5,6 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/alecthomas/types/optional"
-
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	islices "github.com/TBD54566975/ftl/internal/slices"
 )
@@ -215,7 +213,7 @@ func FilterIDRange(filter *timelinepb.GetTimelineRequest_IDFilter) TimelineFilte
 }
 
 //nolint:maintidx
-func filtersFromRequest(req *timelinepb.GetTimelineRequest) (outFilters []TimelineFilter, limit optional.Option[int], ascending bool, err error) {
+func filtersFromRequest(req *timelinepb.GetTimelineRequest) (outFilters []TimelineFilter, ascending bool) {
 	if req.Order != timelinepb.GetTimelineRequest_ORDER_DESC {
 		ascending = true
 	}
@@ -227,11 +225,6 @@ func filtersFromRequest(req *timelinepb.GetTimelineRequest) (outFilters []Timeli
 	}
 	for _, filters := range reqFiltersByType {
 		switch filters[0].Filter.(type) {
-		case *timelinepb.GetTimelineRequest_Filter_Limit:
-			if len(filters) > 1 {
-				return nil, optional.None[int](), false, fmt.Errorf("multiple limit filters not supported")
-			}
-			limit = optional.Some(int(filters[0].GetLimit().Limit))
 		case *timelinepb.GetTimelineRequest_Filter_LogLevel:
 			outFilters = append(outFilters, islices.Map(filters, func(f *timelinepb.GetTimelineRequest_Filter) TimelineFilter {
 				return FilterLogLevel(f.GetLogLevel())
@@ -268,5 +261,5 @@ func filtersFromRequest(req *timelinepb.GetTimelineRequest) (outFilters []Timeli
 			panic(fmt.Sprintf("unexpected filter type: %T", filters[0].Filter))
 		}
 	}
-	return outFilters, limit, ascending, nil
+	return outFilters, ascending
 }

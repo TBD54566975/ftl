@@ -3,44 +3,37 @@ package console
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"time"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/types/optional"
-	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl/backend/controller/admin"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
-	"github.com/TBD54566975/ftl/backend/controller/timeline"
 	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
-	pbtimeline "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
+	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/buildengine"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type ConsoleService struct {
-	dal      *dal.DAL
-	timeline *timeline.Service
-	admin    *admin.AdminService
+	dal   *dal.DAL
+	admin *admin.AdminService
 }
 
 var _ pbconsoleconnect.ConsoleServiceHandler = (*ConsoleService)(nil)
+var _ timelinev1connect.TimelineServiceHandler = (*ConsoleService)(nil)
 
-func NewService(dal *dal.DAL, timeline *timeline.Service, admin *admin.AdminService) *ConsoleService {
+func NewService(dal *dal.DAL, admin *admin.AdminService) *ConsoleService {
 	return &ConsoleService{
-		dal:      dal,
-		timeline: timeline,
-		admin:    admin,
+		dal:   dal,
+		admin: admin,
 	}
 }
 
@@ -472,392 +465,6 @@ func addRefToSetMap(m map[schema.RefKey]map[schema.RefKey]bool, key schema.RefKe
 	m[key][value.ToRefKey()] = true
 }
 
-func (c *ConsoleService) GetEvents(ctx context.Context, req *connect.Request[pbconsole.GetEventsRequest]) (*connect.Response[pbconsole.GetEventsResponse], error) {
-	query, err := eventsQueryProtoToDAL(req.Msg)
-	if err != nil {
-		return nil, err
-	}
-
-	if req.Msg.Limit == 0 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("limit must be > 0"))
-	}
-	limit := int(req.Msg.Limit)
-
-	// Get 1 more than the requested limit to determine if there are more results.
-	limitPlusOne := limit + 1
-
-	results, err := c.timeline.QueryTimeline(ctx, limitPlusOne, query...)
-	if err != nil {
-		return nil, err
-	}
-
-	var cursor *int64
-	// Return only the requested number of results.
-	if len(results) > limit {
-		results = results[:limit]
-		id := results[len(results)-1].GetID()
-		cursor = &id
-	}
-
-	response := &pbconsole.GetEventsResponse{
-		Events: slices.Map(results, eventDALToProto),
-		Cursor: cursor,
-	}
-	return connect.NewResponse(response), nil
-}
-
-func (c *ConsoleService) StreamEvents(ctx context.Context, req *connect.Request[pbconsole.StreamEventsRequest], stream *connect.ServerStream[pbconsole.StreamEventsResponse]) error {
-	// Default to 1 second interval if not specified.
-	updateInterval := 1 * time.Second
-	if req.Msg.UpdateInterval != nil && req.Msg.UpdateInterval.AsDuration() > time.Second { // Minimum 1s interval.
-		updateInterval = req.Msg.UpdateInterval.AsDuration()
-	}
-
-	if req.Msg.Query.Limit == 0 {
-		return connect.NewError(connect.CodeInvalidArgument, errors.New("limit must be > 0"))
-	}
-
-	query, err := eventsQueryProtoToDAL(req.Msg.Query)
-	if err != nil {
-		return err
-	}
-
-	// Default to last 1 day of events
-	var lastEventTime time.Time
-	for {
-		thisRequestTime := time.Now()
-		newQuery := query
-
-		if !lastEventTime.IsZero() {
-			newQuery = append(newQuery, timeline.FilterTimeRange(thisRequestTime, lastEventTime))
-		}
-
-		events, err := c.timeline.QueryTimeline(ctx, int(req.Msg.Query.Limit), newQuery...)
-		if err != nil {
-			return err
-		}
-
-		if len(events) > 0 {
-			err = stream.Send(&pbconsole.StreamEventsResponse{
-				Events: slices.Map(events, eventDALToProto),
-			})
-			if err != nil {
-				return err
-			}
-		}
-
-		lastEventTime = thisRequestTime
-		select {
-		case <-time.After(updateInterval):
-		case <-ctx.Done():
-			return nil
-		}
-	}
-}
-
-//nolint:maintidx
-func eventsQueryProtoToDAL(query *pbconsole.GetEventsRequest) ([]timeline.TimelineFilter, error) {
-	var result []timeline.TimelineFilter
-
-	if query.Order == pbconsole.GetEventsRequest_ORDER_DESC {
-		result = append(result, timeline.FilterDescending())
-	}
-
-	for _, filter := range query.Filters {
-		switch f := filter.Filter.(type) {
-		case *pbconsole.GetEventsRequest_Filter_Deployments:
-			deploymentKeys := make([]model.DeploymentKey, 0, len(f.Deployments.Deployments))
-			for _, deployment := range f.Deployments.Deployments {
-				deploymentKey, err := model.ParseDeploymentKey(deployment)
-				if err != nil {
-					return nil, connect.NewError(connect.CodeInvalidArgument, err)
-				}
-				deploymentKeys = append(deploymentKeys, deploymentKey)
-			}
-			result = append(result, timeline.FilterDeployments(deploymentKeys...))
-
-		case *pbconsole.GetEventsRequest_Filter_Requests:
-			requestKeys := make([]model.RequestKey, 0, len(f.Requests.Requests))
-			for _, request := range f.Requests.Requests {
-				requestKey, err := model.ParseRequestKey(request)
-				if err != nil {
-					return nil, connect.NewError(connect.CodeInvalidArgument, err)
-				}
-				requestKeys = append(requestKeys, requestKey)
-			}
-			result = append(result, timeline.FilterRequests(requestKeys...))
-
-		case *pbconsole.GetEventsRequest_Filter_EventTypes:
-			var types []timeline.EventType
-			for _, t := range f.EventTypes.EventTypes {
-				types = append(types, timeline.EventType(t))
-			}
-			result = append(result, timeline.FilterTypes(types...))
-
-		case *pbconsole.GetEventsRequest_Filter_LogLevel:
-			level := log.Level(f.LogLevel.LogLevel)
-			if level < log.Trace || level > log.Error {
-				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown log level %v", f.LogLevel.LogLevel))
-			}
-			result = append(result, timeline.FilterLogLevel(level))
-
-		case *pbconsole.GetEventsRequest_Filter_Time:
-			newerThan := f.Time.GetNewerThan().AsTime()
-			olderThan := f.Time.GetOlderThan().AsTime()
-			result = append(result, timeline.FilterTimeRange(olderThan, newerThan))
-
-		case *pbconsole.GetEventsRequest_Filter_Id:
-			lowerThan := f.Id.GetLowerThan()
-			higherThan := f.Id.GetHigherThan()
-			result = append(result, timeline.FilterIDRange(lowerThan, higherThan))
-
-		case *pbconsole.GetEventsRequest_Filter_Call:
-			sourceModule := optional.Zero(f.Call.GetSourceModule())
-			destVerb := optional.Zero(f.Call.GetDestVerb())
-			result = append(result, timeline.FilterCall(sourceModule, f.Call.DestModule, destVerb))
-
-		default:
-			return nil, fmt.Errorf("unknown filter type %T", f)
-		}
-	}
-
-	return result, nil
-}
-
-//nolint:maintidx
-func eventDALToProto(event timeline.Event) *pbtimeline.Event {
-	switch event := event.(type) {
-	case *timeline.CallEvent:
-		var requestKey *string
-		if r, ok := event.RequestKey.Get(); ok {
-			rstr := r.String()
-			requestKey = &rstr
-		}
-		var sourceVerbRef *schemapb.Ref
-		if sourceVerb, ok := event.SourceVerb.Get(); ok {
-			sourceVerbRef = sourceVerb.ToProto().(*schemapb.Ref) //nolint:forcetypeassert
-		}
-		return &pbtimeline.Event{
-			Timestamp: timestamppb.New(event.Time),
-			Id:        event.ID,
-			Entry: &pbtimeline.Event_Call{
-				Call: &pbtimeline.CallEvent{
-					RequestKey:    requestKey,
-					DeploymentKey: event.DeploymentKey.String(),
-					Timestamp:     timestamppb.New(event.Time),
-					SourceVerbRef: sourceVerbRef,
-					DestinationVerbRef: &schemapb.Ref{
-						Module: event.DestVerb.Module,
-						Name:   event.DestVerb.Name,
-					},
-					Duration: durationpb.New(event.Duration),
-					Request:  string(event.Request),
-					Response: string(event.Response),
-					Error:    event.Error.Ptr(),
-					Stack:    event.Stack.Ptr(),
-				},
-			},
-		}
-
-	case *timeline.LogEvent:
-		var requestKey *string
-		if r, ok := event.RequestKey.Get(); ok {
-			rstr := r.String()
-			requestKey = &rstr
-		}
-		return &pbtimeline.Event{
-			Timestamp: timestamppb.New(event.Time),
-			Id:        event.ID,
-			Entry: &pbtimeline.Event_Log{
-				Log: &pbtimeline.LogEvent{
-					DeploymentKey: event.DeploymentKey.String(),
-					RequestKey:    requestKey,
-					Timestamp:     timestamppb.New(event.Time),
-					LogLevel:      event.Level,
-					Attributes:    event.Attributes,
-					Message:       event.Message,
-					Error:         event.Error.Ptr(),
-				},
-			},
-		}
-
-	case *timeline.DeploymentCreatedEvent:
-		var replaced *string
-		if r, ok := event.ReplacedDeployment.Get(); ok {
-			rstr := r.String()
-			replaced = &rstr
-		}
-		return &pbtimeline.Event{
-			Timestamp: timestamppb.New(event.Time),
-			Id:        event.ID,
-			Entry: &pbtimeline.Event_DeploymentCreated{
-				DeploymentCreated: &pbtimeline.DeploymentCreatedEvent{
-					Key:         event.DeploymentKey.String(),
-					Language:    event.Language,
-					ModuleName:  event.ModuleName,
-					MinReplicas: int32(event.MinReplicas),
-					Replaced:    replaced,
-				},
-			},
-		}
-	case *timeline.DeploymentUpdatedEvent:
-		return &pbtimeline.Event{
-			Timestamp: timestamppb.New(event.Time),
-			Id:        event.ID,
-			Entry: &pbtimeline.Event_DeploymentUpdated{
-				DeploymentUpdated: &pbtimeline.DeploymentUpdatedEvent{
-					Key:             event.DeploymentKey.String(),
-					MinReplicas:     int32(event.MinReplicas),
-					PrevMinReplicas: int32(event.PrevMinReplicas),
-				},
-			},
-		}
-
-	case *timeline.IngressEvent:
-		var requestKey *string
-		if r, ok := event.RequestKey.Get(); ok {
-			rstr := r.String()
-			requestKey = &rstr
-		}
-
-		return &pbtimeline.Event{
-			Timestamp: timestamppb.New(event.Time),
-			Id:        event.ID,
-			Entry: &pbtimeline.Event_Ingress{
-				Ingress: &pbtimeline.IngressEvent{
-					DeploymentKey: event.DeploymentKey.String(),
-					RequestKey:    requestKey,
-					VerbRef: &schemapb.Ref{
-						Module: event.Verb.Module,
-						Name:   event.Verb.Name,
-					},
-					Method:         event.Method,
-					Path:           event.Path,
-					StatusCode:     int32(event.StatusCode),
-					Timestamp:      timestamppb.New(event.Time),
-					Duration:       durationpb.New(event.Duration),
-					Request:        string(event.Request),
-					RequestHeader:  string(event.RequestHeader),
-					Response:       string(event.Response),
-					ResponseHeader: string(event.ResponseHeader),
-					Error:          event.Error.Ptr(),
-				},
-			},
-		}
-
-	case *timeline.CronScheduledEvent:
-		return &pbtimeline.Event{
-			Timestamp: timestamppb.New(event.Time),
-			Id:        event.ID,
-			Entry: &pbtimeline.Event_CronScheduled{
-				CronScheduled: &pbtimeline.CronScheduledEvent{
-					DeploymentKey: event.DeploymentKey.String(),
-					VerbRef: &schemapb.Ref{
-						Module: event.Verb.Module,
-						Name:   event.Verb.Name,
-					},
-					Timestamp:   timestamppb.New(event.Time),
-					Duration:    durationpb.New(event.Duration),
-					ScheduledAt: timestamppb.New(event.ScheduledAt),
-					Schedule:    event.Schedule,
-					Error:       event.Error.Ptr(),
-				},
-			},
-		}
-
-	case *timeline.AsyncExecuteEvent:
-		var requestKey *string
-		if rstr, ok := event.RequestKey.Get(); ok {
-			requestKey = &rstr
-		}
-
-		var asyncEventType pbtimeline.AsyncExecuteEventType
-		switch event.EventType {
-		case timeline.AsyncExecuteEventTypeUnkown:
-			asyncEventType = pbtimeline.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_UNSPECIFIED
-		case timeline.AsyncExecuteEventTypeCron:
-			asyncEventType = pbtimeline.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_CRON
-		case timeline.AsyncExecuteEventTypePubSub:
-			asyncEventType = pbtimeline.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_PUBSUB
-		}
-
-		return &pbtimeline.Event{
-			Timestamp: timestamppb.New(event.Time),
-			Id:        event.ID,
-			Entry: &pbtimeline.Event_AsyncExecute{
-				AsyncExecute: &pbtimeline.AsyncExecuteEvent{
-					DeploymentKey:  event.DeploymentKey.String(),
-					RequestKey:     requestKey,
-					Timestamp:      timestamppb.New(event.Time),
-					AsyncEventType: asyncEventType,
-					VerbRef: &schemapb.Ref{
-						Module: event.Verb.Module,
-						Name:   event.Verb.Name,
-					},
-					Duration: durationpb.New(event.Duration),
-					Error:    event.Error.Ptr(),
-				},
-			},
-		}
-
-	case *timeline.PubSubPublishEvent:
-		var requestKey *string
-		if r, ok := event.RequestKey.Get(); ok {
-			requestKey = &r
-		}
-
-		return &pbtimeline.Event{
-			Timestamp: timestamppb.New(event.Time),
-			Id:        event.ID,
-			Entry: &pbtimeline.Event_PubsubPublish{
-				PubsubPublish: &pbtimeline.PubSubPublishEvent{
-					DeploymentKey: event.DeploymentKey.String(),
-					RequestKey:    requestKey,
-					VerbRef:       event.SourceVerb.ToProto().(*schemapb.Ref), //nolint:forcetypeassert
-					Timestamp:     timestamppb.New(event.Time),
-					Duration:      durationpb.New(event.Duration),
-					Topic:         event.Topic,
-					Request:       string(event.Request),
-					Error:         event.Error.Ptr(),
-				},
-			},
-		}
-
-	case *timeline.PubSubConsumeEvent:
-		var requestKey *string
-		if r, ok := event.RequestKey.Get(); ok {
-			requestKey = &r
-		}
-
-		var destVerbModule string
-		var destVerbName string
-		if destVerb, ok := event.DestVerb.Get(); ok {
-			destVerbModule = destVerb.Module
-			destVerbName = destVerb.Name
-		}
-
-		return &pbtimeline.Event{
-			Timestamp: timestamppb.New(event.Time),
-			Id:        event.ID,
-			Entry: &pbtimeline.Event_PubsubConsume{
-				PubsubConsume: &pbtimeline.PubSubConsumeEvent{
-					DeploymentKey:  event.DeploymentKey.String(),
-					RequestKey:     requestKey,
-					DestVerbModule: &destVerbModule,
-					DestVerbName:   &destVerbName,
-					Timestamp:      timestamppb.New(event.Time),
-					Duration:       durationpb.New(event.Duration),
-					Topic:          event.Topic,
-					Error:          event.Error.Ptr(),
-				},
-			},
-		}
-
-	default:
-		panic(fmt.Errorf("unknown event type %T", event))
-	}
-}
-
 func (c *ConsoleService) GetConfig(ctx context.Context, req *connect.Request[pbconsole.GetConfigRequest]) (*connect.Response[pbconsole.GetConfigResponse], error) {
 	resp, err := c.admin.ConfigGet(ctx, connect.NewRequest(&ftlv1.ConfigGetRequest{
 		Ref: &ftlv1.ConfigRef{
@@ -939,4 +546,40 @@ func buildGraph(sch *schema.Schema, module *schema.Module, out map[string][]stri
 			buildGraph(sch, module, out)
 		}
 	}
+}
+
+func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[timelinepb.GetTimelineRequest]) (*connect.Response[timelinepb.GetTimelineResponse], error) {
+	client := rpc.ClientFromContext[timelinev1connect.TimelineServiceClient](ctx)
+	resp, err := client.GetTimeline(ctx, connect.NewRequest(req.Msg))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get timeline from service: %w", err)
+	}
+	return connect.NewResponse(resp.Msg), nil
+}
+
+func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Request[timelinepb.StreamTimelineRequest], out *connect.ServerStream[timelinepb.StreamTimelineResponse]) error {
+	client := rpc.ClientFromContext[timelinev1connect.TimelineServiceClient](ctx)
+	stream, err := client.StreamTimeline(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to stream timeline from service: %w", err)
+	}
+	defer stream.Close()
+	for stream.Receive() {
+		msg := stream.Msg()
+		err = out.Send(msg)
+		if err != nil {
+			return fmt.Errorf("failed to send message: %w", err)
+		}
+	}
+	if stream.Err() != nil {
+		return fmt.Errorf("error streaming timeline from service: %w", stream.Err())
+	}
+	return nil
+}
+func (c *ConsoleService) CreateEvent(ctx context.Context, req *connect.Request[timelinepb.CreateEventRequest]) (*connect.Response[timelinepb.CreateEventResponse], error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (c *ConsoleService) DeleteOldEvents(ctx context.Context, req *connect.Request[timelinepb.DeleteOldEventsRequest]) (*connect.Response[timelinepb.DeleteOldEventsResponse], error) {
+	return nil, fmt.Errorf("not implemented")
 }

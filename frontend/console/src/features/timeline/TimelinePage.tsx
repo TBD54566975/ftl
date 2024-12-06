@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import type { GetEventsRequest_Filter } from '../../protos/xyz/block/ftl/console/v1/console_pb'
+import type { GetTimelineRequest_Filter } from '../../protos/xyz/block/ftl/timeline/v1/timeline_pb'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { Timeline } from './Timeline'
 import { TimelineFilterPanel } from './filters/TimelineFilterPanel'
@@ -9,7 +9,7 @@ import { TIME_RANGES, type TimeSettings, TimelineTimeControls } from './filters/
 export const TimelinePage = () => {
   const [searchParams] = useSearchParams()
   const [timeSettings, setTimeSettings] = useState<TimeSettings>({ isTailing: true, isPaused: false })
-  const [filters, setFilters] = useState<GetEventsRequest_Filter[]>([])
+  const [filters, setFilters] = useState<GetTimelineRequest_Filter[]>([])
   const [selectedTimeRange, setSelectedTimeRange] = useState(TIME_RANGES.tail)
   const [isTimelinePaused, setIsTimelinePaused] = useState(false)
 
@@ -26,7 +26,7 @@ export const TimelinePage = () => {
     setTimeSettings(settings)
   }
 
-  const handleFiltersChanged = (filters: GetEventsRequest_Filter[]) => {
+  const handleFiltersChanged = (filters: GetTimelineRequest_Filter[]) => {
     setFilters(filters)
   }
 

@@ -43,6 +43,7 @@ func TestGetTimelineWithLimit(t *testing.T) {
 	} {
 		resp, err := service.GetTimeline(ctx, connect.NewRequest(&timelinepb.GetTimelineRequest{
 			Order: timelinepb.GetTimelineRequest_ORDER_DESC,
+			Limit: limit,
 			Filters: []*timelinepb.GetTimelineRequest_Filter{
 				{
 					Filter: &timelinepb.GetTimelineRequest_Filter_EventTypes{
@@ -53,15 +54,12 @@ func TestGetTimelineWithLimit(t *testing.T) {
 						},
 					},
 				},
-				{
-					Filter: &timelinepb.GetTimelineRequest_Filter_Limit{
-						Limit: &timelinepb.GetTimelineRequest_LimitFilter{
-							Limit: limit,
-						},
-					},
-				},
 			},
 		}))
+		if limit == 0 {
+			assert.Error(t, err, "invalid_argument: limit must be > 0")
+			continue
+		}
 		assert.NoError(t, err)
 		if limit == 0 || limit > int32(entryCount) {
 			assert.Equal(t, entryCount, len(resp.Msg.Events))

@@ -9,9 +9,8 @@ import (
 	"connectrpc.com/connect"
 	"github.com/jpillora/backoff"
 
-	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
-	pbtimeline "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
+	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
@@ -38,8 +37,8 @@ func (c *replayCmd) Run(
 		return fmt.Errorf("failed to wait for client: %w", err)
 	}
 
-	consoleServiceClient := rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, cli.Endpoint.String(), log.Error)
-	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, c.Wait-time.Since(startTime), consoleServiceClient); err != nil {
+	timelineClient := rpc.Dial(timelinev1connect.NewTimelineServiceClient, cli.TimelineEndpoint.String(), log.Error)
+	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, c.Wait-time.Since(startTime), timelineClient); err != nil {
 		return fmt.Errorf("failed to wait for console service client: %w", err)
 	}
 
@@ -77,21 +76,21 @@ func (c *replayCmd) Run(
 		return fmt.Errorf("verb not found: %s", c.Verb)
 	}
 
-	events, err := consoleServiceClient.GetEvents(ctx, connect.NewRequest(&pbconsole.GetEventsRequest{
-		Order: pbconsole.GetEventsRequest_ORDER_DESC,
-		Filters: []*pbconsole.GetEventsRequest_Filter{
+	events, err := timelineClient.GetTimeline(ctx, connect.NewRequest(&timelinepb.GetTimelineRequest{
+		Order: timelinepb.GetTimelineRequest_ORDER_DESC,
+		Filters: []*timelinepb.GetTimelineRequest_Filter{
 			{
-				Filter: &pbconsole.GetEventsRequest_Filter_Call{
-					Call: &pbconsole.GetEventsRequest_CallFilter{
+				Filter: &timelinepb.GetTimelineRequest_Filter_Call{
+					Call: &timelinepb.GetTimelineRequest_CallFilter{
 						DestModule: c.Verb.Module,
 						DestVerb:   &c.Verb.Name,
 					},
 				},
 			},
 			{
-				Filter: &pbconsole.GetEventsRequest_Filter_EventTypes{
-					EventTypes: &pbconsole.GetEventsRequest_EventTypeFilter{
-						EventTypes: []pbtimeline.EventType{pbtimeline.EventType_EVENT_TYPE_CALL},
+				Filter: &timelinepb.GetTimelineRequest_Filter_EventTypes{
+					EventTypes: &timelinepb.GetTimelineRequest_EventTypeFilter{
+						EventTypes: []timelinepb.EventType{timelinepb.EventType_EVENT_TYPE_CALL},
 					},
 				},
 			},

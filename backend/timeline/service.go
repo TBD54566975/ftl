@@ -2,6 +2,7 @@ package timeline
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"sync"
@@ -114,10 +115,13 @@ func (s *service) GetTimeline(ctx context.Context, req *connect.Request[timeline
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	filters, limit, ascending, err := filtersFromRequest(req.Msg)
-	if err != nil {
-		return nil, err
+	filters, ascending := filtersFromRequest(req.Msg)
+	if req.Msg.Limit == 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("limit must be > 0"))
 	}
+	// Get 1 more than the requested limit to determine if there are more results.
+	limit := int(req.Msg.Limit)
+	fetchLimit := limit + 1
 
 	results := []*timelinepb.Event{}
 
@@ -141,13 +145,74 @@ func (s *service) GetTimeline(ctx context.Context, req *connect.Request[timeline
 			continue
 		}
 		results = append(results, s.events[i])
-		if limit, ok := limit.Get(); ok && limit != 0 && len(results) >= limit {
+		if fetchLimit != 0 && len(results) >= fetchLimit {
 			break
 		}
 	}
+
+	var cursor *int64
+	// Return only the requested number of results.
+	if len(results) > limit {
+		id := results[len(results)-1].Id
+		results = results[:limit]
+		cursor = &id
+	}
 	return connect.NewResponse(&timelinepb.GetTimelineResponse{
 		Events: results,
+		Cursor: cursor,
 	}), nil
+}
+
+func (s *service) StreamTimeline(ctx context.Context, req *connect.Request[timelinepb.StreamTimelineRequest], stream *connect.ServerStream[timelinepb.StreamTimelineResponse]) error {
+	// Default to 1 second interval if not specified.
+	updateInterval := 1 * time.Second
+	if req.Msg.UpdateInterval != nil && req.Msg.UpdateInterval.AsDuration() > time.Second { // Minimum 1s interval.
+		updateInterval = req.Msg.UpdateInterval.AsDuration()
+	}
+
+	if req.Msg.Query.Limit == 0 {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("limit must be > 0"))
+	}
+
+	timelineReq := req.Msg.Query
+	// Default to last 1 day of events
+	var lastEventTime time.Time
+	for {
+		thisRequestTime := time.Now()
+		newQuery := timelineReq
+
+		if !lastEventTime.IsZero() {
+			newQuery.Filters = append(newQuery.Filters, &timelinepb.GetTimelineRequest_Filter{
+				Filter: &timelinepb.GetTimelineRequest_Filter_Time{
+					Time: &timelinepb.GetTimelineRequest_TimeFilter{
+						NewerThan: timestamppb.New(lastEventTime),
+						OlderThan: timestamppb.New(thisRequestTime),
+					},
+				},
+			})
+		}
+
+		resp, err := s.GetTimeline(ctx, connect.NewRequest(newQuery))
+		if err != nil {
+			return fmt.Errorf("failed to get timeline: %w", err)
+		}
+
+		if len(resp.Msg.Events) > 0 {
+			err = stream.Send(&timelinepb.StreamTimelineResponse{
+				Events: resp.Msg.Events,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to get timeline events: %w", err)
+			}
+		}
+
+		lastEventTime = thisRequestTime
+		select {
+		case <-time.After(updateInterval):
+		case <-ctx.Done():
+			return nil
+		}
+	}
 }
 
 func (s *service) DeleteOldEvents(ctx context.Context, req *connect.Request[timelinepb.DeleteOldEventsRequest]) (*connect.Response[timelinepb.DeleteOldEventsResponse], error) {

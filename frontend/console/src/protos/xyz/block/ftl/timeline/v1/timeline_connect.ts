@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "../../v1/ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { CreateEventRequest, CreateEventResponse, DeleteOldEventsRequest, DeleteOldEventsResponse, GetTimelineRequest, GetTimelineResponse } from "./timeline_pb.js";
+import { CreateEventRequest, CreateEventResponse, DeleteOldEventsRequest, DeleteOldEventsResponse, GetTimelineRequest, GetTimelineResponse, StreamTimelineRequest, StreamTimelineResponse } from "./timeline_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.timeline.v1.TimelineService
@@ -26,7 +26,7 @@ export const TimelineService = {
       idempotency: MethodIdempotency.NoSideEffects,
     },
     /**
-     * Get timeline events, optionally filtered by type and time
+     * Get timeline events with filters
      *
      * @generated from rpc xyz.block.ftl.timeline.v1.TimelineService.GetTimeline
      */
@@ -36,6 +36,17 @@ export const TimelineService = {
       O: GetTimelineResponse,
       kind: MethodKind.Unary,
       idempotency: MethodIdempotency.NoSideEffects,
+    },
+    /**
+     * Stream timeline events with filters
+     *
+     * @generated from rpc xyz.block.ftl.timeline.v1.TimelineService.StreamTimeline
+     */
+    streamTimeline: {
+      name: "StreamTimeline",
+      I: StreamTimelineRequest,
+      O: StreamTimelineResponse,
+      kind: MethodKind.ServerStreaming,
     },
     /**
      * @generated from rpc xyz.block.ftl.timeline.v1.TimelineService.CreateEvent

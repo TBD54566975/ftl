@@ -3,8 +3,8 @@ import type React from 'react'
 import { useEffect, useState } from 'react'
 import { useModules } from '../../../api/modules/use-modules'
 import { eventTypesFilter, logLevelFilter, modulesFilter } from '../../../api/timeline'
-import type { GetEventsRequest_Filter } from '../../../protos/xyz/block/ftl/console/v1/console_pb'
 import { EventType, LogLevel } from '../../../protos/xyz/block/ftl/timeline/v1/event_pb'
+import type { GetTimelineRequest_Filter } from '../../../protos/xyz/block/ftl/timeline/v1/timeline_pb'
 import { textColor } from '../../../utils'
 import { LogLevelBadgeSmall } from '../../logs/LogLevelBadgeSmall'
 import { logLevelBgColor, logLevelColor, logLevelRingColor } from '../../logs/log.utils'
@@ -47,7 +47,7 @@ const LOG_LEVELS: Record<number, string> = {
 export const TimelineFilterPanel = ({
   onFiltersChanged,
 }: {
-  onFiltersChanged: (filters: GetEventsRequest_Filter[]) => void
+  onFiltersChanged: (filters: GetTimelineRequest_Filter[]) => void
 }) => {
   const modules = useModules()
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(Object.keys(EVENT_TYPES))
@@ -69,7 +69,7 @@ export const TimelineFilterPanel = ({
   }, [modules.data])
 
   useEffect(() => {
-    const filter: GetEventsRequest_Filter[] = []
+    const filter: GetTimelineRequest_Filter[] = []
     if (selectedEventTypes.length !== Object.keys(EVENT_TYPES).length) {
       const selectedTypes = selectedEventTypes.map((key) => EVENT_TYPES[key].type)
 
