@@ -623,13 +623,6 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment dalsql.GetDeploymen
 	return out, nil
 }
 
-func (d *DAL) CreateRequest(ctx context.Context, key model.RequestKey, addr string) error {
-	if err := d.db.CreateRequest(ctx, dalsql.Origin(key.Payload.Origin), key, addr); err != nil {
-		return libdal.TranslatePGError(err)
-	}
-	return nil
-}
-
 func (d *DAL) GetActiveRunners(ctx context.Context) ([]dalmodel.Runner, error) {
 	rows, err := d.db.GetActiveRunners(ctx)
 	if err != nil {

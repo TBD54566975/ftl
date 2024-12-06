@@ -61,49 +61,6 @@ func (ns NullAsyncCallState) Value() (driver.Value, error) {
 	return string(ns.AsyncCallState), nil
 }
 
-type Origin string
-
-const (
-	OriginIngress Origin = "ingress"
-	OriginCron    Origin = "cron"
-	OriginPubsub  Origin = "pubsub"
-)
-
-func (e *Origin) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = Origin(s)
-	case string:
-		*e = Origin(s)
-	default:
-		return fmt.Errorf("unsupported scan type for Origin: %T", src)
-	}
-	return nil
-}
-
-type NullOrigin struct {
-	Origin Origin
-	Valid  bool // Valid is true if Origin is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullOrigin) Scan(value interface{}) error {
-	if value == nil {
-		ns.Origin, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.Origin.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullOrigin) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.Origin), nil
-}
-
 type TopicSubscriptionState string
 
 const (
