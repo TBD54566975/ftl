@@ -7,7 +7,6 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	deployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -20,9 +19,8 @@ type PubSubPublish struct {
 	Time          time.Time
 	SourceVerb    schema.Ref
 	Topic         string
-	// Should this just be request body?
-	Request *deployment.PublishEventRequest
-	Error   optional.Option[string]
+	Request       []byte
+	Error         optional.Option[string]
 }
 
 var _ Event = PubSubPublish{}
@@ -38,7 +36,7 @@ func (p PubSubPublish) ToReq() (*timelinepb.CreateEventRequest, error) {
 				Timestamp:     timestamppb.New(p.Time),
 				Duration:      durationpb.New(time.Since(p.Time)),
 				Topic:         p.Topic,
-				Request:       string(p.Request.Body),
+				Request:       string(p.Request),
 				Error:         p.Error.Ptr(),
 			},
 		},
