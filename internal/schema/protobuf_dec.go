@@ -197,6 +197,14 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			Digest: s.SqlMigration.Digest,
 		}
 
+	case *schemapb.Metadata_Artefact:
+		return &MetadataArtefact{
+			Pos:        PosFromProto(s.Artefact.Pos),
+			Executable: s.Artefact.Executable,
+			Path:       s.Artefact.Path,
+			Digest:     s.Artefact.Digest,
+		}
+
 	default:
 		panic(fmt.Sprintf("unhandled metadata type: %T", s))
 	}

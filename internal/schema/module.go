@@ -21,10 +21,11 @@ import (
 type Module struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Comments []string `parser:"@Comment*" protobuf:"2"`
-	Builtin  bool     `parser:"@'builtin'?" protobuf:"3"`
-	Name     string   `parser:"'module' @Ident '{'" protobuf:"4"`
-	Decls    []Decl   `parser:"@@* '}'" protobuf:"5"`
+	Comments []string   `parser:"@Comment*" protobuf:"2"`
+	Builtin  bool       `parser:"@'builtin'?" protobuf:"3"`
+	Name     string     `parser:"'module' @Ident '{'" protobuf:"4"`
+	Metadata []Metadata `parser:"@@*" protobuf:"6"`
+	Decls    []Decl     `parser:"@@* '}'" protobuf:"5"`
 
 	Runtime *ModuleRuntime `protobuf:"31634" parser:""`
 }
@@ -235,6 +236,7 @@ func (m *Module) ToProto() proto.Message {
 		Comments: m.Comments,
 		Decls:    declListToProto(m.Decls),
 		Runtime:  runtime,
+		Metadata: metadataListToProto(m.Metadata),
 	}
 }
 
@@ -259,6 +261,7 @@ func ModuleFromProto(s *schemapb.Module) (*Module, error) {
 		Comments: s.Comments,
 		Decls:    declListToSchema(s.Decls),
 		Runtime:  ModuleRuntimeFromProto(s.Runtime),
+		Metadata: metadataListToSchema(s.Metadata),
 	}
 	return module, ValidateModule(module)
 }

@@ -180,7 +180,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 						validateRetries(module, md, optional.Some(n.Request), scopes, optional.Some(schema))
 
 					case *MetadataCronJob, *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap,
-						*MetadataEncoding, *MetadataSecrets, *MetadataPublisher, *MetadataSQLMigration, DatabaseConnector:
+						*MetadataEncoding, *MetadataSecrets, *MetadataPublisher, *MetadataSQLMigration, *MetadataArtefact, DatabaseConnector:
 					}
 				}
 			case *Database:
@@ -224,7 +224,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named,
 				*MetadataSubscriber, *Topic, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher,
 				*MetadataSQLMigration, *DSNDatabaseConnector, *DatabaseRuntime, DatabaseConnector,
-				*AWSIAMAuthDatabaseConnector, *DatabaseRuntimeConnections:
+				*AWSIAMAuthDatabaseConnector, *DatabaseRuntimeConnections, *MetadataArtefact:
 			}
 			return next()
 		})
@@ -367,7 +367,7 @@ func ValidateModule(module *Module) error {
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
 			*Config, *Secret, *MetadataSubscriber, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher,
 			*MetadataSQLMigration, *DSNDatabaseConnector, *DatabaseRuntime, *AWSIAMAuthDatabaseConnector,
-			DatabaseConnector, *DatabaseRuntimeConnections:
+			*MetadataArtefact, DatabaseConnector, *DatabaseRuntimeConnections:
 
 		case Named, Symbol, Type, Metadata, Value, Decl: // Union types.
 		}
@@ -467,6 +467,8 @@ func sortMetadataType(md Metadata) {
 		sortRefs(m.Topics)
 	case *MetadataSQLMigration:
 		return
+	case *MetadataArtefact:
+		return
 	}
 }
 
@@ -499,6 +501,8 @@ func getMetadataSortingPriority(metadata Metadata) int {
 		priority = 12
 	case *MetadataSQLMigration:
 		priority = 13
+	case *MetadataArtefact:
+		priority = 14
 	}
 	return priority
 }
@@ -697,7 +701,7 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 			subErrs := validateVerbSubscriptions(module, n, md, scopes)
 			merr = append(merr, subErrs...)
 		case *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap, *MetadataEncoding,
-			*MetadataSecrets, *MetadataPublisher, *MetadataSQLMigration:
+			*MetadataSecrets, *MetadataPublisher, *MetadataSQLMigration, *MetadataArtefact:
 		}
 	}
 	return

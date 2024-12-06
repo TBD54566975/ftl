@@ -317,6 +317,8 @@ func TestParsing(t *testing.T) {
 		{name: "TimeEcho",
 			input: `
 				module echo {
+					+artefact "echo" "asf4as1fdfa2"
+
 					data EchoRequest {
 						name String?
 					}
@@ -346,6 +348,9 @@ func TestParsing(t *testing.T) {
 			expected: &Schema{
 				Modules: []*Module{{
 					Name: "echo",
+					Metadata: []Metadata{
+						&MetadataArtefact{Path: "echo", Digest: "asf4as1fdfa2", Executable: false},
+					},
 					Decls: []Decl{
 						&Data{Name: "EchoRequest", Fields: []*Field{{Name: "name", Type: &Optional{Type: &String{}}}}},
 						&Data{Name: "EchoResponse", Fields: []*Field{{Name: "message", Type: &String{}}}},

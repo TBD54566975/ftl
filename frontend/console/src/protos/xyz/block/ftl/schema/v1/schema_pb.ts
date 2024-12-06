@@ -1303,6 +1303,12 @@ export class Metadata extends Message<Metadata> {
     case: "alias";
   } | {
     /**
+     * @generated from field: xyz.block.ftl.schema.v1.MetadataArtefact artefact = 14;
+     */
+    value: MetadataArtefact;
+    case: "artefact";
+  } | {
+    /**
      * @generated from field: xyz.block.ftl.schema.v1.MetadataCalls calls = 1;
      */
     value: MetadataCalls;
@@ -1384,6 +1390,7 @@ export class Metadata extends Message<Metadata> {
   static readonly typeName = "xyz.block.ftl.schema.v1.Metadata";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 5, name: "alias", kind: "message", T: MetadataAlias, oneof: "value" },
+    { no: 14, name: "artefact", kind: "message", T: MetadataArtefact, oneof: "value" },
     { no: 1, name: "calls", kind: "message", T: MetadataCalls, oneof: "value" },
     { no: 10, name: "config", kind: "message", T: MetadataConfig, oneof: "value" },
     { no: 3, name: "cron_job", kind: "message", T: MetadataCronJob, oneof: "value" },
@@ -1461,6 +1468,61 @@ export class MetadataAlias extends Message<MetadataAlias> {
 
   static equals(a: MetadataAlias | PlainMessage<MetadataAlias> | undefined, b: MetadataAlias | PlainMessage<MetadataAlias> | undefined): boolean {
     return proto3.util.equals(MetadataAlias, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.schema.v1.MetadataArtefact
+ */
+export class MetadataArtefact extends Message<MetadataArtefact> {
+  /**
+   * @generated from field: optional xyz.block.ftl.schema.v1.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string path = 2;
+   */
+  path = "";
+
+  /**
+   * @generated from field: string digest = 3;
+   */
+  digest = "";
+
+  /**
+   * @generated from field: bool executable = 4;
+   */
+  executable = false;
+
+  constructor(data?: PartialMessage<MetadataArtefact>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.schema.v1.MetadataArtefact";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "digest", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "executable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataArtefact {
+    return new MetadataArtefact().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetadataArtefact {
+    return new MetadataArtefact().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetadataArtefact {
+    return new MetadataArtefact().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MetadataArtefact | PlainMessage<MetadataArtefact> | undefined, b: MetadataArtefact | PlainMessage<MetadataArtefact> | undefined): boolean {
+    return proto3.util.equals(MetadataArtefact, a, b);
   }
 }
 
@@ -2059,6 +2121,11 @@ export class Module extends Message<Module> {
   name = "";
 
   /**
+   * @generated from field: repeated xyz.block.ftl.schema.v1.Metadata metadata = 6;
+   */
+  metadata: Metadata[] = [];
+
+  /**
    * @generated from field: repeated xyz.block.ftl.schema.v1.Decl decls = 5;
    */
   decls: Decl[] = [];
@@ -2080,6 +2147,7 @@ export class Module extends Message<Module> {
     { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "builtin", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 4, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "metadata", kind: "message", T: Metadata, repeated: true },
     { no: 5, name: "decls", kind: "message", T: Decl, repeated: true },
     { no: 31634, name: "runtime", kind: "message", T: ModuleRuntime },
   ]);
