@@ -13,7 +13,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub/internal/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
-	"github.com/TBD54566975/ftl/backend/controller/timeline"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -40,15 +39,13 @@ type Service struct {
 	dal               *dal.DAL
 	asyncCallListener optional.Option[AsyncCallListener]
 	eventPublished    chan struct{}
-	timelineSvc       *timeline.Service
 }
 
-func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service, asyncCallListener optional.Option[AsyncCallListener], timeline *timeline.Service) *Service {
+func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service, asyncCallListener optional.Option[AsyncCallListener]) *Service {
 	m := &Service{
 		dal:               dal.New(conn, encryption),
 		asyncCallListener: asyncCallListener,
 		eventPublished:    make(chan struct{}),
-		timelineSvc:       timeline,
 	}
 	go m.poll(ctx)
 	return m
@@ -93,7 +90,7 @@ func (s *Service) poll(ctx context.Context) {
 }
 
 func (s *Service) progressSubscriptions(ctx context.Context) error {
-	count, err := s.dal.ProgressSubscriptions(ctx, eventConsumptionDelay, s.timelineSvc)
+	count, err := s.dal.ProgressSubscriptions(ctx, eventConsumptionDelay)
 	if err != nil {
 		return fmt.Errorf("progress subscriptions: %w", err)
 	}

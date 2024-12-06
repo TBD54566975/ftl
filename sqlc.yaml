@@ -6,8 +6,6 @@ sql:
       - backend/controller/dal/internal/sql/queries.sql
       - backend/controller/dal/internal/sql/async_queries.sql
       - backend/controller/pubsub/internal/sql/queries.sql
-      # Some of the timeline entries happen within a controller transaction, so we need to include them here
-      - backend/controller/timeline/internal/sql/deployment_queries.sql
     schema: "backend/controller/sql/schema"
     database:
       uri: postgres://localhost:15432/ftl?sslmode=disable&user=postgres&password=secret
@@ -166,14 +164,6 @@ sql:
       go:
         <<: *gengo
         out: "backend/controller/encryption/internal/sql"
-  - <<: *daldir
-    queries:
-      - backend/controller/timeline/internal/sql/queries.sql
-      - backend/controller/timeline/internal/sql/deployment_queries.sql
-    gen:
-      go:
-        <<: *gengo
-        out: "backend/controller/timeline/internal/sql"
   - <<: *daldir
     queries:
       - backend/controller/pubsub/internal/sql/queries.sql

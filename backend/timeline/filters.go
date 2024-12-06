@@ -191,10 +191,10 @@ func FilterTypes(filters ...*timelinepb.GetTimelineRequest_EventTypeFilter) Time
 // FilterTimeRange filters events between the given times, inclusive.
 func FilterTimeRange(filter *timelinepb.GetTimelineRequest_TimeFilter) TimelineFilter {
 	return func(event *timelinepb.Event) bool {
-		if filter.NewerThan != nil && event.TimeStamp.AsTime().Before(filter.NewerThan.AsTime()) {
+		if filter.NewerThan != nil && event.Timestamp.AsTime().Before(filter.NewerThan.AsTime()) {
 			return false
 		}
-		if filter.OlderThan != nil && event.TimeStamp.AsTime().After(filter.OlderThan.AsTime()) {
+		if filter.OlderThan != nil && event.Timestamp.AsTime().After(filter.OlderThan.AsTime()) {
 			return false
 		}
 		return true

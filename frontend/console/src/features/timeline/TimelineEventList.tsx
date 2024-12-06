@@ -60,7 +60,7 @@ export const TimelineEventList = ({ events, selectedEventId, handleEntryClicked 
               <td className='w-8 flex-none flex items-center justify-center'>
                 <TimelineIcon event={entry} />
               </td>
-              <td className='p-1 w-40 items-center flex-none text-gray-400 dark:text-gray-400'>{formatTimestampShort(entry.timeStamp)}</td>
+              <td className='p-1 w-40 items-center flex-none text-gray-400 dark:text-gray-400'>{formatTimestampShort(entry.timestamp)}</td>
               <td title={deploymentKey(entry)} className={`p-1 pr-2 w-40 items-center flex-none truncate ${deploymentTextColor(deploymentKey(entry))}`}>
                 {deploymentKey(entry)}
               </td>

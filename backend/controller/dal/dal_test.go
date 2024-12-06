@@ -3,6 +3,7 @@ package dal
 import (
 	"bytes"
 	"context"
+	"net/http"
 	"sync"
 	"testing"
 	"time"
@@ -12,7 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	"github.com/TBD54566975/ftl/backend/controller/timeline"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
@@ -21,18 +22,20 @@ import (
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
 func TestDAL(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	timelineClient := timelinev1connect.NewTimelineServiceClient(http.DefaultClient, "http://localhost:8080")
+	ctx = rpc.ContextWithClient(ctx, timelineClient)
 	conn := sqltest.OpenForTesting(ctx, t)
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	timelineSrv := timeline.New(ctx, conn, encryption)
-	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener](), timelineSrv)
+	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
 	dal := New(ctx, conn, encryption, pubSub, artefacts.NewForTesting())
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
@@ -191,8 +194,7 @@ func TestCreateArtefactConflict(t *testing.T) {
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	timelineSrv := timeline.New(ctx, conn, encryption)
-	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener](), timelineSrv)
+	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
 
 	dal := New(ctx, conn, encryption, pubSub, artefacts.NewForTesting())
 

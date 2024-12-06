@@ -3,11 +3,11 @@ import type { Event } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
 import { compareTimestamps, durationToMillis } from '../../utils'
 
 export const eventBarLeftOffsetPercentage = (event: Event, requestStartTime: number, requestDurationMs: number) => {
-  if (!event.timeStamp) {
+  if (!event.timestamp) {
     return 0
   }
 
-  const offsetInMillis = event.timeStamp.toDate().getTime() - requestStartTime
+  const offsetInMillis = event.timestamp.toDate().getTime() - requestStartTime
   return (offsetInMillis / requestDurationMs) * 100
 }
 
@@ -33,7 +33,7 @@ export const groupEventsByRequestKey = (events: Event[]): Record<string, Event[]
     acc[requestKey] = acc[requestKey] ? [...acc[requestKey], event] : [event]
 
     // Sort events by timestamp, ensuring the first event is the "trigger" event
-    acc[requestKey].sort((a, b) => compareTimestamps(a.timeStamp, b.timeStamp))
+    acc[requestKey].sort((a, b) => compareTimestamps(a.timestamp, b.timestamp))
 
     return acc
   }, {})
@@ -41,7 +41,7 @@ export const groupEventsByRequestKey = (events: Event[]): Record<string, Event[]
 
 export const requestStartTime = (events: Event[]): number => {
   const traceEvents = events.map((event) => event.entry.value as TraceEvent)
-  return Math.min(...traceEvents.map((event) => event.timeStamp?.toDate().getTime() ?? 0))
+  return Math.min(...traceEvents.map((event) => event.timestamp?.toDate().getTime() ?? 0))
 }
 
 export const totalDurationForRequest = (events: Event[]): number => {
@@ -49,7 +49,7 @@ export const totalDurationForRequest = (events: Event[]): number => {
   const requestEndTime = Math.max(
     ...traceEvents.map((event) => {
       const eventDuration = event.duration ? durationToMillis(event.duration) : 0
-      return (event.timeStamp?.toDate().getTime() ?? 0) + eventDuration
+      return (event.timestamp?.toDate().getTime() ?? 0) + eventDuration
     }),
   )
   return requestEndTime - requestStartTime(events)

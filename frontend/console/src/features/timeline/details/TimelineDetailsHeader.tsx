@@ -19,8 +19,8 @@ export const TimelineDetailsHeader = ({ event }: { event: Event }) => {
           <div className='flex items-center space-x-2'>
             {eventBadge(event)}
 
-            <time dateTime={formatTimestampShort(event.timeStamp)} className='flex-none text-sm font-roboto-mono text-gray-500 dark:text-gray-300'>
-              {formatTimestampShort(event.timeStamp)}
+            <time dateTime={formatTimestampShort(event.timestamp)} className='flex-none text-sm font-roboto-mono text-gray-500 dark:text-gray-300'>
+              {formatTimestampShort(event.timestamp)}
             </time>
           </div>
           <CloseButton onClick={closePanel} />

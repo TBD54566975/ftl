@@ -638,13 +638,13 @@ func eventDALToProto(event timeline.Event) *pbtimeline.Event {
 			sourceVerbRef = sourceVerb.ToProto().(*schemapb.Ref) //nolint:forcetypeassert
 		}
 		return &pbtimeline.Event{
-			TimeStamp: timestamppb.New(event.Time),
+			Timestamp: timestamppb.New(event.Time),
 			Id:        event.ID,
 			Entry: &pbtimeline.Event_Call{
 				Call: &pbtimeline.CallEvent{
 					RequestKey:    requestKey,
 					DeploymentKey: event.DeploymentKey.String(),
-					TimeStamp:     timestamppb.New(event.Time),
+					Timestamp:     timestamppb.New(event.Time),
 					SourceVerbRef: sourceVerbRef,
 					DestinationVerbRef: &schemapb.Ref{
 						Module: event.DestVerb.Module,
@@ -666,13 +666,13 @@ func eventDALToProto(event timeline.Event) *pbtimeline.Event {
 			requestKey = &rstr
 		}
 		return &pbtimeline.Event{
-			TimeStamp: timestamppb.New(event.Time),
+			Timestamp: timestamppb.New(event.Time),
 			Id:        event.ID,
 			Entry: &pbtimeline.Event_Log{
 				Log: &pbtimeline.LogEvent{
 					DeploymentKey: event.DeploymentKey.String(),
 					RequestKey:    requestKey,
-					TimeStamp:     timestamppb.New(event.Time),
+					Timestamp:     timestamppb.New(event.Time),
 					LogLevel:      event.Level,
 					Attributes:    event.Attributes,
 					Message:       event.Message,
@@ -688,7 +688,7 @@ func eventDALToProto(event timeline.Event) *pbtimeline.Event {
 			replaced = &rstr
 		}
 		return &pbtimeline.Event{
-			TimeStamp: timestamppb.New(event.Time),
+			Timestamp: timestamppb.New(event.Time),
 			Id:        event.ID,
 			Entry: &pbtimeline.Event_DeploymentCreated{
 				DeploymentCreated: &pbtimeline.DeploymentCreatedEvent{
@@ -702,7 +702,7 @@ func eventDALToProto(event timeline.Event) *pbtimeline.Event {
 		}
 	case *timeline.DeploymentUpdatedEvent:
 		return &pbtimeline.Event{
-			TimeStamp: timestamppb.New(event.Time),
+			Timestamp: timestamppb.New(event.Time),
 			Id:        event.ID,
 			Entry: &pbtimeline.Event_DeploymentUpdated{
 				DeploymentUpdated: &pbtimeline.DeploymentUpdatedEvent{
@@ -721,7 +721,7 @@ func eventDALToProto(event timeline.Event) *pbtimeline.Event {
 		}
 
 		return &pbtimeline.Event{
-			TimeStamp: timestamppb.New(event.Time),
+			Timestamp: timestamppb.New(event.Time),
 			Id:        event.ID,
 			Entry: &pbtimeline.Event_Ingress{
 				Ingress: &pbtimeline.IngressEvent{
@@ -734,7 +734,7 @@ func eventDALToProto(event timeline.Event) *pbtimeline.Event {
 					Method:         event.Method,
 					Path:           event.Path,
 					StatusCode:     int32(event.StatusCode),
-					TimeStamp:      timestamppb.New(event.Time),
+					Timestamp:      timestamppb.New(event.Time),
 					Duration:       durationpb.New(event.Duration),
 					Request:        string(event.Request),
 					RequestHeader:  string(event.RequestHeader),
@@ -747,7 +747,7 @@ func eventDALToProto(event timeline.Event) *pbtimeline.Event {
 
 	case *timeline.CronScheduledEvent:
 		return &pbtimeline.Event{
-			TimeStamp: timestamppb.New(event.Time),
+			Timestamp: timestamppb.New(event.Time),
 			Id:        event.ID,
 			Entry: &pbtimeline.Event_CronScheduled{
 				CronScheduled: &pbtimeline.CronScheduledEvent{
@@ -756,7 +756,7 @@ func eventDALToProto(event timeline.Event) *pbtimeline.Event {
 						Module: event.Verb.Module,
 						Name:   event.Verb.Name,
 					},
-					TimeStamp:   timestamppb.New(event.Time),
+					Timestamp:   timestamppb.New(event.Time),
 					Duration:    durationpb.New(event.Duration),
 					ScheduledAt: timestamppb.New(event.ScheduledAt),
 					Schedule:    event.Schedule,
@@ -782,13 +782,13 @@ func eventDALToProto(event timeline.Event) *pbtimeline.Event {
 		}
 
 		return &pbtimeline.Event{
-			TimeStamp: timestamppb.New(event.Time),
+			Timestamp: timestamppb.New(event.Time),
 			Id:        event.ID,
 			Entry: &pbtimeline.Event_AsyncExecute{
 				AsyncExecute: &pbtimeline.AsyncExecuteEvent{
 					DeploymentKey:  event.DeploymentKey.String(),
 					RequestKey:     requestKey,
-					TimeStamp:      timestamppb.New(event.Time),
+					Timestamp:      timestamppb.New(event.Time),
 					AsyncEventType: asyncEventType,
 					VerbRef: &schemapb.Ref{
 						Module: event.Verb.Module,
@@ -807,14 +807,14 @@ func eventDALToProto(event timeline.Event) *pbtimeline.Event {
 		}
 
 		return &pbtimeline.Event{
-			TimeStamp: timestamppb.New(event.Time),
+			Timestamp: timestamppb.New(event.Time),
 			Id:        event.ID,
 			Entry: &pbtimeline.Event_PubsubPublish{
 				PubsubPublish: &pbtimeline.PubSubPublishEvent{
 					DeploymentKey: event.DeploymentKey.String(),
 					RequestKey:    requestKey,
 					VerbRef:       event.SourceVerb.ToProto().(*schemapb.Ref), //nolint:forcetypeassert
-					TimeStamp:     timestamppb.New(event.Time),
+					Timestamp:     timestamppb.New(event.Time),
 					Duration:      durationpb.New(event.Duration),
 					Topic:         event.Topic,
 					Request:       string(event.Request),
@@ -837,7 +837,7 @@ func eventDALToProto(event timeline.Event) *pbtimeline.Event {
 		}
 
 		return &pbtimeline.Event{
-			TimeStamp: timestamppb.New(event.Time),
+			Timestamp: timestamppb.New(event.Time),
 			Id:        event.ID,
 			Entry: &pbtimeline.Event_PubsubConsume{
 				PubsubConsume: &pbtimeline.PubSubConsumeEvent{
@@ -845,7 +845,7 @@ func eventDALToProto(event timeline.Event) *pbtimeline.Event {
 					RequestKey:     requestKey,
 					DestVerbModule: &destVerbModule,
 					DestVerbName:   &destVerbName,
-					TimeStamp:      timestamppb.New(event.Time),
+					Timestamp:      timestamppb.New(event.Time),
 					Duration:       durationpb.New(event.Duration),
 					Topic:          event.Topic,
 					Error:          event.Error.Ptr(),

@@ -14,8 +14,8 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	dalsql "github.com/TBD54566975/ftl/backend/controller/pubsub/internal/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
-	"github.com/TBD54566975/ftl/backend/controller/timeline"
 	"github.com/TBD54566975/ftl/backend/libdal"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -98,7 +98,7 @@ func (d *DAL) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]model.Subscr
 	}), nil
 }
 
-func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay time.Duration, timelineSvc *timeline.Service) (count int, err error) {
+func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay time.Duration) (count int, err error) {
 	tx, err := d.Begin(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to begin transaction: %w", err)
@@ -118,7 +118,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 	for _, subscription := range subs {
 		now := time.Now().UTC()
 		enqueueTimelineEvent := func(destVerb optional.Option[schema.RefKey], err optional.Option[string]) {
-			timelineSvc.EnqueueEvent(ctx, &timeline.PubSubConsume{
+			timeline.Publish(ctx, &timeline.PubSubConsume{
 				DeploymentKey: subscription.DeploymentKey,
 				RequestKey:    subscription.RequestKey,
 				Time:          now,
