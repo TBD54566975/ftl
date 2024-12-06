@@ -1,8 +1,12 @@
 package ftl
 
 import (
+	"fmt"
 	"regexp"
+	"strconv"
+	"time"
 
+	"github.com/alecthomas/types/must"
 	"golang.org/x/mod/semver"
 )
 
@@ -28,5 +32,11 @@ func IsVersionAtLeastMin(v string, minVersion string) bool {
 // Version of FTL binary (set by linker).
 var Version = "dev"
 
+// FormattedVersion includes the version and timestamp.
+var FormattedVersion = fmt.Sprintf("%s (%s)", Version, Timestamp.Format("2006-01-02"))
+
 // Timestamp of FTL binary (set by linker).
-var Timestamp = "0"
+var timestamp = "0"
+
+// Timestamp parsed from timestamp (set by linker).
+var Timestamp = time.Unix(0, must.Get(strconv.ParseInt(timestamp, 0, 64)))

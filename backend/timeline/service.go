@@ -17,7 +17,6 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
@@ -37,7 +36,7 @@ type service struct {
 	events []*timelinepb.Event
 }
 
-func Start(ctx context.Context, config Config, schemaEventSource schemaeventsource.EventSource) error {
+func Start(ctx context.Context, config Config) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx).Scope("timeline")
