@@ -23,7 +23,6 @@ type Querier interface {
 	CompleteEventForSubscription(ctx context.Context, name string, module string) error
 	CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error)
 	CreateDeployment(ctx context.Context, moduleName string, schema *schema.Module, key model.DeploymentKey) error
-	CreateRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error
 	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error)
 	DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriptionKey, error)
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)

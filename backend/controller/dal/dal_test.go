@@ -145,12 +145,6 @@ func TestDAL(t *testing.T) {
 		}}, runners)
 	})
 
-	requestKey := model.NewRequestKey(model.OriginIngress, "GET /test")
-	t.Run("CreateIngressRequest", func(t *testing.T) {
-		err = dal.CreateRequest(ctx, requestKey, "127.0.0.1:1234")
-		assert.NoError(t, err)
-	})
-
 	t.Run("UpdateRunnerInvalidDeployment", func(t *testing.T) {
 		err := dal.UpsertRunner(ctx, dalmodel.Runner{
 			Key:        runnerID,

@@ -170,16 +170,6 @@ func (q *Queries) CreateDeployment(ctx context.Context, moduleName string, schem
 	return err
 }
 
-const createRequest = `-- name: CreateRequest :exec
-INSERT INTO requests (origin, "key", source_addr)
-VALUES ($1, $2, $3)
-`
-
-func (q *Queries) CreateRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error {
-	_, err := q.db.ExecContext(ctx, createRequest, origin, key, sourceAddr)
-	return err
-}
-
 const deleteSubscribers = `-- name: DeleteSubscribers :many
 DELETE FROM topic_subscribers
 WHERE deployment_id IN (
