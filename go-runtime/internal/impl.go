@@ -10,8 +10,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/puzpuzpuz/xsync/v3"
 
-	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
-	deploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
 	pubpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1"
 	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
@@ -57,32 +55,6 @@ func (r *RealFTL) PublishEvent(ctx context.Context, topic *schema.Ref, event any
 	if topic.Module != caller.Module {
 		return fmt.Errorf("can not publish to another module's topic: %s", topic)
 	}
-	if err := publishToFTL(ctx, topic, event, caller); err != nil {
-		return err
-	}
-	return publishToModule(ctx, topic, event, key, caller)
-}
-
-func publishToFTL(ctx context.Context, topic *schema.Ref, event any, caller schema.RefKey) error {
-	// TODO: remove this once we have other pubsub moved over to kafka
-	// For now we are publishing to both systems.
-	client := rpc.ClientFromContext[deploymentconnect.DeploymentServiceClient](ctx)
-	body, err := encoding.Marshal(event)
-	if err != nil {
-		return fmt.Errorf("failed to marshal event to controller: %w", err)
-	}
-	_, err = client.PublishEvent(ctx, connect.NewRequest(&ftldeployment.PublishEventRequest{
-		Topic:  topic.ToProto().(*schemapb.Ref), //nolint: forcetypeassert
-		Caller: caller.Name,
-		Body:   body,
-	}))
-	if err != nil {
-		return fmt.Errorf("failed to publish event to controller: %w", err)
-	}
-	return nil
-}
-
-func publishToModule(ctx context.Context, topic *schema.Ref, event any, key string, caller schema.RefKey) error {
 	client := rpc.ClientFromContext[pubconnect.PublishServiceClient](ctx)
 	body, err := encoding.Marshal(event)
 	if err != nil {

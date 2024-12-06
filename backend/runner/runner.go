@@ -362,6 +362,8 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 		s.pubSub = pubSub
 
 		deploymentServiceClient := rpc.Dial(ftldeploymentconnect.NewDeploymentServiceClient, s.config.ControllerEndpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, deploymentServiceClient)
+
 		leaseServiceClient := rpc.Dial(ftlleaseconnect.NewLeaseServiceClient, s.config.ControllerEndpoint.String(), log.Error)
 
 		s.proxy = proxy.New(deploymentServiceClient, leaseServiceClient)

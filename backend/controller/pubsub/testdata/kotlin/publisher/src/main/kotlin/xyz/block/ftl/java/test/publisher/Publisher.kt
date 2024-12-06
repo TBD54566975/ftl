@@ -4,17 +4,23 @@ import io.quarkus.logging.Log
 import xyz.block.ftl.*
 import java.time.ZonedDateTime
 
+class PartitionMapper : TopicPartitionMapper<PubSubEvent> {
+    override fun getPartitionKey(event: PubSubEvent): String {
+        return event.time.toString()
+    }
+}
+
 class Publisher {
     @Export
     @Topic("testTopic")
-    interface TestTopic : WriteableTopic<PubSubEvent?>
+    interface TestTopic : WriteableTopic<PubSubEvent, PartitionMapper>
 
     @Topic("localTopic")
-    interface LocalTopic : WriteableTopic<PubSubEvent?>
+    interface LocalTopic : WriteableTopic<PubSubEvent, PartitionMapper>
 
     @Export
     @Topic("topic2")
-    interface Topic2 : WriteableTopic<PubSubEvent?>
+    interface Topic2 : WriteableTopic<PubSubEvent, PartitionMapper>
 
     @Verb
     @Throws(Exception::class)

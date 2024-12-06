@@ -1,19 +1,26 @@
 package pubsub
 
 import (
+	"context"
 	"fmt"
 
+	"connectrpc.com/connect"
 	"github.com/IBM/sarama"
 
+	deploymentpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
+	ftldeploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type publisher struct {
+	module   string
 	topic    *schema.Topic
 	producer sarama.SyncProducer
 }
 
-func newPublisher(t *schema.Topic) (*publisher, error) {
+func newPublisher(module string, t *schema.Topic) (*publisher, error) {
 	if t.Runtime == nil {
 		return nil, fmt.Errorf("topic %s has no runtime", t.Name)
 	}
@@ -31,12 +38,16 @@ func newPublisher(t *schema.Topic) (*publisher, error) {
 		return nil, fmt.Errorf("failed to create producer for topic %s: %w", t.Name, err)
 	}
 	return &publisher{
+		module:   module,
 		topic:    t,
 		producer: producer,
 	}, nil
 }
 
-func (p *publisher) publish(data []byte, key string) error {
+func (p *publisher) publish(ctx context.Context, data []byte, key string, caller schema.RefKey) error {
+	if err := p.publishToController(ctx, data, caller); err != nil {
+		return err
+	}
 	_, _, err := p.producer.SendMessage(&sarama.ProducerMessage{
 		Topic: p.topic.Runtime.TopicID,
 		Value: sarama.ByteEncoder(data),
@@ -44,6 +55,22 @@ func (p *publisher) publish(data []byte, key string) error {
 	})
 	if err != nil {
 		return fmt.Errorf("failed to publish message: %w", err)
+	}
+	return nil
+}
+
+// publishToController publishes the data to the controller (old pubsub implementation)
+//
+// This is to keep pubsub working while we transition fully to Kafka for pubsub.
+func (p *publisher) publishToController(ctx context.Context, data []byte, caller schema.RefKey) error {
+	client := rpc.ClientFromContext[ftldeploymentconnect.DeploymentServiceClient](ctx)
+	_, err := client.PublishEvent(ctx, connect.NewRequest(&deploymentpb.PublishEventRequest{
+		Topic:  &schemapb.Ref{Module: p.module, Name: p.topic.Name},
+		Caller: caller.Name,
+		Body:   data,
+	}))
+	if err != nil {
+		return fmt.Errorf("failed to publish event to controller: %w", err)
 	}
 	return nil
 }

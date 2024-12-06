@@ -22,7 +22,7 @@ var _ pbconnect.PublishServiceHandler = (*Service)(nil)
 func New(module *schema.Module) (*Service, error) {
 	publishers := map[string]*publisher{}
 	for t := range sl.FilterVariants[*schema.Topic](module.Decls) {
-		publisher, err := newPublisher(t)
+		publisher, err := newPublisher(module.Name, t)
 		if err != nil {
 			return nil, err
 		}
@@ -42,7 +42,11 @@ func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[pb.Publ
 	if !ok {
 		return nil, fmt.Errorf("topic %s not found", req.Msg.Topic.Name)
 	}
-	err := publisher.publish(req.Msg.Body, req.Msg.Key)
+	caller, err := schema.ParseRef(req.Msg.Caller)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse caller: %w", err)
+	}
+	err = publisher.publish(ctx, req.Msg.Body, req.Msg.Key, caller.ToRefKey())
 	if err != nil {
 		return nil, err
 	}
