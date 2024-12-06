@@ -2,19 +2,19 @@ import { Code, ConnectError } from '@connectrpc/connect'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useClient } from '../../hooks/use-client'
 import { useVisibility } from '../../hooks/use-visibility'
-import { ConsoleService } from '../../protos/xyz/block/ftl/console/v1/console_connect'
-import { type GetEventsRequest_Filter, GetEventsRequest_Order } from '../../protos/xyz/block/ftl/console/v1/console_pb'
 import type { Event } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
+import { TimelineService } from '../../protos/xyz/block/ftl/timeline/v1/timeline_connect'
+import { type GetTimelineRequest_Filter, GetTimelineRequest_Order } from '../../protos/xyz/block/ftl/timeline/v1/timeline_pb'
 
 const timelineKey = 'timeline'
 const maxTimelineEntries = 1000
 
-export const useTimeline = (isStreaming: boolean, filters: GetEventsRequest_Filter[], updateIntervalMs = 1000, enabled = true) => {
-  const client = useClient(ConsoleService)
+export const useTimeline = (isStreaming: boolean, filters: GetTimelineRequest_Filter[], updateIntervalMs = 1000, enabled = true) => {
+  const client = useClient(TimelineService)
   const queryClient = useQueryClient()
   const isVisible = useVisibility()
 
-  const order = GetEventsRequest_Order.DESC
+  const order = GetTimelineRequest_Order.DESC
   const limit = isStreaming ? 200 : 1000
 
   const queryKey = [timelineKey, isStreaming, filters, order, limit]
@@ -22,7 +22,7 @@ export const useTimeline = (isStreaming: boolean, filters: GetEventsRequest_Filt
   const fetchTimeline = async ({ signal }: { signal: AbortSignal }) => {
     try {
       console.debug('fetching timeline')
-      const response = await client.getEvents({ filters, limit, order }, { signal })
+      const response = await client.getTimeline({ filters, limit, order }, { signal })
       return response.events
     } catch (error) {
       if (error instanceof ConnectError) {
@@ -42,7 +42,7 @@ export const useTimeline = (isStreaming: boolean, filters: GetEventsRequest_Filt
       // Clear the cache when starting a new stream
       queryClient.setQueryData<Event[]>(queryKey, (_ = []) => [])
 
-      for await (const response of client.streamEvents(
+      for await (const response of client.streamTimeline(
         { updateInterval: { seconds: BigInt(0), nanos: updateIntervalMs * 1000 }, query: { limit, filters, order } },
         { signal },
       )) {

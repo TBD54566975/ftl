@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package xyz.block.ftl.timeline.v1;
 
+import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "xyz/block/ftl/timeline/v1/event.proto";
 import "xyz/block/ftl/v1/ftl.proto";
@@ -10,10 +11,6 @@ option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/tim
 option java_multiple_files = true;
 
 message GetTimelineRequest {
-  // Limit the number of events returned.
-  message LimitFilter {
-    int32 limit = 1;
-  }
   // Filters events by log level.
   message LogLevelFilter {
     timeline.v1.LogLevel log_level = 1;
@@ -64,15 +61,14 @@ message GetTimelineRequest {
   message Filter {
     // These map 1:1 with filters in backend/timeline/filters.go
     oneof filter {
-      LimitFilter limit = 1;
-      LogLevelFilter log_level = 2;
-      DeploymentFilter deployments = 3;
-      RequestFilter requests = 4;
-      EventTypeFilter event_types = 5;
-      TimeFilter time = 6;
-      IDFilter id = 7;
-      CallFilter call = 8;
-      ModuleFilter module = 9;
+      LogLevelFilter log_level = 1;
+      DeploymentFilter deployments = 2;
+      RequestFilter requests = 3;
+      EventTypeFilter event_types = 4;
+      TimeFilter time = 5;
+      IDFilter id = 6;
+      CallFilter call = 7;
+      ModuleFilter module = 8;
     }
   }
 
@@ -82,6 +78,17 @@ message GetTimelineRequest {
 }
 
 message GetTimelineResponse {
+  repeated timeline.v1.Event events = 1;
+  // For pagination, this cursor is where we should start our next query
+  optional int64 cursor = 2;
+}
+
+message StreamTimelineRequest {
+  optional google.protobuf.Duration update_interval = 1;
+  GetTimelineRequest query = 2;
+}
+
+message StreamTimelineResponse {
   repeated timeline.v1.Event events = 1;
 }
 
@@ -116,10 +123,13 @@ service TimelineService {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 
-  // Get timeline events, optionally filtered by type and time
+  // Get timeline events with filters
   rpc GetTimeline(GetTimelineRequest) returns (GetTimelineResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
+
+  // Stream timeline events with filters
+  rpc StreamTimeline(StreamTimelineRequest) returns (stream StreamTimelineResponse);
 
   rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse) {}
 

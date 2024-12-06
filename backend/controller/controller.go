@@ -44,7 +44,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
-	oldtimeline "github.com/TBD54566975/ftl/backend/controller/timeline"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
@@ -160,7 +159,7 @@ func Start(
 	logger.Debugf("Advertising as %s", config.Advertise)
 
 	admin := admin.NewAdminService(cm, sm, svc.dal)
-	console := console.NewService(svc.dal, svc.timeline, admin)
+	console := console.NewService(svc.dal, admin)
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -173,6 +172,7 @@ func Start(
 			rpc.GRPC(ftlv1connect.NewSchemaServiceHandler, svc),
 			rpc.GRPC(ftlv1connect.NewAdminServiceHandler, admin),
 			rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
+			rpc.GRPC(timelinev1connect.NewTimelineServiceHandler, console),
 			rpc.HTTP("/", consoleHandler),
 			rpc.PProf(),
 		)
@@ -209,7 +209,6 @@ type Service struct {
 	tasks                   *scheduledtask.Scheduler
 	pubSub                  *pubsub.Service
 	registry                artefacts.Service
-	timeline                *oldtimeline.Service
 	controllerListListeners []ControllerListListener
 
 	// Map from runnerKey.String() to client.
@@ -275,8 +274,6 @@ func New(
 	}
 	svc.registry = storage
 
-	timelineSvc := oldtimeline.New(ctx, conn, encryption)
-	svc.timeline = timelineSvc
 	pubSub := pubsub.New(ctx, conn, encryption, optional.Some[pubsub.AsyncCallListener](svc))
 	svc.pubSub = pubSub
 	svc.dal = dal.New(ctx, conn, encryption, pubSub, svc.registry)

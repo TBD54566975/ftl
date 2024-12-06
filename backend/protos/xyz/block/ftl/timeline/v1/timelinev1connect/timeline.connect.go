@@ -39,6 +39,9 @@ const (
 	// TimelineServiceGetTimelineProcedure is the fully-qualified name of the TimelineService's
 	// GetTimeline RPC.
 	TimelineServiceGetTimelineProcedure = "/xyz.block.ftl.timeline.v1.TimelineService/GetTimeline"
+	// TimelineServiceStreamTimelineProcedure is the fully-qualified name of the TimelineService's
+	// StreamTimeline RPC.
+	TimelineServiceStreamTimelineProcedure = "/xyz.block.ftl.timeline.v1.TimelineService/StreamTimeline"
 	// TimelineServiceCreateEventProcedure is the fully-qualified name of the TimelineService's
 	// CreateEvent RPC.
 	TimelineServiceCreateEventProcedure = "/xyz.block.ftl.timeline.v1.TimelineService/CreateEvent"
@@ -51,8 +54,10 @@ const (
 type TimelineServiceClient interface {
 	// Ping service for readiness
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
-	// Get timeline events, optionally filtered by type and time
+	// Get timeline events with filters
 	GetTimeline(context.Context, *connect.Request[v11.GetTimelineRequest]) (*connect.Response[v11.GetTimelineResponse], error)
+	// Stream timeline events with filters
+	StreamTimeline(context.Context, *connect.Request[v11.StreamTimelineRequest]) (*connect.ServerStreamForClient[v11.StreamTimelineResponse], error)
 	CreateEvent(context.Context, *connect.Request[v11.CreateEventRequest]) (*connect.Response[v11.CreateEventResponse], error)
 	// Delete old events of a specific type
 	DeleteOldEvents(context.Context, *connect.Request[v11.DeleteOldEventsRequest]) (*connect.Response[v11.DeleteOldEventsResponse], error)
@@ -80,6 +85,11 @@ func NewTimelineServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
+		streamTimeline: connect.NewClient[v11.StreamTimelineRequest, v11.StreamTimelineResponse](
+			httpClient,
+			baseURL+TimelineServiceStreamTimelineProcedure,
+			opts...,
+		),
 		createEvent: connect.NewClient[v11.CreateEventRequest, v11.CreateEventResponse](
 			httpClient,
 			baseURL+TimelineServiceCreateEventProcedure,
@@ -97,6 +107,7 @@ func NewTimelineServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 type timelineServiceClient struct {
 	ping            *connect.Client[v1.PingRequest, v1.PingResponse]
 	getTimeline     *connect.Client[v11.GetTimelineRequest, v11.GetTimelineResponse]
+	streamTimeline  *connect.Client[v11.StreamTimelineRequest, v11.StreamTimelineResponse]
 	createEvent     *connect.Client[v11.CreateEventRequest, v11.CreateEventResponse]
 	deleteOldEvents *connect.Client[v11.DeleteOldEventsRequest, v11.DeleteOldEventsResponse]
 }
@@ -109,6 +120,11 @@ func (c *timelineServiceClient) Ping(ctx context.Context, req *connect.Request[v
 // GetTimeline calls xyz.block.ftl.timeline.v1.TimelineService.GetTimeline.
 func (c *timelineServiceClient) GetTimeline(ctx context.Context, req *connect.Request[v11.GetTimelineRequest]) (*connect.Response[v11.GetTimelineResponse], error) {
 	return c.getTimeline.CallUnary(ctx, req)
+}
+
+// StreamTimeline calls xyz.block.ftl.timeline.v1.TimelineService.StreamTimeline.
+func (c *timelineServiceClient) StreamTimeline(ctx context.Context, req *connect.Request[v11.StreamTimelineRequest]) (*connect.ServerStreamForClient[v11.StreamTimelineResponse], error) {
+	return c.streamTimeline.CallServerStream(ctx, req)
 }
 
 // CreateEvent calls xyz.block.ftl.timeline.v1.TimelineService.CreateEvent.
@@ -126,8 +142,10 @@ func (c *timelineServiceClient) DeleteOldEvents(ctx context.Context, req *connec
 type TimelineServiceHandler interface {
 	// Ping service for readiness
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
-	// Get timeline events, optionally filtered by type and time
+	// Get timeline events with filters
 	GetTimeline(context.Context, *connect.Request[v11.GetTimelineRequest]) (*connect.Response[v11.GetTimelineResponse], error)
+	// Stream timeline events with filters
+	StreamTimeline(context.Context, *connect.Request[v11.StreamTimelineRequest], *connect.ServerStream[v11.StreamTimelineResponse]) error
 	CreateEvent(context.Context, *connect.Request[v11.CreateEventRequest]) (*connect.Response[v11.CreateEventResponse], error)
 	// Delete old events of a specific type
 	DeleteOldEvents(context.Context, *connect.Request[v11.DeleteOldEventsRequest]) (*connect.Response[v11.DeleteOldEventsResponse], error)
@@ -151,6 +169,11 @@ func NewTimelineServiceHandler(svc TimelineServiceHandler, opts ...connect.Handl
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
+	timelineServiceStreamTimelineHandler := connect.NewServerStreamHandler(
+		TimelineServiceStreamTimelineProcedure,
+		svc.StreamTimeline,
+		opts...,
+	)
 	timelineServiceCreateEventHandler := connect.NewUnaryHandler(
 		TimelineServiceCreateEventProcedure,
 		svc.CreateEvent,
@@ -167,6 +190,8 @@ func NewTimelineServiceHandler(svc TimelineServiceHandler, opts ...connect.Handl
 			timelineServicePingHandler.ServeHTTP(w, r)
 		case TimelineServiceGetTimelineProcedure:
 			timelineServiceGetTimelineHandler.ServeHTTP(w, r)
+		case TimelineServiceStreamTimelineProcedure:
+			timelineServiceStreamTimelineHandler.ServeHTTP(w, r)
 		case TimelineServiceCreateEventProcedure:
 			timelineServiceCreateEventHandler.ServeHTTP(w, r)
 		case TimelineServiceDeleteOldEventsProcedure:
@@ -186,6 +211,10 @@ func (UnimplementedTimelineServiceHandler) Ping(context.Context, *connect.Reques
 
 func (UnimplementedTimelineServiceHandler) GetTimeline(context.Context, *connect.Request[v11.GetTimelineRequest]) (*connect.Response[v11.GetTimelineResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.timeline.v1.TimelineService.GetTimeline is not implemented"))
+}
+
+func (UnimplementedTimelineServiceHandler) StreamTimeline(context.Context, *connect.Request[v11.StreamTimelineRequest], *connect.ServerStream[v11.StreamTimelineResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.timeline.v1.TimelineService.StreamTimeline is not implemented"))
 }
 
 func (UnimplementedTimelineServiceHandler) CreateEvent(context.Context, *connect.Request[v11.CreateEventRequest]) (*connect.Response[v11.CreateEventResponse], error) {

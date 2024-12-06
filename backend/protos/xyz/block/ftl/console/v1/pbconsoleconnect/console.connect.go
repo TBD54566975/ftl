@@ -42,12 +42,6 @@ const (
 	// ConsoleServiceStreamModulesProcedure is the fully-qualified name of the ConsoleService's
 	// StreamModules RPC.
 	ConsoleServiceStreamModulesProcedure = "/xyz.block.ftl.console.v1.ConsoleService/StreamModules"
-	// ConsoleServiceStreamEventsProcedure is the fully-qualified name of the ConsoleService's
-	// StreamEvents RPC.
-	ConsoleServiceStreamEventsProcedure = "/xyz.block.ftl.console.v1.ConsoleService/StreamEvents"
-	// ConsoleServiceGetEventsProcedure is the fully-qualified name of the ConsoleService's GetEvents
-	// RPC.
-	ConsoleServiceGetEventsProcedure = "/xyz.block.ftl.console.v1.ConsoleService/GetEvents"
 	// ConsoleServiceGetConfigProcedure is the fully-qualified name of the ConsoleService's GetConfig
 	// RPC.
 	ConsoleServiceGetConfigProcedure = "/xyz.block.ftl.console.v1.ConsoleService/GetConfig"
@@ -68,8 +62,6 @@ type ConsoleServiceClient interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	GetModules(context.Context, *connect.Request[v11.GetModulesRequest]) (*connect.Response[v11.GetModulesResponse], error)
 	StreamModules(context.Context, *connect.Request[v11.StreamModulesRequest]) (*connect.ServerStreamForClient[v11.StreamModulesResponse], error)
-	StreamEvents(context.Context, *connect.Request[v11.StreamEventsRequest]) (*connect.ServerStreamForClient[v11.StreamEventsResponse], error)
-	GetEvents(context.Context, *connect.Request[v11.GetEventsRequest]) (*connect.Response[v11.GetEventsResponse], error)
 	GetConfig(context.Context, *connect.Request[v11.GetConfigRequest]) (*connect.Response[v11.GetConfigResponse], error)
 	SetConfig(context.Context, *connect.Request[v11.SetConfigRequest]) (*connect.Response[v11.SetConfigResponse], error)
 	GetSecret(context.Context, *connect.Request[v11.GetSecretRequest]) (*connect.Response[v11.GetSecretResponse], error)
@@ -102,16 +94,6 @@ func NewConsoleServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			baseURL+ConsoleServiceStreamModulesProcedure,
 			opts...,
 		),
-		streamEvents: connect.NewClient[v11.StreamEventsRequest, v11.StreamEventsResponse](
-			httpClient,
-			baseURL+ConsoleServiceStreamEventsProcedure,
-			opts...,
-		),
-		getEvents: connect.NewClient[v11.GetEventsRequest, v11.GetEventsResponse](
-			httpClient,
-			baseURL+ConsoleServiceGetEventsProcedure,
-			opts...,
-		),
 		getConfig: connect.NewClient[v11.GetConfigRequest, v11.GetConfigResponse](
 			httpClient,
 			baseURL+ConsoleServiceGetConfigProcedure,
@@ -140,8 +122,6 @@ type consoleServiceClient struct {
 	ping          *connect.Client[v1.PingRequest, v1.PingResponse]
 	getModules    *connect.Client[v11.GetModulesRequest, v11.GetModulesResponse]
 	streamModules *connect.Client[v11.StreamModulesRequest, v11.StreamModulesResponse]
-	streamEvents  *connect.Client[v11.StreamEventsRequest, v11.StreamEventsResponse]
-	getEvents     *connect.Client[v11.GetEventsRequest, v11.GetEventsResponse]
 	getConfig     *connect.Client[v11.GetConfigRequest, v11.GetConfigResponse]
 	setConfig     *connect.Client[v11.SetConfigRequest, v11.SetConfigResponse]
 	getSecret     *connect.Client[v11.GetSecretRequest, v11.GetSecretResponse]
@@ -161,16 +141,6 @@ func (c *consoleServiceClient) GetModules(ctx context.Context, req *connect.Requ
 // StreamModules calls xyz.block.ftl.console.v1.ConsoleService.StreamModules.
 func (c *consoleServiceClient) StreamModules(ctx context.Context, req *connect.Request[v11.StreamModulesRequest]) (*connect.ServerStreamForClient[v11.StreamModulesResponse], error) {
 	return c.streamModules.CallServerStream(ctx, req)
-}
-
-// StreamEvents calls xyz.block.ftl.console.v1.ConsoleService.StreamEvents.
-func (c *consoleServiceClient) StreamEvents(ctx context.Context, req *connect.Request[v11.StreamEventsRequest]) (*connect.ServerStreamForClient[v11.StreamEventsResponse], error) {
-	return c.streamEvents.CallServerStream(ctx, req)
-}
-
-// GetEvents calls xyz.block.ftl.console.v1.ConsoleService.GetEvents.
-func (c *consoleServiceClient) GetEvents(ctx context.Context, req *connect.Request[v11.GetEventsRequest]) (*connect.Response[v11.GetEventsResponse], error) {
-	return c.getEvents.CallUnary(ctx, req)
 }
 
 // GetConfig calls xyz.block.ftl.console.v1.ConsoleService.GetConfig.
@@ -200,8 +170,6 @@ type ConsoleServiceHandler interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	GetModules(context.Context, *connect.Request[v11.GetModulesRequest]) (*connect.Response[v11.GetModulesResponse], error)
 	StreamModules(context.Context, *connect.Request[v11.StreamModulesRequest], *connect.ServerStream[v11.StreamModulesResponse]) error
-	StreamEvents(context.Context, *connect.Request[v11.StreamEventsRequest], *connect.ServerStream[v11.StreamEventsResponse]) error
-	GetEvents(context.Context, *connect.Request[v11.GetEventsRequest]) (*connect.Response[v11.GetEventsResponse], error)
 	GetConfig(context.Context, *connect.Request[v11.GetConfigRequest]) (*connect.Response[v11.GetConfigResponse], error)
 	SetConfig(context.Context, *connect.Request[v11.SetConfigRequest]) (*connect.Response[v11.SetConfigResponse], error)
 	GetSecret(context.Context, *connect.Request[v11.GetSecretRequest]) (*connect.Response[v11.GetSecretResponse], error)
@@ -228,16 +196,6 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 	consoleServiceStreamModulesHandler := connect.NewServerStreamHandler(
 		ConsoleServiceStreamModulesProcedure,
 		svc.StreamModules,
-		opts...,
-	)
-	consoleServiceStreamEventsHandler := connect.NewServerStreamHandler(
-		ConsoleServiceStreamEventsProcedure,
-		svc.StreamEvents,
-		opts...,
-	)
-	consoleServiceGetEventsHandler := connect.NewUnaryHandler(
-		ConsoleServiceGetEventsProcedure,
-		svc.GetEvents,
 		opts...,
 	)
 	consoleServiceGetConfigHandler := connect.NewUnaryHandler(
@@ -268,10 +226,6 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 			consoleServiceGetModulesHandler.ServeHTTP(w, r)
 		case ConsoleServiceStreamModulesProcedure:
 			consoleServiceStreamModulesHandler.ServeHTTP(w, r)
-		case ConsoleServiceStreamEventsProcedure:
-			consoleServiceStreamEventsHandler.ServeHTTP(w, r)
-		case ConsoleServiceGetEventsProcedure:
-			consoleServiceGetEventsHandler.ServeHTTP(w, r)
 		case ConsoleServiceGetConfigProcedure:
 			consoleServiceGetConfigHandler.ServeHTTP(w, r)
 		case ConsoleServiceSetConfigProcedure:
@@ -299,14 +253,6 @@ func (UnimplementedConsoleServiceHandler) GetModules(context.Context, *connect.R
 
 func (UnimplementedConsoleServiceHandler) StreamModules(context.Context, *connect.Request[v11.StreamModulesRequest], *connect.ServerStream[v11.StreamModulesResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.console.v1.ConsoleService.StreamModules is not implemented"))
-}
-
-func (UnimplementedConsoleServiceHandler) StreamEvents(context.Context, *connect.Request[v11.StreamEventsRequest], *connect.ServerStream[v11.StreamEventsResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.console.v1.ConsoleService.StreamEvents is not implemented"))
-}
-
-func (UnimplementedConsoleServiceHandler) GetEvents(context.Context, *connect.Request[v11.GetEventsRequest]) (*connect.Response[v11.GetEventsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.console.v1.ConsoleService.GetEvents is not implemented"))
 }
 
 func (UnimplementedConsoleServiceHandler) GetConfig(context.Context, *connect.Request[v11.GetConfigRequest]) (*connect.Response[v11.GetConfigResponse], error) {

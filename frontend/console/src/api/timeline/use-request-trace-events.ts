@@ -1,4 +1,3 @@
-import type { GetEventsRequest_Filter } from '../../protos/xyz/block/ftl/console/v1/console_pb.ts'
 import {
   type AsyncExecuteEvent,
   type CallEvent,
@@ -7,12 +6,13 @@ import {
   type PubSubConsumeEvent,
   type PubSubPublishEvent,
 } from '../../protos/xyz/block/ftl/timeline/v1/event_pb.ts'
+import type { GetTimelineRequest_Filter } from '../../protos/xyz/block/ftl/timeline/v1/timeline_pb.ts'
 import { eventTypesFilter, requestKeysFilter } from './timeline-filters.ts'
 import { useTimeline } from './use-timeline.ts'
 
 export type TraceEvent = CallEvent | IngressEvent | AsyncExecuteEvent | PubSubPublishEvent | PubSubConsumeEvent
 
-export const useRequestTraceEvents = (requestKey?: string, filters: GetEventsRequest_Filter[] = []) => {
+export const useRequestTraceEvents = (requestKey?: string, filters: GetTimelineRequest_Filter[] = []) => {
   const eventTypes = [EventType.CALL, EventType.ASYNC_EXECUTE, EventType.INGRESS, EventType.PUBSUB_CONSUME, EventType.PUBSUB_PUBLISH]
 
   const allFilters = [...filters, requestKeysFilter([requestKey || '']), eventTypesFilter(eventTypes)]

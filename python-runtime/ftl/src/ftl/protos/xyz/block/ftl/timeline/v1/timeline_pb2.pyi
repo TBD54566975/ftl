@@ -1,3 +1,4 @@
+from google.protobuf import duration_pb2 as _duration_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from xyz.block.ftl.timeline.v1 import event_pb2 as _event_pb2
 from xyz.block.ftl.v1 import ftl_pb2 as _ftl_pb2
@@ -19,11 +20,6 @@ class GetTimelineRequest(_message.Message):
     ORDER_UNSPECIFIED: GetTimelineRequest.Order
     ORDER_ASC: GetTimelineRequest.Order
     ORDER_DESC: GetTimelineRequest.Order
-    class LimitFilter(_message.Message):
-        __slots__ = ("limit",)
-        LIMIT_FIELD_NUMBER: _ClassVar[int]
-        limit: int
-        def __init__(self, limit: _Optional[int] = ...) -> None: ...
     class LogLevelFilter(_message.Message):
         __slots__ = ("log_level",)
         LOG_LEVEL_FIELD_NUMBER: _ClassVar[int]
@@ -75,8 +71,7 @@ class GetTimelineRequest(_message.Message):
         verb: str
         def __init__(self, module: _Optional[str] = ..., verb: _Optional[str] = ...) -> None: ...
     class Filter(_message.Message):
-        __slots__ = ("limit", "log_level", "deployments", "requests", "event_types", "time", "id", "call", "module")
-        LIMIT_FIELD_NUMBER: _ClassVar[int]
+        __slots__ = ("log_level", "deployments", "requests", "event_types", "time", "id", "call", "module")
         LOG_LEVEL_FIELD_NUMBER: _ClassVar[int]
         DEPLOYMENTS_FIELD_NUMBER: _ClassVar[int]
         REQUESTS_FIELD_NUMBER: _ClassVar[int]
@@ -85,7 +80,6 @@ class GetTimelineRequest(_message.Message):
         ID_FIELD_NUMBER: _ClassVar[int]
         CALL_FIELD_NUMBER: _ClassVar[int]
         MODULE_FIELD_NUMBER: _ClassVar[int]
-        limit: GetTimelineRequest.LimitFilter
         log_level: GetTimelineRequest.LogLevelFilter
         deployments: GetTimelineRequest.DeploymentFilter
         requests: GetTimelineRequest.RequestFilter
@@ -94,7 +88,7 @@ class GetTimelineRequest(_message.Message):
         id: GetTimelineRequest.IDFilter
         call: GetTimelineRequest.CallFilter
         module: GetTimelineRequest.ModuleFilter
-        def __init__(self, limit: _Optional[_Union[GetTimelineRequest.LimitFilter, _Mapping]] = ..., log_level: _Optional[_Union[GetTimelineRequest.LogLevelFilter, _Mapping]] = ..., deployments: _Optional[_Union[GetTimelineRequest.DeploymentFilter, _Mapping]] = ..., requests: _Optional[_Union[GetTimelineRequest.RequestFilter, _Mapping]] = ..., event_types: _Optional[_Union[GetTimelineRequest.EventTypeFilter, _Mapping]] = ..., time: _Optional[_Union[GetTimelineRequest.TimeFilter, _Mapping]] = ..., id: _Optional[_Union[GetTimelineRequest.IDFilter, _Mapping]] = ..., call: _Optional[_Union[GetTimelineRequest.CallFilter, _Mapping]] = ..., module: _Optional[_Union[GetTimelineRequest.ModuleFilter, _Mapping]] = ...) -> None: ...
+        def __init__(self, log_level: _Optional[_Union[GetTimelineRequest.LogLevelFilter, _Mapping]] = ..., deployments: _Optional[_Union[GetTimelineRequest.DeploymentFilter, _Mapping]] = ..., requests: _Optional[_Union[GetTimelineRequest.RequestFilter, _Mapping]] = ..., event_types: _Optional[_Union[GetTimelineRequest.EventTypeFilter, _Mapping]] = ..., time: _Optional[_Union[GetTimelineRequest.TimeFilter, _Mapping]] = ..., id: _Optional[_Union[GetTimelineRequest.IDFilter, _Mapping]] = ..., call: _Optional[_Union[GetTimelineRequest.CallFilter, _Mapping]] = ..., module: _Optional[_Union[GetTimelineRequest.ModuleFilter, _Mapping]] = ...) -> None: ...
     FILTERS_FIELD_NUMBER: _ClassVar[int]
     LIMIT_FIELD_NUMBER: _ClassVar[int]
     ORDER_FIELD_NUMBER: _ClassVar[int]
@@ -104,6 +98,22 @@ class GetTimelineRequest(_message.Message):
     def __init__(self, filters: _Optional[_Iterable[_Union[GetTimelineRequest.Filter, _Mapping]]] = ..., limit: _Optional[int] = ..., order: _Optional[_Union[GetTimelineRequest.Order, str]] = ...) -> None: ...
 
 class GetTimelineResponse(_message.Message):
+    __slots__ = ("events", "cursor")
+    EVENTS_FIELD_NUMBER: _ClassVar[int]
+    CURSOR_FIELD_NUMBER: _ClassVar[int]
+    events: _containers.RepeatedCompositeFieldContainer[_event_pb2.Event]
+    cursor: int
+    def __init__(self, events: _Optional[_Iterable[_Union[_event_pb2.Event, _Mapping]]] = ..., cursor: _Optional[int] = ...) -> None: ...
+
+class StreamTimelineRequest(_message.Message):
+    __slots__ = ("update_interval", "query")
+    UPDATE_INTERVAL_FIELD_NUMBER: _ClassVar[int]
+    QUERY_FIELD_NUMBER: _ClassVar[int]
+    update_interval: _duration_pb2.Duration
+    query: GetTimelineRequest
+    def __init__(self, update_interval: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., query: _Optional[_Union[GetTimelineRequest, _Mapping]] = ...) -> None: ...
+
+class StreamTimelineResponse(_message.Message):
     __slots__ = ("events",)
     EVENTS_FIELD_NUMBER: _ClassVar[int]
     events: _containers.RepeatedCompositeFieldContainer[_event_pb2.Event]
