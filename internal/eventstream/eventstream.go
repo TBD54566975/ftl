@@ -5,53 +5,51 @@ import (
 	"sync"
 
 	"github.com/alecthomas/types/pubsub"
+
+	"github.com/TBD54566975/ftl/internal/reflect"
 )
 
 // EventStream is a stream of events that can be published and subscribed to, that update a materialized view
-type EventStream[T View] interface {
-	Publish(Event[T]) error
+type EventStream[View any] interface {
+	Publish(event Event[View]) error
 
-	View() T
+	View() View
 
-	Subscribe() <-chan Event[T]
+	Subscribe() <-chan Event[View]
 }
 
 // StreamView is a view of an event stream that can be subscribed to, without modifying the stream.
-type StreamView[T View] interface {
-	View() T
+type StreamView[View any] interface {
+	View() View
 
-	Subscribe() <-chan Event[T]
+	// Subscribe to the event stream. The channel will only receive events that are published after the subscription.
+	Subscribe() <-chan Event[View]
 }
 
-// View is a read-only view of the materialised current state of the event stream.
-type View interface {
-}
-
-type Event[T View] interface {
+type Event[View any] interface {
 
 	// Handle applies the event to the view
-	Handle(T) (T, error)
+	Handle(view View) (View, error)
 }
 
-func NewInMemory[T View](initial T) EventStream[T] {
-	return &inMemoryEventStream[T]{
+func NewInMemory[View any](initial View) EventStream[View] {
+	return &inMemoryEventStream[View]{
 		view:  initial,
-		topic: pubsub.New[Event[T]](),
+		topic: pubsub.New[Event[View]](),
 	}
-
 }
 
-type inMemoryEventStream[T View] struct {
-	view  T
+type inMemoryEventStream[View any] struct {
+	view  View
 	lock  sync.Mutex
-	topic *pubsub.Topic[Event[T]]
+	topic *pubsub.Topic[Event[View]]
 }
 
 func (i *inMemoryEventStream[T]) Publish(e Event[T]) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
-	newView, err := e.Handle(i.view)
+	newView, err := e.Handle(reflect.DeepCopy(i.view))
 	if err != nil {
 		return fmt.Errorf("failed to handle event: %w", err)
 	}
