@@ -349,6 +349,7 @@ jobs:
           # this might remove tools that are actually needed,
           # if set to "true" but frees about 6 GB
           tool-cache: false
+          large-packages: false # this is slow
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Init Hermit
