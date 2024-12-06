@@ -173,7 +173,7 @@ func createKongApplication(cli any, csm *currentStatusManager) *kong.Kong {
 			return &kong.Group{Key: node.Name, Title: "Command flags:"}
 		}),
 		kong.Vars{
-			"version": ftl.Version,
+			"version": ftl.FormattedVersion,
 			"os":      runtime.GOOS,
 			"arch":    runtime.GOARCH,
 			"numcpu":  strconv.Itoa(runtime.NumCPU()),

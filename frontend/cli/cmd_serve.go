@@ -319,7 +319,7 @@ func (s *serveCommonConfig) run(
 
 	// Start Timeline
 	wg.Go(func() error {
-		err := timeline.Start(ctx, s.Timeline, schemaEventSourceFactory())
+		err := timeline.Start(ctx, s.Timeline)
 		if err != nil {
 			return fmt.Errorf("timeline failed: %w", err)
 		}

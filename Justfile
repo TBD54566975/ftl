@@ -137,9 +137,9 @@ build-go-binary dir binary="": build-zips build-protos
   binary="${2:-$(basename "$1")}"
 
   if [ "${FTL_DEBUG:-}" = "true" ]; then
-    go build -o "{{RELEASE}}/${binary}" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "$1"
+    go build -o "{{RELEASE}}/${binary}" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.timestamp={{TIMESTAMP}}" "$1"
   else
-    mk "{{RELEASE}}/${binary}" : !(build|integration|infrastructure|node_modules|Procfile*|Dockerfile*) -- go build -o "{{RELEASE}}/${binary}" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "$1"
+    mk "{{RELEASE}}/${binary}" : !(build|integration|infrastructure|node_modules|Procfile*|Dockerfile*) -- go build -o "{{RELEASE}}/${binary}" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.timestamp={{TIMESTAMP}}" "$1"
   fi
 
 export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable"

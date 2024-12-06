@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"os"
-	"strconv"
-	"time"
 
 	"github.com/alecthomas/kong"
 
@@ -27,24 +24,19 @@ var cli struct {
 	ObservabilityConfig  observability.Config `embed:"" prefix:"o11y-"`
 	LogConfig            log.Config           `embed:"" prefix:"log-"`
 	HTTPIngressConfig    ingress.Config       `embed:""`
-	ConfigFlag           string               `name:"config" short:"C" help:"Path to FTL project cf file." env:"FTL_CONFIG" placeholder:"FILE"`
 	SchemaServerEndpoint *url.URL             `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
 	TimelineEndpoint     *url.URL             `help:"Timeline endpoint." env:"FTL_TIMELINE_ENDPOINT" default:"http://127.0.0.1:8894"`
 }
 
 func main() {
-	t, err := strconv.ParseInt(ftl.Timestamp, 10, 64)
-	if err != nil {
-		panic(fmt.Sprintf("invalid timestamp %q: %s", ftl.Timestamp, err))
-	}
 	kctx := kong.Parse(&cli,
 		kong.Description(`FTL - HTTP Ingress`),
 		kong.UsageOnError(),
-		kong.Vars{"version": ftl.Version, "timestamp": time.Unix(t, 0).Format(time.RFC3339)},
+		kong.Vars{"version": ftl.FormattedVersion},
 	)
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
-	err = observability.Init(ctx, false, "", "ftl-http-ingress", ftl.Version, cli.ObservabilityConfig)
+	err := observability.Init(ctx, false, "", "ftl-http-ingress", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
 	timelineClient := rpc.Dial(timelinev1connect.NewTimelineServiceClient, cli.TimelineEndpoint.String(), log.Error)

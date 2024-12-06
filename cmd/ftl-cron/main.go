@@ -2,10 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
-	"strconv"
-	"time"
 
 	"github.com/alecthomas/kong"
 
@@ -25,22 +22,17 @@ var cli struct {
 	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
 	LogConfig           log.Config           `embed:"" prefix:"log-"`
 	CronConfig          cron.Config          `embed:""`
-	ConfigFlag          string               `name:"config" short:"C" help:"Path to FTL project cf file." env:"FTL_CONFIG" placeholder:"FILE"`
 }
 
 func main() {
-	t, err := strconv.ParseInt(ftl.Timestamp, 10, 64)
-	if err != nil {
-		panic(fmt.Sprintf("invalid timestamp %q: %s", ftl.Timestamp, err))
-	}
 	kctx := kong.Parse(&cli,
 		kong.Description(`FTL - Cron`),
 		kong.UsageOnError(),
-		kong.Vars{"version": ftl.Version, "timestamp": time.Unix(t, 0).Format(time.RFC3339)},
+		kong.Vars{"version": ftl.FormattedVersion},
 	)
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
-	err = observability.Init(ctx, false, "", "ftl-cron", ftl.Version, cli.ObservabilityConfig)
+	err := observability.Init(ctx, false, "", "ftl-cron", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
 	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.CronConfig.SchemaServiceEndpoint.String(), log.Error)
