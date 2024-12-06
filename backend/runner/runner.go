@@ -471,7 +471,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentKey, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
+func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentKey, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient, ftlv1.PingRequest, ftlv1.PingResponse, *ftlv1.PingResponse]) *deployment {
 	return &deployment{
 		ctx:      ctx,
 		key:      key,

@@ -10,6 +10,7 @@ import (
 
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
 	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -36,7 +37,7 @@ type pluginClient interface {
 var _ pluginClient = &pluginClientImpl{}
 
 type pluginClientImpl struct {
-	plugin *plugin.Plugin[langconnect.LanguageServiceClient]
+	plugin *plugin.Plugin[langconnect.LanguageServiceClient, ftlv1.PingRequest, ftlv1.PingResponse, *ftlv1.PingResponse]
 
 	// channel gets closed when the plugin exits
 	cmdError chan error

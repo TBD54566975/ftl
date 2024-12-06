@@ -29,12 +29,12 @@ type serverOptions struct {
 
 type Option func(*serverOptions)
 
-type GRPCServerConstructor[Iface Pingable] func(svc Iface, opts ...connect.HandlerOption) (string, http.Handler)
+type GRPCServerConstructor[Iface Pingable[Req, Resp, RespPtr], Req any, Resp any, RespPtr PingResponse[Resp]] func(svc Iface, opts ...connect.HandlerOption) (string, http.Handler)
 type RawGRPCServerConstructor[Iface any] func(svc Iface, opts ...connect.HandlerOption) (string, http.Handler)
 
 // GRPC is a convenience function for registering a GRPC server with default options.
 // TODO(aat): Do we need pingable here?
-func GRPC[Iface, Impl Pingable](constructor GRPCServerConstructor[Iface], impl Impl, options ...connect.HandlerOption) Option {
+func GRPC[Iface, Impl Pingable[Req, Resp, RespPtr], Req any, Resp any, RespPtr PingResponse[Resp]](constructor GRPCServerConstructor[Iface, Req, Resp, RespPtr], impl Impl, options ...connect.HandlerOption) Option {
 	return func(o *serverOptions) {
 		options = append(options, DefaultHandlerOptions()...)
 		path, handler := constructor(any(impl).(Iface), options...)
