@@ -43,6 +43,8 @@ spec:
             {{- if .Values.ingress.env }}
             {{- toYaml .Values.ingress.env | nindent 12 }}
             {{- end }}
+            - name: FTL_TIMELINE_ENDPOINT
+              value: "http://{{ .Values.timeline.service.name }}:{{ .Values.timeline.service.port }}"
 
           ports:
             {{- range .Values.ingress.ports }}
