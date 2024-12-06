@@ -14,6 +14,7 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	cf "github.com/TBD54566975/ftl/internal/configuration"
@@ -28,13 +29,14 @@ import (
 )
 
 var cli struct {
-	Version             kong.VersionFlag     `help:"Show version."`
-	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
-	LogConfig           log.Config           `embed:"" prefix:"log-"`
-	ControllerConfig    controller.Config    `embed:""`
-	ConfigFlag          string               `name:"config" short:"C" help:"Path to FTL project cf file." env:"FTL_CONFIG" placeholder:"FILE"`
-	DisableIstio        bool                 `help:"Disable Istio integration. This will prevent the creation of Istio policies to limit network traffic." env:"FTL_DISABLE_ISTIO"`
-	TimelineEndpoint    *url.URL             `help:"Timeline endpoint." env:"FTL_TIMELINE_ENDPOINT" default:"http://127.0.0.1:8894"`
+	Version             kong.VersionFlag         `help:"Show version."`
+	ObservabilityConfig observability.Config     `embed:"" prefix:"o11y-"`
+	LogConfig           log.Config               `embed:"" prefix:"log-"`
+	RegistryConfig      artefacts.RegistryConfig `embed:"" prefix:"oci-"`
+	ControllerConfig    controller.Config        `embed:""`
+	ConfigFlag          string                   `name:"config" short:"C" help:"Path to FTL project cf file." env:"FTL_CONFIG" placeholder:"FILE"`
+	DisableIstio        bool                     `help:"Disable Istio integration. This will prevent the creation of Istio policies to limit network traffic." env:"FTL_DISABLE_ISTIO"`
+	TimelineEndpoint    *url.URL                 `help:"Timeline endpoint." env:"FTL_TIMELINE_ENDPOINT" default:"http://127.0.0.1:8894"`
 }
 
 func main() {
@@ -56,6 +58,9 @@ func main() {
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
 	err = observability.Init(ctx, false, "", "ftl-controller", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
+
+	storage, err := artefacts.NewOCIRegistryStorage(cli.RegistryConfig)
+	kctx.FatalIfErrorf(err, "failed to create OCI registry storage")
 
 	// The FTL controller currently only supports DB as a cf provider/resolver.
 	conn, err := cli.ControllerConfig.OpenDBAndInstrument()
@@ -80,6 +85,6 @@ func main() {
 	sm, err := manager.New[cf.Secrets](ctx, dbSecretResolver, asmSecretProvider)
 	kctx.FatalIfErrorf(err)
 
-	err = controller.Start(ctx, cli.ControllerConfig, cm, sm, conn, false)
+	err = controller.Start(ctx, cli.ControllerConfig, storage, cm, sm, conn, false)
 	kctx.FatalIfErrorf(err)
 }

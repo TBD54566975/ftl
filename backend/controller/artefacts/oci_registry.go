@@ -35,11 +35,9 @@ type RegistryConfig struct {
 }
 
 type OCIArtefactService struct {
-	repository    string
-	repoFactory   func() (*remote.Repository, error)
-	auth          authn.AuthConfig
-	allowInsecure bool
-	puller        *googleremote.Puller
+	config RegistryConfig
+	auth   authn.AuthConfig
+	puller *googleremote.Puller
 }
 
 type ArtefactRepository struct {
@@ -64,44 +62,23 @@ func NewForTesting() *OCIArtefactService {
 	return storage
 }
 
-func NewOCIRegistryStorage(c RegistryConfig) (*OCIArtefactService, error) {
+func NewOCIRegistryStorage(config RegistryConfig) (*OCIArtefactService, error) {
 	// Connect the registry targeting the specified container
 	puller, err := googleremote.NewPuller()
 	if err != nil {
-		return nil, fmt.Errorf("unable to create puller for registry '%s': %w", c.Registry, err)
+		return nil, fmt.Errorf("unable to create puller for registry '%s': %w", config.Registry, err)
 	}
-	repoFactory := func() (*remote.Repository, error) {
-		reg, err := remote.NewRepository(c.Registry)
-		if err != nil {
-			return nil, fmt.Errorf("unable to connect to container registry '%s': %w", c.Registry, err)
-		}
-
-		reg.Client = &auth.Client{
-			Client: retry.DefaultClient,
-			Cache:  auth.NewCache(),
-			Credential: auth.StaticCredential(c.Registry, auth.Credential{
-				Username: c.Username,
-				Password: c.Password,
-			}),
-		}
-		reg.PlainHTTP = c.AllowInsecure
-
-		return reg, nil
-	}
-
 	return &OCIArtefactService{
-		repository:    c.Registry,
-		repoFactory:   repoFactory,
-		auth:          authn.AuthConfig{Username: c.Username, Password: c.Password},
-		allowInsecure: c.AllowInsecure,
-		puller:        puller,
+		config: config,
+		auth:   authn.AuthConfig{Username: config.Username, Password: config.Password},
+		puller: puller,
 	}, nil
 }
 
 func (s *OCIArtefactService) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (keys []ArtefactKey, missing []sha256.SHA256, err error) {
 	repo, err := s.repoFactory()
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to connect to container registry '%s': %w", s.repository, err)
+		return nil, nil, fmt.Errorf("unable to connect to container registry '%s': %w", s.config.Registry, err)
 	}
 	set := make(map[sha256.SHA256]bool)
 	for _, d := range digests {
@@ -132,7 +109,7 @@ func (s *OCIArtefactService) Upload(ctx context.Context, artefact Artefact) (sha
 	repo, err := s.repoFactory()
 	logger := log.FromContext(ctx)
 	if err != nil {
-		return sha256.SHA256{}, fmt.Errorf("unable to connect to repository '%s': %w", s.repository, err)
+		return sha256.SHA256{}, fmt.Errorf("unable to connect to repository '%s': %w", s.config.Registry, err)
 	}
 
 	// 2. Pack the files and tag the packed manifest
@@ -183,10 +160,10 @@ func (s *OCIArtefactService) Download(ctx context.Context, dg sha256.SHA256) (io
 	// So we are using google's go-containerregistry to do the actual download
 	// This is not great, we should remove oras at some point
 	opts := []name.Option{}
-	if s.allowInsecure {
+	if s.config.AllowInsecure {
 		opts = append(opts, name.Insecure)
 	}
-	newDigest, err := name.NewDigest(fmt.Sprintf("%s@sha256:%s", s.repository, dg.String()), opts...)
+	newDigest, err := name.NewDigest(fmt.Sprintf("%s@sha256:%s", s.config.Registry, dg.String()), opts...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create digest '%s': %w", dg, err)
 	}
@@ -199,6 +176,24 @@ func (s *OCIArtefactService) Download(ctx context.Context, dg sha256.SHA256) (io
 		return nil, fmt.Errorf("unable to read uncompressed layer '%s': %w", newDigest, err)
 	}
 	return uncompressed, nil
+}
+
+func (s *OCIArtefactService) repoFactory() (*remote.Repository, error) {
+	reg, err := remote.NewRepository(s.config.Registry)
+	if err != nil {
+		return nil, fmt.Errorf("unable to connect to container registry '%s': %w", s.config.Registry, err)
+	}
+
+	reg.Client = &auth.Client{
+		Client: retry.DefaultClient,
+		Cache:  auth.NewCache(),
+		Credential: auth.StaticCredential(s.config.Registry, auth.Credential{
+			Username: s.config.Username,
+			Password: s.config.Password,
+		}),
+	}
+	reg.PlainHTTP = s.config.AllowInsecure
+	return reg, nil
 }
 
 func pushBlob(ctx context.Context, mediaType string, blob []byte, target oras.Target) (desc ocispec.Descriptor, err error) {

@@ -28,13 +28,13 @@ import (
 const tenMB = 1024 * 1024 * 10
 
 // NewSQLMigrationProvisioner creates a new provisioner that provisions database migrations
-func NewSQLMigrationProvisioner(registryConfig artefacts.RegistryConfig) *InMemProvisioner {
+func NewSQLMigrationProvisioner(storage *artefacts.OCIArtefactService) *InMemProvisioner {
 	return NewEmbeddedProvisioner(map[schema.ResourceType]InMemResourceProvisionerFn{
-		schema.ResourceTypeSQLMigration: provisionSQLMigration(registryConfig),
+		schema.ResourceTypeSQLMigration: provisionSQLMigration(storage),
 	})
 }
 
-func provisionSQLMigration(registryConfig artefacts.RegistryConfig) func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
+func provisionSQLMigration(storage *artefacts.OCIArtefactService) func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
 	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
 		migration, ok := rc.Resource.Resource.(*provisioner.Resource_SqlMigration)
 		if !ok {
@@ -43,15 +43,11 @@ func provisionSQLMigration(registryConfig artefacts.RegistryConfig) func(ctx con
 		if len(rc.Dependencies) != 1 {
 			return nil, fmt.Errorf("migrations must have exaclyt one dependency, found %v", rc.Dependencies)
 		}
-		registry, err := artefacts.NewOCIRegistryStorage(registryConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create OCI registry storage: %w", err)
-		}
 		parseSHA256, err := sha256.ParseSHA256(rc.Resource.GetSqlMigration().Digest)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse digest %w", err)
 		}
-		download, err := registry.Download(ctx, parseSHA256)
+		download, err := storage.Download(ctx, parseSHA256)
 		if err != nil {
 			return nil, fmt.Errorf("failed to download migration: %w", err)
 		}
