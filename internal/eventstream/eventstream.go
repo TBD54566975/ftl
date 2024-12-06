@@ -9,7 +9,7 @@ import (
 
 // EventStream is a stream of events that can be published and subscribed to, that update a materialized view
 type EventStream[T View] interface {
-	Publish(Event[T]) error
+	Publish(event Event[T]) error
 
 	View() T
 
@@ -30,7 +30,7 @@ type View interface {
 type Event[T View] interface {
 
 	// Handle applies the event to the view
-	Handle(T) (T, error)
+	Handle(view T) (T, error)
 }
 
 func NewInMemory[T View](initial T) EventStream[T] {

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/alecthomas/types/optional"
 	inprocesspubsub "github.com/alecthomas/types/pubsub"
@@ -17,7 +16,6 @@ import (
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
-	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -63,10 +61,10 @@ type DAL struct {
 	DeploymentChanges *inprocesspubsub.Topic[DeploymentNotification]
 }
 
-func (d *DAL) GetStatus(ctx context.Context, controller dalmodel.Controller, EventStream) (dalmodel.Status, error) {
+func (d *DAL) GetDeploymentStatus(ctx context.Context) ([]dalmodel.Deployment, error) {
 	deployments, err := d.db.GetActiveDeployments(ctx)
 	if err != nil {
-		return dalmodel.Status{}, fmt.Errorf("could not get active deployments: %w", libdal.TranslatePGError(err))
+		return nil, fmt.Errorf("could not get active deployments: %w", libdal.TranslatePGError(err))
 	}
 	statusDeployments, err := slices.MapErr(deployments, func(in dalsql.GetActiveDeploymentsRow) (dalmodel.Deployment, error) {
 		labels := model.Labels{}
@@ -84,17 +82,10 @@ func (d *DAL) GetStatus(ctx context.Context, controller dalmodel.Controller, Eve
 		}, nil
 	})
 	if err != nil {
-		return dalmodel.Status{}, fmt.Errorf("could not parse deployments: %w", err)
+		return nil, fmt.Errorf("could not parse deployments: %w", err)
 	}
 
-	if err != nil {
-		return dalmodel.Status{}, fmt.Errorf("could not parse runners: %w", err)
-	}
-	return dalmodel.Status{
-		Controllers: []dalmodel.Controller{controller},
-		Deployments: statusDeployments,
-		Runners:     domainRunners,
-	}, nil
+	return statusDeployments, nil
 }
 
 func (d *DAL) UpsertModule(ctx context.Context, language, name string) (err error) {
@@ -344,7 +335,6 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]dalmodel.Deployment, 
 			Module:      in.ModuleName,
 			Language:    in.Language,
 			MinReplicas: int(in.Deployment.MinReplicas),
-			Replicas:    optional.Some(int(in.Replicas)),
 			Schema:      in.Deployment.Schema,
 			CreatedAt:   in.Deployment.CreatedAt,
 		}
