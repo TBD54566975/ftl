@@ -59,7 +59,7 @@ func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.Reques
 		logger.Debugf("bad request: %s", err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("bad request"))
-		recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusBadRequest, err.Error())
+		recordIngressErrorEvent(r.Context(), ingressEvent, http.StatusBadRequest, err.Error())
 		return
 	}
 	ingressEvent.RequestBody = body
@@ -77,11 +77,11 @@ func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.Reques
 			httpCode := connectCodeToHTTP(connectErr.Code())
 			http.Error(w, http.StatusText(httpCode), httpCode)
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("failed to call verb: connect error"))
-			recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusInternalServerError, connectErr.Error())
+			recordIngressErrorEvent(r.Context(), ingressEvent, http.StatusInternalServerError, connectErr.Error())
 		} else {
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("failed to call verb: internal server error"))
-			recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusInternalServerError, err.Error())
+			recordIngressErrorEvent(r.Context(), ingressEvent, http.StatusInternalServerError, err.Error())
 		}
 		return
 	}
@@ -93,7 +93,7 @@ func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.Reques
 			logger.Errorf(err, "could not resolve schema type for verb %s", route.verb)
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("could not resolve schema type for verb"))
-			recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusInternalServerError, err.Error())
+			recordIngressErrorEvent(r.Context(), ingressEvent, http.StatusInternalServerError, err.Error())
 			return
 		}
 		var responseBody []byte
@@ -104,7 +104,7 @@ func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.Reques
 				logger.Errorf(err, "could not unmarhal response for verb %s", verb)
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("could not unmarhal response for verb"))
-				recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusInternalServerError, err.Error())
+				recordIngressErrorEvent(r.Context(), ingressEvent, http.StatusInternalServerError, err.Error())
 				return
 			}
 			rawBody = response.Body
@@ -114,7 +114,7 @@ func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.Reques
 				logger.Errorf(err, "could not create response for verb %s", verb)
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("could not create response for verb"))
-				recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusInternalServerError, err.Error())
+				recordIngressErrorEvent(r.Context(), ingressEvent, http.StatusInternalServerError, err.Error())
 				return
 			}
 
@@ -147,25 +147,25 @@ func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.Reques
 		} else {
 			logger.Errorf(err, "could not write response body")
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("could not write response body"))
-			recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusInternalServerError, err.Error())
+			recordIngressErrorEvent(r.Context(), ingressEvent, http.StatusInternalServerError, err.Error())
 		}
 
 	case *ftlv1.CallResponse_Error_:
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("call response: internal server error"))
-		recordIngressErrorEvent(r.Context(), &ingressEvent, http.StatusInternalServerError, msg.Error.Message)
+		recordIngressErrorEvent(r.Context(), ingressEvent, http.StatusInternalServerError, msg.Error.Message)
 	}
 }
 
 func recordIngressErrorEvent(
 	ctx context.Context,
-	ingressEvent *timeline.Ingress,
+	ingressEvent timeline.Ingress,
 	statusCode int,
 	errorMsg string,
 ) {
 	ingressEvent.ResponseStatus = statusCode
 	ingressEvent.Error = optional.Some(errorMsg)
-	// TODO: record event in timeline, one it has been split out from the controller
+	timeline.Publish(ctx, ingressEvent)
 }
 
 // Copied from the Apache-licensed connect-go source.
