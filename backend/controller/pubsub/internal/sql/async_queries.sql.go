@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/alecthomas/types/optional"
@@ -61,7 +60,7 @@ type CreateAsyncCallParams struct {
 	ScheduledAt       time.Time
 	Verb              schema.RefKey
 	Origin            string
-	Request           api.EncryptedAsyncColumn
+	Request           json.RawMessage
 	RemainingAttempts int32
 	Backoff           sqltypes.Duration
 	MaxBackoff        sqltypes.Duration

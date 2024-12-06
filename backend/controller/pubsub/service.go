@@ -10,7 +10,6 @@ import (
 	"github.com/jpillora/backoff"
 
 	"github.com/TBD54566975/ftl/backend/controller/async"
-	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub/internal/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/libdal"
@@ -41,9 +40,9 @@ type Service struct {
 	eventPublished    chan struct{}
 }
 
-func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service, asyncCallListener optional.Option[AsyncCallListener]) *Service {
+func New(ctx context.Context, conn libdal.Connection, asyncCallListener optional.Option[AsyncCallListener]) *Service {
 	m := &Service{
-		dal:               dal.New(conn, encryption),
+		dal:               dal.New(conn),
 		asyncCallListener: asyncCallListener,
 		eventPublished:    make(chan struct{}),
 	}

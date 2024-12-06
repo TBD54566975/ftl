@@ -19,11 +19,9 @@ require (
 	github.com/alecthomas/participle/v2 v2.1.1
 	github.com/alecthomas/types v0.17.0
 	github.com/amacneil/dbmate/v2 v2.23.0
-	github.com/aws/aws-sdk-go v1.55.5
 	github.com/aws/aws-sdk-go-v2 v1.32.6
 	github.com/aws/aws-sdk-go-v2/config v1.28.6
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.47
-	github.com/aws/aws-sdk-go-v2/service/kms v1.37.7
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.34.7
 	github.com/aws/smithy-go v1.22.1
 	github.com/beevik/etree v1.4.1
@@ -58,8 +56,6 @@ require (
 	github.com/sqlc-dev/pqtype v0.3.0
 	github.com/swaggest/jsonschema-go v0.3.72
 	github.com/tidwall/pretty v1.2.1
-	github.com/tink-crypto/tink-go-awskms v0.0.0-20230616072154-ba4f9f22c3e9
-	github.com/tink-crypto/tink-go/v2 v2.2.0
 	github.com/titanous/json5 v1.0.0
 	github.com/tliron/commonlog v0.2.19
 	github.com/tliron/glsp v0.2.2

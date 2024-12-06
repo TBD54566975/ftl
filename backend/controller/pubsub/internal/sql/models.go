@@ -6,10 +6,10 @@ package sql
 
 import (
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
 	"github.com/sqlc-dev/pqtype"
@@ -72,10 +72,10 @@ type TopicEvent struct {
 	CreatedAt    time.Time
 	Key          model.TopicEventKey
 	TopicID      int64
-	Payload      api.EncryptedAsyncColumn
 	Caller       optional.Option[string]
 	RequestKey   optional.Option[string]
 	TraceContext pqtype.NullRawMessage
+	Payload      json.RawMessage
 }
 
 type TopicSubscription struct {

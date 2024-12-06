@@ -38,7 +38,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/console"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
-	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
@@ -96,7 +95,6 @@ type Config struct {
 	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
 	EventLogRetention            *time.Duration      `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
-	KMSURI                       *string             `help:"URI for KMS key e.g. with fake-kms:// or aws-kms://arn:aws:kms:ap-southeast-2:12345:key/0000-1111" env:"FTL_KMS_URI"`
 	MaxOpenDBConnections         int                 `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
 	MaxIdleDBConnections         int                 `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
 	CommonConfig
@@ -246,11 +244,6 @@ func New(
 		config.ControllerTimeout = time.Second * 5
 	}
 
-	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Ptr(config.KMSURI)))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create encryption dal: %w", err)
-	}
-
 	ldb := dbleaser.NewDatabaseLeaser(conn)
 	scheduler := scheduledtask.New(ctx, key, ldb)
 
@@ -270,9 +263,9 @@ func New(
 		storage:                 storage,
 	}
 
-	pubSub := pubsub.New(ctx, conn, encryption, optional.Some[pubsub.AsyncCallListener](svc))
+	pubSub := pubsub.New(ctx, conn, optional.Some[pubsub.AsyncCallListener](svc))
 	svc.pubSub = pubSub
-	svc.dal = dal.New(ctx, conn, encryption, pubSub, svc.storage)
+	svc.dal = dal.New(ctx, conn, pubSub, svc.storage)
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx)
 

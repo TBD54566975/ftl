@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -155,8 +154,7 @@ type AsyncCall struct {
 	State             AsyncCallState
 	Origin            string
 	ScheduledAt       time.Time
-	Request           api.EncryptedAsyncColumn
-	Response          api.OptionalEncryptedAsyncColumn
+	Response          interface{}
 	Error             optional.Option[string]
 	RemainingAttempts int32
 	Backoff           sqltypes.Duration
@@ -165,6 +163,7 @@ type AsyncCall struct {
 	Catching          bool
 	ParentRequestKey  optional.Option[string]
 	TraceContext      pqtype.NullRawMessage
+	Request           json.RawMessage
 }
 
 type Deployment struct {
@@ -199,10 +198,10 @@ type TopicEvent struct {
 	CreatedAt    time.Time
 	Key          model.TopicEventKey
 	TopicID      int64
-	Payload      api.EncryptedAsyncColumn
 	Caller       optional.Option[string]
 	RequestKey   optional.Option[string]
 	TraceContext pqtype.NullRawMessage
+	Payload      json.RawMessage
 }
 
 type TopicSubscription struct {

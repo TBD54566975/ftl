@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -68,7 +67,7 @@ type AcquireAsyncCallRow struct {
 	Origin              string
 	Verb                schema.RefKey
 	CatchVerb           optional.Option[schema.RefKey]
-	Request             api.EncryptedAsyncColumn
+	Request             json.RawMessage
 	ScheduledAt         time.Time
 	RemainingAttempts   int32
 	Error               optional.Option[string]
@@ -129,7 +128,7 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 
 const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec
 WITH event AS (
-    SELECT id, created_at, key, topic_id, payload, caller, request_key, trace_context
+    SELECT id, created_at, key, topic_id, caller, request_key, trace_context, payload
     FROM topic_events
     WHERE "key" = $2::topic_event_key
 )
@@ -285,7 +284,7 @@ WITH updated AS (
   SET state = 'error'::async_call_state,
       error = $7::TEXT
   WHERE id = $8::BIGINT
-  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context
+  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, request
 )
 INSERT INTO async_calls (
   verb,
@@ -816,7 +815,7 @@ LIMIT 1
 
 type GetNextEventForSubscriptionRow struct {
 	Event        optional.Option[model.TopicEventKey]
-	Payload      api.OptionalEncryptedAsyncColumn
+	Payload      pqtype.NullRawMessage
 	CreatedAt    sqltypes.OptionalTime
 	Caller       optional.Option[string]
 	RequestKey   optional.Option[string]
@@ -1162,7 +1161,7 @@ func (q *Queries) GetTopic(ctx context.Context, dollar_1 int64) (Topic, error) {
 }
 
 const getTopicEvent = `-- name: GetTopicEvent :one
-SELECT id, created_at, key, topic_id, payload, caller, request_key, trace_context
+SELECT id, created_at, key, topic_id, caller, request_key, trace_context, payload
 FROM topic_events
 WHERE id = $1::BIGINT
 `
@@ -1175,16 +1174,16 @@ func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent
 		&i.CreatedAt,
 		&i.Key,
 		&i.TopicID,
-		&i.Payload,
 		&i.Caller,
 		&i.RequestKey,
 		&i.TraceContext,
+		&i.Payload,
 	)
 	return i, err
 }
 
 const getZombieAsyncCalls = `-- name: GetZombieAsyncCalls :many
-SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context
+SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, request
 FROM async_calls
 WHERE state = 'executing'
   AND lease_id IS NULL
@@ -1209,7 +1208,6 @@ func (q *Queries) GetZombieAsyncCalls(ctx context.Context, limit int32) ([]Async
 			&i.State,
 			&i.Origin,
 			&i.ScheduledAt,
-			&i.Request,
 			&i.Response,
 			&i.Error,
 			&i.RemainingAttempts,
@@ -1219,6 +1217,7 @@ func (q *Queries) GetZombieAsyncCalls(ctx context.Context, limit int32) ([]Async
 			&i.Catching,
 			&i.ParentRequestKey,
 			&i.TraceContext,
+			&i.Request,
 		); err != nil {
 			return nil, err
 		}
@@ -1306,7 +1305,7 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout sqltypes.Duratio
 }
 
 const loadAsyncCall = `-- name: LoadAsyncCall :one
-SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context
+SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, request
 FROM async_calls
 WHERE id = $1
 `
@@ -1322,7 +1321,6 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 		&i.State,
 		&i.Origin,
 		&i.ScheduledAt,
-		&i.Request,
 		&i.Response,
 		&i.Error,
 		&i.RemainingAttempts,
@@ -1332,6 +1330,7 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 		&i.Catching,
 		&i.ParentRequestKey,
 		&i.TraceContext,
+		&i.Request,
 	)
 	return i, err
 }
@@ -1366,7 +1365,7 @@ type PublishEventForTopicParams struct {
 	Module       string
 	Topic        string
 	Caller       string
-	Payload      api.EncryptedAsyncColumn
+	Payload      json.RawMessage
 	RequestKey   string
 	TraceContext json.RawMessage
 }
@@ -1422,7 +1421,7 @@ WHERE id = $2
 RETURNING true
 `
 
-func (q *Queries) SucceedAsyncCall(ctx context.Context, response api.OptionalEncryptedAsyncColumn, iD int64) (bool, error) {
+func (q *Queries) SucceedAsyncCall(ctx context.Context, response interface{}, iD int64) (bool, error) {
 	row := q.db.QueryRowContext(ctx, succeedAsyncCall, response, iD)
 	var column_1 bool
 	err := row.Scan(&column_1)
