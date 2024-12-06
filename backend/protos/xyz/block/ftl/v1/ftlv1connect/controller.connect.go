@@ -41,9 +41,6 @@ const (
 	// ControllerServiceStatusProcedure is the fully-qualified name of the ControllerService's Status
 	// RPC.
 	ControllerServiceStatusProcedure = "/xyz.block.ftl.v1.ControllerService/Status"
-	// ControllerServiceGetCertificationProcedure is the fully-qualified name of the ControllerService's
-	// GetCertification RPC.
-	ControllerServiceGetCertificationProcedure = "/xyz.block.ftl.v1.ControllerService/GetCertification"
 	// ControllerServiceGetArtefactDiffsProcedure is the fully-qualified name of the ControllerService's
 	// GetArtefactDiffs RPC.
 	ControllerServiceGetArtefactDiffsProcedure = "/xyz.block.ftl.v1.ControllerService/GetArtefactDiffs"
@@ -83,8 +80,6 @@ type ControllerServiceClient interface {
 	// List "processes" running on the cluster.
 	ProcessList(context.Context, *connect.Request[v1.ProcessListRequest]) (*connect.Response[v1.ProcessListResponse], error)
 	Status(context.Context, *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error)
-	// Runner will initially call this to have the controller sign its public key.
-	GetCertification(context.Context, *connect.Request[v1.GetCertificationRequest]) (*connect.Response[v1.GetCertificationResponse], error)
 	// Get list of artefacts that differ between the server and client.
 	GetArtefactDiffs(context.Context, *connect.Request[v1.GetArtefactDiffsRequest]) (*connect.Response[v1.GetArtefactDiffsResponse], error)
 	// Upload an artefact to the server.
@@ -140,11 +135,6 @@ func NewControllerServiceClient(httpClient connect.HTTPClient, baseURL string, o
 		status: connect.NewClient[v1.StatusRequest, v1.StatusResponse](
 			httpClient,
 			baseURL+ControllerServiceStatusProcedure,
-			opts...,
-		),
-		getCertification: connect.NewClient[v1.GetCertificationRequest, v1.GetCertificationResponse](
-			httpClient,
-			baseURL+ControllerServiceGetCertificationProcedure,
 			opts...,
 		),
 		getArtefactDiffs: connect.NewClient[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse](
@@ -205,7 +195,6 @@ type controllerServiceClient struct {
 	ping                   *connect.Client[v1.PingRequest, v1.PingResponse]
 	processList            *connect.Client[v1.ProcessListRequest, v1.ProcessListResponse]
 	status                 *connect.Client[v1.StatusRequest, v1.StatusResponse]
-	getCertification       *connect.Client[v1.GetCertificationRequest, v1.GetCertificationResponse]
 	getArtefactDiffs       *connect.Client[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse]
 	uploadArtefact         *connect.Client[v1.UploadArtefactRequest, v1.UploadArtefactResponse]
 	createDeployment       *connect.Client[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse]
@@ -231,11 +220,6 @@ func (c *controllerServiceClient) ProcessList(ctx context.Context, req *connect.
 // Status calls xyz.block.ftl.v1.ControllerService.Status.
 func (c *controllerServiceClient) Status(ctx context.Context, req *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error) {
 	return c.status.CallUnary(ctx, req)
-}
-
-// GetCertification calls xyz.block.ftl.v1.ControllerService.GetCertification.
-func (c *controllerServiceClient) GetCertification(ctx context.Context, req *connect.Request[v1.GetCertificationRequest]) (*connect.Response[v1.GetCertificationResponse], error) {
-	return c.getCertification.CallUnary(ctx, req)
 }
 
 // GetArtefactDiffs calls xyz.block.ftl.v1.ControllerService.GetArtefactDiffs.
@@ -295,8 +279,6 @@ type ControllerServiceHandler interface {
 	// List "processes" running on the cluster.
 	ProcessList(context.Context, *connect.Request[v1.ProcessListRequest]) (*connect.Response[v1.ProcessListResponse], error)
 	Status(context.Context, *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error)
-	// Runner will initially call this to have the controller sign its public key.
-	GetCertification(context.Context, *connect.Request[v1.GetCertificationRequest]) (*connect.Response[v1.GetCertificationResponse], error)
 	// Get list of artefacts that differ between the server and client.
 	GetArtefactDiffs(context.Context, *connect.Request[v1.GetArtefactDiffsRequest]) (*connect.Response[v1.GetArtefactDiffsResponse], error)
 	// Upload an artefact to the server.
@@ -348,11 +330,6 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect.H
 	controllerServiceStatusHandler := connect.NewUnaryHandler(
 		ControllerServiceStatusProcedure,
 		svc.Status,
-		opts...,
-	)
-	controllerServiceGetCertificationHandler := connect.NewUnaryHandler(
-		ControllerServiceGetCertificationProcedure,
-		svc.GetCertification,
 		opts...,
 	)
 	controllerServiceGetArtefactDiffsHandler := connect.NewUnaryHandler(
@@ -413,8 +390,6 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect.H
 			controllerServiceProcessListHandler.ServeHTTP(w, r)
 		case ControllerServiceStatusProcedure:
 			controllerServiceStatusHandler.ServeHTTP(w, r)
-		case ControllerServiceGetCertificationProcedure:
-			controllerServiceGetCertificationHandler.ServeHTTP(w, r)
 		case ControllerServiceGetArtefactDiffsProcedure:
 			controllerServiceGetArtefactDiffsHandler.ServeHTTP(w, r)
 		case ControllerServiceUploadArtefactProcedure:
@@ -454,10 +429,6 @@ func (UnimplementedControllerServiceHandler) ProcessList(context.Context, *conne
 
 func (UnimplementedControllerServiceHandler) Status(context.Context, *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.Status is not implemented"))
-}
-
-func (UnimplementedControllerServiceHandler) GetCertification(context.Context, *connect.Request[v1.GetCertificationRequest]) (*connect.Response[v1.GetCertificationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.GetCertification is not implemented"))
 }
 
 func (UnimplementedControllerServiceHandler) GetArtefactDiffs(context.Context, *connect.Request[v1.GetArtefactDiffsRequest]) (*connect.Response[v1.GetArtefactDiffsResponse], error) {
