@@ -22,6 +22,7 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
+	"github.com/alecthomas/types/result"
 	"github.com/jackc/pgx/v5"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
@@ -43,7 +44,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
-	"github.com/TBD54566975/ftl/backend/controller/timeline"
+	oldtimeline "github.com/TBD54566975/ftl/backend/controller/timeline"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
@@ -55,6 +56,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	frontend "github.com/TBD54566975/ftl/frontend/console"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
@@ -207,7 +209,7 @@ type Service struct {
 	tasks                   *scheduledtask.Scheduler
 	pubSub                  *pubsub.Service
 	registry                artefacts.Service
-	timeline                *timeline.Service
+	timeline                *oldtimeline.Service
 	controllerListListeners []ControllerListListener
 
 	// Map from runnerKey.String() to client.
@@ -273,7 +275,7 @@ func New(
 	}
 	svc.registry = storage
 
-	timelineSvc := timeline.New(ctx, conn, encryption)
+	timelineSvc := oldtimeline.New(ctx, conn, encryption)
 	svc.timeline = timelineSvc
 	pubSub := pubsub.New(ctx, conn, encryption, optional.Some[pubsub.AsyncCallListener](svc))
 	svc.pubSub = pubSub
@@ -463,7 +465,7 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 			requestKey = optional.Some(rkey)
 		}
 
-		s.timeline.EnqueueEvent(ctx, &timeline.Log{
+		timeline.Publish(ctx, &timeline.Log{
 			DeploymentKey: deploymentKey,
 			RequestKey:    requestKey,
 			Time:          msg.TimeStamp.AsTime(),
@@ -901,7 +903,7 @@ func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftldepl
 	routes := s.routeTable.Current()
 	route, ok := routes.GetDeployment(module).Get()
 	if ok {
-		s.timeline.EnqueueEvent(ctx, &timeline.PubSubPublish{
+		timeline.Publish(ctx, &timeline.PubSubPublish{
 			DeploymentKey: route,
 			RequestKey:    requestKey,
 			Time:          now,
@@ -1018,16 +1020,16 @@ func (s *Service) callWithRequest(
 	if currentCaller != nil && currentCaller.Module != module && !verb.IsExported() {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: verb not exported"))
 		err = connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
-		callEvent.Response = either.RightOf[*ftlv1.CallResponse](err)
-		s.timeline.EnqueueEvent(ctx, callEvent)
+		callEvent.Response = result.Err[*ftlv1.CallResponse](err)
+		timeline.Publish(ctx, callEvent)
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
 	}
 
 	err = validateCallBody(req.Msg.Body, verb, sch)
 	if err != nil {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: invalid call body"))
-		callEvent.Response = either.RightOf[*ftlv1.CallResponse](err)
-		s.timeline.EnqueueEvent(ctx, callEvent)
+		callEvent.Response = result.Err[*ftlv1.CallResponse](err)
+		timeline.Publish(ctx, callEvent)
 		return nil, err
 	}
 
@@ -1044,15 +1046,15 @@ func (s *Service) callWithRequest(
 	var resp *connect.Response[ftlv1.CallResponse]
 	if err == nil {
 		resp = connect.NewResponse(response.Msg)
-		callEvent.Response = either.LeftOf[error](resp.Msg)
+		callEvent.Response = result.Ok(resp.Msg)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.None[string]())
 	} else {
-		callEvent.Response = either.RightOf[*ftlv1.CallResponse](err)
+		callEvent.Response = result.Err[*ftlv1.CallResponse](err)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
 		logger.Errorf(err, "Call failed to verb %s for module %s", verbRef.String(), module)
 	}
 
-	s.timeline.EnqueueEvent(ctx, callEvent)
+	timeline.Publish(ctx, callEvent)
 	return resp, err
 }
 
@@ -1259,7 +1261,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 			if e, ok := err.Get(); ok {
 				errStr = optional.Some(e.Error())
 			}
-			s.timeline.EnqueueEvent(ctx, &timeline.AsyncExecute{
+			timeline.Publish(ctx, &timeline.AsyncExecute{
 				DeploymentKey: deployment,
 				RequestKey:    call.ParentRequestKey,
 				EventType:     eventType,
