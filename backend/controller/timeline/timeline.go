@@ -3,16 +3,12 @@ package timeline
 import (
 	"context"
 	stdsql "database/sql"
-	"fmt"
 	"time"
 
 	"github.com/alecthomas/atomic"
 
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
-	"github.com/TBD54566975/ftl/backend/controller/observability"
-	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/controller/timeline/internal/sql"
-	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -29,9 +25,6 @@ const (
 	EventTypeAsyncExecute      = sql.EventTypeAsyncExecute
 	EventTypePubSubPublish     = sql.EventTypePubsubPublish
 	EventTypePubSubConsume     = sql.EventTypePubsubConsume
-
-	maxBatchSize  = 16
-	maxBatchDelay = 100 * time.Millisecond
 )
 
 // Event types.
@@ -65,13 +58,7 @@ func New(ctx context.Context, conn *stdsql.DB, encryption *encryption.Service) *
 		encryption: encryption,
 		events:     events,
 	}
-	go s.processEvents()
 	return s
-}
-
-func (s *Service) DeleteOldEvents(ctx context.Context, eventType EventType, age time.Duration) (int64, error) {
-	count, err := sql.New(s.conn).DeleteOldTimelineEvents(ctx, sqltypes.Duration(age), eventType)
-	return count, libdal.TranslatePGError(err)
 }
 
 // EnqueueEvent asynchronously enqueues an event for insertion into the timeline.
@@ -89,81 +76,4 @@ func (s *Service) EnqueueEvent(ctx context.Context, inEvent InEvent) {
 			s.lastDroppedError.Store(time.Now())
 		}
 	}
-}
-
-func (s *Service) processEvents() {
-	lastFlush := time.Now()
-	buffer := make([]Event, 0, maxBatchSize)
-	for {
-		select {
-		case event := <-s.events:
-			buffer = append(buffer, event)
-
-			if len(buffer) < maxBatchSize || time.Since(lastFlush) < maxBatchDelay {
-				continue
-			}
-			s.flushEvents(buffer)
-			buffer = nil
-
-		case <-time.After(maxBatchDelay):
-			if len(buffer) == 0 {
-				continue
-			}
-			s.flushEvents(buffer)
-			buffer = nil
-		}
-	}
-}
-
-// Flush all events in the buffer to the database in a single transaction.
-func (s *Service) flushEvents(events []Event) {
-	logger := log.FromContext(s.ctx).Scope("timeline")
-	tx, err := s.conn.Begin()
-	if err != nil {
-		logger.Errorf(err, "Failed to start transaction")
-		return
-	}
-	querier := sql.New(tx)
-	var lastError error
-	failures := 0
-	for _, event := range events {
-		var err error
-		switch e := event.(type) {
-		case *CallEvent:
-			err = s.insertCallEvent(s.ctx, querier, e)
-		case *LogEvent:
-			err = s.insertLogEvent(s.ctx, querier, e)
-		case *IngressEvent:
-			err = s.insertHTTPIngress(s.ctx, querier, e)
-		case *CronScheduledEvent:
-			err = s.insertCronScheduledEvent(s.ctx, querier, e)
-		case *AsyncExecuteEvent:
-			err = s.insertAsyncExecuteEvent(s.ctx, querier, e)
-		case *PubSubPublishEvent:
-			err = s.insertPubSubPublishEvent(s.ctx, querier, e)
-		case *PubSubConsumeEvent:
-			err = s.insertPubSubConsumeEvent(s.ctx, querier, e)
-		case *DeploymentCreatedEvent, *DeploymentUpdatedEvent:
-		// TODO: Implement
-		default:
-			panic(fmt.Sprintf("unexpected event type: %T", e))
-		}
-		if err != nil {
-			lastError = err
-			failures++
-		}
-	}
-	err = tx.Commit()
-	if err != nil {
-		failures = len(events)
-		lastError = err
-	}
-	if lastError != nil {
-		if time.Since(s.lastFailedError.Load()) > 10*time.Second {
-			logger.Errorf(lastError, "Failed to insert %d events, most recent error", failures)
-			s.lastFailedError.Store(time.Now())
-		}
-		observability.Timeline.Failed(s.ctx, failures)
-	}
-	observability.Timeline.Inserted(s.ctx, len(events)-failures)
 }

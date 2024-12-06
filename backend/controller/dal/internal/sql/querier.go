@@ -60,8 +60,6 @@ type Querier interface {
 	GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent, error)
 	GetZombieAsyncCalls(ctx context.Context, limit int32) ([]AsyncCall, error)
 	InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error
-	InsertTimelineDeploymentCreatedEvent(ctx context.Context, arg InsertTimelineDeploymentCreatedEventParams) error
-	InsertTimelineDeploymentUpdatedEvent(ctx context.Context, arg InsertTimelineDeploymentUpdatedEventParams) error
 	KillStaleRunners(ctx context.Context, timeout sqltypes.Duration) (int64, error)
 	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
 	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error

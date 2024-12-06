@@ -7,17 +7,16 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/timeline"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
 var _ log.Sink = (*deploymentLogsSink)(nil)
 
-func newDeploymentLogsSink(ctx context.Context, timeline *timeline.Service) *deploymentLogsSink {
+func newDeploymentLogsSink(ctx context.Context) *deploymentLogsSink {
 	sink := &deploymentLogsSink{
 		logQueue: make(chan log.Entry, 10000),
-		timeline: timeline,
 	}
 
 	// Process logs in background
@@ -28,7 +27,6 @@ func newDeploymentLogsSink(ctx context.Context, timeline *timeline.Service) *dep
 
 type deploymentLogsSink struct {
 	logQueue chan log.Entry
-	timeline *timeline.Service
 }
 
 // Log implements Sink
@@ -71,7 +69,7 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 				errorStr = optional.Some(entry.Error.Error())
 			}
 
-			d.timeline.EnqueueEvent(ctx, &timeline.Log{
+			timeline.Publish(ctx, &timeline.Log{
 				RequestKey:    request,
 				DeploymentKey: deployment,
 				Time:          entry.Time,

@@ -160,9 +160,9 @@ export class LogEvent extends Message<LogEvent> {
   requestKey?: string;
 
   /**
-   * @generated from field: google.protobuf.Timestamp time_stamp = 3;
+   * @generated from field: google.protobuf.Timestamp timestamp = 3;
    */
-  timeStamp?: Timestamp;
+  timestamp?: Timestamp;
 
   /**
    * @generated from field: int32 log_level = 4;
@@ -199,7 +199,7 @@ export class LogEvent extends Message<LogEvent> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 3, name: "timestamp", kind: "message", T: Timestamp },
     { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
     { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -239,9 +239,9 @@ export class CallEvent extends Message<CallEvent> {
   deploymentKey = "";
 
   /**
-   * @generated from field: google.protobuf.Timestamp time_stamp = 3;
+   * @generated from field: google.protobuf.Timestamp timestamp = 3;
    */
-  timeStamp?: Timestamp;
+  timestamp?: Timestamp;
 
   /**
    * @generated from field: optional xyz.block.ftl.schema.v1.Ref source_verb_ref = 11;
@@ -288,7 +288,7 @@ export class CallEvent extends Message<CallEvent> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 3, name: "timestamp", kind: "message", T: Timestamp },
     { no: 11, name: "source_verb_ref", kind: "message", T: Ref, opt: true },
     { no: 12, name: "destination_verb_ref", kind: "message", T: Ref },
     { no: 6, name: "duration", kind: "message", T: Duration },
@@ -460,9 +460,9 @@ export class IngressEvent extends Message<IngressEvent> {
   statusCode = 0;
 
   /**
-   * @generated from field: google.protobuf.Timestamp time_stamp = 8;
+   * @generated from field: google.protobuf.Timestamp timestamp = 8;
    */
-  timeStamp?: Timestamp;
+  timestamp?: Timestamp;
 
   /**
    * @generated from field: google.protobuf.Duration duration = 9;
@@ -508,7 +508,7 @@ export class IngressEvent extends Message<IngressEvent> {
     { no: 4, name: "method", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "status_code", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 8, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 8, name: "timestamp", kind: "message", T: Timestamp },
     { no: 9, name: "duration", kind: "message", T: Duration },
     { no: 10, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 11, name: "request_header", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -549,9 +549,9 @@ export class CronScheduledEvent extends Message<CronScheduledEvent> {
   verbRef?: Ref;
 
   /**
-   * @generated from field: google.protobuf.Timestamp time_stamp = 3;
+   * @generated from field: google.protobuf.Timestamp timestamp = 3;
    */
-  timeStamp?: Timestamp;
+  timestamp?: Timestamp;
 
   /**
    * @generated from field: google.protobuf.Duration duration = 4;
@@ -583,7 +583,7 @@ export class CronScheduledEvent extends Message<CronScheduledEvent> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "verb_ref", kind: "message", T: Ref },
-    { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 3, name: "timestamp", kind: "message", T: Timestamp },
     { no: 4, name: "duration", kind: "message", T: Duration },
     { no: 5, name: "scheduled_at", kind: "message", T: Timestamp },
     { no: 6, name: "schedule", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -627,9 +627,9 @@ export class AsyncExecuteEvent extends Message<AsyncExecuteEvent> {
   verbRef?: Ref;
 
   /**
-   * @generated from field: google.protobuf.Timestamp time_stamp = 4;
+   * @generated from field: google.protobuf.Timestamp timestamp = 4;
    */
-  timeStamp?: Timestamp;
+  timestamp?: Timestamp;
 
   /**
    * @generated from field: google.protobuf.Duration duration = 5;
@@ -657,7 +657,7 @@ export class AsyncExecuteEvent extends Message<AsyncExecuteEvent> {
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "verb_ref", kind: "message", T: Ref },
-    { no: 4, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 4, name: "timestamp", kind: "message", T: Timestamp },
     { no: 5, name: "duration", kind: "message", T: Duration },
     { no: 6, name: "async_event_type", kind: "enum", T: proto3.getEnumType(AsyncExecuteEventType) },
     { no: 7, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
@@ -700,9 +700,9 @@ export class PubSubPublishEvent extends Message<PubSubPublishEvent> {
   verbRef?: Ref;
 
   /**
-   * @generated from field: google.protobuf.Timestamp time_stamp = 4;
+   * @generated from field: google.protobuf.Timestamp timestamp = 4;
    */
-  timeStamp?: Timestamp;
+  timestamp?: Timestamp;
 
   /**
    * @generated from field: google.protobuf.Duration duration = 5;
@@ -735,7 +735,7 @@ export class PubSubPublishEvent extends Message<PubSubPublishEvent> {
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "verb_ref", kind: "message", T: Ref },
-    { no: 4, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 4, name: "timestamp", kind: "message", T: Timestamp },
     { no: 5, name: "duration", kind: "message", T: Duration },
     { no: 6, name: "topic", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -784,9 +784,9 @@ export class PubSubConsumeEvent extends Message<PubSubConsumeEvent> {
   destVerbName?: string;
 
   /**
-   * @generated from field: google.protobuf.Timestamp time_stamp = 5;
+   * @generated from field: google.protobuf.Timestamp timestamp = 5;
    */
-  timeStamp?: Timestamp;
+  timestamp?: Timestamp;
 
   /**
    * @generated from field: google.protobuf.Duration duration = 6;
@@ -815,7 +815,7 @@ export class PubSubConsumeEvent extends Message<PubSubConsumeEvent> {
     { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "dest_verb_module", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "dest_verb_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 5, name: "timestamp", kind: "message", T: Timestamp },
     { no: 6, name: "duration", kind: "message", T: Duration },
     { no: 7, name: "topic", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
@@ -843,9 +843,9 @@ export class PubSubConsumeEvent extends Message<PubSubConsumeEvent> {
  */
 export class Event extends Message<Event> {
   /**
-   * @generated from field: google.protobuf.Timestamp time_stamp = 1;
+   * @generated from field: google.protobuf.Timestamp timestamp = 1;
    */
-  timeStamp?: Timestamp;
+  timestamp?: Timestamp;
 
   /**
    * Unique ID for event.
@@ -921,7 +921,7 @@ export class Event extends Message<Event> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.timeline.v1.Event";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 1, name: "timestamp", kind: "message", T: Timestamp },
     { no: 2, name: "id", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 3, name: "log", kind: "message", T: LogEvent, oneof: "entry" },
     { no: 4, name: "call", kind: "message", T: CallEvent, oneof: "entry" },

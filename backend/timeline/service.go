@@ -40,7 +40,10 @@ func Start(ctx context.Context, config Config, schemaEventSource schemaeventsour
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx).Scope("timeline")
-	svc := &service{}
+	svc := &service{
+		events: make([]*timelinepb.Event, 0),
+		nextID: 0,
+	}
 
 	logger.Debugf("Timeline service listening on: %s", config.Bind)
 	err := rpc.Serve(ctx, config.Bind,
@@ -62,7 +65,7 @@ func (s *service) CreateEvent(ctx context.Context, req *connect.Request[timeline
 
 	event := &timelinepb.Event{
 		Id:        int64(s.nextID),
-		TimeStamp: timestamppb.Now(),
+		Timestamp: timestamppb.Now(),
 	}
 	switch entry := req.Msg.Entry.(type) {
 	case *timelinepb.CreateEventRequest_Log:
@@ -134,7 +137,7 @@ func (s *service) GetTimeline(ctx context.Context, req *connect.Request[timeline
 		_, didNotMatchAFilter := slices.Find(filters, func(filter TimelineFilter) bool {
 			return !filter(event)
 		})
-		for didNotMatchAFilter {
+		if didNotMatchAFilter {
 			continue
 		}
 		results = append(results, s.events[i])
@@ -162,14 +165,19 @@ func (s *service) DeleteOldEvents(ctx context.Context, req *connect.Request[time
 	}
 
 	filtered := []*timelinepb.Event{}
+	deleted := int64(0)
 	for _, event := range s.events {
 		_, didNotMatchAFilter := slices.Find(deletionFilters, func(filter TimelineFilter) bool {
 			return !filter(event)
 		})
 		if didNotMatchAFilter {
 			filtered = append(filtered, event)
+		} else {
+			deleted++
 		}
 	}
 	s.events = filtered
-	return connect.NewResponse(&timelinepb.DeleteOldEventsResponse{}), nil
+	return connect.NewResponse(&timelinepb.DeleteOldEventsResponse{
+		DeletedCount: deleted,
+	}), nil
 }

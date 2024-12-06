@@ -1,16 +1,10 @@
 package timeline
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/alecthomas/types/optional"
 
-	ftlencryption "github.com/TBD54566975/ftl/backend/controller/encryption/api"
-	"github.com/TBD54566975/ftl/backend/controller/timeline/internal/sql"
-	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
@@ -38,36 +32,4 @@ type eventLogJSON struct {
 	Message    string                  `json:"message"`
 	Attributes map[string]string       `json:"attributes"`
 	Error      optional.Option[string] `json:"error,omitempty"`
-}
-
-func (s *Service) insertLogEvent(ctx context.Context, querier sql.Querier, log *LogEvent) error {
-	var requestKey optional.Option[string]
-	if name, ok := log.RequestKey.Get(); ok {
-		requestKey = optional.Some(name.String())
-	}
-
-	logJSON := eventLogJSON{
-		Message:    log.Message,
-		Attributes: log.Attributes,
-		Error:      log.Error,
-	}
-
-	data, err := json.Marshal(logJSON)
-	if err != nil {
-		return fmt.Errorf("failed to marshal log event: %w", err)
-	}
-
-	var encryptedPayload ftlencryption.EncryptedTimelineColumn
-	err = s.encryption.EncryptJSON(json.RawMessage(data), &encryptedPayload)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt log payload: %w", err)
-	}
-
-	return libdal.TranslatePGError(querier.InsertTimelineLogEvent(ctx, sql.InsertTimelineLogEventParams{
-		DeploymentKey: log.DeploymentKey,
-		RequestKey:    requestKey,
-		TimeStamp:     log.Time,
-		Level:         log.Level,
-		Payload:       encryptedPayload,
-	}))
 }

@@ -1,18 +1,13 @@
 package timeline
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 
-	ftlencryption "github.com/TBD54566975/ftl/backend/controller/encryption/api"
-	"github.com/TBD54566975/ftl/backend/controller/timeline/internal/sql"
-	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -56,58 +51,6 @@ type Call struct {
 }
 
 func (c *Call) toEvent() (Event, error) { return callToCallEvent(c), nil } //nolint:unparam
-
-func (s *Service) insertCallEvent(ctx context.Context, querier sql.Querier, callEvent *CallEvent) error {
-	var sourceModule, sourceVerb optional.Option[string]
-	if sr, ok := callEvent.SourceVerb.Get(); ok {
-		sourceModule, sourceVerb = optional.Some(sr.Module), optional.Some(sr.Name)
-	}
-
-	var requestKey optional.Option[string]
-	if rn, ok := callEvent.RequestKey.Get(); ok {
-		requestKey = optional.Some(rn.String())
-	}
-
-	var parentRequestKey optional.Option[string]
-	if pr, ok := callEvent.ParentRequestKey.Get(); ok {
-		parentRequestKey = optional.Some(pr.String())
-	}
-
-	callJSON := eventCallJSON{
-		DurationMS: callEvent.Duration.Milliseconds(),
-		Request:    callEvent.Request,
-		Response:   callEvent.Response,
-		Error:      callEvent.Error,
-		Stack:      callEvent.Stack,
-	}
-
-	data, err := json.Marshal(callJSON)
-	if err != nil {
-		return fmt.Errorf("failed to marshal call event: %w", err)
-	}
-
-	var payload ftlencryption.EncryptedTimelineColumn
-	err = s.encryption.EncryptJSON(json.RawMessage(data), &payload)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt call event: %w", err)
-	}
-
-	err = libdal.TranslatePGError(querier.InsertTimelineCallEvent(ctx, sql.InsertTimelineCallEventParams{
-		DeploymentKey:    callEvent.DeploymentKey,
-		RequestKey:       requestKey,
-		ParentRequestKey: parentRequestKey,
-		TimeStamp:        callEvent.Time,
-		SourceModule:     sourceModule,
-		SourceVerb:       sourceVerb,
-		DestModule:       callEvent.DestVerb.Module,
-		DestVerb:         callEvent.DestVerb.Name,
-		Payload:          payload,
-	}))
-	if err != nil {
-		return fmt.Errorf("failed to insert call event: %w", err)
-	}
-	return nil
-}
 
 func callToCallEvent(call *Call) *CallEvent {
 	var sourceVerb optional.Option[schema.Ref]

@@ -51,6 +51,8 @@ import (
 	ftllease "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1"
 	leaseconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	frontend "github.com/TBD54566975/ftl/frontend/console"
@@ -273,11 +275,11 @@ func New(
 
 	timelineSvc := timeline.New(ctx, conn, encryption)
 	svc.timeline = timelineSvc
-	pubSub := pubsub.New(ctx, conn, encryption, optional.Some[pubsub.AsyncCallListener](svc), timelineSvc)
+	pubSub := pubsub.New(ctx, conn, encryption, optional.Some[pubsub.AsyncCallListener](svc))
 	svc.pubSub = pubSub
 	svc.dal = dal.New(ctx, conn, encryption, pubSub, svc.registry)
 
-	svc.deploymentLogsSink = newDeploymentLogsSink(ctx, timelineSvc)
+	svc.deploymentLogsSink = newDeploymentLogsSink(ctx)
 
 	// Use min, max backoff if we are running in production, otherwise use
 	// (1s, 1s) (or develBackoff). Will also wrap the job such that it its next
@@ -1689,12 +1691,16 @@ func (s *Service) reapCallEvents(ctx context.Context) (time.Duration, error) {
 		return time.Hour, nil
 	}
 
-	removed, err := s.timeline.DeleteOldEvents(ctx, timeline.EventTypeCall, *s.config.EventLogRetention)
+	client := rpc.ClientFromContext[timelinev1connect.TimelineServiceClient](ctx)
+	resp, err := client.DeleteOldEvents(ctx, connect.NewRequest(&timelinepb.DeleteOldEventsRequest{
+		EventType:  timelinepb.EventType_EVENT_TYPE_CALL,
+		AgeSeconds: int64(s.config.EventLogRetention.Seconds()),
+	}))
 	if err != nil {
 		return 0, fmt.Errorf("failed to prune call events: %w", err)
 	}
-	if removed > 0 {
-		logger.Debugf("Pruned %d call events older than %s", removed, s.config.EventLogRetention)
+	if resp.Msg.DeletedCount > 0 {
+		logger.Debugf("Pruned %d call events older than %s", resp.Msg.DeletedCount, s.config.EventLogRetention)
 	}
 
 	// Prune every 5% of the retention period.

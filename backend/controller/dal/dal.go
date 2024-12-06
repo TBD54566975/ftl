@@ -16,11 +16,11 @@ import (
 	dalsql "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
-	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -350,21 +350,11 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 			return libdal.TranslatePGError(err)
 		}
 	}
-	var payload api.EncryptedTimelineColumn
-	err = d.encryption.EncryptJSON(map[string]interface{}{
-		"prev_min_replicas": deployment.MinReplicas,
-		"min_replicas":      minReplicas,
-	}, &payload)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt payload for InsertDeploymentUpdatedEvent: %w", err)
-	}
-	err = tx.db.InsertTimelineDeploymentUpdatedEvent(ctx, dalsql.InsertTimelineDeploymentUpdatedEventParams{
-		DeploymentKey: key,
-		Payload:       payload,
+	timeline.Publish(ctx, timeline.DeploymentUpdated{
+		DeploymentKey:   key,
+		MinReplicas:     minReplicas,
+		PrevMinReplicas: int(deployment.MinReplicas),
 	})
-	if err != nil {
-		return libdal.TranslatePGError(err)
-	}
 
 	return nil
 }
@@ -420,25 +410,16 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		}
 	}
 
-	var payload api.EncryptedTimelineColumn
-	err = d.encryption.EncryptJSON(map[string]any{
-		"min_replicas": int32(minReplicas),
-		"replaced":     replacedDeploymentKey,
-	}, &payload)
-	if err != nil {
-		return fmt.Errorf("replace deployment failed to encrypt payload: %w", err)
-	}
-
-	err = tx.db.InsertTimelineDeploymentCreatedEvent(ctx, dalsql.InsertTimelineDeploymentCreatedEventParams{
-		DeploymentKey: newDeploymentKey,
-		Language:      newDeployment.Language,
-		ModuleName:    newDeployment.ModuleName,
-		Payload:       payload,
+	timeline.Publish(ctx, timeline.DeploymentCreated{
+		DeploymentKey:      newDeploymentKey,
+		Language:           newDeployment.Language,
+		ModuleName:         newDeployment.ModuleName,
+		MinReplicas:        minReplicas,
+		ReplacedDeployment: replacedDeploymentKey,
 	})
 	if err != nil {
 		return fmt.Errorf("replace deployment failed to create event: %w", libdal.TranslatePGError(err))
 	}
-
 	return nil
 }
 

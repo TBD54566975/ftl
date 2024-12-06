@@ -1,7 +1,6 @@
 package timeline
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,10 +8,6 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	ftlencryption "github.com/TBD54566975/ftl/backend/controller/encryption/api"
-	"github.com/TBD54566975/ftl/backend/controller/timeline/internal/sql"
-	"github.com/TBD54566975/ftl/backend/libdal"
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
@@ -100,45 +95,4 @@ func (ingress *Ingress) toEvent() (Event, error) {
 		ResponseHeader: respHeaderBytes,
 		Error:          ingress.Error,
 	}, nil
-}
-
-func (s *Service) insertHTTPIngress(ctx context.Context, querier sql.Querier, ingress *IngressEvent) error {
-	ingressJSON := eventIngressJSON{
-		DurationMS:     ingress.Duration.Milliseconds(),
-		Method:         ingress.Method,
-		Path:           ingress.Path,
-		StatusCode:     ingress.StatusCode,
-		Request:        ingress.Request,
-		RequestHeader:  ingress.RequestHeader,
-		Response:       ingress.Response,
-		ResponseHeader: ingress.ResponseHeader,
-		Error:          ingress.Error,
-	}
-
-	data, err := json.Marshal(ingressJSON)
-	if err != nil {
-		return fmt.Errorf("failed to marshal ingress JSON: %w", err)
-	}
-
-	var payload ftlencryption.EncryptedTimelineColumn
-	err = s.encryption.EncryptJSON(json.RawMessage(data), &payload)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt ingress payload: %w", err)
-	}
-
-	log.FromContext(ctx).Debugf("Inserting ingress event for %s %s", ingress.RequestKey, ingress.Path)
-
-	err = libdal.TranslatePGError(querier.InsertTimelineIngressEvent(ctx, sql.InsertTimelineIngressEventParams{
-		DeploymentKey: ingress.DeploymentKey,
-		RequestKey:    optional.Some(ingress.RequestKey.String()),
-		TimeStamp:     ingress.Time,
-		Module:        ingress.Verb.Module,
-		Verb:          ingress.Verb.Name,
-		IngressType:   "http",
-		Payload:       payload,
-	}))
-	if err != nil {
-		return fmt.Errorf("failed to insert ingress event: %w", err)
-	}
-	return nil
 }

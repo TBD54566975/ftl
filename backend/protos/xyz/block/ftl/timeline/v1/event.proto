@@ -40,7 +40,7 @@ enum LogLevel {
 message LogEvent {
   string deployment_key = 1;
   optional string request_key = 2;
-  google.protobuf.Timestamp time_stamp = 3;
+  google.protobuf.Timestamp timestamp = 3;
   int32 log_level = 4;
   map<string, string> attributes = 5;
   string message = 6;
@@ -51,7 +51,7 @@ message LogEvent {
 message CallEvent {
   optional string request_key = 1;
   string deployment_key = 2;
-  google.protobuf.Timestamp time_stamp = 3;
+  google.protobuf.Timestamp timestamp = 3;
   optional ftl.schema.v1.Ref source_verb_ref = 11;
   ftl.schema.v1.Ref destination_verb_ref = 12;
   google.protobuf.Duration duration = 6;
@@ -84,7 +84,7 @@ message IngressEvent {
   string method = 4;
   string path = 5;
   int32 status_code = 7;
-  google.protobuf.Timestamp time_stamp = 8;
+  google.protobuf.Timestamp timestamp = 8;
   google.protobuf.Duration duration = 9;
   string request = 10;
   string request_header = 11;
@@ -96,7 +96,7 @@ message IngressEvent {
 message CronScheduledEvent {
   string deployment_key = 1;
   ftl.schema.v1.Ref verb_ref = 2;
-  google.protobuf.Timestamp time_stamp = 3;
+  google.protobuf.Timestamp timestamp = 3;
   google.protobuf.Duration duration = 4;
   google.protobuf.Timestamp scheduled_at = 5;
   string schedule = 6;
@@ -107,7 +107,7 @@ message AsyncExecuteEvent {
   string deployment_key = 1;
   optional string request_key = 2;
   ftl.schema.v1.Ref verb_ref = 3;
-  google.protobuf.Timestamp time_stamp = 4;
+  google.protobuf.Timestamp timestamp = 4;
   google.protobuf.Duration duration = 5;
   AsyncExecuteEventType async_event_type = 6;
   optional string error = 7;
@@ -117,7 +117,7 @@ message PubSubPublishEvent {
   string deployment_key = 1;
   optional string request_key = 2;
   ftl.schema.v1.Ref verb_ref = 3;
-  google.protobuf.Timestamp time_stamp = 4;
+  google.protobuf.Timestamp timestamp = 4;
   google.protobuf.Duration duration = 5;
   string topic = 6;
   string request = 7;
@@ -129,14 +129,14 @@ message PubSubConsumeEvent {
   optional string request_key = 2;
   optional string dest_verb_module = 3;
   optional string dest_verb_name = 4;
-  google.protobuf.Timestamp time_stamp = 5;
+  google.protobuf.Timestamp timestamp = 5;
   google.protobuf.Duration duration = 6;
   string topic = 7;
   optional string error = 8;
 }
 
 message Event {
-  google.protobuf.Timestamp time_stamp = 1;
+  google.protobuf.Timestamp timestamp = 1;
   // Unique ID for event.
   int64 id = 2;
   oneof entry {
