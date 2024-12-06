@@ -84,22 +84,21 @@ type CommonConfig struct {
 }
 
 type Config struct {
-	Bind                         *url.URL                 `help:"Socket to bind to." default:"http://127.0.0.1:8892" env:"FTL_BIND"`
-	Key                          model.ControllerKey      `help:"Controller key (auto)." placeholder:"KEY"`
-	DSN                          string                   `help:"DAL DSN." default:"${dsn}" env:"FTL_CONTROLLER_DSN"`
-	Advertise                    *url.URL                 `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_ADVERTISE"`
-	ConsoleURL                   *url.URL                 `help:"The public URL of the console (for CORS)." env:"FTL_CONTROLLER_CONSOLE_URL"`
-	ContentTime                  time.Time                `help:"Time to use for console resource timestamps." default:"${timestamp=1970-01-01T00:00:00Z}"`
-	RunnerTimeout                time.Duration            `help:"Runner heartbeat timeout." default:"10s"`
-	ControllerTimeout            time.Duration            `help:"Controller heartbeat timeout." default:"10s"`
-	DeploymentReservationTimeout time.Duration            `help:"Deployment reservation timeout." default:"120s"`
-	ModuleUpdateFrequency        time.Duration            `help:"Frequency to send module updates." default:"30s"`
-	EventLogRetention            *time.Duration           `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
-	ArtefactChunkSize            int                      `help:"Size of each chunk streamed to the client." default:"1048576"`
-	KMSURI                       *string                  `help:"URI for KMS key e.g. with fake-kms:// or aws-kms://arn:aws:kms:ap-southeast-2:12345:key/0000-1111" env:"FTL_KMS_URI"`
-	MaxOpenDBConnections         int                      `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
-	MaxIdleDBConnections         int                      `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
-	Registry                     artefacts.RegistryConfig `embed:"" prefix:"oci-"`
+	Bind                         *url.URL            `help:"Socket to bind to." default:"http://127.0.0.1:8892" env:"FTL_BIND"`
+	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"KEY"`
+	DSN                          string              `help:"DAL DSN." default:"${dsn}" env:"FTL_CONTROLLER_DSN"`
+	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_ADVERTISE"`
+	ConsoleURL                   *url.URL            `help:"The public URL of the console (for CORS)." env:"FTL_CONTROLLER_CONSOLE_URL"`
+	ContentTime                  time.Time           `help:"Time to use for console resource timestamps." default:"${timestamp=1970-01-01T00:00:00Z}"`
+	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
+	ControllerTimeout            time.Duration       `help:"Controller heartbeat timeout." default:"10s"`
+	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
+	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
+	EventLogRetention            *time.Duration      `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
+	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
+	KMSURI                       *string             `help:"URI for KMS key e.g. with fake-kms:// or aws-kms://arn:aws:kms:ap-southeast-2:12345:key/0000-1111" env:"FTL_KMS_URI"`
+	MaxOpenDBConnections         int                 `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
+	MaxIdleDBConnections         int                 `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
 	CommonConfig
 }
 
@@ -126,6 +125,7 @@ func (c *Config) OpenDBAndInstrument() (*sql.DB, error) {
 func Start(
 	ctx context.Context,
 	config Config,
+	storage *artefacts.OCIArtefactService,
 	cm *cf.Manager[configuration.Configuration],
 	sm *cf.Manager[configuration.Secrets],
 	conn *sql.DB,
@@ -151,7 +151,7 @@ func Start(
 		logger.Infof("Web console available at: %s", config.Bind)
 	}
 
-	svc, err := New(ctx, conn, cm, sm, config, devel)
+	svc, err := New(ctx, conn, cm, sm, storage, config, devel)
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ type Service struct {
 
 	tasks                   *scheduledtask.Scheduler
 	pubSub                  *pubsub.Service
-	registry                artefacts.Service
+	storage                 *artefacts.OCIArtefactService
 	controllerListListeners []ControllerListListener
 
 	// Map from runnerKey.String() to client.
@@ -230,6 +230,7 @@ func New(
 	conn *sql.DB,
 	cm *cf.Manager[configuration.Configuration],
 	sm *cf.Manager[configuration.Secrets],
+	storage *artefacts.OCIArtefactService,
 	config Config,
 	devel bool,
 ) (*Service, error) {
@@ -266,17 +267,12 @@ func New(
 		config:                  config,
 		increaseReplicaFailures: map[string]int{},
 		routeTable:              routingTable,
+		storage:                 storage,
 	}
-
-	storage, err := artefacts.NewOCIRegistryStorage(config.Registry)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OCI registry storage: %w", err)
-	}
-	svc.registry = storage
 
 	pubSub := pubsub.New(ctx, conn, encryption, optional.Some[pubsub.AsyncCallListener](svc))
 	svc.pubSub = pubSub
-	svc.dal = dal.New(ctx, conn, encryption, pubSub, svc.registry)
+	svc.dal = dal.New(ctx, conn, encryption, pubSub, svc.storage)
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx)
 
@@ -659,7 +655,7 @@ nextArtefact:
 				continue nextArtefact
 			}
 		}
-		reader, err := s.registry.Download(ctx, artefact.Digest)
+		reader, err := s.storage.Download(ctx, artefact.Digest)
 		if err != nil {
 			return fmt.Errorf("could not download artefact: %w", err)
 		}
@@ -1055,7 +1051,7 @@ func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftl
 	if err != nil {
 		return nil, err
 	}
-	_, need, err := s.registry.GetDigestsKeys(ctx, byteDigests)
+	_, need, err := s.storage.GetDigestsKeys(ctx, byteDigests)
 	if err != nil {
 		return nil, err
 	}
@@ -1066,7 +1062,7 @@ func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftl
 
 func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1.UploadArtefactRequest]) (*connect.Response[ftlv1.UploadArtefactResponse], error) {
 	logger := log.FromContext(ctx)
-	digest, err := s.registry.Upload(ctx, artefacts.Artefact{Content: req.Msg.Content})
+	digest, err := s.storage.Upload(ctx, artefacts.Artefact{Content: req.Msg.Content})
 	if err != nil {
 		return nil, err
 	}

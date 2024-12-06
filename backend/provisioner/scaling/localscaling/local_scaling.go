@@ -21,7 +21,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/localdebug"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
@@ -43,7 +42,7 @@ type localScaling struct {
 
 	prevRunnerSuffix int
 	ideSupport       optional.Option[localdebug.IDEIntegration]
-	registryConfig   artefacts.RegistryConfig
+	storage          *artefacts.OCIArtefactService
 	enableOtel       bool
 
 	devModeEndpointsUpdates <-chan dev.LocalEndpoint
@@ -179,8 +178,16 @@ type runnerInfo struct {
 	port       string
 }
 
-func NewLocalScaling(ctx context.Context, portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string, enableIDEIntegration bool, registryConfig artefacts.RegistryConfig, enableOtel bool, devModeEndpoints <-chan dev.LocalEndpoint) (scaling.RunnerScaling, error) {
-
+func NewLocalScaling(
+	ctx context.Context,
+	portAllocator *bind.BindAllocator,
+	controllerAddresses []*url.URL,
+	configPath string,
+	enableIDEIntegration bool,
+	storage *artefacts.OCIArtefactService,
+	enableOtel bool,
+	devModeEndpoints <-chan dev.LocalEndpoint,
+) (scaling.RunnerScaling, error) {
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return nil, err
@@ -194,7 +201,7 @@ func NewLocalScaling(ctx context.Context, portAllocator *bind.BindAllocator, con
 		controllerAddresses:     controllerAddresses,
 		prevRunnerSuffix:        -1,
 		debugPorts:              map[string]*localdebug.DebugInfo{},
-		registryConfig:          registryConfig,
+		storage:                 storage,
 		enableOtel:              enableOtel,
 		devModeEndpointsUpdates: devModeEndpoints,
 		devModeEndpoints:        map[string]*devModeRunner{},
@@ -293,17 +300,14 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey model.Depl
 		Key:                model.NewLocalRunnerKey(keySuffix),
 		Deployment:         deploymentKey,
 		DebugPort:          debugPort,
-		Registry:           l.registryConfig,
-		ObservabilityConfig: observability.Config{
-			ExportOTEL: observability.ExportOTELFlag(l.enableOtel),
-		},
-		DevEndpoint: devURI,
+		DevEndpoint:        devURI,
 	}
 
 	simpleName := fmt.Sprintf("runner%d", keySuffix)
 	if err := kong.ApplyDefaults(&config, kong.Vars{
 		"deploymentdir": filepath.Join(l.cacheDir, "ftl-runner", simpleName, "deployments"),
-		"language":      "go,kotlin,java",
+		// TODO: This doesn't seem like it should be here.
+		"language": "go,kotlin,java",
 	}); err != nil {
 		return fmt.Errorf("failed to apply defaults: %w", err)
 	}
@@ -316,7 +320,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey model.Depl
 	info.runner = optional.Some(runnerInfo{cancelFunc: cancel, port: bind.Port()})
 
 	go func() {
-		err := runner.Start(runnerCtx, config)
+		err := runner.Start(runnerCtx, config, l.storage)
 		l.lock.Lock()
 		defer l.lock.Unlock()
 		if devEndpoint != nil {

@@ -161,9 +161,13 @@ func (s *serveCommonConfig) run(
 	if err != nil {
 		return fmt.Errorf("registry init failed: %w", err)
 	}
-	var registry artefacts.RegistryConfig
-	registry.AllowInsecure = true
-	registry.Registry = fmt.Sprintf("127.0.0.1:%d/ftl", s.RegistryPort)
+	storage, err := artefacts.NewOCIRegistryStorage(artefacts.RegistryConfig{
+		AllowInsecure: true,
+		Registry:      fmt.Sprintf("127.0.0.1:%d/ftl", s.RegistryPort),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create OCI registry storage: %w", err)
+	}
 	// Bring up the DB and DAL.
 	dsn := dev.PostgresDSN(ctx, s.DBPort)
 	err = dev.SetupPostgres(ctx, optional.Some(s.DatabaseImage), s.DBPort, recreate)
@@ -206,7 +210,16 @@ func (s *serveCommonConfig) run(
 		provisionerAddresses = append(provisionerAddresses, bind)
 	}
 
-	runnerScaling, err := localscaling.NewLocalScaling(ctx, bindAllocator, controllerAddresses, projConfig.Path, devMode && !projConfig.DisableIDEIntegration, registry, bool(s.ObservabilityConfig.ExportOTEL), devModeEndpoints)
+	runnerScaling, err := localscaling.NewLocalScaling(
+		ctx,
+		bindAllocator,
+		controllerAddresses,
+		projConfig.Path,
+		devMode && !projConfig.DisableIDEIntegration,
+		storage,
+		bool(s.ObservabilityConfig.ExportOTEL),
+		devModeEndpoints,
+	)
 	if err != nil {
 		return err
 	}
@@ -220,7 +233,6 @@ func (s *serveCommonConfig) run(
 			Bind:         controllerAddresses[i],
 			Key:          model.NewLocalControllerKey(i),
 			DSN:          dsn,
-			Registry:     registry,
 		}
 		config.SetDefaults()
 		config.ModuleUpdateFrequency = time.Second * 1
@@ -235,7 +247,7 @@ func (s *serveCommonConfig) run(
 		}
 
 		wg.Go(func() error {
-			if err := controller.Start(controllerCtx, config, cm, sm, conn, true); err != nil {
+			if err := controller.Start(controllerCtx, config, storage, cm, sm, conn, true); err != nil {
 				logger.Errorf(err, "controller%d failed: %v", i, err)
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}
@@ -270,7 +282,7 @@ func (s *serveCommonConfig) run(
 					ID: "dev",
 				},
 				{
-					Provisioner: provisioner.NewSQLMigrationProvisioner(registry),
+					Provisioner: provisioner.NewSQLMigrationProvisioner(storage),
 					Types:       []schema.ResourceType{schema.ResourceTypeSQLMigration},
 					ID:          "migration",
 				},

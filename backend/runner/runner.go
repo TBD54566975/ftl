@@ -29,7 +29,6 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	ftldeploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
 	ftlleaseconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
@@ -65,18 +64,12 @@ type Config struct {
 	HeartbeatJitter       time.Duration            `help:"Jitter to add to heartbeat period." default:"2s"`
 	Deployment            model.DeploymentKey      `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
 	DebugPort             int                      `help:"The port to use for debugging." env:"FTL_DEBUG_PORT"`
-	Registry              artefacts.RegistryConfig `embed:"" prefix:"oci-"`
-	ObservabilityConfig   ftlobservability.Config  `embed:"" prefix:"o11y-"`
 	DevEndpoint           optional.Option[url.URL] `help:"An existing endpoint to connect to in development mode" env:"FTL_DEV_ENDPOINT"`
 }
 
-func Start(ctx context.Context, config Config) error {
+func Start(ctx context.Context, config Config, storage *artefacts.OCIArtefactService) error {
 	ctx, doneFunc := context.WithCancel(ctx)
 	defer doneFunc()
-	err := ftlobservability.Init(ctx, false, "", "ftl-runner", ftl.Version, config.ObservabilityConfig)
-	if err != nil {
-		return fmt.Errorf("failed to initialise observability: %w", err)
-	}
 	hostname, err := os.Hostname()
 	if err != nil {
 		observability.Runner.StartupFailed(ctx)
@@ -119,6 +112,7 @@ func Start(ctx context.Context, config Config) error {
 	svc := &Service{
 		key:                key,
 		config:             config,
+		storage:            storage,
 		controllerClient:   controllerClient,
 		labels:             labels,
 		deploymentLogQueue: make(chan log.Entry, 10000),
@@ -247,6 +241,7 @@ type Service struct {
 	readyTime  atomic.Value[time.Time]
 
 	config           Config
+	storage          *artefacts.OCIArtefactService
 	controllerClient ftlv1connect.ControllerServiceClient
 	// Failed to register with the Controller
 	registrationFailure atomic.Value[optional.Option[error]]
@@ -344,11 +339,7 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 			client:   client,
 		}
 	} else {
-		storage, err := artefacts.NewOCIRegistryStorage(s.config.Registry)
-		if err != nil {
-			return fmt.Errorf("failed to create OCI registry storage: %w", err)
-		}
-		err = download.ArtefactsFromOCI(ctx, s.controllerClient, key, deploymentDir, storage)
+		err := download.ArtefactsFromOCI(ctx, s.controllerClient, key, deploymentDir, s.storage)
 		if err != nil {
 			observability.Deployment.Failure(ctx, optional.Some(key.String()))
 			return fmt.Errorf("failed to download artefacts: %w", err)
