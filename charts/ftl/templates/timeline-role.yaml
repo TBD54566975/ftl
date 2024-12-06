@@ -1,0 +1,8 @@
+{{- if .Values.timeline.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.timeline.serviceAccountName }}
+  namespace: {{ .Release.Namespace }}
+
+{{- end }}

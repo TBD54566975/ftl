@@ -53,6 +53,8 @@ spec:
             - name: FTL_CONTROLLER_DSN
               value: "postgres://{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.global.postgresql.auth.database }}?sslmode=disable&user={{ .Values.postgresql.global.postgresql.auth.username }}&password={{ .Values.postgresql.global.postgresql.auth.password }}"
             {{- end }}
+            - name: FTL_TIMELINE_ENDPOINT
+              value: "http://{{ .Values.timeline.service.name }}:{{ .Values.timeline.service.port }}"
             {{- if .Values.controller.kmsUri }}
             - name: FTL_KMS_URI
               value: "{{ .Values.controller.kmsUri }}"

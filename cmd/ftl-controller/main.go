@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	cfdal "github.com/TBD54566975/ftl/internal/configuration/dal"
@@ -22,6 +24,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
+	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 var cli struct {
@@ -31,6 +34,7 @@ var cli struct {
 	ControllerConfig    controller.Config    `embed:""`
 	ConfigFlag          string               `name:"config" short:"C" help:"Path to FTL project cf file." env:"FTL_CONFIG" placeholder:"FILE"`
 	DisableIstio        bool                 `help:"Disable Istio integration. This will prevent the creation of Istio policies to limit network traffic." env:"FTL_DISABLE_ISTIO"`
+	TimelineEndpoint    *url.URL             `help:"Timeline endpoint." env:"FTL_TIMELINE_ENDPOINT" default:"http://127.0.0.1:8894"`
 }
 
 func main() {
@@ -64,6 +68,9 @@ func main() {
 	configResolver := routers.NewDatabaseConfig(configDal)
 	cm, err := manager.New(ctx, configResolver, providers.NewDatabaseConfig(configDal))
 	kctx.FatalIfErrorf(err)
+
+	timelineServiceClient := rpc.Dial(timelinev1connect.NewTimelineServiceClient, cli.TimelineEndpoint.String(), log.Error)
+	ctx = rpc.ContextWithClient(ctx, timelineServiceClient)
 
 	// The FTL controller currently only supports AWS Secrets Manager as a secrets provider.
 	awsConfig, err := config.LoadDefaultConfig(ctx)

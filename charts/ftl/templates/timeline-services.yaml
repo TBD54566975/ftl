@@ -1,0 +1,24 @@
+{{- if .Values.timeline.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    {{- include "ftl.labels" . | nindent 4 }}
+  name: {{ include "ftl.fullname" . }}-timeline
+  {{- if .Values.timeline.service.annotations }}
+  annotations:
+    {{- toYaml .Values.timeline.service.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+    {{- range .Values.timeline.service.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      protocol: {{ .protocol | default "TCP" }}
+      targetPort: {{ .targetPort }}
+    {{- end }}
+  selector:
+    {{- include "ftl-timeline.selectorLabels" . | nindent 4 }}
+  type: {{ .Values.timeline.service.type | default "ClusterIP" }}
+
+{{- end }}

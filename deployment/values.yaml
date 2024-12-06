@@ -41,6 +41,12 @@ provisioner:
     ports:
       - name: "http-8893"
         port: 8893
+timeline:
+  image:
+    repository: "ftl:5000/ftl-timeline"
+    tag: "latest"
+    pullPolicy: Always
+
 cron:
   image:
     repository: "ftl:5000/ftl-cron"

@@ -30,6 +30,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling/k8sscaling"
@@ -152,6 +153,13 @@ func WithoutProvisioner() Option {
 	}
 }
 
+// WithoutTimeline is a Run* option that disables starting the timeline service.
+func WithoutTimeline() Option {
+	return func(o *options) {
+		o.startTimeline = false
+	}
+}
+
 // WithProvisionerConfig is a Run* option that specifies the provisioner config to use.
 func WithProvisionerConfig(config string) Option {
 	return func(o *options) {
@@ -173,6 +181,7 @@ type options struct {
 	startController   bool
 	devMode           bool
 	startProvisioner  bool
+	startTimeline     bool
 	provisionerConfig string
 	requireJava       bool
 	envars            map[string]string
@@ -192,6 +201,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 	opts := options{
 		startController:  true,
 		startProvisioner: true,
+		startTimeline:    true,
 		languages:        []string{"go"},
 		envars:           map[string]string{},
 	}
@@ -353,6 +363,16 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			}
 			defer dumpKubePods(ctx, ic.kubeClient, ic.kubeNamespace)
 
+			if opts.startTimeline && !opts.kube {
+				ic.Timeline = rpc.Dial(timelinev1connect.NewTimelineServiceClient, "http://localhost:8894", log.Debug)
+
+				Infof("Waiting for timeline to be ready")
+				ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
+					_, err := ic.Timeline.Ping(ic, connect.NewRequest(&ftlv1.PingRequest{}))
+					assert.NoError(t, err)
+				})
+			}
+
 			if opts.startController || opts.kube {
 				ic.Controller = controller
 				ic.Schema = schema
@@ -436,6 +456,7 @@ type TestContext struct {
 	Schema      ftlv1connect.SchemaServiceClient
 	Console     pbconsoleconnect.ConsoleServiceClient
 	Verbs       ftlv1connect.VerbServiceClient
+	Timeline    timelinev1connect.TimelineServiceClient
 
 	realT *testing.T
 }

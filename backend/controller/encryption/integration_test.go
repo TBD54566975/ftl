@@ -62,6 +62,7 @@ func TestKMSEncryptorLocalstack(ts *testing.T) {
 		in.WithLocalstack(),
 		in.WithoutController(),
 		in.WithoutProvisioner(),
+		in.WithoutTimeline(),
 		in.Action(func(t testing.TB, ic in.TestContext) {
 			endpoint := "http://localhost:4566"
 

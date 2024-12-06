@@ -13,6 +13,7 @@ func TestModuleUnitTests(t *testing.T) {
 		in.WithFTLConfig("wrapped/ftl-project.toml"),
 		in.WithoutController(),
 		in.WithoutProvisioner(),
+		in.WithoutTimeline(),
 		in.GitInit(),
 		in.CopyModule("time"),
 		in.CopyModule("wrapped"),

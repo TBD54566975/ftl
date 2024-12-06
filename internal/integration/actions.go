@@ -30,6 +30,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -470,6 +471,20 @@ func VerifySchemaVerb(module string, verb string, check func(ctx context.Context
 			}
 		}
 		t.Errorf("verb %s.%s not found in schema", module, verb)
+	}
+}
+
+// VerifyTimeline lets you test the current timeline
+func VerifyTimeline(filters []*timelinepb.GetTimelineRequest_Filter, check func(ctx context.Context, t testing.TB, events []*timelinepb.Event)) Action {
+	return func(t testing.TB, ic TestContext) {
+		resp, err := ic.Timeline.GetTimeline(ic, connect.NewRequest(&timelinepb.GetTimelineRequest{
+			Filters: filters,
+		}))
+		if err != nil {
+			t.Errorf("failed to get timeline: %v", err)
+			return
+		}
+		check(ic.Context, t, resp.Msg.Events)
 	}
 }
 

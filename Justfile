@@ -46,7 +46,8 @@ DOCKER_IMAGES := '''
   "cron": {},
   "http-ingress": {},
   "runner": {},
-  "runner-jvm": {}
+  "runner-jvm": {},
+  "timeline": {}
 }
 '''
 
