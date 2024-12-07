@@ -153,7 +153,7 @@ init-db:
 # Regenerate SQLC code (requires init-db to be run first)
 build-sqlc:
   @mk $(eval echo $(yq '.sql[].gen.go.out + "/{db.go,models.go,querier.go,queries.sql.go}"' sqlc.yaml)) \
-    : sqlc.yaml $(yq '.sql[].queries[]' sqlc.yaml) \
+    : sqlc.yaml $(yq '.sql[].queries[]' sqlc.yaml) backend/controller/sql/schema \
     --  "just init-db && sqlc generate"
 
 # Build the ZIP files that are embedded in the FTL release binaries
