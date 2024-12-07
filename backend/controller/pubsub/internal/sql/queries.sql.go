@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -19,7 +18,7 @@ import (
 
 const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec
 WITH event AS (
-    SELECT id, created_at, key, topic_id, payload, caller, request_key, trace_context
+    SELECT id, created_at, key, topic_id, caller, request_key, trace_context, payload
     FROM topic_events
     WHERE "key" = $2::topic_event_key
 )
@@ -142,7 +141,7 @@ LIMIT 1
 
 type GetNextEventForSubscriptionRow struct {
 	Event        optional.Option[model.TopicEventKey]
-	Payload      api.OptionalEncryptedAsyncColumn
+	Payload      pqtype.NullRawMessage
 	CreatedAt    sqltypes.OptionalTime
 	Caller       optional.Option[string]
 	RequestKey   optional.Option[string]
@@ -324,7 +323,7 @@ func (q *Queries) GetTopic(ctx context.Context, dollar_1 int64) (Topic, error) {
 }
 
 const getTopicEvent = `-- name: GetTopicEvent :one
-SELECT id, created_at, key, topic_id, payload, caller, request_key, trace_context
+SELECT id, created_at, key, topic_id, caller, request_key, trace_context, payload
 FROM topic_events
 WHERE id = $1::BIGINT
 `
@@ -337,10 +336,10 @@ func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent
 		&i.CreatedAt,
 		&i.Key,
 		&i.TopicID,
-		&i.Payload,
 		&i.Caller,
 		&i.RequestKey,
 		&i.TraceContext,
+		&i.Payload,
 	)
 	return i, err
 }
@@ -431,7 +430,7 @@ type PublishEventForTopicParams struct {
 	Module       string
 	Topic        string
 	Caller       string
-	Payload      api.EncryptedAsyncColumn
+	Payload      json.RawMessage
 	RequestKey   string
 	TraceContext json.RawMessage
 }

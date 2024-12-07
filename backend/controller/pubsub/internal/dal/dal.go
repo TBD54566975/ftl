@@ -9,8 +9,6 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/async"
-	"github.com/TBD54566975/ftl/backend/controller/encryption"
-	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	dalsql "github.com/TBD54566975/ftl/backend/controller/pubsub/internal/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
@@ -25,30 +23,22 @@ import (
 
 type DAL struct {
 	*libdal.Handle[DAL]
-	db         dalsql.Querier
-	encryption *encryption.Service
+	db dalsql.Querier
 }
 
-func New(conn libdal.Connection, encryption *encryption.Service) *DAL {
+func New(conn libdal.Connection) *DAL {
 	return &DAL{
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{
-				Handle:     h,
-				db:         dalsql.New(h.Connection),
-				encryption: encryption,
+				Handle: h,
+				db:     dalsql.New(h.Connection),
 			}
 		}),
-		db:         dalsql.New(conn),
-		encryption: encryption,
+		db: dalsql.New(conn),
 	}
 }
 
 func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller string, payload []byte) error {
-	var encryptedPayload api.EncryptedAsyncColumn
-	err := d.encryption.Encrypt(payload, &encryptedPayload)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt payload: %w", err)
-	}
 
 	// Store the current otel context with the event
 	jsonOc, err := observability.RetrieveTraceContextFromContext(ctx)
@@ -72,7 +62,7 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller st
 		Module:       module,
 		Topic:        topic,
 		Caller:       caller,
-		Payload:      encryptedPayload,
+		Payload:      payload,
 		RequestKey:   requestKey,
 		TraceContext: jsonOc,
 	})
@@ -135,7 +125,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			enqueueTimelineEvent(optional.None[schema.RefKey](), optional.Some(err.Error()))
 			return 0, err
 		}
-		payload, ok := nextCursor.Payload.Get()
+		ok := nextCursor.Payload.Valid
 		if !ok {
 			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription-->Payload.Get", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.None[schema.RefKey]())
 			err = fmt.Errorf("could not find payload to progress subscription: %w", libdal.TranslatePGError(err))
@@ -181,7 +171,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			ScheduledAt:       time.Now(),
 			Verb:              subscriber.Sink,
 			Origin:            origin.String(),
-			Request:           payload, // already encrypted
+			Request:           nextCursor.Payload.RawMessage,
 			RemainingAttempts: subscriber.RetryAttempts,
 			Backoff:           subscriber.Backoff,
 			MaxBackoff:        subscriber.MaxBackoff,

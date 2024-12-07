@@ -8,7 +8,6 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/async"
-	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
@@ -20,13 +19,11 @@ import (
 func TestNoCallToAcquire(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
-	assert.NoError(t, err)
 
-	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
-	dal := New(ctx, conn, encryption, pubSub, nil)
+	pubSub := pubsub.New(ctx, conn, optional.None[pubsub.AsyncCallListener]())
+	dal := New(ctx, conn, pubSub, nil)
 
-	_, _, err = dal.AcquireAsyncCall(ctx)
+	_, _, err := dal.AcquireAsyncCall(ctx)
 	assert.IsError(t, err, libdal.ErrNotFound)
 	assert.EqualError(t, err, "no pending async calls: not found")
 }

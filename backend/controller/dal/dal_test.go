@@ -16,7 +16,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
-	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
@@ -32,15 +31,14 @@ func TestDAL(t *testing.T) {
 	timelineClient := timelinev1connect.NewTimelineServiceClient(http.DefaultClient, "http://localhost:8080")
 	ctx = rpc.ContextWithClient(ctx, timelineClient)
 	conn := sqltest.OpenForTesting(ctx, t)
-	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
-	assert.NoError(t, err)
 
-	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
-	dal := New(ctx, conn, encryption, pubSub, artefacts.NewForTesting())
+	pubSub := pubsub.New(ctx, conn, optional.None[pubsub.AsyncCallListener]())
+	dal := New(ctx, conn, pubSub, artefacts.NewForTesting())
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
 
+	var err error
 	deploymentChangesCh := dal.DeploymentChanges.Subscribe(nil)
 	deploymentChanges := []DeploymentNotification{}
 	wg := errgroup.Group{}
@@ -191,12 +189,10 @@ func TestDAL(t *testing.T) {
 func TestCreateArtefactConflict(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
-	assert.NoError(t, err)
 
-	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
+	pubSub := pubsub.New(ctx, conn, optional.None[pubsub.AsyncCallListener]())
 
-	dal := New(ctx, conn, encryption, pubSub, artefacts.NewForTesting())
+	dal := New(ctx, conn, pubSub, artefacts.NewForTesting())
 
 	idch := make(chan sha256.SHA256, 2)
 

@@ -57,18 +57,6 @@ sql:
             nullable: true
             go_type:
               type: "optional.Option[Type]"
-          - db_type: "encrypted_identity"
-            go_type: "github.com/TBD54566975/ftl/backend/controller/encryption/api.EncryptedIdentityColumn"
-          - db_type: "encrypted_async"
-            go_type: "github.com/TBD54566975/ftl/backend/controller/encryption/api.EncryptedAsyncColumn"
-          - db_type: "encrypted_async"
-            nullable: true
-            go_type: "github.com/TBD54566975/ftl/backend/controller/encryption/api.OptionalEncryptedAsyncColumn"
-          - db_type: "encrypted_timeline"
-            go_type: "github.com/TBD54566975/ftl/backend/controller/encryption/api.EncryptedTimelineColumn"
-          - db_type: "encrypted_timeline"
-            nullable: true
-            go_type: "github.com/TBD54566975/ftl/backend/controller/encryption/api.OptionalEncryptedTimelineColumn"
           - db_type: "lease_key"
             go_type: "github.com/TBD54566975/ftl/backend/controller/leases.Key"
           - db_type: "lease_key"
@@ -159,19 +147,13 @@ sql:
         out: "backend/controller/leases/dbleaser/internal/sql"
   - <<: *daldir
     queries:
-      - backend/controller/encryption/internal/sql/queries.sql
-    gen:
-      go:
-        <<: *gengo
-        out: "backend/controller/encryption/internal/sql"
-  - <<: *daldir
-    queries:
       - backend/controller/pubsub/internal/sql/queries.sql
       - backend/controller/dal/internal/sql/async_queries.sql
     gen:
       go:
         <<: *gengo
         out: "backend/controller/pubsub/internal/sql"
+
 rules:
   - name: postgresql-query-too-costly
     message: "Query cost estimate is too high"

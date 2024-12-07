@@ -7,7 +7,6 @@ package sql
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -65,7 +64,7 @@ type Querier interface {
 	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
 	SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error
-	SucceedAsyncCall(ctx context.Context, response api.OptionalEncryptedAsyncColumn, iD int64) (bool, error)
+	SucceedAsyncCall(ctx context.Context, response interface{}, iD int64) (bool, error)
 	// Note that this can result in a race condition if the deployment is being updated by another process. This will go
 	// away once we ditch the DB.
 	//
