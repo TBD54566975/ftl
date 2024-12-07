@@ -28,9 +28,9 @@ import (
 
 	"github.com/block/scaffolder"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -475,16 +475,39 @@ func VerifySchemaVerb(module string, verb string, check func(ctx context.Context
 }
 
 // VerifyTimeline lets you test the current timeline
-func VerifyTimeline(filters []*timelinepb.GetTimelineRequest_Filter, check func(ctx context.Context, t testing.TB, events []*timelinepb.Event)) Action {
+func VerifyTimeline(limit int, filters []*timelinepb.GetTimelineRequest_Filter, check func(ctx context.Context, t testing.TB, events []*timelinepb.Event)) Action {
 	return func(t testing.TB, ic TestContext) {
 		resp, err := ic.Timeline.GetTimeline(ic, connect.NewRequest(&timelinepb.GetTimelineRequest{
 			Filters: filters,
+			Limit:   int32(limit),
 		}))
 		if err != nil {
 			t.Errorf("failed to get timeline: %v", err)
 			return
 		}
 		check(ic.Context, t, resp.Msg.Events)
+	}
+}
+
+// DeleteOldTimelineEvents deletes old events from the timeline
+func DeleteOldTimelineEvents(ageSeconds int, _type timelinepb.EventType, check func(ctx context.Context, t testing.TB, expectDeleted int, events []*timelinepb.Event)) Action {
+	return func(t testing.TB, ic TestContext) {
+		resp, err := ic.Timeline.DeleteOldEvents(ic, connect.NewRequest(&timelinepb.DeleteOldEventsRequest{
+			EventType:  _type,
+			AgeSeconds: int64(ageSeconds),
+		}))
+		if err != nil {
+			t.Errorf("failed to delete old timeline events: %v", err)
+			return
+		}
+		remaining, err := ic.Timeline.GetTimeline(ic, connect.NewRequest(&timelinepb.GetTimelineRequest{
+			Limit: 1000,
+		}))
+		if err != nil {
+			t.Errorf("failed to get timeline: %v", err)
+			return
+		}
+		check(ic.Context, t, int(resp.Msg.DeletedCount), remaining.Msg.Events)
 	}
 }
 

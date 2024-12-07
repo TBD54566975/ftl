@@ -223,6 +223,9 @@ func filtersFromRequest(req *timelinepb.GetTimelineRequest) (outFilters []Timeli
 	for _, filter := range req.Filters {
 		reqFiltersByType[reflect.TypeOf(filter.Filter)] = append(reqFiltersByType[reflect.TypeOf(filter.Filter)], filter)
 	}
+	if len(reqFiltersByType) == 0 {
+		return outFilters, ascending
+	}
 	for _, filters := range reqFiltersByType {
 		switch filters[0].Filter.(type) {
 		case *timelinepb.GetTimelineRequest_Filter_LogLevel:
