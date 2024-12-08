@@ -35,7 +35,7 @@ func CallingVerb() schema.RefKey {
 		fnName := splitName[1]
 		if strings.HasPrefix(pkg, "ftl/") {
 			module = strings.Split(pkg, "/")[1]
-			verb = fnName
+			verb = strcase.ToLowerCamel(fnName)
 		}
 		if !more {
 			break

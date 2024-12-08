@@ -2,6 +2,7 @@ package cron
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"sort"
 	"testing"
@@ -14,10 +15,12 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/routing"
+	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
@@ -62,6 +65,7 @@ func TestCron(t *testing.T) {
 	})
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{Level: log.Trace}))
+	ctx = rpc.ContextWithClient(ctx, timelinev1connect.NewTimelineServiceClient(http.DefaultClient, "http://localhost:8080"))
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	t.Cleanup(cancel)
 

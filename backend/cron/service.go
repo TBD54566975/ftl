@@ -12,6 +12,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/cron/observability"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -31,6 +32,7 @@ type cronJob struct {
 
 type Config struct {
 	SchemaServiceEndpoint *url.URL `name:"ftl-endpoint" help:"Schema Service endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
+	TimelineEndpoint      *url.URL `help:"Timeline endpoint." env:"FTL_TIMELINE_ENDPOINT" default:"http://127.0.0.1:8894"`
 }
 
 func (c cronJob) String() string {
@@ -53,7 +55,7 @@ func Start(ctx context.Context, eventSource schemaeventsource.EventSource, clien
 	logger.Debugf("Starting cron service")
 
 	for {
-		next, ok := scheduleNext(cronQueue)
+		next, ok := scheduleNext(ctx, cronQueue)
 		var nextCh <-chan time.Time
 		if ok {
 			logger.Debugf("Next cron job scheduled in %s", next)
@@ -126,10 +128,16 @@ func callCronJob(ctx context.Context, verbClient routing.CallClient, cronJob cro
 	}
 }
 
-func scheduleNext(cronQueue []cronJob) (time.Duration, bool) {
+func scheduleNext(ctx context.Context, cronQueue []cronJob) (time.Duration, bool) {
 	if len(cronQueue) == 0 {
 		return 0, false
 	}
+	timeline.Publish(ctx, timeline.CronScheduled{
+		DeploymentKey: model.NewDeploymentKey(cronQueue[0].module),
+		Verb:          schema.Ref{Module: cronQueue[0].module, Name: cronQueue[0].verb.Name},
+		ScheduledAt:   cronQueue[0].next,
+		Schedule:      cronQueue[0].pattern.String(),
+	})
 	return time.Until(cronQueue[0].next), true
 }
 

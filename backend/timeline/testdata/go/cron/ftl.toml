@@ -1,0 +1,2 @@
+module = "cron"
+language = "go"
