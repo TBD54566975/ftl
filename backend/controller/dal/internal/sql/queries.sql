@@ -172,10 +172,6 @@ FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
 WHERE d.key = sqlc.arg('key')::deployment_key;
 
--- name: CreateRequest :exec
-INSERT INTO requests (origin, "key", source_addr)
-VALUES ($1, $2, $3);
-
 -- name: SucceedAsyncCall :one
 UPDATE async_calls
 SET

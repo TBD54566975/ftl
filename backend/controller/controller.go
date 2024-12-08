@@ -977,10 +977,6 @@ func (s *Service) callWithRequest(
 	}
 	if isNewRequestKey {
 		headers.SetRequestKey(req.Header(), requestKey)
-		if err = s.dal.CreateRequest(ctx, requestKey, sourceAddress); err != nil {
-			observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("failed to create request"))
-			return nil, err
-		}
 	}
 
 	deployment, ok := routes.GetDeployment(module).Get()
