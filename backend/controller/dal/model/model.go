@@ -63,7 +63,6 @@ type Deployment struct {
 	Language    string
 	Module      string
 	MinReplicas int
-	Replicas    optional.Option[int] // Depending on the query this may or may not be populated.
 	Schema      *schema.Module
 	CreatedAt   time.Time
 	Labels      model.Labels

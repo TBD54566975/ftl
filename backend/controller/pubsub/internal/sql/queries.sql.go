@@ -233,12 +233,6 @@ func (q *Queries) GetSubscription(ctx context.Context, column1 string, column2 s
 }
 
 const getSubscriptionsNeedingUpdate = `-- name: GetSubscriptionsNeedingUpdate :many
-WITH runner_count AS (
-    SELECT count(r.deployment_id) as runner_count,
-           r.deployment_id as deployment
-    FROM runners r
-    GROUP BY deployment
-)
 SELECT
     subs.key::subscription_key as key,
     curser.key as cursor,
@@ -247,7 +241,6 @@ SELECT
     deployments.key as deployment_key,
     curser.request_key as request_key
 FROM topic_subscriptions subs
-         JOIN runner_count on subs.deployment_id = runner_count.deployment
          JOIN deployments ON subs.deployment_id = deployments.id
          LEFT JOIN topics ON subs.topic_id = topics.id
          LEFT JOIN topic_events curser ON subs.cursor = curser.id
