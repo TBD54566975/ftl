@@ -14,9 +14,9 @@ import (
 	"github.com/alecthomas/types/must"
 	"github.com/alecthomas/types/optional"
 
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -28,9 +28,13 @@ func TestSchemaEventSource(t *testing.T) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	t.Cleanup(cancel)
 
-	bind := must.Get(url.Parse("http://127.0.0.1:9090"))
 	server := &mockSchemaService{changes: make(chan *ftlv1.PullSchemaResponse, 8)}
-	go rpc.Serve(ctx, bind, rpc.GRPC(ftlv1connect.NewSchemaServiceHandler, server)) //nolint:errcheck
+	sv, err := rpc.NewServer(ctx, must.Get(url.Parse("http://127.0.0.1:0")), rpc.GRPC(ftlv1connect.NewSchemaServiceHandler, server)) //nolint:errcheck
+	assert.NoError(t, err)
+	bindChan := sv.Bind.Subscribe(nil)
+	defer sv.Bind.Unsubscribe(bindChan)
+	go sv.Serve(ctx) //nolint:errcheck
+	bind := <-bindChan
 
 	changes := New(ctx, rpc.Dial(ftlv1connect.NewSchemaServiceClient, bind.String(), log.Debug))
 
