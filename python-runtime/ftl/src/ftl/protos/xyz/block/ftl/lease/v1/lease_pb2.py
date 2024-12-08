@@ -26,7 +26,7 @@ from google.protobuf import duration_pb2 as google_dot_protobuf_dot_duration__pb
 from xyz.block.ftl.v1 import ftl_pb2 as xyz_dot_block_dot_ftl_dot_v1_dot_ftl__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\"xyz/block/ftl/lease/v1/lease.proto\x12\x16xyz.block.ftl.lease.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1axyz/block/ftl/v1/ftl.proto\"l\n\x13\x41\x63quireLeaseRequest\x12\x16\n\x06module\x18\x01 \x01(\tR\x06module\x12\x10\n\x03key\x18\x02 \x03(\tR\x03key\x12+\n\x03ttl\x18\x03 \x01(\x0b\x32\x19.google.protobuf.DurationR\x03ttl\"\x16\n\x14\x41\x63quireLeaseResponse2\xc9\x01\n\x0cLeaseService\x12J\n\x04Ping\x12\x1d.xyz.block.ftl.v1.PingRequest\x1a\x1e.xyz.block.ftl.v1.PingResponse\"\x03\x90\x02\x01\x12m\n\x0c\x41\x63quireLease\x12+.xyz.block.ftl.lease.v1.AcquireLeaseRequest\x1a,.xyz.block.ftl.lease.v1.AcquireLeaseResponse(\x01\x30\x01\x42JP\x01ZFgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1;ftlv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\"xyz/block/ftl/lease/v1/lease.proto\x12\x16xyz.block.ftl.lease.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1axyz/block/ftl/v1/ftl.proto\"T\n\x13\x41\x63quireLeaseRequest\x12\x10\n\x03key\x18\x01 \x03(\tR\x03key\x12+\n\x03ttl\x18\x03 \x01(\x0b\x32\x19.google.protobuf.DurationR\x03ttl\"\x16\n\x14\x41\x63quireLeaseResponse2\xc9\x01\n\x0cLeaseService\x12J\n\x04Ping\x12\x1d.xyz.block.ftl.v1.PingRequest\x1a\x1e.xyz.block.ftl.v1.PingResponse\"\x03\x90\x02\x01\x12m\n\x0c\x41\x63quireLease\x12+.xyz.block.ftl.lease.v1.AcquireLeaseRequest\x1a,.xyz.block.ftl.lease.v1.AcquireLeaseResponse(\x01\x30\x01\x42JP\x01ZFgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1;ftlv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -37,9 +37,9 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_LEASESERVICE'].methods_by_name['Ping']._loaded_options = None
   _globals['_LEASESERVICE'].methods_by_name['Ping']._serialized_options = b'\220\002\001'
   _globals['_ACQUIRELEASEREQUEST']._serialized_start=122
-  _globals['_ACQUIRELEASEREQUEST']._serialized_end=230
-  _globals['_ACQUIRELEASERESPONSE']._serialized_start=232
-  _globals['_ACQUIRELEASERESPONSE']._serialized_end=254
-  _globals['_LEASESERVICE']._serialized_start=257
-  _globals['_LEASESERVICE']._serialized_end=458
+  _globals['_ACQUIRELEASEREQUEST']._serialized_end=206
+  _globals['_ACQUIRELEASERESPONSE']._serialized_start=208
+  _globals['_ACQUIRELEASERESPONSE']._serialized_end=230
+  _globals['_LEASESERVICE']._serialized_start=233
+  _globals['_LEASESERVICE']._serialized_end=434
 # @@protoc_insertion_point(module_scope)

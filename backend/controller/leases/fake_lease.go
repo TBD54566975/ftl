@@ -2,11 +2,8 @@ package leases
 
 import (
 	"context"
-	"fmt"
-	"reflect"
 	"time"
 
-	"github.com/alecthomas/types/optional"
 	"github.com/puzpuzpuz/xsync/v3"
 )
 
@@ -23,12 +20,11 @@ type FakeLeaser struct {
 	leases *xsync.MapOf[string, *FakeLease]
 }
 
-func (f *FakeLeaser) AcquireLease(ctx context.Context, key Key, ttl time.Duration, metadata optional.Option[any]) (Lease, context.Context, error) {
+func (f *FakeLeaser) AcquireLease(ctx context.Context, key Key, ttl time.Duration) (Lease, context.Context, error) {
 	leaseCtx, cancelCtx := context.WithCancel(ctx)
 	newLease := &FakeLease{
 		leaser:    f,
 		key:       key,
-		metadata:  metadata,
 		cancelCtx: cancelCtx,
 		ttl:       ttl,
 	}
@@ -39,37 +35,10 @@ func (f *FakeLeaser) AcquireLease(ctx context.Context, key Key, ttl time.Duratio
 	return newLease, leaseCtx, nil
 }
 
-func (f *FakeLeaser) GetLeaseInfo(ctx context.Context, key Key, metadata any) (expiry time.Time, err error) {
-	lease, ok := f.leases.Load(key.String())
-	if !ok {
-		return time.Time{}, fmt.Errorf("not found")
-	}
-	expiry = time.Now().Add(lease.ttl)
-	md, ok := lease.metadata.Get()
-	if !ok || metadata == nil {
-		// no need to parse metadata
-		return
-	}
-	metaValue := reflect.ValueOf(metadata)
-	if metaValue.Kind() != reflect.Ptr || metaValue.IsNil() {
-		return time.Time{}, fmt.Errorf("metadata must be a non-nil pointer")
-	}
-	if !metaValue.Elem().CanSet() {
-		return time.Time{}, fmt.Errorf("cannot set metadata value")
-	}
-	mdValue := reflect.ValueOf(md)
-	if mdValue.Type() != metaValue.Elem().Type() {
-		return time.Time{}, fmt.Errorf("type mismatch between metadata and md")
-	}
-	metaValue.Elem().Set(mdValue)
-	return
-}
-
 type FakeLease struct {
 	leaser    *FakeLeaser
 	key       Key
 	cancelCtx context.CancelFunc
-	metadata  optional.Option[any]
 	ttl       time.Duration
 }
 

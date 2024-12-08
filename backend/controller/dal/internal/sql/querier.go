@@ -16,7 +16,7 @@ import (
 type Querier interface {
 	// Reserve a pending async call for execution, returning the associated lease
 	// reservation key and accompanying metadata.
-	AcquireAsyncCall(ctx context.Context, ttl sqltypes.Duration) (AcquireAsyncCallRow, error)
+	AcquireAsyncCall(ctx context.Context) (AcquireAsyncCallRow, error)
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
 	AsyncCallQueueDepth(ctx context.Context) (int64, error)
 	BeginConsumingTopicEvent(ctx context.Context, subscription model.SubscriptionKey, event model.TopicEventKey) error

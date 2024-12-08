@@ -47,7 +47,8 @@ DOCKER_IMAGES := '''
   "http-ingress": {},
   "runner": {},
   "runner-jvm": {},
-  "timeline": {}
+  "timeline": {},
+  "lease": {}
 }
 '''
 

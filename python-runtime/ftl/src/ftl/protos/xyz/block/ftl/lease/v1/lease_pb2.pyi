@@ -8,14 +8,12 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class AcquireLeaseRequest(_message.Message):
-    __slots__ = ("module", "key", "ttl")
-    MODULE_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ("key", "ttl")
     KEY_FIELD_NUMBER: _ClassVar[int]
     TTL_FIELD_NUMBER: _ClassVar[int]
-    module: str
     key: _containers.RepeatedScalarFieldContainer[str]
     ttl: _duration_pb2.Duration
-    def __init__(self, module: _Optional[str] = ..., key: _Optional[_Iterable[str]] = ..., ttl: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ...) -> None: ...
+    def __init__(self, key: _Optional[_Iterable[str]] = ..., ttl: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ...) -> None: ...
 
 class AcquireLeaseResponse(_message.Message):
     __slots__ = ()

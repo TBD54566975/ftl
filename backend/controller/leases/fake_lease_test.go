@@ -6,22 +6,21 @@ import (
 	"time"
 
 	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types/optional"
 )
 
 func TestFakeLease(t *testing.T) {
 	leaser := NewFakeLeaser()
 
-	lease1, lease1Ctx, err := leaser.AcquireLease(context.Background(), SystemKey("test"), time.Second, optional.None[any]())
+	lease1, lease1Ctx, err := leaser.AcquireLease(context.Background(), SystemKey("test"), time.Second)
 	assert.NoError(t, err)
 
-	_, _, err = leaser.AcquireLease(context.Background(), SystemKey("test"), time.Second, optional.None[any]())
+	_, _, err = leaser.AcquireLease(context.Background(), SystemKey("test"), time.Second)
 	assert.IsError(t, err, ErrConflict)
 
 	err = lease1.Release()
 	assert.NoError(t, err)
 
-	lease2, lease2Ctx, err := leaser.AcquireLease(context.Background(), SystemKey("test"), time.Second, optional.None[any]())
+	lease2, lease2Ctx, err := leaser.AcquireLease(context.Background(), SystemKey("test"), time.Second)
 	assert.NoError(t, err)
 	err = lease2.Release()
 	assert.NoError(t, err)

@@ -140,13 +140,6 @@ sql:
         out: "internal/configuration/dal/internal/sql"
   - <<: *daldir
     queries:
-      - backend/controller/leases/dbleaser/internal/sql/queries.sql
-    gen:
-      go:
-        <<: *gengo
-        out: "backend/controller/leases/dbleaser/internal/sql"
-  - <<: *daldir
-    queries:
       - backend/controller/pubsub/internal/sql/queries.sql
       - backend/controller/dal/internal/sql/async_queries.sql
     gen:

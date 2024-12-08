@@ -15,7 +15,6 @@ import (
 	aregistry "github.com/TBD54566975/ftl/backend/controller/artefacts"
 	dalsql "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
-	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
@@ -53,14 +52,12 @@ func New(ctx context.Context, conn libdal.Connection, pubsub *pubsub.Service, re
 	var d *DAL
 	db := dalsql.New(conn)
 	d = &DAL{
-		leaser:   dbleaser.NewDatabaseLeaser(conn),
 		db:       db,
 		registry: registry,
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{
 				Handle:            h,
 				db:                dalsql.New(h.Connection),
-				leaser:            dbleaser.NewDatabaseLeaser(h.Connection),
 				pubsub:            pubsub,
 				registry:          registry,
 				DeploymentChanges: d.DeploymentChanges,
@@ -76,7 +73,6 @@ type DAL struct {
 	*libdal.Handle[DAL]
 	db dalsql.Querier
 
-	leaser   *dbleaser.DatabaseLeaser
 	pubsub   *pubsub.Service
 	registry aregistry.Service
 

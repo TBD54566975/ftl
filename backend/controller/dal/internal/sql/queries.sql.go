@@ -10,12 +10,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/alecthomas/types/optional"
-	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/sqlc-dev/pqtype"
 )
@@ -31,19 +29,12 @@ WITH pending_calls AS (
   FROM pending_calls
   LIMIT 1
   FOR UPDATE SKIP LOCKED
-), lease AS (
-  INSERT INTO leases (idempotency_key, key, expires_at)
-  SELECT gen_random_uuid(), '/system/async_call/' || (SELECT id FROM async_call), (NOW() AT TIME ZONE 'utc') + $1::interval
-  WHERE (SELECT id FROM async_call) IS NOT NULL
-  RETURNING id, idempotency_key, key, created_at, expires_at, metadata
 )
 UPDATE async_calls
-SET state = 'executing', lease_id = (SELECT id FROM lease)
+SET state = 'executing'
 WHERE id = (SELECT id FROM async_call)
 RETURNING
   id AS async_call_id,
-  (SELECT idempotency_key FROM lease) AS lease_idempotency_key,
-  (SELECT key FROM lease) AS lease_key,
   (SELECT count(*) FROM pending_calls) AS queue_depth,
   origin,
   verb,
@@ -60,33 +51,29 @@ RETURNING
 `
 
 type AcquireAsyncCallRow struct {
-	AsyncCallID         int64
-	LeaseIdempotencyKey uuid.UUID
-	LeaseKey            leases.Key
-	QueueDepth          int64
-	Origin              string
-	Verb                schema.RefKey
-	CatchVerb           optional.Option[schema.RefKey]
-	Request             json.RawMessage
-	ScheduledAt         time.Time
-	RemainingAttempts   int32
-	Error               optional.Option[string]
-	Backoff             sqltypes.Duration
-	MaxBackoff          sqltypes.Duration
-	ParentRequestKey    optional.Option[string]
-	TraceContext        pqtype.NullRawMessage
-	Catching            bool
+	AsyncCallID       int64
+	QueueDepth        int64
+	Origin            string
+	Verb              schema.RefKey
+	CatchVerb         optional.Option[schema.RefKey]
+	Request           json.RawMessage
+	ScheduledAt       time.Time
+	RemainingAttempts int32
+	Error             optional.Option[string]
+	Backoff           sqltypes.Duration
+	MaxBackoff        sqltypes.Duration
+	ParentRequestKey  optional.Option[string]
+	TraceContext      pqtype.NullRawMessage
+	Catching          bool
 }
 
 // Reserve a pending async call for execution, returning the associated lease
 // reservation key and accompanying metadata.
-func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl sqltypes.Duration) (AcquireAsyncCallRow, error) {
-	row := q.db.QueryRowContext(ctx, acquireAsyncCall, ttl)
+func (q *Queries) AcquireAsyncCall(ctx context.Context) (AcquireAsyncCallRow, error) {
+	row := q.db.QueryRowContext(ctx, acquireAsyncCall)
 	var i AcquireAsyncCallRow
 	err := row.Scan(
 		&i.AsyncCallID,
-		&i.LeaseIdempotencyKey,
-		&i.LeaseKey,
 		&i.QueueDepth,
 		&i.Origin,
 		&i.Verb,
@@ -274,7 +261,7 @@ WITH updated AS (
   SET state = 'error'::async_call_state,
       error = $7::TEXT
   WHERE id = $8::BIGINT
-  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, request
+  RETURNING id, created_at, verb, state, origin, scheduled_at, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, request
 )
 INSERT INTO async_calls (
   verb,
@@ -1173,10 +1160,9 @@ func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent
 }
 
 const getZombieAsyncCalls = `-- name: GetZombieAsyncCalls :many
-SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, request
+SELECT id, created_at, verb, state, origin, scheduled_at, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, request
 FROM async_calls
 WHERE state = 'executing'
-  AND lease_id IS NULL
 ORDER BY created_at ASC
 LIMIT $1::INT
 `
@@ -1193,7 +1179,6 @@ func (q *Queries) GetZombieAsyncCalls(ctx context.Context, limit int32) ([]Async
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
-			&i.LeaseID,
 			&i.Verb,
 			&i.State,
 			&i.Origin,
@@ -1295,7 +1280,7 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout sqltypes.Duratio
 }
 
 const loadAsyncCall = `-- name: LoadAsyncCall :one
-SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, request
+SELECT id, created_at, verb, state, origin, scheduled_at, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, request
 FROM async_calls
 WHERE id = $1
 `
@@ -1306,7 +1291,6 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
-		&i.LeaseID,
 		&i.Verb,
 		&i.State,
 		&i.Origin,
