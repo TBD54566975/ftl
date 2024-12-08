@@ -69,7 +69,7 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 				errorStr = optional.Some(entry.Error.Error())
 			}
 
-			timeline.Publish(ctx, &timeline.Log{
+			timeline.ClientFromContext(ctx).Publish(ctx, &timeline.Log{
 				RequestKey:    request,
 				DeploymentKey: deployment,
 				Time:          entry.Time,

@@ -132,7 +132,7 @@ func scheduleNext(ctx context.Context, cronQueue []cronJob) (time.Duration, bool
 	if len(cronQueue) == 0 {
 		return 0, false
 	}
-	timeline.Publish(ctx, timeline.CronScheduled{
+	timeline.ClientFromContext(ctx).Publish(ctx, timeline.CronScheduled{
 		DeploymentKey: model.NewDeploymentKey(cronQueue[0].module),
 		Verb:          schema.Ref{Module: cronQueue[0].module, Name: cronQueue[0].verb.Name},
 		ScheduledAt:   cronQueue[0].next,
