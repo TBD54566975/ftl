@@ -57,6 +57,7 @@ type Config struct {
 	Bind                  *url.URL                 `help:"Endpoint the Runner should bind to and advertise." default:"http://127.0.0.1:8892" env:"FTL_BIND"`
 	Key                   model.RunnerKey          `help:"Runner key (auto)."`
 	ControllerEndpoint    *url.URL                 `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
+	LeaseEndpoint         *url.URL                 `name:"ftl-lease-endpoint" help:"Lease endpoint endpoint." env:"FTL_LEASE_ENDPOINT" default:"http://127.0.0.1:8894"`
 	TemplateDir           string                   `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
 	DeploymentDir         string                   `help:"Directory to store deployments in." default:"${deploymentdir}"`
 	DeploymentKeepHistory int                      `help:"Number of deployments to keep history for." default:"3"`
@@ -353,9 +354,10 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 		s.pubSub = pubSub
 
 		deploymentServiceClient := rpc.Dial(ftldeploymentconnect.NewDeploymentServiceClient, s.config.ControllerEndpoint.String(), log.Error)
+
 		ctx = rpc.ContextWithClient(ctx, deploymentServiceClient)
 
-		leaseServiceClient := rpc.Dial(ftlleaseconnect.NewLeaseServiceClient, s.config.ControllerEndpoint.String(), log.Error)
+		leaseServiceClient := rpc.Dial(ftlleaseconnect.NewLeaseServiceClient, s.config.LeaseEndpoint.String(), log.Error)
 
 		s.proxy = proxy.New(deploymentServiceClient, leaseServiceClient)
 

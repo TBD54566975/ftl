@@ -26,10 +26,10 @@ type Service struct {
 	moduleVerbService           map[string]ftlv1connect.VerbServiceClient
 }
 
-func New(controllerModuleService ftldeploymentconnect.DeploymentServiceClient, controllerLeaseClient ftlleaseconnect.LeaseServiceClient) *Service {
+func New(controllerModuleService ftldeploymentconnect.DeploymentServiceClient, leaseClient ftlleaseconnect.LeaseServiceClient) *Service {
 	proxy := &Service{
 		controllerDeploymentService: controllerModuleService,
-		controllerLeaseService:      controllerLeaseClient,
+		controllerLeaseService:      leaseClient,
 		moduleVerbService:           map[string]ftlv1connect.VerbServiceClient{},
 	}
 	return proxy
@@ -68,7 +68,13 @@ func (r *Service) GetDeploymentContext(ctx context.Context, c *connect.Request[f
 }
 
 func (r *Service) AcquireLease(ctx context.Context, c *connect.BidiStream[ftllease.AcquireLeaseRequest, ftllease.AcquireLeaseResponse]) error {
+	_, err := r.controllerLeaseService.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
+	if err != nil {
+		return fmt.Errorf("failed to ping lease service: %w", err)
+	}
 	lease := r.controllerLeaseService.AcquireLease(ctx)
+	defer lease.CloseResponse() //nolint:errcheck
+	defer lease.CloseRequest()  //nolint:errcheck
 	for {
 		req, err := c.Receive()
 		if err != nil {
@@ -80,7 +86,7 @@ func (r *Service) AcquireLease(ctx context.Context, c *connect.BidiStream[ftllea
 		}
 		msg, err := lease.Receive()
 		if err != nil {
-			return fmt.Errorf("failed to receive response message: %w", err)
+			return connect.NewError(connect.CodeOf(err), fmt.Errorf("lease failed %w", err))
 		}
 		err = c.Send(msg)
 		if err != nil {

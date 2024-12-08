@@ -13,14 +13,12 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/async"
 	"github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
-	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type AsyncCall struct {
-	*leasedal.Lease  // May be nil
 	ID               int64
 	Origin           async.AsyncOrigin
 	Verb             schema.RefKey
@@ -49,8 +47,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, leaseCtx c
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
-	ttl := time.Second * 5
-	row, err := tx.db.AcquireAsyncCall(ctx, sqltypes.Duration(ttl))
+	row, err := tx.db.AcquireAsyncCall(ctx)
 	if err != nil {
 		err = libdal.TranslatePGError(err)
 		if errors.Is(err, libdal.ErrNotFound) {
@@ -63,7 +60,6 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, leaseCtx c
 		return nil, ctx, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
 
-	lease, leaseCtx := d.leaser.NewLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl)
 	return &AsyncCall{
 		ID: row.AsyncCallID,
 
@@ -71,7 +67,6 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, leaseCtx c
 		Origin:            origin,
 		CatchVerb:         row.CatchVerb,
 		Request:           row.Request,
-		Lease:             lease,
 		ScheduledAt:       row.ScheduledAt,
 		QueueDepth:        row.QueueDepth,
 		ParentRequestKey:  row.ParentRequestKey,
@@ -81,7 +76,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, leaseCtx c
 		Backoff:           time.Duration(row.Backoff),
 		MaxBackoff:        time.Duration(row.MaxBackoff),
 		Catching:          row.Catching,
-	}, leaseCtx, nil
+	}, ctx, nil
 }
 
 // CompleteAsyncCall completes an async call.

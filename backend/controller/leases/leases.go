@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"time"
-
-	"github.com/alecthomas/types/optional"
 )
 
 // ErrConflict is returned when a lease is already held.
@@ -27,12 +25,7 @@ type Leaser interface {
 	// must be at _least_ 5 seconds.
 	//
 	// The returned context will be cancelled when the lease fails to renew.
-	AcquireLease(ctx context.Context, key Key, ttl time.Duration, metadata optional.Option[any]) (Lease, context.Context, error)
-
-	// GetLeaseInfo returns the metadata and expiry time for a key.
-	//
-	// metadata should be a pointer to the type that metadata should be unmarshaled into.
-	GetLeaseInfo(ctx context.Context, key Key, metadata any) (expiry time.Time, err error)
+	AcquireLease(ctx context.Context, key Key, ttl time.Duration) (Lease, context.Context, error)
 }
 
 // Lease represents a lease that is held by a controller.

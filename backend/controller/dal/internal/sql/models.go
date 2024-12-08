@@ -149,7 +149,6 @@ func (ns NullTopicSubscriptionState) Value() (driver.Value, error) {
 type AsyncCall struct {
 	ID                int64
 	CreatedAt         time.Time
-	LeaseID           optional.Option[int64]
 	Verb              schema.RefKey
 	State             AsyncCallState
 	Origin            string

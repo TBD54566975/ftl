@@ -162,7 +162,9 @@ var _ deploymentcontext.LeaseClient = &leaseClient{}
 
 func (c *leaseClient) Acquire(ctx context.Context, module string, key []string, ttl time.Duration) error {
 	c.stream = rpc.ClientFromContext[ftlv1connect.LeaseServiceClient](ctx).AcquireLease(ctx)
-	req := &ftlv1.AcquireLeaseRequest{Key: key, Module: module, Ttl: durationpb.New(ttl)}
+	realKeys := []string{"module", module}
+	realKeys = append(realKeys, key...)
+	req := &ftlv1.AcquireLeaseRequest{Key: realKeys, Ttl: durationpb.New(ttl)}
 	if err := c.stream.Send(req); err != nil {
 		if connect.CodeOf(err) == connect.CodeResourceExhausted {
 			return ErrLeaseHeld
@@ -181,7 +183,9 @@ func (c *leaseClient) Acquire(ctx context.Context, module string, key []string, 
 }
 
 func (c *leaseClient) Heartbeat(_ context.Context, module string, key []string, ttl time.Duration) error {
-	req := &ftlv1.AcquireLeaseRequest{Key: key, Module: module, Ttl: durationpb.New(ttl)}
+	realKeys := []string{"module", module}
+	realKeys = append(realKeys, key...)
+	req := &ftlv1.AcquireLeaseRequest{Key: realKeys, Ttl: durationpb.New(ttl)}
 	err := c.stream.Send(req)
 	if err == nil {
 		return nil
