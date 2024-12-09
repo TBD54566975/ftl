@@ -43,12 +43,14 @@ class StatusRequest(_message.Message):
     def __init__(self, provisioning_token: _Optional[str] = ..., desired_module: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ...) -> None: ...
 
 class ProvisioningEvent(_message.Message):
-    __slots__ = ("module_runtime_event", "database_runtime_event")
+    __slots__ = ("module_runtime_event", "database_runtime_event", "topic_runtime_event")
     MODULE_RUNTIME_EVENT_FIELD_NUMBER: _ClassVar[int]
     DATABASE_RUNTIME_EVENT_FIELD_NUMBER: _ClassVar[int]
+    TOPIC_RUNTIME_EVENT_FIELD_NUMBER: _ClassVar[int]
     module_runtime_event: _schema_pb2.ModuleRuntimeEvent
     database_runtime_event: _schema_pb2.DatabaseRuntimeEvent
-    def __init__(self, module_runtime_event: _Optional[_Union[_schema_pb2.ModuleRuntimeEvent, _Mapping]] = ..., database_runtime_event: _Optional[_Union[_schema_pb2.DatabaseRuntimeEvent, _Mapping]] = ...) -> None: ...
+    topic_runtime_event: _schema_pb2.TopicRuntimeEvent
+    def __init__(self, module_runtime_event: _Optional[_Union[_schema_pb2.ModuleRuntimeEvent, _Mapping]] = ..., database_runtime_event: _Optional[_Union[_schema_pb2.DatabaseRuntimeEvent, _Mapping]] = ..., topic_runtime_event: _Optional[_Union[_schema_pb2.TopicRuntimeEvent, _Mapping]] = ...) -> None: ...
 
 class StatusResponse(_message.Message):
     __slots__ = ("running", "success")

@@ -2932,6 +2932,49 @@ export class TopicRuntime extends Message<TopicRuntime> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.schema.v1.TopicRuntimeEvent
+ */
+export class TopicRuntimeEvent extends Message<TopicRuntimeEvent> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.schema.v1.TopicRuntime payload = 2;
+   */
+  payload?: TopicRuntime;
+
+  constructor(data?: PartialMessage<TopicRuntimeEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.schema.v1.TopicRuntimeEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "payload", kind: "message", T: TopicRuntime },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TopicRuntimeEvent {
+    return new TopicRuntimeEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TopicRuntimeEvent {
+    return new TopicRuntimeEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TopicRuntimeEvent {
+    return new TopicRuntimeEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TopicRuntimeEvent | PlainMessage<TopicRuntimeEvent> | undefined, b: TopicRuntimeEvent | PlainMessage<TopicRuntimeEvent> | undefined): boolean {
+    return proto3.util.equals(TopicRuntimeEvent, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.schema.v1.Type
  */
 export class Type extends Message<Type> {

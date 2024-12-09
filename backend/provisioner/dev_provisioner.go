@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/IBM/sarama"
 	"github.com/XSAM/otelsql"
 	_ "github.com/go-sql-driver/mysql"
 
@@ -23,7 +24,6 @@ var pubSubNameLimit = 249 // 255 (filename limit) - 6 (partition id)
 // NewDevProvisioner creates a new provisioner that provisions resources locally when running FTL in dev mode
 func NewDevProvisioner(postgresPort int, mysqlPort int, recreate bool) *InMemProvisioner {
 	// return NewEmbeddedProvisioner(map[schema.ResourceType]LegacyInMemResourceProvisionerFn{
-	// 	schema.ResourceTypeTopic:        provisionTopic(),
 	// 	schema.ResourceTypeSubscription: provisionSubscription(),
 	// }, map[schema.ResourceType]InMemResourceProvisionerFn{
 	// 	schema.ResourceTypePostgres: provisionPostgres(postgresPort, recreate),
@@ -32,6 +32,7 @@ func NewDevProvisioner(postgresPort int, mysqlPort int, recreate bool) *InMemPro
 	return NewEmbeddedProvisioner(map[schema.ResourceType]InMemResourceProvisionerFn{
 		schema.ResourceTypePostgres: provisionPostgres(postgresPort, recreate),
 		schema.ResourceTypeMysql:    provisionMysql(mysqlPort, recreate),
+		schema.ResourceTypeTopic:    provisionTopic(),
 	})
 }
 func provisionMysql(mysqlPort int, recreate bool) InMemResourceProvisionerFn {
@@ -187,58 +188,59 @@ func provisionPostgres(postgresPort int, recreate bool) InMemResourceProvisioner
 
 }
 
-// func provisionTopic() func(ctx context.Context, rc *provisioner.ResourceContext, module string, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
-// 	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
-// 		logger := log.FromContext(ctx)
-// 		if err := dev.SetUpRedPanda(ctx); err != nil {
-// 			return nil, fmt.Errorf("could not set up redpanda: %w", err)
-// 		}
-// 		topic, ok := rc.Resource.Resource.(*provisioner.Resource_Topic)
-// 		if !ok {
-// 			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
-// 		}
+func provisionTopic() InMemResourceProvisionerFn {
+	return func(ctx context.Context, res schema.Provisioned, module *schema.Module) (*RuntimeEvent, error) {
+		logger := log.FromContext(ctx)
+		if err := dev.SetUpRedPanda(ctx); err != nil {
+			return nil, fmt.Errorf("could not set up redpanda: %w", err)
+		}
+		topic, ok := res.(*schema.Topic)
+		if !ok {
+			panic(fmt.Errorf("unexpected resource type: %T", res))
+		}
 
-// 		topicID := kafkaTopicID(module, id)
-// 		logger.Infof("Provisioning topic: %s", topicID)
+		topicID := kafkaTopicID(module.Name, topic.Name)
+		logger.Infof("Provisioning topic: %s", topicID)
 
-// 		config := sarama.NewConfig()
-// 		admin, err := sarama.NewClusterAdmin(redPandaBrokers, config)
-// 		if err != nil {
-// 			return nil, fmt.Errorf("failed to create cluster admin: %w", err)
-// 		}
-// 		defer admin.Close()
+		config := sarama.NewConfig()
+		admin, err := sarama.NewClusterAdmin(redPandaBrokers, config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create cluster admin: %w", err)
+		}
+		defer admin.Close()
 
-// 		topicMetas, err := admin.DescribeTopics([]string{topicID})
-// 		if err != nil {
-// 			return nil, fmt.Errorf("failed to describe topic: %w", err)
-// 		}
-// 		if len(topicMetas) != 1 {
-// 			return nil, fmt.Errorf("expected topic metadata from kafka but received none")
-// 		}
-// 		if topicMetas[0].Err == sarama.ErrUnknownTopicOrPartition {
-// 			// No topic exists yet. Create it
-// 			err = admin.CreateTopic(topicID, &sarama.TopicDetail{
-// 				NumPartitions:     8,
-// 				ReplicationFactor: 1,
-// 				ReplicaAssignment: nil,
-// 			}, false)
-// 			if err != nil {
-// 				return nil, fmt.Errorf("failed to create topic: %w", err)
-// 			}
-// 		} else if topicMetas[0].Err != sarama.ErrNoError {
-// 			return nil, fmt.Errorf("failed to describe topic %q: %w", topicID, topicMetas[0].Err)
-// 		}
+		topicMetas, err := admin.DescribeTopics([]string{topicID})
+		if err != nil {
+			return nil, fmt.Errorf("failed to describe topic: %w", err)
+		}
+		if len(topicMetas) != 1 {
+			return nil, fmt.Errorf("expected topic metadata from kafka but received none")
+		}
+		if topicMetas[0].Err == sarama.ErrUnknownTopicOrPartition {
+			// No topic exists yet. Create it
+			err = admin.CreateTopic(topicID, &sarama.TopicDetail{
+				NumPartitions:     8,
+				ReplicationFactor: 1,
+				ReplicaAssignment: nil,
+			}, false)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create topic: %w", err)
+			}
+		} else if topicMetas[0].Err != sarama.ErrNoError {
+			return nil, fmt.Errorf("failed to describe topic %q: %w", topicID, topicMetas[0].Err)
+		}
 
-// 		if topic.Topic == nil {
-// 			topic.Topic = &provisioner.TopicResource{}
-// 		}
-// 		topic.Topic.Output = &provisioner.TopicResource_TopicResourceOutput{
-// 			KafkaBrokers: redPandaBrokers,
-// 			TopicId:      topicID,
-// 		}
-// 		return rc.Resource, nil
-// 	}
-// }
+		return &RuntimeEvent{
+			Topic: &schema.TopicRuntimeEvent{
+				ID: res.ResourceID(),
+				Payload: &schema.TopicRuntime{
+					KafkaBrokers: redPandaBrokers,
+					TopicID:      topicID,
+				},
+			},
+		}, nil
+	}
+}
 
 // func provisionSubscription() func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
 // 	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
@@ -263,9 +265,9 @@ func provisionPostgres(postgresPort int, recreate bool) InMemResourceProvisioner
 // 	}
 // }
 
-// func kafkaTopicID(module, id string) string {
-// 	return shortenString(fmt.Sprintf("%s.%s", module, id), pubSubNameLimit)
-// }
+func kafkaTopicID(module, id string) string {
+	return shortenString(fmt.Sprintf("%s.%s", module, id), pubSubNameLimit)
+}
 
 // func consumerGroupID(module, id string) string {
 // 	return shortenString(fmt.Sprintf("%s.%s", module, id), pubSubNameLimit)

@@ -377,6 +377,11 @@ message TopicRuntime {
   string topic_id = 2;
 }
 
+message TopicRuntimeEvent {
+  string id = 1;
+  TopicRuntime payload = 2;
+}
+
 message Type {
   oneof value {
     Any any = 9;
