@@ -116,7 +116,11 @@ func (s *serveCommonConfig) run(
 			// allow usage of --background and --stop together to "restart" the background process
 			_ = KillBackgroundServe(logger) //nolint:errcheck // ignore error here if the process is not running
 		}
-
+		_, err := controllerClient.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
+		if err == nil {
+			// The controller is already running, bail out.
+			return fmt.Errorf("controller is already running")
+		}
 		if err := runInBackground(logger); err != nil {
 			return err
 		}
@@ -136,7 +140,11 @@ func (s *serveCommonConfig) run(
 	if s.Stop {
 		return KillBackgroundServe(logger)
 	}
-
+	_, err := controllerClient.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
+	if err == nil {
+		// The controller is already running, bail out.
+		return fmt.Errorf("controller is already running")
+	}
 	if s.Provisioners > 0 {
 		logger.Debugf("Starting FTL with %d controller(s) and %d provisioner(s)", s.Controllers, s.Provisioners)
 	} else {
@@ -154,7 +162,7 @@ func (s *serveCommonConfig) run(
 			s.ObservabilityConfig.ExportOTEL = true
 		}
 	}
-	err := observability.Init(ctx, false, "", "ftl-serve", ftl.Version, s.ObservabilityConfig)
+	err = observability.Init(ctx, false, "", "ftl-serve", ftl.Version, s.ObservabilityConfig)
 	if err != nil {
 		return fmt.Errorf("observability init failed: %w", err)
 	}
