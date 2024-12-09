@@ -58,13 +58,13 @@ func (ns NullTopicSubscriptionState) Value() (driver.Value, error) {
 }
 
 type Topic struct {
-	ID        int64
-	Key       model.TopicKey
-	CreatedAt time.Time
-	ModuleID  int64
-	Name      string
-	Type      string
-	Head      optional.Option[int64]
+	ID         int64
+	Key        model.TopicKey
+	CreatedAt  time.Time
+	Name       string
+	Type       string
+	Head       optional.Option[int64]
+	ModuleName string
 }
 
 type TopicEvent struct {
@@ -79,13 +79,13 @@ type TopicEvent struct {
 }
 
 type TopicSubscription struct {
-	ID           int64
-	Key          model.SubscriptionKey
-	CreatedAt    time.Time
-	TopicID      int64
-	ModuleID     int64
-	DeploymentID int64
-	Name         string
-	Cursor       optional.Option[int64]
-	State        TopicSubscriptionState
+	ID            int64
+	Key           model.SubscriptionKey
+	CreatedAt     time.Time
+	TopicID       int64
+	Name          string
+	Cursor        optional.Option[int64]
+	State         TopicSubscriptionState
+	DeploymentKey model.DeploymentKey
+	ModuleName    string
 }
