@@ -1,7 +1,6 @@
 package state
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/alecthomas/types/optional"
@@ -55,46 +54,32 @@ type Runner struct {
 	Deployment model.DeploymentKey
 }
 
-var _ eventstream.Event[State] = (*RunnerCreatedEvent)(nil)
-var _ eventstream.Event[State] = (*RunnerHeartbeatEvent)(nil)
+var _ eventstream.Event[State] = (*RunnerRegisteredEvent)(nil)
 var _ eventstream.Event[State] = (*RunnerDeletedEvent)(nil)
 
-type RunnerCreatedEvent struct {
+type RunnerRegisteredEvent struct {
 	Key        model.RunnerKey
-	Create     time.Time
+	Time       time.Time
 	Endpoint   string
 	Module     string
 	Deployment model.DeploymentKey
 }
 
-func (r *RunnerCreatedEvent) Handle(t State) (State, error) {
+func (r *RunnerRegisteredEvent) Handle(t State) (State, error) {
 	if existing := t.runners[r.Key.String()]; existing != nil {
+		existing.LastSeen = r.Time
 		return t, nil
 	}
 	n := Runner{
 		Key:        r.Key,
-		Create:     r.Create,
-		LastSeen:   r.Create,
+		Create:     r.Time,
+		LastSeen:   r.Time,
 		Endpoint:   r.Endpoint,
 		Module:     r.Module,
 		Deployment: r.Deployment,
 	}
 	t.runners[r.Key.String()] = &n
 	t.runnersByDeployment[r.Deployment.String()] = append(t.runnersByDeployment[r.Deployment.String()], &n)
-	return t, nil
-}
-
-type RunnerHeartbeatEvent struct {
-	Key      model.RunnerKey
-	LastSeen time.Time
-}
-
-func (r *RunnerHeartbeatEvent) Handle(t State) (State, error) {
-	existing := t.runners[r.Key.String()]
-	if existing == nil {
-		return t, fmt.Errorf("runner %s not found", r.Key)
-	}
-	existing.LastSeen = r.LastSeen
 	return t, nil
 }
 
@@ -106,7 +91,6 @@ func (r RunnerDeletedEvent) Handle(t State) (State, error) {
 	existing := t.runners[r.Key.String()]
 	if existing != nil {
 		delete(t.runners, r.Key.String())
-
 	}
 	return t, nil
 }
