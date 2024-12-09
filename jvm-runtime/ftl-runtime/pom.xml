@@ -52,7 +52,7 @@
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <quarkus.version>3.17.2</quarkus.version>
+        <quarkus.version>3.17.3</quarkus.version>
         <surefire-plugin.version>3.5.2</surefire-plugin.version>
         <rootDir>${basedir}/../../../..</rootDir>
         <grpc.version>1.68.2</grpc.version>
