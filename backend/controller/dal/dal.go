@@ -212,7 +212,7 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 			return libdal.TranslatePGError(err)
 		}
 	}
-	timeline.Publish(ctx, timeline.DeploymentUpdated{
+	timeline.ClientFromContext(ctx).Publish(ctx, timeline.DeploymentUpdated{
 		DeploymentKey:   key,
 		MinReplicas:     minReplicas,
 		PrevMinReplicas: int(deployment.MinReplicas),
@@ -272,7 +272,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		}
 	}
 
-	timeline.Publish(ctx, timeline.DeploymentCreated{
+	timeline.ClientFromContext(ctx).Publish(ctx, timeline.DeploymentCreated{
 		DeploymentKey:      newDeploymentKey,
 		Language:           newDeployment.Language,
 		ModuleName:         newDeployment.ModuleName,

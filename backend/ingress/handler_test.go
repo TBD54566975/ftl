@@ -13,12 +13,11 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
@@ -68,7 +67,9 @@ func TestIngress(t *testing.T) {
 	}
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	ctx = rpc.ContextWithClient(ctx, timelinev1connect.NewTimelineServiceClient(http.DefaultClient, "http://localhost:8080"))
+	timelineEndpoint, err := url.Parse("http://localhost:8080")
+	assert.NoError(t, err)
+	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, timelineEndpoint))
 	assert.NoError(t, err)
 
 	for _, test := range []struct {

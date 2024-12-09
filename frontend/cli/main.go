@@ -21,8 +21,8 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/admin"
 	leasev1connext "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
 	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/configuration"
@@ -235,9 +235,8 @@ func makeBindContext(logger *log.Logger, cancel context.CancelFunc) terminal.Kon
 		ctx = rpc.ContextWithClient(ctx, provisionerServiceClient)
 		kctx.BindTo(provisionerServiceClient, (*provisionerconnect.ProvisionerServiceClient)(nil))
 
-		timelineServiceClient := rpc.Dial(timelinev1connect.NewTimelineServiceClient, cli.TimelineEndpoint.String(), log.Error)
-		ctx = rpc.ContextWithClient(ctx, timelineServiceClient)
-		kctx.BindTo(timelineServiceClient, (*timelinev1connect.TimelineServiceClient)(nil))
+		ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, cli.TimelineEndpoint))
+
 		leaseClient := rpc.Dial(leasev1connext.NewLeaseServiceClient, cli.LeaseEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, leaseClient)
 		kctx.BindTo(leaseClient, (*leasev1connext.LeaseServiceClient)(nil))

@@ -35,8 +35,7 @@ func main() {
 	err := observability.Init(ctx, false, "", "ftl-cron", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
-	// timelineServiceClient := rpc.Dial(timelinev1connect.NewTimelineServiceClient, cli.CronConfig.TimelineEndpoint.String(), log.Error)
-	// ctx = rpc.ContextWithClient(ctx, timelineServiceClient)
+	// ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, cli.TimelineEndpoint))
 
 	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.CronConfig.SchemaServiceEndpoint.String(), log.Error)
 	eventSource := schemaeventsource.New(ctx, schemaClient)

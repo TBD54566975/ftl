@@ -27,7 +27,7 @@ type Call struct {
 }
 
 func (Call) clientEvent() {}
-func (c Call) ToReq() (*timelinepb.CreateEventRequest, error) {
+func (c Call) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, error) {
 	requestKey := c.RequestKey.String()
 
 	var respError *string
@@ -49,8 +49,8 @@ func (c Call) ToReq() (*timelinepb.CreateEventRequest, error) {
 		sourceVerb = c.Callers[0].ToProto().(*schemapb.Ref) //nolint:forcetypeassert
 	}
 
-	return &timelinepb.CreateEventRequest{
-		Entry: &timelinepb.CreateEventRequest_Call{
+	return &timelinepb.CreateEventsRequest_EventEntry{
+		Entry: &timelinepb.CreateEventsRequest_EventEntry_Call{
 			Call: &timelinepb.CallEvent{
 				RequestKey:         &requestKey,
 				DeploymentKey:      c.DeploymentKey.String(),

@@ -108,7 +108,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 	for _, subscription := range subs {
 		now := time.Now().UTC()
 		enqueueTimelineEvent := func(destVerb optional.Option[schema.RefKey], err optional.Option[string]) {
-			timeline.Publish(ctx, &timeline.PubSubConsume{
+			timeline.ClientFromContext(ctx).Publish(ctx, &timeline.PubSubConsume{
 				DeploymentKey: subscription.DeploymentKey,
 				RequestKey:    subscription.RequestKey,
 				Time:          now,

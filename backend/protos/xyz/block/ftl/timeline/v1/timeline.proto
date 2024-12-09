@@ -74,6 +74,8 @@ message GetTimelineRequest {
 
   repeated Filter filters = 1;
   int32 limit = 2;
+  // Ordering is done by id which matches publication order.
+  // This roughly corresponds to the time of the event, but not strictly.
   Order order = 3;
 }
 
@@ -92,21 +94,27 @@ message StreamTimelineResponse {
   repeated timeline.v1.Event events = 1;
 }
 
-message CreateEventRequest {
-  oneof entry {
-    LogEvent log = 1;
-    CallEvent call = 2;
-    DeploymentCreatedEvent deployment_created = 3;
-    DeploymentUpdatedEvent deployment_updated = 4;
-    IngressEvent ingress = 5;
-    CronScheduledEvent cron_scheduled = 6;
-    AsyncExecuteEvent async_execute = 7;
-    PubSubPublishEvent pubsub_publish = 8;
-    PubSubConsumeEvent pubsub_consume = 9;
+message CreateEventsRequest {
+  message EventEntry {
+    google.protobuf.Timestamp timestamp = 1;
+
+    oneof entry {
+      LogEvent log = 2;
+      CallEvent call = 3;
+      DeploymentCreatedEvent deployment_created = 4;
+      DeploymentUpdatedEvent deployment_updated = 5;
+      IngressEvent ingress = 6;
+      CronScheduledEvent cron_scheduled = 7;
+      AsyncExecuteEvent async_execute = 8;
+      PubSubPublishEvent pubsub_publish = 9;
+      PubSubConsumeEvent pubsub_consume = 10;
+    }
   }
+
+  repeated EventEntry entries = 1;
 }
 
-message CreateEventResponse {}
+message CreateEventsResponse {}
 
 message DeleteOldEventsRequest {
   timeline.v1.EventType event_type = 1;
@@ -131,7 +139,7 @@ service TimelineService {
   // Stream timeline events with filters
   rpc StreamTimeline(StreamTimelineRequest) returns (stream StreamTimelineResponse);
 
-  rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse) {}
+  rpc CreateEvents(CreateEventsRequest) returns (CreateEventsResponse) {}
 
   // Delete old events of a specific type
   rpc DeleteOldEvents(DeleteOldEventsRequest) returns (DeleteOldEventsResponse) {}

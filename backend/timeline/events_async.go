@@ -47,9 +47,9 @@ type AsyncExecute struct {
 var _ Event = AsyncExecute{}
 
 func (AsyncExecute) clientEvent() {}
-func (a AsyncExecute) ToReq() (*timelinepb.CreateEventRequest, error) {
-	return &timelinepb.CreateEventRequest{
-		Entry: &timelinepb.CreateEventRequest_AsyncExecute{
+func (a AsyncExecute) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, error) {
+	return &timelinepb.CreateEventsRequest_EventEntry{
+		Entry: &timelinepb.CreateEventsRequest_EventEntry_AsyncExecute{
 			AsyncExecute: &timelinepb.AsyncExecuteEvent{
 				DeploymentKey:  a.DeploymentKey.String(),
 				RequestKey:     a.RequestKey.Ptr(),
