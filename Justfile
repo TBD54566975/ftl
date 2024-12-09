@@ -81,12 +81,17 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev --plain {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-backend build-frontend build-backend-tests build-generate build-sqlc build-zips lsp-generate build-jvm build-language-plugins
+build-all: build-protos-unconditionally build-backend build-frontend build-backend-tests build-generate build-sqlc build-zips lsp-generate build-jvm build-language-plugins build-go2proto-testdata
 
 # Run "go generate" on all packages
 build-generate:
   @mk internal/schema/aliaskind_enumer.go : internal/schema/metadataalias.go -- go generate -x ./internal/schema
   @mk internal/log/log_level_string.go : internal/log/api.go -- go generate -x ./internal/log
+
+# Generate testdata for go2proto. This should be run after any changes to go2proto.
+build-go2proto-testdata:
+  @mk cmd/go2proto/testdata/go2proto.to.go cmd/go2proto/testdata/testdatapb/model.proto : cmd/go2proto/*.go cmd/go2proto/testdata/model.go -- go2proto -m -o ./cmd/go2proto/testdata/testdatapb/model.proto -O 'go_package="github.com/TBD54566975/ftl/cmd/go2proto/testdata/testdatapb"' xyz.block.ftl.go2proto.test ./cmd/go2proto/testdata.Root
+  @mk cmd/go2proto/testdata/testdatapb/model.pb.go : cmd/go2proto/testdata/testdatapb/model.proto -- '(cd ./cmd/go2proto/testdata/testdatapb && protoc --go_out=paths=source_relative:. model.proto) && go build ./cmd/go2proto/testdata'
 
 # Build command-line tools
 build +tools: build-protos build-zips build-frontend
@@ -236,8 +241,12 @@ ensure-frozen-migrations:
   @scripts/ensure-frozen-migrations
 
 # Run backend tests
-test-backend:
+test-backend: test-go2proto
   @gotestsum --hide-summary skipped --format-hide-empty-pkg -- -short -fullpath ./...
+
+# Run go2proto tests
+test-go2proto: build-go2proto-testdata
+  @gotestsum --hide-summary skipped --format-hide-empty-pkg -- -short -fullpath ./cmd/go2proto/testdata
 
 # Run shell script tests
 test-scripts:
