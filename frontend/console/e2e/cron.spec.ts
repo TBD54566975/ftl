@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { navigateToDecl } from './helpers'
+import { navigateToDecl, pressShortcut } from './helpers'
 
 test('shows cron verb form', async ({ page }) => {
   await navigateToDecl(page, 'cron', 'thirtySeconds')
@@ -22,5 +22,18 @@ test('send cron request', async ({ page }) => {
   const responseText = await responseEditor.textContent()
   const responseJson = JSON.parse(responseText?.trim() || '{}')
 
+  expect(responseJson).toEqual({})
+})
+
+test('submit cron form using ⌘+⏎ shortcut', async ({ page }) => {
+  await navigateToDecl(page, 'cron', 'thirtySeconds')
+
+  await pressShortcut(page, 'Enter')
+
+  const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
+  await expect(responseEditor).toBeVisible()
+
+  const responseText = await responseEditor.textContent()
+  const responseJson = JSON.parse(responseText?.trim() || '{}')
   expect(responseJson).toEqual({})
 })
