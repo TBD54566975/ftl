@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/optional"
+	"github.com/alecthomas/types/result"
 
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
@@ -22,8 +24,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/alecthomas/types/optional"
-	"github.com/alecthomas/types/result"
 )
 
 var _ ftlv1connect.VerbServiceHandler = &Service{}
