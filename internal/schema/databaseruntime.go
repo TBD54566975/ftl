@@ -12,10 +12,8 @@ type DatabaseRuntime struct {
 	Connections *DatabaseRuntimeConnections `parser:"" protobuf:"1,optional"`
 }
 
-var _ Runtime = (*DatabaseRuntime)(nil)
 var _ Symbol = (*DatabaseRuntime)(nil)
 
-func (d *DatabaseRuntime) runtime()           {}
 func (d *DatabaseRuntime) Position() Position { return d.Connections.Read.Position() }
 func (d *DatabaseRuntime) schemaSymbol()      {}
 func (d *DatabaseRuntime) String() string {

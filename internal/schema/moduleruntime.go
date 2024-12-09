@@ -10,16 +10,12 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
-var _ Runtime = (*ModuleRuntime)(nil)
-
 // ModuleRuntime is runtime configuration for a module that can be dynamically updated.
 type ModuleRuntime struct {
 	Base       ModuleRuntimeBase        `protobuf:"1"` // Base is always present.
 	Scaling    *ModuleRuntimeScaling    `protobuf:"2,optional"`
 	Deployment *ModuleRuntimeDeployment `protobuf:"3,optional"`
 }
-
-func (*ModuleRuntime) runtime() {}
 
 // ApplyEvent applies a ModuleRuntimeEvent to the ModuleRuntime.
 func (m *ModuleRuntime) ApplyEvent(event ModuleRuntimeEvent) {

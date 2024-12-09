@@ -16,6 +16,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/strcase"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 var redPandaBrokers = []string{"127.0.0.1:19092"}
@@ -23,16 +24,11 @@ var pubSubNameLimit = 249 // 255 (filename limit) - 6 (partition id)
 
 // NewDevProvisioner creates a new provisioner that provisions resources locally when running FTL in dev mode
 func NewDevProvisioner(postgresPort int, mysqlPort int, recreate bool) *InMemProvisioner {
-	// return NewEmbeddedProvisioner(map[schema.ResourceType]LegacyInMemResourceProvisionerFn{
-	// 	schema.ResourceTypeSubscription: provisionSubscription(),
-	// }, map[schema.ResourceType]InMemResourceProvisionerFn{
-	// 	schema.ResourceTypePostgres: provisionPostgres(postgresPort, recreate),
-	// 	schema.ResourceTypeMysql:    provisionMysql(mysqlPort, recreate),
-	// })
 	return NewEmbeddedProvisioner(map[schema.ResourceType]InMemResourceProvisionerFn{
-		schema.ResourceTypePostgres: provisionPostgres(postgresPort, recreate),
-		schema.ResourceTypeMysql:    provisionMysql(mysqlPort, recreate),
-		schema.ResourceTypeTopic:    provisionTopic(),
+		schema.ResourceTypePostgres:     provisionPostgres(postgresPort, recreate),
+		schema.ResourceTypeMysql:        provisionMysql(mysqlPort, recreate),
+		schema.ResourceTypeTopic:        provisionTopic(),
+		schema.ResourceTypeSubscription: provisionSubscription(),
 	})
 }
 func provisionMysql(mysqlPort int, recreate bool) InMemResourceProvisionerFn {
@@ -242,28 +238,30 @@ func provisionTopic() InMemResourceProvisionerFn {
 	}
 }
 
-// func provisionSubscription() func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
-// 	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
-// 		logger := log.FromContext(ctx)
-// 		if err := dev.SetUpRedPanda(ctx); err != nil {
-// 			return nil, fmt.Errorf("could not set up redpanda: %w", err)
-// 		}
-// 		subscription, ok := rc.Resource.Resource.(*provisioner.Resource_Subscription)
-// 		if !ok {
-// 			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
-// 		}
-
-// 		topicID := kafkaTopicID(subscription.Subscription.Topic.Module, subscription.Subscription.Topic.Name)
-// 		consumerGroupID := consumerGroupID(module, id)
-// 		subscription.Subscription.Output = &provisioner.SubscriptionResource_SubscriptionResourceOutput{
-// 			KafkaBrokers:    redPandaBrokers,
-// 			TopicId:         topicID,
-// 			ConsumerGroupId: consumerGroupID,
-// 		}
-// 		logger.Infof("Provisioning subscription: %v", consumerGroupID)
-// 		return rc.Resource, nil
-// 	}
-// }
+func provisionSubscription() InMemResourceProvisionerFn {
+	return func(ctx context.Context, res schema.Provisioned, module *schema.Module) (*RuntimeEvent, error) {
+		logger := log.FromContext(ctx)
+		if err := dev.SetUpRedPanda(ctx); err != nil {
+			return nil, fmt.Errorf("could not set up redpanda: %w", err)
+		}
+		verb, ok := res.(*schema.Verb)
+		if !ok {
+			panic(fmt.Errorf("unexpected resource type: %T", res))
+		}
+		for _ = range slices.FilterVariants[*schema.MetadataSubscriber](verb.Metadata) {
+			logger.Infof("Provisioning subscription for verb: %s", verb.Name)
+			return &RuntimeEvent{
+				Verb: &schema.VerbRuntimeEvent{
+					ID: verb.Name,
+					Payload: &schema.VerbRuntimeSubscription{
+						KafkaBrokers: redPandaBrokers,
+					},
+				},
+			}, nil
+		}
+		return nil, nil
+	}
+}
 
 func kafkaTopicID(module, id string) string {
 	return shortenString(fmt.Sprintf("%s.%s", module, id), pubSubNameLimit)

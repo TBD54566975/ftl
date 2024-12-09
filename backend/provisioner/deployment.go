@@ -100,6 +100,10 @@ func (t *Task) Progress(ctx context.Context) error {
 				case *provisioner.ProvisioningEvent_TopicRuntimeEvent:
 					topicEvent := schema.TopicRuntimeEventFromProto(event.GetTopicRuntimeEvent())
 					topicEvent.ApplyTo(module)
+
+				case *provisioner.ProvisioningEvent_VerbRuntimeEvent:
+					verbEvent := schema.VerbRuntimeEventFromProto(event.GetVerbRuntimeEvent())
+					verbEvent.ApplyTo(module)
 				}
 			}
 			return nil
