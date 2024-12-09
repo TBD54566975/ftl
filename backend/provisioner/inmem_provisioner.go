@@ -48,6 +48,7 @@ type RuntimeEvent struct {
 	Module   schema.ModuleRuntimeEvent
 	Database *schema.DatabaseRuntimeEvent
 	Topic    *schema.TopicRuntimeEvent
+	Verb     *schema.VerbRuntimeEvent
 }
 
 type InMemResourceProvisionerFn func(context.Context, schema.Provisioned, *schema.Module) (*RuntimeEvent, error)
@@ -190,6 +191,8 @@ func eventsToProto(events []*RuntimeEvent) []*provisioner.ProvisioningEvent {
 			}
 		case e.Topic != nil:
 			return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_TopicRuntimeEvent{TopicRuntimeEvent: e.Topic.ToProto().(*schemapb.TopicRuntimeEvent)}} //nolint:forcetypeassert
+		case e.Verb != nil:
+			return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_VerbRuntimeEvent{VerbRuntimeEvent: e.Verb.ToProto().(*schemapb.VerbRuntimeEvent)}} //nolint:forcetypeassert
 		default:
 			panic("unknown event type")
 		}

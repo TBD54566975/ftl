@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
-import { DatabaseRuntimeEvent, Module, ModuleRuntimeEvent, TopicRuntimeEvent } from "../../schema/v1/schema_pb.js";
+import { DatabaseRuntimeEvent, Module, ModuleRuntimeEvent, TopicRuntimeEvent, VerbRuntimeEvent } from "../../schema/v1/schema_pb.js";
 
 /**
  * @generated from message xyz.block.ftl.provisioner.v1beta1.ProvisionRequest
@@ -195,6 +195,12 @@ export class ProvisioningEvent extends Message<ProvisioningEvent> {
      */
     value: TopicRuntimeEvent;
     case: "topicRuntimeEvent";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.schema.v1.VerbRuntimeEvent verb_runtime_event = 4;
+     */
+    value: VerbRuntimeEvent;
+    case: "verbRuntimeEvent";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<ProvisioningEvent>) {
@@ -208,6 +214,7 @@ export class ProvisioningEvent extends Message<ProvisioningEvent> {
     { no: 1, name: "module_runtime_event", kind: "message", T: ModuleRuntimeEvent, oneof: "value" },
     { no: 2, name: "database_runtime_event", kind: "message", T: DatabaseRuntimeEvent, oneof: "value" },
     { no: 3, name: "topic_runtime_event", kind: "message", T: TopicRuntimeEvent, oneof: "value" },
+    { no: 4, name: "verb_runtime_event", kind: "message", T: VerbRuntimeEvent, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProvisioningEvent {
