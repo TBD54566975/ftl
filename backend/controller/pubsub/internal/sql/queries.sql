@@ -1,12 +1,12 @@
 -- name: UpsertTopic :exec
-INSERT INTO topics (key, module_id, name, type)
+INSERT INTO topics (key, module_name, name, type)
 VALUES (
            sqlc.arg('topic')::topic_key,
-           (SELECT id FROM modules WHERE name = sqlc.arg('module')::TEXT LIMIT 1),
+           sqlc.arg('module')::TEXT,
            sqlc.arg('name')::TEXT,
            sqlc.arg('event_type')::TEXT
        )
-ON CONFLICT (name, module_id) DO
+ON CONFLICT (name, module_name) DO
     UPDATE SET
     type = sqlc.arg('event_type')::TEXT
 RETURNING id;
@@ -15,26 +15,25 @@ RETURNING id;
 INSERT INTO topic_subscriptions (
     key,
     topic_id,
-    module_id,
-    deployment_id,
+    module_name,
+    deployment_key,
     name)
 VALUES (
            sqlc.arg('key')::subscription_key,
            (
                SELECT topics.id as id
                FROM topics
-                        INNER JOIN modules ON topics.module_id = modules.id
-               WHERE modules.name = sqlc.arg('topic_module')::TEXT
+               WHERE module_name = sqlc.arg('topic_module')::TEXT
                  AND topics.name = sqlc.arg('topic_name')::TEXT
            ),
-           (SELECT id FROM modules WHERE name = sqlc.arg('module')::TEXT),
-           (SELECT id FROM deployments WHERE key = sqlc.arg('deployment')::deployment_key),
+           sqlc.arg('module')::TEXT,
+           sqlc.arg('deployment')::deployment_key,
            sqlc.arg('name')::TEXT
        )
-ON CONFLICT (name, module_id) DO
+ON CONFLICT (name, module_name) DO
     UPDATE SET
                topic_id = excluded.topic_id,
-               deployment_id = (SELECT id FROM deployments WHERE key = sqlc.arg('deployment')::deployment_key)
+               deployment_key = sqlc.arg('deployment')::deployment_key
 RETURNING
     id,
     CASE
@@ -44,27 +43,19 @@ RETURNING
 
 -- name: DeleteSubscriptions :many
 DELETE FROM topic_subscriptions
-WHERE deployment_id IN (
-    SELECT deployments.id
-    FROM deployments
-    WHERE deployments.key = sqlc.arg('deployment')::deployment_key
-)
+WHERE deployment_key = sqlc.arg('deployment')::deployment_key
 RETURNING topic_subscriptions.key;
 
 -- name: DeleteSubscribers :many
 DELETE FROM topic_subscribers
-WHERE deployment_id IN (
-    SELECT deployments.id
-    FROM deployments
-    WHERE deployments.key = sqlc.arg('deployment')::deployment_key
-)
+WHERE deployment_key = sqlc.arg('deployment')::deployment_key
 RETURNING topic_subscribers.key;
 
 -- name: InsertSubscriber :exec
 INSERT INTO topic_subscribers (
     key,
     topic_subscriptions_id,
-    deployment_id,
+    deployment_key,
     sink,
     retry_attempts,
     backoff,
@@ -76,11 +67,10 @@ VALUES (
            (
                SELECT topic_subscriptions.id as id
                FROM topic_subscriptions
-                        INNER JOIN modules ON topic_subscriptions.module_id = modules.id
-               WHERE modules.name = sqlc.arg('module')::TEXT
+               WHERE module_name = sqlc.arg('module')::TEXT
                  AND topic_subscriptions.name = sqlc.arg('subscription_name')::TEXT
            ),
-           (SELECT id FROM deployments WHERE key = sqlc.arg('deployment')::deployment_key),
+           sqlc.arg('deployment')::deployment_key,
            sqlc.arg('sink'),
            sqlc.arg('retry_attempts'),
            sqlc.arg('backoff')::interval,
@@ -102,8 +92,7 @@ VALUES (
            (
                SELECT topics.id
                FROM topics
-                        INNER JOIN modules ON topics.module_id = modules.id
-               WHERE modules.name = sqlc.arg('module')::TEXT
+               WHERE module_name = sqlc.arg('module')::TEXT
                  AND topics.name = sqlc.arg('topic')::TEXT
            ),
            sqlc.arg('caller')::TEXT,
@@ -122,10 +111,9 @@ SELECT
     curser.key as cursor,
     topics.key::topic_key as topic,
     subs.name,
-    deployments.key as deployment_key,
+    deployment_key as deployment_key,
     curser.request_key as request_key
 FROM topic_subscriptions subs
-         JOIN deployments ON subs.deployment_id = deployments.id
          LEFT JOIN topics ON subs.topic_id = topics.id
          LEFT JOIN topic_events curser ON subs.cursor = curser.id
 WHERE subs.cursor IS DISTINCT FROM topics.head
@@ -164,10 +152,9 @@ SELECT
     subscribers.backoff as backoff,
     subscribers.max_backoff as max_backoff,
     subscribers.catch_verb as catch_verb,
-    deployments.key as deployment_key
+    subscribers.deployment_key as deployment_key
 FROM topic_subscribers as subscribers
          JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
-         JOIN deployments ON subscribers.deployment_id = deployments.id
 WHERE topic_subscriptions.key = sqlc.arg('key')::subscription_key
 ORDER BY RANDOM()
 LIMIT 1;
@@ -184,26 +171,16 @@ SET state = 'executing',
 WHERE key = sqlc.arg('subscription')::subscription_key;
 
 -- name: CompleteEventForSubscription :exec
-WITH module AS (
-    SELECT id
-    FROM modules
-    WHERE name = sqlc.arg('module')::TEXT
-)
 UPDATE topic_subscriptions
 SET state = 'idle'
 WHERE name = @name::TEXT
-  AND module_id = (SELECT id FROM module);
+  AND module_name = sqlc.arg('module')::TEXT;
 
 -- name: GetSubscription :one
-WITH module AS (
-    SELECT id
-    FROM modules
-    WHERE name = $2::TEXT
-)
 SELECT *
 FROM topic_subscriptions
 WHERE name = $1::TEXT
-  AND module_id = (SELECT id FROM module);
+  AND module_name = $2::TEXT;
 
 -- name: SetSubscriptionCursor :exec
 WITH event AS (
