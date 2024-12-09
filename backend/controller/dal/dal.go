@@ -17,7 +17,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/timeline"
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -93,8 +92,7 @@ func (d *DAL) UpsertModule(ctx context.Context, language, name string) (err erro
 // previously created artefacts with it.
 //
 // If an existing deployment with identical artefacts exists, it is returned.
-func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchema *schema.Module, artefacts []dalmodel.DeploymentArtefact) (key model.DeploymentKey, err error) {
-	logger := log.FromContext(ctx)
+func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchema *schema.Module) (key model.DeploymentKey, err error) {
 
 	// Start the parent transaction
 	tx, err := d.Begin(ctx)
@@ -102,18 +100,6 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		return model.DeploymentKey{}, fmt.Errorf("could not start transaction: %w", err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)
-
-	existingDeployment, err := tx.checkForExistingDeployments(ctx, tx, moduleSchema, artefacts)
-	if err != nil {
-		return model.DeploymentKey{}, err
-	} else if !existingDeployment.IsZero() {
-		logger.Tracef("Returning existing deployment %s", existingDeployment)
-		return existingDeployment, nil
-	}
-
-	artefactsByDigest := maps.FromSlice(artefacts, func(in dalmodel.DeploymentArtefact) (sha256.SHA256, dalmodel.DeploymentArtefact) {
-		return in.Digest, in
-	})
 
 	// TODO(aat): "schema" containing language?
 	_, err = tx.db.UpsertModule(ctx, language, moduleSchema.Name)
@@ -146,41 +132,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		return model.DeploymentKey{}, fmt.Errorf("failed to create deployment: %w", libdal.TranslatePGError(err))
 	}
 
-	uploadedDigests := slices.Map(artefacts, func(in dalmodel.DeploymentArtefact) sha256.SHA256 { return sha256.FromBytes(in.Digest[:]) })
-	keys, missing, err := tx.registry.GetDigestsKeys(ctx, uploadedDigests)
-	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("failed to get artefact digests: %w", err)
-	}
-	if len(missing) > 0 {
-		m := slices.Reduce(missing, "", func(join string, in sha256.SHA256) string {
-			return fmt.Sprintf("%s, %s", join, in.String())
-		})
-		return model.DeploymentKey{}, fmt.Errorf("missing digests %s", m)
-	}
-
-	// Associate the artefacts with the deployment
-	for _, row := range keys {
-		artefact := artefactsByDigest[row.Digest]
-		err = tx.db.AssociateArtefactWithDeployment(ctx, dalsql.AssociateArtefactWithDeploymentParams{
-			Key:        deploymentKey,
-			Digest:     row.Digest[:],
-			Executable: artefact.Executable,
-			Path:       artefact.Path,
-		})
-		if err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("failed to associate artefact with deployment: %w", libdal.TranslatePGError(err))
-		}
-	}
-
 	return deploymentKey, nil
-}
-
-func (d *DAL) GetDeployment(ctx context.Context, key model.DeploymentKey) (*model.Deployment, error) {
-	deployment, err := d.db.GetDeployment(ctx, key)
-	if err != nil {
-		return nil, libdal.TranslatePGError(err)
-	}
-	return d.loadDeployment(ctx, deployment)
 }
 
 // SetDeploymentReplicas activates the given deployment.
@@ -424,47 +376,6 @@ type Process struct {
 	MinReplicas int
 	Labels      model.Labels
 	Runner      optional.Option[ProcessRunner]
-}
-
-func (d *DAL) loadDeployment(ctx context.Context, deployment dalsql.GetDeploymentRow) (*model.Deployment, error) {
-	out := &model.Deployment{
-		Module:   deployment.ModuleName,
-		Language: deployment.Language,
-		Key:      deployment.Deployment.Key,
-		Schema:   deployment.Deployment.Schema,
-	}
-	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.Deployment.ID)
-	if err != nil {
-		return nil, libdal.TranslatePGError(err)
-	}
-	out.Artefacts = slices.Map(artefacts, func(row dalsql.GetDeploymentArtefactsRow) *model.Artefact {
-		return &model.Artefact{
-			Path:       row.Path,
-			Executable: row.Executable,
-			Digest:     sha256.FromBytes(row.Digest),
-		}
-	})
-	return out, nil
-}
-
-// Check if a deployment exists that exactly matches the given artefacts and schema.
-func (*DAL) checkForExistingDeployments(ctx context.Context, tx *DAL, moduleSchema *schema.Module, artefacts []dalmodel.DeploymentArtefact) (model.DeploymentKey, error) {
-	schemaBytes, err := schema.ModuleToBytes(moduleSchema)
-	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("failed to marshal schema: %w", err)
-	}
-	existing, err := tx.db.GetDeploymentsWithArtefacts(ctx,
-		sha256esToBytes(slices.Map(artefacts, func(in dalmodel.DeploymentArtefact) sha256.SHA256 { return in.Digest })),
-		schemaBytes,
-		int64(len(artefacts)),
-	)
-	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("couldn't check for existing deployment: %w", err)
-	}
-	if len(existing) > 0 {
-		return existing[0].DeploymentKey, nil
-	}
-	return model.DeploymentKey{}, nil
 }
 
 func sha256esToBytes(digests []sha256.SHA256) [][]byte {

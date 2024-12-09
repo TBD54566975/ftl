@@ -464,7 +464,8 @@ func (s *Service) UpdateDeploymentRuntime(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deployment key: %w", err))
 	}
-	dep, err := s.dal.GetDeployment(ctx, deployment)
+	cs := s.controllerState.View()
+	dep, err := cs.GetDeployment(deployment)
 	if err != nil {
 		return nil, fmt.Errorf("could not get schema: %w", err)
 	}
@@ -520,7 +521,8 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
 		} else if errors.Is(err, dal.ErrReplaceDeploymentAlreadyActive) {
 			logger.Infof("Reusing deployment: %s", newDeploymentKey)
-			dep, err := s.dal.GetDeployment(ctx, newDeploymentKey)
+			cs := s.controllerState.View()
+			dep, err := cs.GetDeployment(newDeploymentKey)
 			if err == nil {
 				status.UpdateModuleState(ctx, dep.Module, status.BuildStateDeployed)
 			} else {
@@ -602,7 +604,7 @@ func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.
 
 	return connect.NewResponse(&ftlv1.GetDeploymentResponse{
 		Schema:    deployment.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
-		Artefacts: slices.Map(deployment.Artefacts, ftlv1.ArtefactToProto),
+		Artefacts: slices.Map(maps.Values(deployment.Artefacts), ftlv1.ArtefactToProto),
 	}), nil
 }
 
@@ -694,7 +696,8 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 	if err != nil {
 		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deployment key: %w", err))
 	}
-	deployment, err := s.dal.GetDeployment(ctx, key)
+	cs := s.controllerState.View()
+	deployment, err := cs.GetDeployment(key)
 	if err != nil {
 		return fmt.Errorf("could not get deployment: %w", err)
 	}
@@ -1007,14 +1010,18 @@ func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1
 func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftlv1.CreateDeploymentRequest]) (*connect.Response[ftlv1.CreateDeploymentResponse], error) {
 	logger := log.FromContext(ctx)
 
-	artefacts := make([]dalmodel.DeploymentArtefact, len(req.Msg.Artefacts))
+	artefacts := make([]*state.DeploymentArtefact, len(req.Msg.Artefacts))
 	for i, artefact := range req.Msg.Artefacts {
 		digest, err := sha256.ParseSHA256(artefact.Digest)
 		if err != nil {
 			logger.Errorf(err, "Invalid digest %s", artefact.Digest)
 			return nil, fmt.Errorf("invalid digest: %w", err)
 		}
-		artefacts[i] = dalmodel.DeploymentArtefact{
+		err = s.controllerState.Publish(&state.DeploymentArtefactCreatedEvent{})
+		if err != nil {
+			return nil, fmt.Errorf("could not create deployment artefact: %w", err)
+		}
+		artefacts[i] = &state.DeploymentArtefact{
 			Executable: artefact.Executable,
 			Path:       artefact.Path,
 			Digest:     digest,
@@ -1038,11 +1045,21 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		return nil, fmt.Errorf("invalid module schema: %w", err)
 	}
 
-	dkey, err := s.dal.CreateDeployment(ctx, ms.Runtime.Base.Language, module, artefacts)
-
+	dkey, err := s.dal.CreateDeployment(ctx, ms.Runtime.Base.Language, module)
 	if err != nil {
 		logger.Errorf(err, "Could not create deployment")
 		return nil, fmt.Errorf("could not create deployment: %w", err)
+	}
+	err = s.controllerState.Publish(&state.DeploymentCreatedEvent{
+		Module:    module.Name,
+		Key:       dkey,
+		CreatedAt: time.Now(),
+		Schema:    ms,
+		Artefacts: artefacts,
+	})
+	if err != nil {
+		logger.Errorf(err, "Could not create deployment event")
+		return nil, fmt.Errorf("could not create deployment event: %w", err)
 	}
 
 	deploymentLogger := s.getDeploymentLogger(ctx, dkey)
@@ -1094,12 +1111,13 @@ func (s *Service) validateModuleSchema(ctx context.Context, module *schema.Modul
 	return schema.Module(module.Name).MustGet(), nil
 }
 
-func (s *Service) getDeployment(ctx context.Context, key string) (*model.Deployment, error) {
+func (s *Service) getDeployment(ctx context.Context, key string) (*state.Deployment, error) {
 	dkey, err := model.ParseDeploymentKey(key)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deployment key: %w", err))
 	}
-	deployment, err := s.dal.GetDeployment(ctx, dkey)
+	cs := s.controllerState.View()
+	deployment, err := cs.GetDeployment(dkey)
 	if errors.Is(err, pgx.ErrNoRows) {
 		logger := s.getDeploymentLogger(ctx, dkey)
 		logger.Errorf(err, "Deployment not found")

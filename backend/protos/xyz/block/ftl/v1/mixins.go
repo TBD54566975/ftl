@@ -5,10 +5,10 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/backend/controller/state"
 )
 
-func ArtefactToProto(artefact *model.Artefact) *DeploymentArtefact {
+func ArtefactToProto(artefact *state.DeploymentArtefact) *DeploymentArtefact {
 	return &DeploymentArtefact{
 		Path:       artefact.Path,
 		Executable: artefact.Executable,
