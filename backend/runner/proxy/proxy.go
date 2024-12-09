@@ -142,7 +142,7 @@ func (r *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	callers, err := headers.GetCallers(req.Header())
 	if err != nil {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("failed to get callers"))
-		return nil, err
+		return nil, fmt.Errorf("could not get callers from headers: %w", err)
 	}
 
 	requestKey, ok, err := headers.GetRequestKey(req.Header())
