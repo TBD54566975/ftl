@@ -223,22 +223,6 @@ func (q *Queries) DeleteSubscriptions(ctx context.Context, deployment model.Depl
 	return items, nil
 }
 
-const deregisterRunner = `-- name: DeregisterRunner :one
-WITH matches AS (
-    DELETE FROM runners
-        WHERE key = $1::runner_key
-        RETURNING 1)
-SELECT COUNT(*)
-FROM matches
-`
-
-func (q *Queries) DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error) {
-	row := q.db.QueryRowContext(ctx, deregisterRunner, key)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const failAsyncCall = `-- name: FailAsyncCall :one
 UPDATE async_calls
 SET
@@ -350,10 +334,9 @@ func (q *Queries) GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDe
 }
 
 const getActiveDeployments = `-- name: GetActiveDeployments :many
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, m.name AS module_name, m.language, COUNT(r.id) AS replicas
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, m.name AS module_name, m.language
 FROM deployments d
   JOIN modules m ON d.module_id = m.id
-  LEFT JOIN runners r ON d.id = r.deployment_id
 WHERE min_replicas > 0
 GROUP BY d.id, m.name, m.language
 ORDER BY d.last_activated_at
@@ -363,7 +346,6 @@ type GetActiveDeploymentsRow struct {
 	Deployment Deployment
 	ModuleName string
 	Language   string
-	Replicas   int64
 }
 
 func (q *Queries) GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error) {
@@ -386,58 +368,6 @@ func (q *Queries) GetActiveDeployments(ctx context.Context) ([]GetActiveDeployme
 			&i.Deployment.LastActivatedAt,
 			&i.ModuleName,
 			&i.Language,
-			&i.Replicas,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getActiveRunners = `-- name: GetActiveRunners :many
-SELECT DISTINCT ON (r.key) r.key AS runner_key,
-                           r.endpoint,
-                           r.labels,
-                           r.last_seen,
-                           r.module_name,
-                           d.key AS deployment_key
-FROM runners r
-         INNER JOIN deployments d on d.id = r.deployment_id
-ORDER BY r.key
-`
-
-type GetActiveRunnersRow struct {
-	RunnerKey     model.RunnerKey
-	Endpoint      string
-	Labels        json.RawMessage
-	LastSeen      time.Time
-	ModuleName    optional.Option[string]
-	DeploymentKey model.DeploymentKey
-}
-
-func (q *Queries) GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error) {
-	rows, err := q.db.QueryContext(ctx, getActiveRunners)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetActiveRunnersRow
-	for rows.Next() {
-		var i GetActiveRunnersRow
-		if err := rows.Scan(
-			&i.RunnerKey,
-			&i.Endpoint,
-			&i.Labels,
-			&i.LastSeen,
-			&i.ModuleName,
-			&i.DeploymentKey,
 		); err != nil {
 			return nil, err
 		}
@@ -815,58 +745,6 @@ func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDe
 	return i, err
 }
 
-const getProcessList = `-- name: GetProcessList :many
-SELECT d.min_replicas,
-       d.key   AS deployment_key,
-       d.labels    deployment_labels,
-       r.key    AS runner_key,
-       r.endpoint,
-       r.labels AS runner_labels
-FROM deployments d
-         LEFT JOIN runners r on d.id = r.deployment_id
-WHERE d.min_replicas > 0
-ORDER BY d.key
-`
-
-type GetProcessListRow struct {
-	MinReplicas      int32
-	DeploymentKey    model.DeploymentKey
-	DeploymentLabels json.RawMessage
-	RunnerKey        optional.Option[model.RunnerKey]
-	Endpoint         optional.Option[string]
-	RunnerLabels     pqtype.NullRawMessage
-}
-
-func (q *Queries) GetProcessList(ctx context.Context) ([]GetProcessListRow, error) {
-	rows, err := q.db.QueryContext(ctx, getProcessList)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetProcessListRow
-	for rows.Next() {
-		var i GetProcessListRow
-		if err := rows.Scan(
-			&i.MinReplicas,
-			&i.DeploymentKey,
-			&i.DeploymentLabels,
-			&i.RunnerKey,
-			&i.Endpoint,
-			&i.RunnerLabels,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getRandomSubscriber = `-- name: GetRandomSubscriber :one
 SELECT
     subscribers.sink as sink,
@@ -904,107 +782,6 @@ func (q *Queries) GetRandomSubscriber(ctx context.Context, key model.Subscriptio
 		&i.DeploymentKey,
 	)
 	return i, err
-}
-
-const getRunner = `-- name: GetRunner :one
-SELECT DISTINCT ON (r.key) r.key                                   AS runner_key,
-                           r.endpoint,
-                           r.labels,
-                           r.last_seen,
-                           r.module_name,
-                           d.key AS deployment_key
-FROM runners r
-         INNER JOIN deployments d on d.id = r.deployment_id
-WHERE r.key = $1::runner_key
-`
-
-type GetRunnerRow struct {
-	RunnerKey     model.RunnerKey
-	Endpoint      string
-	Labels        json.RawMessage
-	LastSeen      time.Time
-	ModuleName    optional.Option[string]
-	DeploymentKey model.DeploymentKey
-}
-
-func (q *Queries) GetRunner(ctx context.Context, key model.RunnerKey) (GetRunnerRow, error) {
-	row := q.db.QueryRowContext(ctx, getRunner, key)
-	var i GetRunnerRow
-	err := row.Scan(
-		&i.RunnerKey,
-		&i.Endpoint,
-		&i.Labels,
-		&i.LastSeen,
-		&i.ModuleName,
-		&i.DeploymentKey,
-	)
-	return i, err
-}
-
-const getRunnersForDeployment = `-- name: GetRunnersForDeployment :many
-SELECT r.id, r.key, created, last_seen, endpoint, module_name, deployment_id, r.labels, d.id, created_at, module_id, d.key, schema, d.labels, min_replicas, last_activated_at
-FROM runners r
-         INNER JOIN deployments d on r.deployment_id = d.id
-WHERE d.key = $1::deployment_key
-`
-
-type GetRunnersForDeploymentRow struct {
-	ID              int64
-	Key             model.RunnerKey
-	Created         time.Time
-	LastSeen        time.Time
-	Endpoint        string
-	ModuleName      optional.Option[string]
-	DeploymentID    int64
-	Labels          json.RawMessage
-	ID_2            int64
-	CreatedAt       time.Time
-	ModuleID        int64
-	Key_2           model.DeploymentKey
-	Schema          *schema.Module
-	Labels_2        json.RawMessage
-	MinReplicas     int32
-	LastActivatedAt time.Time
-}
-
-func (q *Queries) GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error) {
-	rows, err := q.db.QueryContext(ctx, getRunnersForDeployment, key)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetRunnersForDeploymentRow
-	for rows.Next() {
-		var i GetRunnersForDeploymentRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Key,
-			&i.Created,
-			&i.LastSeen,
-			&i.Endpoint,
-			&i.ModuleName,
-			&i.DeploymentID,
-			&i.Labels,
-			&i.ID_2,
-			&i.CreatedAt,
-			&i.ModuleID,
-			&i.Key_2,
-			&i.Schema,
-			&i.Labels_2,
-			&i.MinReplicas,
-			&i.LastActivatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getSchemaForDeployment = `-- name: GetSchemaForDeployment :one
@@ -1048,12 +825,6 @@ func (q *Queries) GetSubscription(ctx context.Context, column1 string, column2 s
 }
 
 const getSubscriptionsNeedingUpdate = `-- name: GetSubscriptionsNeedingUpdate :many
-WITH runner_count AS (
-    SELECT count(r.deployment_id) as runner_count,
-           r.deployment_id as deployment
-    FROM runners r
-    GROUP BY deployment
-)
 SELECT
     subs.key::subscription_key as key,
     curser.key as cursor,
@@ -1062,7 +833,6 @@ SELECT
     deployments.key as deployment_key,
     curser.request_key as request_key
 FROM topic_subscriptions subs
-         JOIN runner_count on subs.deployment_id = runner_count.deployment
          JOIN deployments ON subs.deployment_id = deployments.id
          LEFT JOIN topics ON subs.topic_id = topics.id
          LEFT JOIN topic_events curser ON subs.cursor = curser.id
@@ -1263,22 +1033,6 @@ func (q *Queries) InsertSubscriber(ctx context.Context, arg InsertSubscriberPara
 	return err
 }
 
-const killStaleRunners = `-- name: KillStaleRunners :one
-WITH matches AS (
-    DELETE FROM runners
-        WHERE last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
-        RETURNING 1)
-SELECT COUNT(*)
-FROM matches
-`
-
-func (q *Queries) KillStaleRunners(ctx context.Context, timeout sqltypes.Duration) (int64, error) {
-	row := q.db.QueryRowContext(ctx, killStaleRunners, timeout)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const loadAsyncCall = `-- name: LoadAsyncCall :one
 SELECT id, created_at, verb, state, origin, scheduled_at, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, request
 FROM async_calls
@@ -1428,44 +1182,6 @@ func (q *Queries) UpsertModule(ctx context.Context, language string, name string
 	var id int64
 	err := row.Scan(&id)
 	return id, err
-}
-
-const upsertRunner = `-- name: UpsertRunner :one
-WITH deployment_rel AS (
-    SELECT id FROM deployments d
-             WHERE d.key = $4::deployment_key
-             LIMIT 1)
-INSERT
-INTO runners (key, endpoint, labels, deployment_id, last_seen)
-VALUES ($1,
-        $2,
-        $3,
-        (SELECT id FROM deployment_rel),
-        NOW() AT TIME ZONE 'utc')
-ON CONFLICT (key) DO UPDATE SET endpoint      = $2,
-                                labels        = $3,
-                                last_seen     = NOW() AT TIME ZONE 'utc'
-RETURNING deployment_id
-`
-
-type UpsertRunnerParams struct {
-	Key           model.RunnerKey
-	Endpoint      string
-	Labels        json.RawMessage
-	DeploymentKey model.DeploymentKey
-}
-
-// Upsert a runner and return the deployment ID that it is assigned to, if any.
-func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, upsertRunner,
-		arg.Key,
-		arg.Endpoint,
-		arg.Labels,
-		arg.DeploymentKey,
-	)
-	var deployment_id int64
-	err := row.Scan(&deployment_id)
-	return deployment_id, err
 }
 
 const upsertSubscription = `-- name: UpsertSubscription :one

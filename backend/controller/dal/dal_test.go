@@ -106,64 +106,9 @@ func TestDAL(t *testing.T) {
 		assert.Equal(t, []sha256.SHA256{misshingSHA}, missing)
 	})
 
-	runnerID := model.NewRunnerKey("localhost", "8080")
-	labels := map[string]any{}
-
-	t.Run("RegisterRunner", func(t *testing.T) {
-		err = dal.UpsertRunner(ctx, dalmodel.Runner{
-			Key:        runnerID,
-			Labels:     labels,
-			Endpoint:   "http://localhost:8080",
-			Deployment: deploymentKey,
-		})
-		assert.NoError(t, err)
-	})
-
 	t.Run("SetDeploymentReplicas", func(t *testing.T) {
 		err := dal.SetDeploymentReplicas(ctx, deploymentKey, 1)
 		assert.NoError(t, err)
-	})
-
-	t.Run("UpdateRunnerAssigned", func(t *testing.T) {
-		err := dal.UpsertRunner(ctx, dalmodel.Runner{
-			Key:        runnerID,
-			Labels:     labels,
-			Endpoint:   "http://localhost:8080",
-			Deployment: deploymentKey,
-		})
-		assert.NoError(t, err)
-	})
-
-	t.Run("GetRunnersForDeployment", func(t *testing.T) {
-		runners, err := dal.GetRunnersForDeployment(ctx, deploymentKey)
-		assert.NoError(t, err)
-		assert.Equal(t, []dalmodel.Runner{{
-			Key:        runnerID,
-			Labels:     labels,
-			Endpoint:   "http://localhost:8080",
-			Deployment: deploymentKey,
-		}}, runners)
-	})
-
-	t.Run("UpdateRunnerInvalidDeployment", func(t *testing.T) {
-		err := dal.UpsertRunner(ctx, dalmodel.Runner{
-			Key:        runnerID,
-			Labels:     labels,
-			Endpoint:   "http://localhost:8080",
-			Deployment: model.NewDeploymentKey("test"),
-		})
-		assert.Error(t, err)
-		assert.IsError(t, err, libdal.ErrConstraint)
-	})
-
-	t.Run("DeregisterRunner", func(t *testing.T) {
-		err = dal.DeregisterRunner(ctx, runnerID)
-		assert.NoError(t, err)
-	})
-
-	t.Run("DeregisterRunnerFailsOnMissing", func(t *testing.T) {
-		err = dal.DeregisterRunner(ctx, model.NewRunnerKey("localhost", "8080"))
-		assert.IsError(t, err, libdal.ErrNotFound)
 	})
 
 	t.Run("VerifyDeploymentNotifications", func(t *testing.T) {
