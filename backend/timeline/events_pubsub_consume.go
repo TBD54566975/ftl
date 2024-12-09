@@ -24,14 +24,14 @@ type PubSubConsume struct {
 var _ Event = PubSubConsume{}
 
 func (PubSubConsume) clientEvent() {}
-func (p PubSubConsume) ToReq() (*timelinepb.CreateEventRequest, error) {
+func (p PubSubConsume) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, error) {
 	var destModule, destVerb *string
 	if ref, ok := p.DestVerb.Get(); ok {
 		destModule = &ref.Module
 		destVerb = &ref.Name
 	}
-	return &timelinepb.CreateEventRequest{
-		Entry: &timelinepb.CreateEventRequest_PubsubConsume{
+	return &timelinepb.CreateEventsRequest_EventEntry{
+		Entry: &timelinepb.CreateEventsRequest_EventEntry_PubsubConsume{
 			PubsubConsume: &timelinepb.PubSubConsumeEvent{
 				DeploymentKey:  p.DeploymentKey.String(),
 				RequestKey:     p.RequestKey.Ptr(),

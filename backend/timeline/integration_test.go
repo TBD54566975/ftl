@@ -5,12 +5,19 @@ package timeline
 import (
 	"context"
 	"net/http"
+	"slices"
+	"strconv"
+	"sync"
 	"testing"
+	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	in "github.com/TBD54566975/ftl/internal/integration"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 func TestTimeline(t *testing.T) {
@@ -139,4 +146,105 @@ func TestTimeline(t *testing.T) {
 			},
 		),
 	)
+}
+
+type streamState struct {
+	ascEvents     []*timelinepb.Event
+	descEvents    []*timelinepb.Event
+	actualEntries []*timelinepb.CreateEventsRequest_EventEntry
+}
+
+func TestStreamTimeline(t *testing.T) {
+	lock := &sync.Mutex{}
+	state := &streamState{}
+	in.Run(t,
+		// stream events into two slices, one in ascending order and one in descending order
+		streamEvents(60, timelinepb.GetTimelineRequest_ORDER_ASC, state, lock),
+		streamEvents(60, timelinepb.GetTimelineRequest_ORDER_DESC, state, lock),
+
+		// create events with timestamps out of order, simulating different services publishing events at different times
+		createOutOfOrderEvents(100, state),
+		in.Sleep(3*time.Second),
+		createOutOfOrderEvents(100, state),
+		in.Sleep(3*time.Second),
+
+		// check that all events where streamed and in the correct order
+		checkEvents(state, true, lock),
+		checkEvents(state, false, lock),
+	)
+}
+
+func streamEvents(pageSize int32, order timelinepb.GetTimelineRequest_Order, state *streamState, lock *sync.Mutex) in.Action {
+	return func(t testing.TB, ic in.TestContext) {
+		in.Infof("Steaming events (order = %v)", order)
+		go func() {
+			stream, err := ic.Timeline.StreamTimeline(ic.Context, connect.NewRequest(&timelinepb.StreamTimelineRequest{
+				Query: &timelinepb.GetTimelineRequest{
+					Limit: pageSize,
+					Order: order,
+				},
+			}))
+			assert.NoError(t, err)
+			defer stream.Close()
+			for stream.Receive() {
+				lock.Lock()
+				log.FromContext(ic.Context).Infof("streamed %d events", len(stream.Msg().Events))
+				if order == timelinepb.GetTimelineRequest_ORDER_ASC {
+					state.ascEvents = append(state.ascEvents, stream.Msg().Events...)
+				} else {
+					reverseEvents := make([]*timelinepb.Event, 0, len(stream.Msg().Events))
+					reverseEvents = append(reverseEvents, stream.Msg().Events...)
+					slices.Reverse(reverseEvents)
+					state.descEvents = append(state.descEvents, reverseEvents...)
+				}
+				lock.Unlock()
+			}
+		}()
+	}
+}
+
+func createOutOfOrderEvents(count int, state *streamState) in.Action {
+	return func(t testing.TB, ic in.TestContext) {
+		in.Infof("Creating events")
+		for i := range count {
+			entry := &timelinepb.CreateEventsRequest_EventEntry{
+				Timestamp: timestamppb.New(time.Now()),
+				Entry: &timelinepb.CreateEventsRequest_EventEntry_DeploymentCreated{
+					DeploymentCreated: &timelinepb.DeploymentCreatedEvent{
+						Key:         "fake",
+						Language:    "go",
+						ModuleName:  "fakemodule:" + strconv.Itoa(i),
+						MinReplicas: 1,
+					},
+				},
+			}
+			_, err := ic.Timeline.CreateEvents(ic.Context, connect.NewRequest(&timelinepb.CreateEventsRequest{
+				Entries: []*timelinepb.CreateEventsRequest_EventEntry{
+					entry,
+				},
+			}))
+			assert.NoError(t, err)
+			state.actualEntries = append(state.actualEntries, entry)
+		}
+	}
+}
+
+func checkEvents(state *streamState, asc bool, lock *sync.Mutex) in.Action {
+	return func(t testing.TB, ic in.TestContext) {
+		in.Infof("Checking events (asc = %v)", asc)
+		lock.Lock()
+		defer lock.Unlock()
+
+		var streamEvents []*timelinepb.Event
+		if asc {
+			streamEvents = state.ascEvents
+		} else {
+			streamEvents = state.descEvents
+		}
+		assert.Equal(t, len(state.actualEntries), len(streamEvents), "expected all events to have been streamed")
+		for i, event := range streamEvents {
+			expectedEntry := state.actualEntries[i]
+			assert.Equal(t, expectedEntry.GetDeploymentCreated().ModuleName, event.GetDeploymentCreated().ModuleName, "expected streamed event to match publication order")
+		}
+	}
 }

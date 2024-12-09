@@ -16,8 +16,8 @@ import (
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/buildengine"
-	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -549,7 +549,7 @@ func buildGraph(sch *schema.Schema, module *schema.Module, out map[string][]stri
 }
 
 func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[timelinepb.GetTimelineRequest]) (*connect.Response[timelinepb.GetTimelineResponse], error) {
-	client := rpc.ClientFromContext[timelinev1connect.TimelineServiceClient](ctx)
+	client := timeline.ClientFromContext(ctx)
 	resp, err := client.GetTimeline(ctx, connect.NewRequest(req.Msg))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get timeline from service: %w", err)
@@ -558,7 +558,7 @@ func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[t
 }
 
 func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Request[timelinepb.StreamTimelineRequest], out *connect.ServerStream[timelinepb.StreamTimelineResponse]) error {
-	client := rpc.ClientFromContext[timelinev1connect.TimelineServiceClient](ctx)
+	client := timeline.ClientFromContext(ctx)
 	stream, err := client.StreamTimeline(ctx, req)
 	if err != nil {
 		return fmt.Errorf("failed to stream timeline from service: %w", err)
@@ -576,7 +576,7 @@ func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Reques
 	}
 	return nil
 }
-func (c *ConsoleService) CreateEvent(ctx context.Context, req *connect.Request[timelinepb.CreateEventRequest]) (*connect.Response[timelinepb.CreateEventResponse], error) {
+func (c *ConsoleService) CreateEvents(ctx context.Context, req *connect.Request[timelinepb.CreateEventsRequest]) (*connect.Response[timelinepb.CreateEventsResponse], error) {
 	return nil, fmt.Errorf("not implemented")
 }
 

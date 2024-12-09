@@ -34,7 +34,7 @@ type Ingress struct {
 var _ Event = Ingress{}
 
 func (Ingress) clientEvent() {}
-func (i Ingress) ToReq() (*timelinepb.CreateEventRequest, error) {
+func (i Ingress) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, error) {
 	requestKey := i.RequestKey.String()
 
 	requestBody := i.RequestBody
@@ -57,8 +57,8 @@ func (i Ingress) ToReq() (*timelinepb.CreateEventRequest, error) {
 		return nil, fmt.Errorf("failed to marshal response header: %w", err)
 	}
 
-	return &timelinepb.CreateEventRequest{
-		Entry: &timelinepb.CreateEventRequest_Ingress{
+	return &timelinepb.CreateEventsRequest_EventEntry{
+		Entry: &timelinepb.CreateEventsRequest_EventEntry_Ingress{
 			Ingress: &timelinepb.IngressEvent{
 				DeploymentKey:  i.DeploymentKey.String(),
 				RequestKey:     &requestKey,

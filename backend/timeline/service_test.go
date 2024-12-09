@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/alecthomas/assert/v2"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func TestGetTimelineWithLimit(t *testing.T) {
@@ -18,10 +19,11 @@ func TestGetTimelineWithLimit(t *testing.T) {
 
 	// Create a bunch of entries
 	entryCount := 100
-	requests := []*timelinepb.CreateEventRequest{}
+	entries := []*timelinepb.CreateEventsRequest_EventEntry{}
 	for i := range entryCount {
-		requests = append(requests, &timelinepb.CreateEventRequest{
-			Entry: &timelinepb.CreateEventRequest_Call{
+		entries = append(entries, &timelinepb.CreateEventsRequest_EventEntry{
+			Timestamp: timestamppb.New(time.Now()),
+			Entry: &timelinepb.CreateEventsRequest_EventEntry_Call{
 				Call: &timelinepb.CallEvent{
 					Request:  strconv.Itoa(i),
 					Response: strconv.Itoa(i),
@@ -29,10 +31,11 @@ func TestGetTimelineWithLimit(t *testing.T) {
 			},
 		})
 	}
-	for _, request := range requests {
-		_, err := service.CreateEvent(ctx, connect.NewRequest(request))
-		assert.NoError(t, err)
-	}
+
+	_, err := service.CreateEvents(ctx, connect.NewRequest(&timelinepb.CreateEventsRequest{
+		Entries: entries,
+	}))
+	assert.NoError(t, err)
 
 	// Test with different limits
 	for _, limit := range []int32{
@@ -75,40 +78,46 @@ func TestDeleteOldEvents(t *testing.T) {
 	service := &service{}
 
 	// Create a bunch of entries of different types
-	requests := []*timelinepb.CreateEventRequest{}
+	entries := []*timelinepb.CreateEventsRequest_EventEntry{}
 	for i := range 100 {
-		requests = append(requests, &timelinepb.CreateEventRequest{
-			Entry: &timelinepb.CreateEventRequest_Call{
+		var timestamp *timestamppb.Timestamp
+		if i < 50 {
+			timestamp = timestamppb.New(time.Now().Add(-3 * time.Second))
+		} else {
+			timestamp = timestamppb.New(time.Now())
+		}
+		entries = append(entries, &timelinepb.CreateEventsRequest_EventEntry{
+			Timestamp: timestamp,
+			Entry: &timelinepb.CreateEventsRequest_EventEntry_Call{
 				Call: &timelinepb.CallEvent{
 					Request:  strconv.Itoa(i),
 					Response: strconv.Itoa(i),
 				},
 			},
-		}, &timelinepb.CreateEventRequest{
-			Entry: &timelinepb.CreateEventRequest_Log{
+		}, &timelinepb.CreateEventsRequest_EventEntry{
+			Timestamp: timestamp,
+			Entry: &timelinepb.CreateEventsRequest_EventEntry_Log{
 				Log: &timelinepb.LogEvent{
 					Message: strconv.Itoa(i),
 				},
 			},
-		}, &timelinepb.CreateEventRequest{
-			Entry: &timelinepb.CreateEventRequest_DeploymentCreated{
+		}, &timelinepb.CreateEventsRequest_EventEntry{
+			Timestamp: timestamp,
+			Entry: &timelinepb.CreateEventsRequest_EventEntry_DeploymentCreated{
 				DeploymentCreated: &timelinepb.DeploymentCreatedEvent{
 					Key: strconv.Itoa(i),
 				},
 			},
 		})
 	}
-	for i, request := range requests {
-		if i == 150 {
-			// Add a delay half way through
-			time.Sleep(3 * time.Second)
-		}
-		_, err := service.CreateEvent(ctx, connect.NewRequest(request))
-		assert.NoError(t, err)
-	}
+
+	_, err := service.CreateEvents(ctx, connect.NewRequest(&timelinepb.CreateEventsRequest{
+		Entries: entries,
+	}))
+	assert.NoError(t, err)
 
 	// Delete half the events (everything older than 3 seconds)
-	_, err := service.DeleteOldEvents(ctx, connect.NewRequest(&timelinepb.DeleteOldEventsRequest{
+	_, err = service.DeleteOldEvents(ctx, connect.NewRequest(&timelinepb.DeleteOldEventsRequest{
 		AgeSeconds: 3,
 		EventType:  timelinepb.EventType_EVENT_TYPE_UNSPECIFIED,
 	}))

@@ -23,14 +23,14 @@ type Log struct {
 var _ Event = Log{}
 
 func (Log) clientEvent() {}
-func (l Log) ToReq() (*timelinepb.CreateEventRequest, error) {
+func (l Log) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, error) {
 	var requestKey *string
 	if r, ok := l.RequestKey.Get(); ok {
 		key := r.String()
 		requestKey = &key
 	}
-	return &timelinepb.CreateEventRequest{
-		Entry: &timelinepb.CreateEventRequest_Log{
+	return &timelinepb.CreateEventsRequest_EventEntry{
+		Entry: &timelinepb.CreateEventsRequest_EventEntry_Log{
 			Log: &timelinepb.LogEvent{
 				DeploymentKey: l.DeploymentKey.String(),
 				RequestKey:    requestKey,

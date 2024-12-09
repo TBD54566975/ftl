@@ -25,9 +25,9 @@ type CronScheduled struct {
 var _ Event = CronScheduled{}
 
 func (e CronScheduled) clientEvent() {}
-func (e CronScheduled) ToReq() (*timelinepb.CreateEventRequest, error) {
-	return &timelinepb.CreateEventRequest{
-		Entry: &timelinepb.CreateEventRequest_CronScheduled{
+func (e CronScheduled) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, error) {
+	return &timelinepb.CreateEventsRequest_EventEntry{
+		Entry: &timelinepb.CreateEventsRequest_EventEntry_CronScheduled{
 			CronScheduled: &timelinepb.CronScheduledEvent{
 				DeploymentKey: e.DeploymentKey.String(),
 				VerbRef:       (&e.Verb).ToProto().(*schemapb.Ref), //nolint:forcetypeassert

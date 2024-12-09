@@ -423,7 +423,7 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 			requestKey = optional.Some(rkey)
 		}
 
-		timeline.Publish(ctx, timeline.Log{
+		timeline.ClientFromContext(ctx).Publish(ctx, timeline.Log{
 			DeploymentKey: deploymentKey,
 			RequestKey:    requestKey,
 			Time:          msg.TimeStamp.AsTime(),
@@ -828,7 +828,7 @@ func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftldepl
 	routes := s.routeTable.Current()
 	route, ok := routes.GetDeployment(module).Get()
 	if ok {
-		timeline.Publish(ctx, timeline.PubSubPublish{
+		timeline.ClientFromContext(ctx).Publish(ctx, timeline.PubSubPublish{
 			DeploymentKey: route,
 			RequestKey:    requestKey,
 			Time:          now,
@@ -942,7 +942,7 @@ func (s *Service) callWithRequest(
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: verb not exported"))
 		err = connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
 		callEvent.Response = result.Err[*ftlv1.CallResponse](err)
-		timeline.Publish(ctx, callEvent)
+		timeline.ClientFromContext(ctx).Publish(ctx, callEvent)
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
 	}
 
@@ -950,7 +950,7 @@ func (s *Service) callWithRequest(
 	if err != nil {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: invalid call body"))
 		callEvent.Response = result.Err[*ftlv1.CallResponse](err)
-		timeline.Publish(ctx, callEvent)
+		timeline.ClientFromContext(ctx).Publish(ctx, callEvent)
 		return nil, err
 	}
 
@@ -975,7 +975,7 @@ func (s *Service) callWithRequest(
 		logger.Errorf(err, "Call failed to verb %s for module %s", verbRef.String(), module)
 	}
 
-	timeline.Publish(ctx, callEvent)
+	timeline.ClientFromContext(ctx).Publish(ctx, callEvent)
 	return resp, err
 }
 
@@ -1187,7 +1187,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 			if e, ok := err.Get(); ok {
 				errStr = optional.Some(e.Error())
 			}
-			timeline.Publish(ctx, timeline.AsyncExecute{
+			timeline.ClientFromContext(ctx).Publish(ctx, timeline.AsyncExecute{
 				DeploymentKey: deployment,
 				RequestKey:    call.ParentRequestKey,
 				EventType:     eventType,
@@ -1609,7 +1609,7 @@ func (s *Service) reapCallEvents(ctx context.Context) (time.Duration, error) {
 		return time.Hour, nil
 	}
 
-	client := rpc.ClientFromContext[timelinev1connect.TimelineServiceClient](ctx)
+	client := timeline.ClientFromContext(ctx)
 	resp, err := client.DeleteOldEvents(ctx, connect.NewRequest(&timelinepb.DeleteOldEventsRequest{
 		EventType:  timelinepb.EventType_EVENT_TYPE_CALL,
 		AgeSeconds: int64(s.config.EventLogRetention.Seconds()),

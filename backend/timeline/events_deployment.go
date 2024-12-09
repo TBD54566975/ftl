@@ -21,14 +21,14 @@ type DeploymentCreated struct {
 var _ Event = DeploymentCreated{}
 
 func (DeploymentCreated) clientEvent() {}
-func (d DeploymentCreated) ToReq() (*timelinepb.CreateEventRequest, error) {
+func (d DeploymentCreated) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, error) {
 	var replaced *string
 	if r, ok := d.ReplacedDeployment.Get(); ok {
 		repl := r.String()
 		replaced = &repl
 	}
-	return &timelinepb.CreateEventRequest{
-		Entry: &timelinepb.CreateEventRequest_DeploymentCreated{
+	return &timelinepb.CreateEventsRequest_EventEntry{
+		Entry: &timelinepb.CreateEventsRequest_EventEntry_DeploymentCreated{
 			DeploymentCreated: &timelinepb.DeploymentCreatedEvent{
 				Key:         d.DeploymentKey.String(),
 				Language:    d.Language,
@@ -50,9 +50,9 @@ type DeploymentUpdated struct {
 var _ Event = DeploymentUpdated{}
 
 func (DeploymentUpdated) clientEvent() {}
-func (d DeploymentUpdated) ToReq() (*timelinepb.CreateEventRequest, error) {
-	return &timelinepb.CreateEventRequest{
-		Entry: &timelinepb.CreateEventRequest_DeploymentUpdated{
+func (d DeploymentUpdated) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, error) {
+	return &timelinepb.CreateEventsRequest_EventEntry{
+		Entry: &timelinepb.CreateEventsRequest_EventEntry_DeploymentUpdated{
 			DeploymentUpdated: &timelinepb.DeploymentUpdatedEvent{
 				Key:             d.DeploymentKey.String(),
 				MinReplicas:     int32(d.MinReplicas),

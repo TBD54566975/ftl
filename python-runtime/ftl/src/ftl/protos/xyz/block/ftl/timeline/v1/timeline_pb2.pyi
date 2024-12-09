@@ -119,29 +119,36 @@ class StreamTimelineResponse(_message.Message):
     events: _containers.RepeatedCompositeFieldContainer[_event_pb2.Event]
     def __init__(self, events: _Optional[_Iterable[_Union[_event_pb2.Event, _Mapping]]] = ...) -> None: ...
 
-class CreateEventRequest(_message.Message):
-    __slots__ = ("log", "call", "deployment_created", "deployment_updated", "ingress", "cron_scheduled", "async_execute", "pubsub_publish", "pubsub_consume")
-    LOG_FIELD_NUMBER: _ClassVar[int]
-    CALL_FIELD_NUMBER: _ClassVar[int]
-    DEPLOYMENT_CREATED_FIELD_NUMBER: _ClassVar[int]
-    DEPLOYMENT_UPDATED_FIELD_NUMBER: _ClassVar[int]
-    INGRESS_FIELD_NUMBER: _ClassVar[int]
-    CRON_SCHEDULED_FIELD_NUMBER: _ClassVar[int]
-    ASYNC_EXECUTE_FIELD_NUMBER: _ClassVar[int]
-    PUBSUB_PUBLISH_FIELD_NUMBER: _ClassVar[int]
-    PUBSUB_CONSUME_FIELD_NUMBER: _ClassVar[int]
-    log: _event_pb2.LogEvent
-    call: _event_pb2.CallEvent
-    deployment_created: _event_pb2.DeploymentCreatedEvent
-    deployment_updated: _event_pb2.DeploymentUpdatedEvent
-    ingress: _event_pb2.IngressEvent
-    cron_scheduled: _event_pb2.CronScheduledEvent
-    async_execute: _event_pb2.AsyncExecuteEvent
-    pubsub_publish: _event_pb2.PubSubPublishEvent
-    pubsub_consume: _event_pb2.PubSubConsumeEvent
-    def __init__(self, log: _Optional[_Union[_event_pb2.LogEvent, _Mapping]] = ..., call: _Optional[_Union[_event_pb2.CallEvent, _Mapping]] = ..., deployment_created: _Optional[_Union[_event_pb2.DeploymentCreatedEvent, _Mapping]] = ..., deployment_updated: _Optional[_Union[_event_pb2.DeploymentUpdatedEvent, _Mapping]] = ..., ingress: _Optional[_Union[_event_pb2.IngressEvent, _Mapping]] = ..., cron_scheduled: _Optional[_Union[_event_pb2.CronScheduledEvent, _Mapping]] = ..., async_execute: _Optional[_Union[_event_pb2.AsyncExecuteEvent, _Mapping]] = ..., pubsub_publish: _Optional[_Union[_event_pb2.PubSubPublishEvent, _Mapping]] = ..., pubsub_consume: _Optional[_Union[_event_pb2.PubSubConsumeEvent, _Mapping]] = ...) -> None: ...
+class CreateEventsRequest(_message.Message):
+    __slots__ = ("entries",)
+    class EventEntry(_message.Message):
+        __slots__ = ("timestamp", "log", "call", "deployment_created", "deployment_updated", "ingress", "cron_scheduled", "async_execute", "pubsub_publish", "pubsub_consume")
+        TIMESTAMP_FIELD_NUMBER: _ClassVar[int]
+        LOG_FIELD_NUMBER: _ClassVar[int]
+        CALL_FIELD_NUMBER: _ClassVar[int]
+        DEPLOYMENT_CREATED_FIELD_NUMBER: _ClassVar[int]
+        DEPLOYMENT_UPDATED_FIELD_NUMBER: _ClassVar[int]
+        INGRESS_FIELD_NUMBER: _ClassVar[int]
+        CRON_SCHEDULED_FIELD_NUMBER: _ClassVar[int]
+        ASYNC_EXECUTE_FIELD_NUMBER: _ClassVar[int]
+        PUBSUB_PUBLISH_FIELD_NUMBER: _ClassVar[int]
+        PUBSUB_CONSUME_FIELD_NUMBER: _ClassVar[int]
+        timestamp: _timestamp_pb2.Timestamp
+        log: _event_pb2.LogEvent
+        call: _event_pb2.CallEvent
+        deployment_created: _event_pb2.DeploymentCreatedEvent
+        deployment_updated: _event_pb2.DeploymentUpdatedEvent
+        ingress: _event_pb2.IngressEvent
+        cron_scheduled: _event_pb2.CronScheduledEvent
+        async_execute: _event_pb2.AsyncExecuteEvent
+        pubsub_publish: _event_pb2.PubSubPublishEvent
+        pubsub_consume: _event_pb2.PubSubConsumeEvent
+        def __init__(self, timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., log: _Optional[_Union[_event_pb2.LogEvent, _Mapping]] = ..., call: _Optional[_Union[_event_pb2.CallEvent, _Mapping]] = ..., deployment_created: _Optional[_Union[_event_pb2.DeploymentCreatedEvent, _Mapping]] = ..., deployment_updated: _Optional[_Union[_event_pb2.DeploymentUpdatedEvent, _Mapping]] = ..., ingress: _Optional[_Union[_event_pb2.IngressEvent, _Mapping]] = ..., cron_scheduled: _Optional[_Union[_event_pb2.CronScheduledEvent, _Mapping]] = ..., async_execute: _Optional[_Union[_event_pb2.AsyncExecuteEvent, _Mapping]] = ..., pubsub_publish: _Optional[_Union[_event_pb2.PubSubPublishEvent, _Mapping]] = ..., pubsub_consume: _Optional[_Union[_event_pb2.PubSubConsumeEvent, _Mapping]] = ...) -> None: ...
+    ENTRIES_FIELD_NUMBER: _ClassVar[int]
+    entries: _containers.RepeatedCompositeFieldContainer[CreateEventsRequest.EventEntry]
+    def __init__(self, entries: _Optional[_Iterable[_Union[CreateEventsRequest.EventEntry, _Mapping]]] = ...) -> None: ...
 
-class CreateEventResponse(_message.Message):
+class CreateEventsResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
 

@@ -26,9 +26,9 @@ type PubSubPublish struct {
 var _ Event = PubSubPublish{}
 
 func (PubSubPublish) clientEvent() {}
-func (p PubSubPublish) ToReq() (*timelinepb.CreateEventRequest, error) {
-	return &timelinepb.CreateEventRequest{
-		Entry: &timelinepb.CreateEventRequest_PubsubPublish{
+func (p PubSubPublish) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, error) {
+	return &timelinepb.CreateEventsRequest_EventEntry{
+		Entry: &timelinepb.CreateEventsRequest_EventEntry_PubsubPublish{
 			PubsubPublish: &timelinepb.PubSubPublishEvent{
 				DeploymentKey: p.DeploymentKey.String(),
 				RequestKey:    p.RequestKey.Ptr(),

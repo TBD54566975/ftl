@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sort"
 	"sync"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/kong"
+	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
@@ -59,55 +61,66 @@ func (s *service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
-func (s *service) CreateEvent(ctx context.Context, req *connect.Request[timelinepb.CreateEventRequest]) (*connect.Response[timelinepb.CreateEventResponse], error) {
+func (s *service) CreateEvents(ctx context.Context, req *connect.Request[timelinepb.CreateEventsRequest]) (*connect.Response[timelinepb.CreateEventsResponse], error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	event := &timelinepb.Event{
-		Id:        int64(s.nextID),
-		Timestamp: timestamppb.Now(),
+	entries := make([]*timelinepb.CreateEventsRequest_EventEntry, 0, len(req.Msg.Entries))
+	entries = append(entries, req.Msg.Entries...)
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Timestamp.AsTime().Before(entries[j].Timestamp.AsTime())
+	})
+
+	for _, entry := range entries {
+		if entry.Timestamp == nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("timestamp is required"))
+		}
+		event := &timelinepb.Event{
+			Id:        int64(s.nextID),
+			Timestamp: entry.Timestamp,
+		}
+		switch entry := entry.Entry.(type) {
+		case *timelinepb.CreateEventsRequest_EventEntry_Log:
+			event.Entry = &timelinepb.Event_Log{
+				Log: entry.Log,
+			}
+		case *timelinepb.CreateEventsRequest_EventEntry_Call:
+			event.Entry = &timelinepb.Event_Call{
+				Call: entry.Call,
+			}
+		case *timelinepb.CreateEventsRequest_EventEntry_DeploymentCreated:
+			event.Entry = &timelinepb.Event_DeploymentCreated{
+				DeploymentCreated: entry.DeploymentCreated,
+			}
+		case *timelinepb.CreateEventsRequest_EventEntry_DeploymentUpdated:
+			event.Entry = &timelinepb.Event_DeploymentUpdated{
+				DeploymentUpdated: entry.DeploymentUpdated,
+			}
+		case *timelinepb.CreateEventsRequest_EventEntry_Ingress:
+			event.Entry = &timelinepb.Event_Ingress{
+				Ingress: entry.Ingress,
+			}
+		case *timelinepb.CreateEventsRequest_EventEntry_CronScheduled:
+			event.Entry = &timelinepb.Event_CronScheduled{
+				CronScheduled: entry.CronScheduled,
+			}
+		case *timelinepb.CreateEventsRequest_EventEntry_AsyncExecute:
+			event.Entry = &timelinepb.Event_AsyncExecute{
+				AsyncExecute: entry.AsyncExecute,
+			}
+		case *timelinepb.CreateEventsRequest_EventEntry_PubsubPublish:
+			event.Entry = &timelinepb.Event_PubsubPublish{
+				PubsubPublish: entry.PubsubPublish,
+			}
+		case *timelinepb.CreateEventsRequest_EventEntry_PubsubConsume:
+			event.Entry = &timelinepb.Event_PubsubConsume{
+				PubsubConsume: entry.PubsubConsume,
+			}
+		}
+		s.events = append(s.events, event)
+		s.nextID++
 	}
-	switch entry := req.Msg.Entry.(type) {
-	case *timelinepb.CreateEventRequest_Log:
-		event.Entry = &timelinepb.Event_Log{
-			Log: entry.Log,
-		}
-	case *timelinepb.CreateEventRequest_Call:
-		event.Entry = &timelinepb.Event_Call{
-			Call: entry.Call,
-		}
-	case *timelinepb.CreateEventRequest_DeploymentCreated:
-		event.Entry = &timelinepb.Event_DeploymentCreated{
-			DeploymentCreated: entry.DeploymentCreated,
-		}
-	case *timelinepb.CreateEventRequest_DeploymentUpdated:
-		event.Entry = &timelinepb.Event_DeploymentUpdated{
-			DeploymentUpdated: entry.DeploymentUpdated,
-		}
-	case *timelinepb.CreateEventRequest_Ingress:
-		event.Entry = &timelinepb.Event_Ingress{
-			Ingress: entry.Ingress,
-		}
-	case *timelinepb.CreateEventRequest_CronScheduled:
-		event.Entry = &timelinepb.Event_CronScheduled{
-			CronScheduled: entry.CronScheduled,
-		}
-	case *timelinepb.CreateEventRequest_AsyncExecute:
-		event.Entry = &timelinepb.Event_AsyncExecute{
-			AsyncExecute: entry.AsyncExecute,
-		}
-	case *timelinepb.CreateEventRequest_PubsubPublish:
-		event.Entry = &timelinepb.Event_PubsubPublish{
-			PubsubPublish: entry.PubsubPublish,
-		}
-	case *timelinepb.CreateEventRequest_PubsubConsume:
-		event.Entry = &timelinepb.Event_PubsubConsume{
-			PubsubConsume: entry.PubsubConsume,
-		}
-	}
-	s.events = append(s.events, event)
-	s.nextID++
-	return connect.NewResponse(&timelinepb.CreateEventResponse{}), nil
+	return connect.NewResponse(&timelinepb.CreateEventsResponse{}), nil
 }
 
 func (s *service) GetTimeline(ctx context.Context, req *connect.Request[timelinepb.GetTimelineRequest]) (*connect.Response[timelinepb.GetTimelineResponse], error) {
@@ -173,19 +186,20 @@ func (s *service) StreamTimeline(ctx context.Context, req *connect.Request[timel
 		return connect.NewError(connect.CodeInvalidArgument, errors.New("limit must be > 0"))
 	}
 
+	_, ascending := filtersFromRequest(req.Msg.Query)
+
 	timelineReq := req.Msg.Query
 	// Default to last 1 day of events
-	var lastEventTime time.Time
+	var lastEventID optional.Option[int64]
 	for {
-		thisRequestTime := time.Now()
 		newQuery := timelineReq
-
-		if !lastEventTime.IsZero() {
+		// We always want ascending order for the underlying query.
+		newQuery.Order = timelinepb.GetTimelineRequest_ORDER_ASC
+		if _, ok := lastEventID.Get(); ok {
 			newQuery.Filters = append(newQuery.Filters, &timelinepb.GetTimelineRequest_Filter{
-				Filter: &timelinepb.GetTimelineRequest_Filter_Time{
-					Time: &timelinepb.GetTimelineRequest_TimeFilter{
-						NewerThan: timestamppb.New(lastEventTime),
-						OlderThan: timestamppb.New(thisRequestTime),
+				Filter: &timelinepb.GetTimelineRequest_Filter_Id{
+					Id: &timelinepb.GetTimelineRequest_IDFilter{
+						HigherThan: lastEventID.Ptr(),
 					},
 				},
 			})
@@ -196,16 +210,28 @@ func (s *service) StreamTimeline(ctx context.Context, req *connect.Request[timel
 			return fmt.Errorf("failed to get timeline: %w", err)
 		}
 
-		if len(resp.Msg.Events) > 0 {
+		newEvents := make([]*timelinepb.Event, 0, len(resp.Msg.Events))
+		for _, event := range resp.Msg.Events {
+			if lastEventID, ok := lastEventID.Get(); !ok || event.Id != lastEventID {
+				// This is not a duplicate event.
+				newEvents = append(newEvents, event)
+			}
+		}
+		if len(newEvents) > 0 {
+			lastEventID = optional.Some(newEvents[len(newEvents)-1].Id)
+
+			if !ascending {
+				// Original query was for descending order, so reverse the events.
+				slices.Reverse(newEvents)
+			}
 			err = stream.Send(&timelinepb.StreamTimelineResponse{
-				Events: resp.Msg.Events,
+				Events: newEvents,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to get timeline events: %w", err)
 			}
-		}
 
-		lastEventTime = thisRequestTime
+		}
 		select {
 		case <-time.After(updateInterval):
 		case <-ctx.Done():

@@ -144,7 +144,7 @@ func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.Reques
 		_, err = w.Write(responseBody)
 		if err == nil {
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.None[string]())
-			timeline.Publish(r.Context(), ingressEvent)
+			timeline.ClientFromContext(r.Context()).Publish(r.Context(), ingressEvent)
 		} else {
 			logger.Errorf(err, "could not write response body")
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("could not write response body"))
@@ -166,7 +166,7 @@ func recordIngressErrorEvent(
 ) {
 	ingressEvent.ResponseStatus = statusCode
 	ingressEvent.Error = optional.Some(errorMsg)
-	timeline.Publish(ctx, ingressEvent)
+	timeline.ClientFromContext(ctx).Publish(ctx, ingressEvent)
 }
 
 // Copied from the Apache-licensed connect-go source.
