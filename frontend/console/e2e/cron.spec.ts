@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { navigateToDecl } from './helpers'
+import { navigateToDecl, pressShortcut } from './helpers'
 
 test('shows cron verb form', async ({ page }) => {
   await navigateToDecl(page, 'cron', 'thirtySeconds')
@@ -28,42 +28,12 @@ test('send cron request', async ({ page }) => {
 test('submit cron form using ⌘+⏎ shortcut', async ({ page }) => {
   await navigateToDecl(page, 'cron', 'thirtySeconds')
 
-  await page.locator('input#request-path').focus()
+  await pressShortcut(page, 'Enter')
 
-  // The keypress is sometimes flakey in playwright, so try 3 times. Ideally we'd find a better way to do this.
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      await page.keyboard.press('ControlOrMeta+Enter')
-      const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
-      await expect(responseEditor).toBeVisible()
+  const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
+  await expect(responseEditor).toBeVisible()
 
-      const responseText = await responseEditor.textContent()
-      const responseJson = JSON.parse(responseText?.trim() || '{}')
-
-      expect(responseJson).toEqual({})
-      break
-    } catch (error) {
-      if (attempt === 2) throw error
-    }
-  }
-})
-
-test('submit cron form using ⌘+⏎ shortcut without focusing first', async ({ page }) => {
-  await navigateToDecl(page, 'cron', 'thirtySeconds')
-
-  // The keypress is sometimes flakey in playwright, so try 3 times. Ideally we'd find a better way to do this.
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      await page.keyboard.press('ControlOrMeta+Enter')
-      const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
-      await expect(responseEditor).toBeVisible()
-      const responseText = await responseEditor.textContent()
-      const responseJson = JSON.parse(responseText?.trim() || '{}')
-
-      expect(responseJson).toEqual({})
-      break
-    } catch (error) {
-      if (attempt === 2) throw error
-    }
-  }
+  const responseText = await responseEditor.textContent()
+  const responseJson = JSON.parse(responseText?.trim() || '{}')
+  expect(responseJson).toEqual({})
 })
