@@ -355,9 +355,9 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 		s.pubSub = pubSub
 
 		deploymentServiceClient := rpc.Dial(ftldeploymentconnect.NewDeploymentServiceClient, s.config.ControllerEndpoint.String(), log.Error)
-		pubsubClient := rpc.Dial(ftlv1connect2.NewLegacyPubsubServiceClient, s.config.ControllerEndpoint.String(), log.Error)
-
 		ctx = rpc.ContextWithClient(ctx, deploymentServiceClient)
+		pubsubClient := rpc.Dial(ftlv1connect2.NewLegacyPubsubServiceClient, s.config.ControllerEndpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, pubsubClient)
 
 		leaseServiceClient := rpc.Dial(ftlleaseconnect.NewLeaseServiceClient, s.config.LeaseEndpoint.String(), log.Error)
 
@@ -372,6 +372,7 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 			rpc.GRPC(ftldeploymentconnect.NewDeploymentServiceHandler, s.proxy),
 			rpc.GRPC(ftlleaseconnect.NewLeaseServiceHandler, s.proxy),
 			rpc.GRPC(pubconnect.NewPublishServiceHandler, s.pubSub),
+			rpc.GRPC(ftlv1connect2.NewLegacyPubsubServiceHandler, s.proxy),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create server: %w", err)

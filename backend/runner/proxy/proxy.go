@@ -125,3 +125,8 @@ func (r *Service) Call(ctx context.Context, c *connect.Request[ftlv1.CallRequest
 	}
 	return call, nil
 }
+
+// ResetSubscription is legacy, it will go once the DB based pubsub is removed
+func (r *Service) ResetSubscription(ctx context.Context, req *connect.Request[ftlpubsubv1.ResetSubscriptionRequest]) (*connect.Response[ftlpubsubv1.ResetSubscriptionResponse], error) {
+	return connect.NewResponse(&ftlpubsubv1.ResetSubscriptionResponse{}), nil
+}

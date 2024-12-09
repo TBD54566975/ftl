@@ -39,9 +39,9 @@ func (s *VerbCallRouter) Call(ctx context.Context, req *connect.Request[ftlv1.Ca
 	return call, nil
 }
 
-func NewVerbRouter(ctx context.Context, changes schemaeventsource.EventSource) *VerbCallRouter {
+func NewVerbRouterFromTable(ctx context.Context, routeTable *RouteTable) *VerbCallRouter {
 	svc := &VerbCallRouter{
-		routingTable:  New(ctx, changes),
+		routingTable:  routeTable,
 		moduleClients: xsync.NewMapOf[string, optional.Option[ftlv1connect.VerbServiceClient]](),
 	}
 	routeUpdates := svc.routingTable.Subscribe()
@@ -56,6 +56,9 @@ func NewVerbRouter(ctx context.Context, changes schemaeventsource.EventSource) *
 		}
 	}()
 	return svc
+}
+func NewVerbRouter(ctx context.Context, changes schemaeventsource.EventSource) *VerbCallRouter {
+	return NewVerbRouterFromTable(ctx, New(ctx, changes))
 }
 
 func (s *VerbCallRouter) LookupClient(module string) optional.Option[ftlv1connect.VerbServiceClient] {

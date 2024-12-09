@@ -4,9 +4,8 @@ import io.grpc.stub.StreamObserver;
 import xyz.block.ftl.deployment.v1.DeploymentServiceGrpc;
 import xyz.block.ftl.deployment.v1.GetDeploymentContextRequest;
 import xyz.block.ftl.deployment.v1.GetDeploymentContextResponse;
-import xyz.block.ftl.deployment.v1.PublishEventRequest;
-import xyz.block.ftl.deployment.v1.PublishEventResponse;
-import xyz.block.ftl.v1.*;
+import xyz.block.ftl.v1.PingRequest;
+import xyz.block.ftl.v1.PingResponse;
 
 public class TestDeploymentServer extends DeploymentServiceGrpc.DeploymentServiceImplBase {
     @Override
@@ -22,8 +21,4 @@ public class TestDeploymentServer extends DeploymentServiceGrpc.DeploymentServic
         responseObserver.onNext(GetDeploymentContextResponse.newBuilder().build());
     }
 
-    @Override
-    public void publishEvent(PublishEventRequest request, StreamObserver<PublishEventResponse> responseObserver) {
-        super.publishEvent(request, responseObserver);
-    }
 }

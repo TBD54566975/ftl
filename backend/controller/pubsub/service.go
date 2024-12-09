@@ -2,15 +2,20 @@ package pubsub
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand/v2"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 	"github.com/jpillora/backoff"
 
 	"github.com/TBD54566975/ftl/backend/controller/async"
+	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub/internal/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/libdal"
@@ -36,23 +41,20 @@ type Scheduler interface {
 	Parallel(name string, retry backoff.Backoff, job scheduledtask.Job)
 }
 
-type AsyncCallListener interface {
-	AsyncCallWasAdded(ctx context.Context)
-}
-
 type Service struct {
-	dal               *dal.DAL
-	asyncCallListener optional.Option[AsyncCallListener]
-	eventPublished    chan struct{}
-	routeTable        *routing.RouteTable
+	dal            *dal.DAL
+	eventPublished chan struct{}
+	routeTable     *routing.RouteTable
+	verbRouting    *routing.VerbCallRouter
+	asyncCallsLock sync.Mutex
 }
 
-func New(ctx context.Context, conn libdal.Connection, asyncCallListener optional.Option[AsyncCallListener], rt *routing.RouteTable) *Service {
+func New(ctx context.Context, conn libdal.Connection, rt *routing.RouteTable) *Service {
 	m := &Service{
-		dal:               dal.New(conn),
-		asyncCallListener: asyncCallListener,
-		eventPublished:    make(chan struct{}),
-		routeTable:        rt,
+		dal:            dal.New(conn),
+		eventPublished: make(chan struct{}),
+		routeTable:     rt,
+		verbRouting:    routing.NewVerbRouterFromTable(ctx, rt),
 	}
 	go m.poll(ctx)
 	return m
@@ -103,9 +105,7 @@ func (s *Service) progressSubscriptions(ctx context.Context) error {
 	}
 	if count > 0 {
 		// notify controller that we added an async call
-		if listener, ok := s.asyncCallListener.Get(); ok {
-			listener.AsyncCallWasAdded(ctx)
-		}
+		s.AsyncCallWasAdded(ctx)
 	}
 	return nil
 }
@@ -219,4 +219,283 @@ func (s *Service) ResetSubscription(ctx context.Context, req *connect.Request[ft
 
 func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
+}
+
+// AsyncCallWasAdded is an optional notification that an async call was added by this controller
+//
+// It allows us to speed up execution of scheduled async calls rather than waiting for the next poll time.
+func (s *Service) AsyncCallWasAdded(ctx context.Context) {
+	go func() {
+		if _, err := s.ExecuteAsyncCalls(ctx); err != nil {
+			log.FromContext(ctx).Errorf(err, "failed to progress subscriptions")
+		}
+	}()
+}
+
+func (s *Service) ExecuteAsyncCalls(ctx context.Context) (interval time.Duration, returnErr error) {
+	// There are multiple entry points into this function, but we want the controller to handle async calls one at a time.
+	s.asyncCallsLock.Lock()
+	defer s.asyncCallsLock.Unlock()
+
+	logger := log.FromContext(ctx)
+	logger.Tracef("Acquiring async call")
+
+	now := time.Now().UTC()
+	sstate := s.routeTable.Current()
+
+	enqueueTimelineEvent := func(call *dal.AsyncCall, err optional.Option[error]) {
+		module := call.Verb.Module
+		deployment, ok := sstate.GetDeployment(module).Get()
+		if ok {
+			eventType := timeline.AsyncExecuteEventTypeUnkown
+			switch call.Origin.(type) {
+			case async.AsyncOriginCron:
+				eventType = timeline.AsyncExecuteEventTypeCron
+			case async.AsyncOriginPubSub:
+				eventType = timeline.AsyncExecuteEventTypePubSub
+			case *async.AsyncOriginPubSub:
+				eventType = timeline.AsyncExecuteEventTypePubSub
+			default:
+				break
+			}
+			errStr := optional.None[string]()
+			if e, ok := err.Get(); ok {
+				errStr = optional.Some(e.Error())
+			}
+			timeline.ClientFromContext(ctx).Publish(ctx, timeline.AsyncExecute{
+				DeploymentKey: deployment,
+				RequestKey:    call.ParentRequestKey,
+				EventType:     eventType,
+				Verb:          *call.Verb.ToRef(),
+				Time:          now,
+				Error:         errStr,
+			})
+		}
+	}
+
+	call, leaseCtx, err := s.dal.AcquireAsyncCall(ctx)
+	if errors.Is(err, libdal.ErrNotFound) {
+		logger.Tracef("No async calls to execute")
+		return time.Second * 2, nil
+	} else if err != nil {
+		if call == nil {
+			observability.AsyncCalls.AcquireFailed(ctx, err)
+		} else {
+			observability.AsyncCalls.Acquired(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, call.Catching, err)
+			enqueueTimelineEvent(call, optional.Some(err))
+		}
+		return 0, fmt.Errorf("failed to acquire async call: %w", err)
+	}
+	// use originalCtx for things that should are done outside of the lease lifespan
+	originalCtx := ctx
+	ctx = leaseCtx
+
+	// Extract the otel context from the call
+	ctx, err = observability.ExtractTraceContextToContext(ctx, call.TraceContext)
+	if err != nil {
+		observability.AsyncCalls.Acquired(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, call.Catching, err)
+		enqueueTimelineEvent(call, optional.Some(err))
+		return 0, fmt.Errorf("failed to extract trace context: %w", err)
+	}
+
+	observability.AsyncCalls.Acquired(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, call.Catching, nil)
+
+	defer func() {
+		if returnErr == nil {
+			// Post-commit notification based on origin
+			switch origin := call.Origin.(type) {
+			case async.AsyncOriginCron:
+				break
+
+			case async.AsyncOriginPubSub:
+				go s.AsyncCallDidCommit(originalCtx, origin)
+
+			default:
+				break
+			}
+		}
+	}()
+
+	logger = logger.Scope(fmt.Sprintf("%s:%s", call.Origin, call.Verb)).Module(call.Verb.Module)
+
+	if call.Catching {
+		// Retries have been exhausted but catch verb has previously failed
+		// We need to try again to catch the async call
+		return 0, s.catchAsyncCall(ctx, logger, call)
+	}
+
+	logger.Tracef("Executing async call")
+	req := &ftlv1.CallRequest{
+		Verb:     call.Verb.ToProto(),
+		Body:     call.Request,
+		Metadata: metadataForAsyncCall(call),
+	}
+	resp, err := s.verbRouting.Call(ctx, connect.NewRequest(req))
+	var callResult either.Either[[]byte, string]
+	if err != nil {
+		logger.Warnf("Async call could not be called: %v", err)
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, optional.Some("async call could not be called"))
+		callResult = either.RightOf[[]byte](err.Error())
+	} else if perr := resp.Msg.GetError(); perr != nil {
+		logger.Warnf("Async call failed: %s", perr.Message)
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, optional.Some("async call failed"))
+		callResult = either.RightOf[[]byte](perr.Message)
+	} else {
+		logger.Debugf("Async call succeeded")
+		callResult = either.LeftOf[string](resp.Msg.GetBody())
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, optional.None[string]())
+	}
+
+	queueDepth := call.QueueDepth
+	didScheduleAnotherCall, err := s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.DAL, isFinalResult bool) error {
+		return s.finaliseAsyncCall(ctx, tx, call, callResult, isFinalResult)
+	})
+	if err != nil {
+		observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, queueDepth, err)
+		enqueueTimelineEvent(call, optional.Some(err))
+		return 0, fmt.Errorf("failed to complete async call: %w", err)
+	}
+	if !didScheduleAnotherCall {
+		// Queue depth is queried at acquisition time, which means it includes the async
+		// call that was just executed so we need to decrement
+		queueDepth = call.QueueDepth - 1
+	}
+	observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, queueDepth, nil)
+	enqueueTimelineEvent(call, optional.None[error]())
+	return 0, nil
+}
+
+func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *dal.AsyncCall) error {
+	catchVerb, ok := call.CatchVerb.Get()
+	if !ok {
+		logger.Warnf("Async call %s could not catch, missing catch verb", call.Verb)
+		return fmt.Errorf("async call %s could not catch, missing catch verb", call.Verb)
+	}
+	logger.Debugf("Catching async call %s with %s", call.Verb, catchVerb)
+
+	routeView := s.routeTable.Current()
+	sch := routeView.Schema()
+
+	verb := &schema.Verb{}
+	if err := sch.ResolveToType(call.Verb.ToRef(), verb); err != nil {
+		logger.Warnf("Async call %s could not catch, could not resolve original verb: %s", call.Verb, err)
+		return fmt.Errorf("async call %s could not catch, could not resolve original verb: %w", call.Verb, err)
+	}
+
+	originalError := call.Error.Default("unknown error")
+	originalResult := either.RightOf[[]byte](originalError)
+
+	request := map[string]any{
+		"verb": map[string]string{
+			"module": call.Verb.Module,
+			"name":   call.Verb.Name,
+		},
+		"requestType": verb.Request.String(),
+		"request":     call.Request,
+		"error":       originalError,
+	}
+	body, err := json.Marshal(request)
+	if err != nil {
+		logger.Warnf("Async call %s could not marshal body while catching", call.Verb)
+		return fmt.Errorf("async call %s could not marshal body while catching", call.Verb)
+	}
+
+	req := &ftlv1.CallRequest{
+		Verb:     catchVerb.ToProto(),
+		Body:     body,
+		Metadata: metadataForAsyncCall(call),
+	}
+	resp, err := s.verbRouting.Call(ctx, connect.NewRequest(req))
+	var catchResult either.Either[[]byte, string]
+	if err != nil {
+		// Could not call catch verb
+		logger.Warnf("Async call %s could not call catch verb %s: %s", call.Verb, catchVerb, err)
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, optional.Some("async call could not be called"))
+		catchResult = either.RightOf[[]byte](err.Error())
+	} else if perr := resp.Msg.GetError(); perr != nil {
+		// Catch verb failed
+		logger.Warnf("Async call %s had an error while catching (%s): %s", call.Verb, catchVerb, perr.Message)
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, optional.Some("async call failed"))
+		catchResult = either.RightOf[[]byte](perr.Message)
+	} else {
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, optional.None[string]())
+		catchResult = either.LeftOf[string](resp.Msg.GetBody())
+	}
+	queueDepth := call.QueueDepth
+	didScheduleAnotherCall, err := s.dal.CompleteAsyncCall(ctx, call, catchResult, func(tx *dal.DAL, isFinalResult bool) error {
+		// Exposes the original error to external components such as PubSub
+		return s.finaliseAsyncCall(ctx, tx, call, originalResult, isFinalResult)
+	})
+	if err != nil {
+		logger.Errorf(err, "Async call %s could not complete after catching (%s)", call.Verb, catchVerb)
+		observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, queueDepth, err)
+		return fmt.Errorf("async call %s could not complete after catching (%s): %w", call.Verb, catchVerb, err)
+	}
+	if !didScheduleAnotherCall {
+		// Queue depth is queried at acquisition time, which means it includes the async
+		// call that was just executed so we need to decrement
+		queueDepth = call.QueueDepth - 1
+	}
+	logger.Debugf("Caught async call %s with %s", call.Verb, catchVerb)
+	observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, queueDepth, nil)
+	return nil
+}
+
+// ReapAsyncCalls fails async calls that have had their leases reaped
+func (s *Service) ReapAsyncCalls(ctx context.Context) (nextInterval time.Duration, err error) {
+	tx, err := s.dal.Begin(ctx)
+	if err != nil {
+		return 0, connect.NewError(connect.CodeInternal, fmt.Errorf("could not start transaction: %w", err))
+	}
+	defer tx.CommitOrRollback(ctx, &err)
+
+	limit := 20
+	calls, err := tx.GetZombieAsyncCalls(ctx, 20)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get zombie async calls: %w", err)
+	}
+	for _, call := range calls {
+		callResult := either.RightOf[[]byte]("async call lease expired")
+		_, err := tx.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.DAL, isFinalResult bool) error {
+			return s.finaliseAsyncCall(ctx, tx, call, callResult, isFinalResult)
+		})
+		if err != nil {
+			return 0, fmt.Errorf("failed to complete zombie async call: %w", err)
+		}
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, optional.Some("async call lease failed"))
+	}
+
+	if len(calls) == limit {
+		return 0, nil
+	}
+	return time.Second * 5, nil
+}
+
+func metadataForAsyncCall(call *dal.AsyncCall) *ftlv1.Metadata {
+	switch call.Origin.(type) {
+	case async.AsyncOriginCron:
+		return &ftlv1.Metadata{}
+
+	case async.AsyncOriginPubSub:
+		return &ftlv1.Metadata{}
+
+	default:
+		panic(fmt.Errorf("unsupported async call origin: %v", call.Origin))
+	}
+}
+
+func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.DAL, call *dal.AsyncCall, callResult either.Either[[]byte, string], isFinalResult bool) error {
+	_, failed := callResult.(either.Right[[]byte, string])
+
+	// Allow for handling of completion based on origin
+	switch origin := call.Origin.(type) {
+	case async.AsyncOriginPubSub:
+		if err := s.OnCallCompletion(ctx, tx.Connection, origin, failed, isFinalResult); err != nil {
+			return fmt.Errorf("failed to finalize pubsub async call: %w", err)
+		}
+
+	default:
+		panic(fmt.Errorf("unsupported async call origin: %v", call.Origin))
+	}
+	return nil
 }

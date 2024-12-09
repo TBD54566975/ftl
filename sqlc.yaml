@@ -4,7 +4,6 @@ sql:
     engine: "postgresql"
     queries:
       - backend/controller/dal/internal/sql/queries.sql
-      - backend/controller/dal/internal/sql/async_queries.sql
       - backend/controller/pubsub/internal/sql/queries.sql
     schema: "backend/controller/sql/schema"
     database:

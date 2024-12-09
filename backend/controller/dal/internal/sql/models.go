@@ -10,56 +10,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/alecthomas/types/optional"
 	"github.com/sqlc-dev/pqtype"
 )
-
-type AsyncCallState string
-
-const (
-	AsyncCallStatePending   AsyncCallState = "pending"
-	AsyncCallStateExecuting AsyncCallState = "executing"
-	AsyncCallStateSuccess   AsyncCallState = "success"
-	AsyncCallStateError     AsyncCallState = "error"
-)
-
-func (e *AsyncCallState) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = AsyncCallState(s)
-	case string:
-		*e = AsyncCallState(s)
-	default:
-		return fmt.Errorf("unsupported scan type for AsyncCallState: %T", src)
-	}
-	return nil
-}
-
-type NullAsyncCallState struct {
-	AsyncCallState AsyncCallState
-	Valid          bool // Valid is true if AsyncCallState is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullAsyncCallState) Scan(value interface{}) error {
-	if value == nil {
-		ns.AsyncCallState, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.AsyncCallState.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullAsyncCallState) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.AsyncCallState), nil
-}
 
 type TopicSubscriptionState string
 
@@ -101,25 +56,6 @@ func (ns NullTopicSubscriptionState) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.TopicSubscriptionState), nil
-}
-
-type AsyncCall struct {
-	ID                int64
-	CreatedAt         time.Time
-	Verb              schema.RefKey
-	State             AsyncCallState
-	Origin            string
-	ScheduledAt       time.Time
-	Response          interface{}
-	Error             optional.Option[string]
-	RemainingAttempts int32
-	Backoff           sqltypes.Duration
-	MaxBackoff        sqltypes.Duration
-	CatchVerb         optional.Option[schema.RefKey]
-	Catching          bool
-	ParentRequestKey  optional.Option[string]
-	TraceContext      pqtype.NullRawMessage
-	Request           json.RawMessage
 }
 
 type Deployment struct {

@@ -32,7 +32,7 @@ func TestDAL(t *testing.T) {
 	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, timelineEndpoint))
 	conn := sqltest.OpenForTesting(ctx, t)
 
-	pubSub := pubsub.New(ctx, conn, optional.None[pubsub.AsyncCallListener](), routing.New(ctx, schemaeventsource.NewUnattached()))
+	pubSub := pubsub.New(ctx, conn, routing.New(ctx, schemaeventsource.NewUnattached()))
 	dal := New(ctx, conn, pubSub, artefacts.NewForTesting())
 
 	deploymentChangesCh := dal.DeploymentChanges.Subscribe(nil)
@@ -80,7 +80,7 @@ func TestCreateArtefactConflict(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
 
-	pubSub := pubsub.New(ctx, conn, optional.None[pubsub.AsyncCallListener](), routing.New(ctx, schemaeventsource.NewUnattached()))
+	pubSub := pubsub.New(ctx, conn, routing.New(ctx, schemaeventsource.NewUnattached()))
 
 	dal := New(ctx, conn, pubSub, artefacts.NewForTesting())
 
