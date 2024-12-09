@@ -35,17 +35,10 @@ func NewSQLMigrationProvisioner(storage *artefacts.OCIArtefactService) *InMemPro
 }
 
 func provisionSQLMigration(storage *artefacts.OCIArtefactService) InMemResourceProvisionerFn {
-	return func(ctx context.Context, resource schema.Provisioned, module *schema.Module) (*RuntimeEvent, error) {
-		if len(slices.Filter(resource.GetProvisioned(), func(r *schema.ProvisionedResource) bool { return r.Kind == schema.ResourceTypeSQLMigration })) == 0 {
-			return nil, fmt.Errorf("invalid sql migration resource: %T", resource)
-		}
-		provisioned, err := schema.FindProvisioned(module, resource.ResourceID())
-		if err != nil {
-			return nil, fmt.Errorf("failed to find database: %w", err)
-		}
-		db, ok := provisioned.(*schema.Database)
+	return func(ctx context.Context, moduleName string, resource schema.Provisioned) (*RuntimeEvent, error) {
+		db, ok := resource.(*schema.Database)
 		if !ok {
-			return nil, fmt.Errorf("unexpected resource type: %T", provisioned)
+			return nil, fmt.Errorf("expected database, got %T", resource)
 		}
 		for migration := range slices.FilterVariants[*schema.MetadataSQLMigration](db.Metadata) {
 			parseSHA256, err := sha256.ParseSHA256(migration.Digest)

@@ -51,7 +51,7 @@ type RuntimeEvent struct {
 	Verb     *schema.VerbRuntimeEvent
 }
 
-type InMemResourceProvisionerFn func(context.Context, schema.Provisioned, *schema.Module) (*RuntimeEvent, error)
+type InMemResourceProvisionerFn func(ctx context.Context, module string, resource schema.Provisioned) (*RuntimeEvent, error)
 
 // InMemProvisioner for running an in memory provisioner, constructing all resources concurrently
 //
@@ -106,7 +106,7 @@ func (d *InMemProvisioner) Provision(ctx context.Context, req *connect.Request[p
 						task.steps = append(task.steps, step)
 						go func() {
 							defer step.Done.Store(true)
-							event, err := handler(ctx, desired, desiredModule)
+							event, err := handler(ctx, desiredModule.Name, desired)
 							if err != nil {
 								step.Err = err
 								logger.Errorf(err, "failed to provision resource %s:%s", resource.Kind, desired.ResourceID())
