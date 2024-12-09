@@ -78,6 +78,7 @@ func (d *devCmd) Run(
 		return nil
 	}
 	statusManager := terminal.FromContext(ctx)
+	defer statusManager.Close()
 	starting := statusManager.NewStatus("\u001B[92mStarting FTL Server 🚀\u001B[39m")
 
 	bindAllocator, err := bind.NewBindAllocator(d.ServeCmd.Bind, 1)
