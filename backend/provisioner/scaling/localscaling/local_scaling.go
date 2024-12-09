@@ -160,7 +160,7 @@ func (l *localScaling) GetEndpointForDeployment(ctx context.Context, module stri
 	if r, ok := dep.runner.Get(); ok {
 		return optional.Some(url.URL{
 			Scheme: "http",
-			Host:   fmt.Sprintf("localhost:%s", r.port),
+			Host:   fmt.Sprintf("%s:%s", r.host, r.port),
 		}), nil
 	}
 	return optional.None[url.URL](), nil
@@ -177,6 +177,7 @@ type deploymentInfo struct {
 type runnerInfo struct {
 	cancelFunc context.CancelFunc
 	port       string
+	host       string
 }
 
 func NewLocalScaling(
@@ -321,7 +322,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey model.Depl
 	runnerCtx := log.ContextWithLogger(ctx, logger.Scope(simpleName).Module(info.module))
 
 	runnerCtx, cancel := context.WithCancel(runnerCtx)
-	info.runner = optional.Some(runnerInfo{cancelFunc: cancel, port: bind.Port()})
+	info.runner = optional.Some(runnerInfo{cancelFunc: cancel, port: bind.Port(), host: bind.Hostname()})
 
 	go func() {
 		err := runner.Start(runnerCtx, config, l.storage)
