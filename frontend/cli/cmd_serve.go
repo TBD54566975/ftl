@@ -362,29 +362,32 @@ func (s *serveCommonConfig) run(
 		return nil
 	})
 	// Wait for controller to start, then run startup commands.
-	start := time.Now()
-	if err := waitForControllerOnline(ctx, s.StartupTimeout, controllerClient); err != nil {
-		return fmt.Errorf("controller failed to start: %w", err)
-	}
-	if s.Provisioners > 0 {
-		if err := rpc.Wait(ctx, backoff.Backoff{Max: s.StartupTimeout}, s.StartupTimeout, provisionerClient); err != nil {
-			return fmt.Errorf("provisioner failed to start: %w", err)
+	wg.Go(func() error {
+		start := time.Now()
+		if err := waitForControllerOnline(ctx, s.StartupTimeout, controllerClient); err != nil {
+			return fmt.Errorf("controller failed to start: %w", err)
 		}
-	}
-	logger.Infof("Controller started in %.2fs", time.Since(start).Seconds())
-
-	if len(projConfig.Commands.Startup) > 0 {
-		for _, cmd := range projConfig.Commands.Startup {
-			logger.Debugf("Executing startup command: %s", cmd)
-			if err := exec.Command(ctx, log.Info, ".", "bash", "-c", cmd).Run(); err != nil {
-				return fmt.Errorf("startup command failed: %w", err)
+		if s.Provisioners > 0 {
+			if err := rpc.Wait(ctx, backoff.Backoff{Max: s.StartupTimeout}, s.StartupTimeout, provisionerClient); err != nil {
+				return fmt.Errorf("provisioner failed to start: %w", err)
 			}
 		}
-	}
+		logger.Infof("Controller started in %.2fs", time.Since(start).Seconds())
 
-	if ch, ok := initialised.Get(); ok {
-		ch <- true
-	}
+		if len(projConfig.Commands.Startup) > 0 {
+			for _, cmd := range projConfig.Commands.Startup {
+				logger.Debugf("Executing startup command: %s", cmd)
+				if err := exec.Command(ctx, log.Info, ".", "bash", "-c", cmd).Run(); err != nil {
+					return fmt.Errorf("startup command failed: %w", err)
+				}
+			}
+		}
+
+		if ch, ok := initialised.Get(); ok {
+			ch <- true
+		}
+		return nil
+	})
 
 	if err := wg.Wait(); err != nil {
 		return fmt.Errorf("serve failed: %w", err)
