@@ -1,9 +1,7 @@
 {
   "protoc": {
-      "path": "${workspaceRoot}/bin/protoc",
-      "options": [
-          "--proto_path=${workspaceRoot}/backend/protos"
-      ]
+    "path": "${workspaceRoot}/bin/protoc",
+    "options": ["--proto_path=${workspaceRoot}/backend/protos"]
   },
   "[python]": {
     "editor.formatOnSave": true,
@@ -13,7 +11,6 @@
       "source.organizeImports": "explicit"
     }
   },
-  "python.analysis.extraPaths": [
-    "./python-runtime/ftl/src"
-  ]
+  "python.analysis.extraPaths": ["./python-runtime/ftl/src"],
+  "npm.packageManager": "pnpm"
 }
