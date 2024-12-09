@@ -562,10 +562,11 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
 		// The created event does not matter if it is a new runner or not.
-		err = s.controllerState.Publish(&state.RunnerCreatedEvent{
+		err = s.controllerState.Publish(&state.RunnerRegisteredEvent{
 			Key:        runnerKey,
 			Endpoint:   msg.Endpoint,
 			Deployment: deploymentKey,
+			Time:       time.Now(),
 		})
 		if err != nil {
 			return nil, err
@@ -1137,7 +1138,7 @@ func (s *Service) reapStaleRunners(ctx context.Context) (time.Duration, error) {
 	for _, runner := range cs.Runners() {
 		if runner.LastSeen.Add(s.config.RunnerTimeout).Before(time.Now()) {
 			runnerKey := runner.Key
-			logger.Debugf("Reaping stale runner %s", runnerKey)
+			logger.Debugf("Reaping stale runner %s with last seen %v", runnerKey, runner.LastSeen.String())
 			if err := s.controllerState.Publish(&state.RunnerDeletedEvent{Key: runnerKey}); err != nil {
 				return 0, fmt.Errorf("failed to publish runner deleted event: %w", err)
 			}

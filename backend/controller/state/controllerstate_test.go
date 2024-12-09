@@ -19,9 +19,9 @@ func TestRunnerState(t *testing.T) {
 	endpoint := "http://localhost:8080"
 	module := "test"
 	deploymentKey := model.NewDeploymentKey(module)
-	err := cs.Publish(&state.RunnerCreatedEvent{
+	err := cs.Publish(&state.RunnerRegisteredEvent{
 		Key:        key,
-		Create:     create,
+		Time:       create,
 		Endpoint:   endpoint,
 		Module:     module,
 		Deployment: deploymentKey,
@@ -36,9 +36,12 @@ func TestRunnerState(t *testing.T) {
 	assert.Equal(t, module, view.Runners()[0].Module)
 	assert.Equal(t, deploymentKey, view.Runners()[0].Deployment)
 	seen := time.Now()
-	err = cs.Publish(&state.RunnerHeartbeatEvent{
-		Key:      key,
-		LastSeen: seen,
+	err = cs.Publish(&state.RunnerRegisteredEvent{
+		Key:        key,
+		Time:       seen,
+		Endpoint:   endpoint,
+		Module:     module,
+		Deployment: deploymentKey,
 	})
 	assert.NoError(t, err)
 	view = cs.View()
