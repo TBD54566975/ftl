@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Struct, Timestamp } from "@bufbuild/protobuf";
-import { Module, Ref } from "../schema/v1/schema_pb.js";
+import { Module } from "../schema/v1/schema_pb.js";
 
 /**
  * @generated from message xyz.block.ftl.v1.GetArtefactDiffsRequest
@@ -1285,74 +1285,6 @@ export class ProcessListResponse_Process extends Message<ProcessListResponse_Pro
 
   static equals(a: ProcessListResponse_Process | PlainMessage<ProcessListResponse_Process> | undefined, b: ProcessListResponse_Process | PlainMessage<ProcessListResponse_Process> | undefined): boolean {
     return proto3.util.equals(ProcessListResponse_Process, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.ResetSubscriptionRequest
- */
-export class ResetSubscriptionRequest extends Message<ResetSubscriptionRequest> {
-  /**
-   * @generated from field: xyz.block.ftl.schema.v1.Ref subscription = 1;
-   */
-  subscription?: Ref;
-
-  constructor(data?: PartialMessage<ResetSubscriptionRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ResetSubscriptionRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "subscription", kind: "message", T: Ref },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ResetSubscriptionRequest {
-    return new ResetSubscriptionRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ResetSubscriptionRequest {
-    return new ResetSubscriptionRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ResetSubscriptionRequest {
-    return new ResetSubscriptionRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ResetSubscriptionRequest | PlainMessage<ResetSubscriptionRequest> | undefined, b: ResetSubscriptionRequest | PlainMessage<ResetSubscriptionRequest> | undefined): boolean {
-    return proto3.util.equals(ResetSubscriptionRequest, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.ResetSubscriptionResponse
- */
-export class ResetSubscriptionResponse extends Message<ResetSubscriptionResponse> {
-  constructor(data?: PartialMessage<ResetSubscriptionResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.ResetSubscriptionResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ResetSubscriptionResponse {
-    return new ResetSubscriptionResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ResetSubscriptionResponse {
-    return new ResetSubscriptionResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ResetSubscriptionResponse {
-    return new ResetSubscriptionResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ResetSubscriptionResponse | PlainMessage<ResetSubscriptionResponse> | undefined, b: ResetSubscriptionResponse | PlainMessage<ResetSubscriptionResponse> | undefined): boolean {
-    return proto3.util.equals(ResetSubscriptionResponse, a, b);
   }
 }
 

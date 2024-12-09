@@ -143,11 +143,6 @@ message ProcessListResponse {
   repeated Process processes = 1;
 }
 
-message ResetSubscriptionRequest {
-  ftl.schema.v1.Ref subscription = 1;
-}
-message ResetSubscriptionResponse {}
-
 service ControllerService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
@@ -194,7 +189,4 @@ service ControllerService {
 
   // Stream logs from a deployment
   rpc StreamDeploymentLogs(stream StreamDeploymentLogsRequest) returns (StreamDeploymentLogsResponse);
-
-  // Reset the cursor for a subscription to the head of its topic.
-  rpc ResetSubscription(ResetSubscriptionRequest) returns (ResetSubscriptionResponse);
 }

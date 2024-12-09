@@ -13,14 +13,16 @@ import (
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
 func TestNoCallToAcquire(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
 
-	pubSub := pubsub.New(ctx, conn, optional.None[pubsub.AsyncCallListener]())
+	pubSub := pubsub.New(ctx, conn, optional.None[pubsub.AsyncCallListener](), routing.New(ctx, schemaeventsource.NewUnattached()))
 	dal := New(ctx, conn, pubSub, nil)
 
 	_, _, err := dal.AcquireAsyncCall(ctx)

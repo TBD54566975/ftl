@@ -6,6 +6,7 @@ import (
 	"math/rand/v2"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
 	"github.com/jpillora/backoff"
 
@@ -13,8 +14,13 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/pubsub/internal/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/libdal"
+	ftlpubsubv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/routing"
+	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
@@ -38,13 +44,15 @@ type Service struct {
 	dal               *dal.DAL
 	asyncCallListener optional.Option[AsyncCallListener]
 	eventPublished    chan struct{}
+	routeTable        *routing.RouteTable
 }
 
-func New(ctx context.Context, conn libdal.Connection, asyncCallListener optional.Option[AsyncCallListener]) *Service {
+func New(ctx context.Context, conn libdal.Connection, asyncCallListener optional.Option[AsyncCallListener], rt *routing.RouteTable) *Service {
 	m := &Service{
 		dal:               dal.New(conn),
 		asyncCallListener: asyncCallListener,
 		eventPublished:    make(chan struct{}),
+		routeTable:        rt,
 	}
 	go m.poll(ctx)
 	return m
@@ -111,7 +119,7 @@ func (s *Service) PublishEventForTopic(ctx context.Context, module, topic, calle
 	return nil
 }
 
-func (s *Service) ResetSubscription(ctx context.Context, module, name string) (err error) {
+func (s *Service) resetSubscription(ctx context.Context, module, name string) (err error) {
 	err = s.dal.ResetSubscription(ctx, module, name)
 	if err != nil {
 		return fmt.Errorf("%s.%s: reset: %w", module, name, err)
@@ -161,4 +169,54 @@ func (s *Service) CreateSubscribers(ctx context.Context, key model.DeploymentKey
 		return fmt.Errorf("create subscribers: %w", err)
 	}
 	return nil
+}
+
+func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftlpubsubv1.PublishEventRequest]) (*connect.Response[ftlpubsubv1.PublishEventResponse], error) {
+	// Publish the event.
+	now := time.Now().UTC()
+	pubishError := optional.None[string]()
+	err := s.PublishEventForTopic(ctx, req.Msg.Topic.Module, req.Msg.Topic.Name, req.Msg.Caller, req.Msg.Body)
+	if err != nil {
+		pubishError = optional.Some(err.Error())
+	}
+
+	requestKey := optional.None[string]()
+	if rk, err := rpc.RequestKeyFromContext(ctx); err == nil {
+		if rk, ok := rk.Get(); ok {
+			requestKey = optional.Some(rk.String())
+		}
+	}
+
+	// Add to timeline.
+	module := req.Msg.Topic.Module
+	routes := s.routeTable.Current()
+	route, ok := routes.GetDeployment(module).Get()
+	if ok {
+		timeline.ClientFromContext(ctx).Publish(ctx, timeline.PubSubPublish{
+			DeploymentKey: route,
+			RequestKey:    requestKey,
+			Time:          now,
+			SourceVerb:    schema.Ref{Name: req.Msg.Caller, Module: req.Msg.Topic.Module},
+			Topic:         req.Msg.Topic.Name,
+			Request:       req.Msg.Body,
+			Error:         pubishError,
+		})
+	}
+
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to publish a event to topic %s:%s: %w", req.Msg.Topic.Module, req.Msg.Topic.Name, err))
+	}
+	return connect.NewResponse(&ftlpubsubv1.PublishEventResponse{}), nil
+}
+
+func (s *Service) ResetSubscription(ctx context.Context, req *connect.Request[ftlpubsubv1.ResetSubscriptionRequest]) (*connect.Response[ftlpubsubv1.ResetSubscriptionResponse], error) {
+	err := s.resetSubscription(ctx, req.Msg.Subscription.Module, req.Msg.Subscription.Name)
+	if err != nil {
+		return nil, fmt.Errorf("could not reset subscription: %w", err)
+	}
+	return connect.NewResponse(&ftlpubsubv1.ResetSubscriptionResponse{}), nil
+}
+
+func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
+	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }

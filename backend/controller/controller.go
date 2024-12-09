@@ -47,6 +47,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
 	deploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
+	ftlv1connect2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
@@ -169,6 +170,7 @@ func Start(
 			rpc.GRPC(ftlv1connect.NewAdminServiceHandler, admin),
 			rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
 			rpc.GRPC(timelinev1connect.NewTimelineServiceHandler, console),
+			rpc.GRPC(ftlv1connect2.NewLegacyPubsubServiceHandler, svc.pubSub),
 			rpc.HTTP("/", consoleHandler),
 			rpc.PProf(),
 		)
@@ -263,7 +265,7 @@ func New(
 		controllerState:         state.NewInMemoryState(),
 	}
 
-	pubSub := pubsub.New(ctx, conn, optional.Some[pubsub.AsyncCallListener](svc))
+	pubSub := pubsub.New(ctx, conn, optional.Some[pubsub.AsyncCallListener](svc), routingTable)
 	svc.pubSub = pubSub
 	svc.dal = dal.New(ctx, conn, pubSub, svc.storage)
 
@@ -811,44 +813,6 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	return s.callWithRequest(ctx, headers.CopyRequestForForwarding(req), optional.None[model.RequestKey](), optional.None[model.RequestKey](), "")
 }
 
-func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftldeployment.PublishEventRequest]) (*connect.Response[ftldeployment.PublishEventResponse], error) {
-	// Publish the event.
-	now := time.Now().UTC()
-	pubishError := optional.None[string]()
-	err := s.pubSub.PublishEventForTopic(ctx, req.Msg.Topic.Module, req.Msg.Topic.Name, req.Msg.Caller, req.Msg.Body)
-	if err != nil {
-		pubishError = optional.Some(err.Error())
-	}
-
-	requestKey := optional.None[string]()
-	if rk, err := rpc.RequestKeyFromContext(ctx); err == nil {
-		if rk, ok := rk.Get(); ok {
-			requestKey = optional.Some(rk.String())
-		}
-	}
-
-	// Add to timeline.
-	module := req.Msg.Topic.Module
-	routes := s.routeTable.Current()
-	route, ok := routes.GetDeployment(module).Get()
-	if ok {
-		timeline.ClientFromContext(ctx).Publish(ctx, timeline.PubSubPublish{
-			DeploymentKey: route,
-			RequestKey:    requestKey,
-			Time:          now,
-			SourceVerb:    schema.Ref{Name: req.Msg.Caller, Module: req.Msg.Topic.Module},
-			Topic:         req.Msg.Topic.Name,
-			Request:       req.Msg.Body,
-			Error:         pubishError,
-		})
-	}
-
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to publish a event to topic %s:%s: %w", req.Msg.Topic.Module, req.Msg.Topic.Name, err))
-	}
-	return connect.NewResponse(&ftldeployment.PublishEventResponse{}), nil
-}
-
 func (s *Service) callWithRequest(
 	ctx context.Context,
 	req *connect.Request[ftlv1.CallRequest],
@@ -1065,21 +1029,6 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	deploymentLogger := s.getDeploymentLogger(ctx, dkey)
 	deploymentLogger.Debugf("Created deployment %s", dkey)
 	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: dkey.String()}), nil
-}
-
-func (s *Service) ResetSubscription(ctx context.Context, req *connect.Request[ftlv1.ResetSubscriptionRequest]) (*connect.Response[ftlv1.ResetSubscriptionResponse], error) {
-	err := s.pubSub.ResetSubscription(ctx, req.Msg.Subscription.Module, req.Msg.Subscription.Name)
-	if err != nil {
-		return nil, fmt.Errorf("could not reset subscription: %w", err)
-	}
-	return connect.NewResponse(&ftlv1.ResetSubscriptionResponse{}), nil
-}
-
-func dsnSecretKey(module string, db string) string {
-	return fmt.Sprintf("FTL_DSN_%s_%s",
-		strings.ToUpper(stripNonAlphanumeric(module)),
-		strings.ToUpper(stripNonAlphanumeric(db)),
-	)
 }
 
 func stripNonAlphanumeric(s string) string {

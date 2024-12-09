@@ -68,9 +68,6 @@ const (
 	// ControllerServiceStreamDeploymentLogsProcedure is the fully-qualified name of the
 	// ControllerService's StreamDeploymentLogs RPC.
 	ControllerServiceStreamDeploymentLogsProcedure = "/xyz.block.ftl.v1.ControllerService/StreamDeploymentLogs"
-	// ControllerServiceResetSubscriptionProcedure is the fully-qualified name of the
-	// ControllerService's ResetSubscription RPC.
-	ControllerServiceResetSubscriptionProcedure = "/xyz.block.ftl.v1.ControllerService/ResetSubscription"
 )
 
 // ControllerServiceClient is a client for the xyz.block.ftl.v1.ControllerService service.
@@ -107,8 +104,6 @@ type ControllerServiceClient interface {
 	ReplaceDeploy(context.Context, *connect.Request[v1.ReplaceDeployRequest]) (*connect.Response[v1.ReplaceDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context) *connect.ClientStreamForClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
-	// Reset the cursor for a subscription to the head of its topic.
-	ResetSubscription(context.Context, *connect.Request[v1.ResetSubscriptionRequest]) (*connect.Response[v1.ResetSubscriptionResponse], error)
 }
 
 // NewControllerServiceClient constructs a client for the xyz.block.ftl.v1.ControllerService
@@ -182,11 +177,6 @@ func NewControllerServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			baseURL+ControllerServiceStreamDeploymentLogsProcedure,
 			opts...,
 		),
-		resetSubscription: connect.NewClient[v1.ResetSubscriptionRequest, v1.ResetSubscriptionResponse](
-			httpClient,
-			baseURL+ControllerServiceResetSubscriptionProcedure,
-			opts...,
-		),
 	}
 }
 
@@ -204,7 +194,6 @@ type controllerServiceClient struct {
 	updateDeploy           *connect.Client[v1.UpdateDeployRequest, v1.UpdateDeployResponse]
 	replaceDeploy          *connect.Client[v1.ReplaceDeployRequest, v1.ReplaceDeployResponse]
 	streamDeploymentLogs   *connect.Client[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
-	resetSubscription      *connect.Client[v1.ResetSubscriptionRequest, v1.ResetSubscriptionResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.ControllerService.Ping.
@@ -267,11 +256,6 @@ func (c *controllerServiceClient) StreamDeploymentLogs(ctx context.Context) *con
 	return c.streamDeploymentLogs.CallClientStream(ctx)
 }
 
-// ResetSubscription calls xyz.block.ftl.v1.ControllerService.ResetSubscription.
-func (c *controllerServiceClient) ResetSubscription(ctx context.Context, req *connect.Request[v1.ResetSubscriptionRequest]) (*connect.Response[v1.ResetSubscriptionResponse], error) {
-	return c.resetSubscription.CallUnary(ctx, req)
-}
-
 // ControllerServiceHandler is an implementation of the xyz.block.ftl.v1.ControllerService service.
 type ControllerServiceHandler interface {
 	// Ping service for readiness.
@@ -306,8 +290,6 @@ type ControllerServiceHandler interface {
 	ReplaceDeploy(context.Context, *connect.Request[v1.ReplaceDeployRequest]) (*connect.Response[v1.ReplaceDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context, *connect.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect.Response[v1.StreamDeploymentLogsResponse], error)
-	// Reset the cursor for a subscription to the head of its topic.
-	ResetSubscription(context.Context, *connect.Request[v1.ResetSubscriptionRequest]) (*connect.Response[v1.ResetSubscriptionResponse], error)
 }
 
 // NewControllerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -377,11 +359,6 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect.H
 		svc.StreamDeploymentLogs,
 		opts...,
 	)
-	controllerServiceResetSubscriptionHandler := connect.NewUnaryHandler(
-		ControllerServiceResetSubscriptionProcedure,
-		svc.ResetSubscription,
-		opts...,
-	)
 	return "/xyz.block.ftl.v1.ControllerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ControllerServicePingProcedure:
@@ -408,8 +385,6 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect.H
 			controllerServiceReplaceDeployHandler.ServeHTTP(w, r)
 		case ControllerServiceStreamDeploymentLogsProcedure:
 			controllerServiceStreamDeploymentLogsHandler.ServeHTTP(w, r)
-		case ControllerServiceResetSubscriptionProcedure:
-			controllerServiceResetSubscriptionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -465,8 +440,4 @@ func (UnimplementedControllerServiceHandler) ReplaceDeploy(context.Context, *con
 
 func (UnimplementedControllerServiceHandler) StreamDeploymentLogs(context.Context, *connect.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect.Response[v1.StreamDeploymentLogsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.StreamDeploymentLogs is not implemented"))
-}
-
-func (UnimplementedControllerServiceHandler) ResetSubscription(context.Context, *connect.Request[v1.ResetSubscriptionRequest]) (*connect.Response[v1.ResetSubscriptionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.ResetSubscription is not implemented"))
 }

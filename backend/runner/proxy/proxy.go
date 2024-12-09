@@ -10,6 +10,8 @@ import (
 	ftldeploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
 	ftllease "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1"
 	ftlleaseconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
+	ftlpubsubv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1"
+	ftlv1connect2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -23,13 +25,15 @@ var _ ftldeploymentconnect.DeploymentServiceHandler = &Service{}
 type Service struct {
 	controllerDeploymentService ftldeploymentconnect.DeploymentServiceClient
 	controllerLeaseService      ftlleaseconnect.LeaseServiceClient
+	controllerPubsubService     ftlv1connect2.LegacyPubsubServiceClient
 	moduleVerbService           map[string]ftlv1connect.VerbServiceClient
 }
 
-func New(controllerModuleService ftldeploymentconnect.DeploymentServiceClient, leaseClient ftlleaseconnect.LeaseServiceClient) *Service {
+func New(controllerModuleService ftldeploymentconnect.DeploymentServiceClient, leaseClient ftlleaseconnect.LeaseServiceClient, controllerPubsubService ftlv1connect2.LegacyPubsubServiceClient) *Service {
 	proxy := &Service{
 		controllerDeploymentService: controllerModuleService,
 		controllerLeaseService:      leaseClient,
+		controllerPubsubService:     controllerPubsubService,
 		moduleVerbService:           map[string]ftlv1connect.VerbServiceClient{},
 	}
 	return proxy
@@ -96,8 +100,8 @@ func (r *Service) AcquireLease(ctx context.Context, c *connect.BidiStream[ftllea
 
 }
 
-func (r *Service) PublishEvent(ctx context.Context, c *connect.Request[ftldeployment.PublishEventRequest]) (*connect.Response[ftldeployment.PublishEventResponse], error) {
-	event, err := r.controllerDeploymentService.PublishEvent(ctx, connect.NewRequest(c.Msg))
+func (r *Service) PublishEvent(ctx context.Context, c *connect.Request[ftlpubsubv1.PublishEventRequest]) (*connect.Response[ftlpubsubv1.PublishEventResponse], error) {
+	event, err := r.controllerPubsubService.PublishEvent(ctx, connect.NewRequest(c.Msg))
 	if err != nil {
 		return nil, fmt.Errorf("failed to proxy event: %w", err)
 	}
