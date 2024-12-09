@@ -163,7 +163,7 @@ func (v *Verb) GetMetadataCronJob() optional.Option[*MetadataCronJob] {
 func (v *Verb) ToProto() proto.Message {
 	var runtime *schemapb.VerbRuntime
 	if v.Runtime != nil {
-		runtime = &schemapb.VerbRuntime{
+		runtime = &schemapb.VerbRuntime{ //nolint:forcetypeassert
 			Base:         v.Runtime.Base.ToProto().(*schemapb.VerbRuntimeBase),                 //nolint:forcetypeassert
 			Subscription: v.Runtime.Subscription.ToProto().(*schemapb.VerbRuntimeSubscription), //nolint:forcetypeassert
 		}

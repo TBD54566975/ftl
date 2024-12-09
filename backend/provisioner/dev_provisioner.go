@@ -32,10 +32,10 @@ func NewDevProvisioner(postgresPort int, mysqlPort int, recreate bool) *InMemPro
 	})
 }
 func provisionMysql(mysqlPort int, recreate bool) InMemResourceProvisionerFn {
-	return func(ctx context.Context, res schema.Provisioned, module *schema.Module) (*RuntimeEvent, error) {
+	return func(ctx context.Context, moduleName string, res schema.Provisioned) (*RuntimeEvent, error) {
 		logger := log.FromContext(ctx)
 
-		dbName := strcase.ToLowerSnake(module.Name) + "_" + strcase.ToLowerSnake(res.ResourceID())
+		dbName := strcase.ToLowerSnake(moduleName) + "_" + strcase.ToLowerSnake(res.ResourceID())
 
 		logger.Infof("Provisioning mysql database: %s", dbName)
 
@@ -103,9 +103,9 @@ func establishMySQLDB(ctx context.Context, mysqlDSN string, dbName string, mysql
 	}, nil
 }
 
-func ProvisionPostgresForTest(ctx context.Context, module *schema.Module, id string) (string, error) {
+func ProvisionPostgresForTest(ctx context.Context, moduleName string, id string) (string, error) {
 	node := &schema.Database{Name: id + "_test"}
-	event, err := provisionPostgres(15432, true)(ctx, node, module)
+	event, err := provisionPostgres(15432, true)(ctx, moduleName, node)
 	if err != nil {
 		return "", err
 	}
@@ -113,9 +113,9 @@ func ProvisionPostgresForTest(ctx context.Context, module *schema.Module, id str
 	return event.Database.Payload.(*schema.DatabaseRuntimeConnectionsEvent).Connections.Write.(*schema.DSNDatabaseConnector).DSN, nil //nolint:forcetypeassert
 }
 
-func ProvisionMySQLForTest(ctx context.Context, module *schema.Module, id string) (string, error) {
+func ProvisionMySQLForTest(ctx context.Context, moduleName string, id string) (string, error) {
 	node := &schema.Database{Name: id + "_test"}
-	event, err := provisionMysql(13306, true)(ctx, node, module)
+	event, err := provisionMysql(13306, true)(ctx, moduleName, node)
 	if err != nil {
 		return "", err
 	}
@@ -124,10 +124,10 @@ func ProvisionMySQLForTest(ctx context.Context, module *schema.Module, id string
 }
 
 func provisionPostgres(postgresPort int, recreate bool) InMemResourceProvisionerFn {
-	return func(ctx context.Context, resource schema.Provisioned, module *schema.Module) (*RuntimeEvent, error) {
+	return func(ctx context.Context, moduleName string, resource schema.Provisioned) (*RuntimeEvent, error) {
 		logger := log.FromContext(ctx)
 
-		dbName := strcase.ToLowerSnake(module.Name) + "_" + strcase.ToLowerSnake(resource.ResourceID())
+		dbName := strcase.ToLowerSnake(moduleName) + "_" + strcase.ToLowerSnake(resource.ResourceID())
 		logger.Infof("Provisioning postgres database: %s", dbName)
 
 		// We assume that the DB has already been started when running in dev mode
@@ -185,7 +185,7 @@ func provisionPostgres(postgresPort int, recreate bool) InMemResourceProvisioner
 }
 
 func provisionTopic() InMemResourceProvisionerFn {
-	return func(ctx context.Context, res schema.Provisioned, module *schema.Module) (*RuntimeEvent, error) {
+	return func(ctx context.Context, moduleName string, res schema.Provisioned) (*RuntimeEvent, error) {
 		logger := log.FromContext(ctx)
 		if err := dev.SetUpRedPanda(ctx); err != nil {
 			return nil, fmt.Errorf("could not set up redpanda: %w", err)
@@ -195,7 +195,7 @@ func provisionTopic() InMemResourceProvisionerFn {
 			panic(fmt.Errorf("unexpected resource type: %T", res))
 		}
 
-		topicID := kafkaTopicID(module.Name, topic.Name)
+		topicID := kafkaTopicID(moduleName, topic.Name)
 		logger.Infof("Provisioning topic: %s", topicID)
 
 		config := sarama.NewConfig()
@@ -239,7 +239,7 @@ func provisionTopic() InMemResourceProvisionerFn {
 }
 
 func provisionSubscription() InMemResourceProvisionerFn {
-	return func(ctx context.Context, res schema.Provisioned, module *schema.Module) (*RuntimeEvent, error) {
+	return func(ctx context.Context, moduleName string, res schema.Provisioned) (*RuntimeEvent, error) {
 		logger := log.FromContext(ctx)
 		if err := dev.SetUpRedPanda(ctx); err != nil {
 			return nil, fmt.Errorf("could not set up redpanda: %w", err)
@@ -266,10 +266,6 @@ func provisionSubscription() InMemResourceProvisionerFn {
 func kafkaTopicID(module, id string) string {
 	return shortenString(fmt.Sprintf("%s.%s", module, id), pubSubNameLimit)
 }
-
-// func consumerGroupID(module, id string) string {
-// 	return shortenString(fmt.Sprintf("%s.%s", module, id), pubSubNameLimit)
-// }
 
 // shortenString truncates the input string to maxLength and appends a hash of the original string for uniqueness
 func shortenString(input string, maxLength int) string {

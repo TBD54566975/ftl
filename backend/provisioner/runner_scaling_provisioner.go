@@ -15,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // NewRunnerScalingProvisioner creates a new provisioner that provisions resources locally when running FTL in dev mode
@@ -27,12 +26,12 @@ func NewRunnerScalingProvisioner(runners scaling.RunnerScaling) *InMemProvisione
 }
 
 func provisionRunner(scaling scaling.RunnerScaling) InMemResourceProvisionerFn {
-	return func(ctx context.Context, rc schema.Provisioned, module *schema.Module) (*RuntimeEvent, error) {
+	return func(ctx context.Context, moduleName string, rc schema.Provisioned) (*RuntimeEvent, error) {
 		logger := log.FromContext(ctx)
-		if len(slices.Filter(rc.GetProvisioned(), func(r *schema.ProvisionedResource) bool {
-			return r.Kind == schema.ResourceTypeRunner
-		})) == 0 {
-			return nil, fmt.Errorf("invalid runner resource: %T", rc)
+
+		module, ok := rc.(*schema.Module)
+		if !ok {
+			return nil, fmt.Errorf("expected module, got %T", rc)
 		}
 
 		deployment := module.Runtime.Deployment.DeploymentKey

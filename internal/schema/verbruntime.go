@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"fmt"
 	"time"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
@@ -14,7 +15,6 @@ type VerbRuntime struct {
 	Subscription *VerbRuntimeSubscription `protobuf:"2,optional"`
 }
 
-//sumtype:decl
 type VerbRuntimeEvent struct {
 	ID      string             `protobuf:"1"`
 	Payload VerbRuntimePayload `protobuf:"2"`
@@ -23,20 +23,36 @@ type VerbRuntimeEvent struct {
 func (v *VerbRuntimeEvent) ApplyTo(m *Module) {
 	for verb := range slices.FilterVariants[*Verb](m.Decls) {
 		if verb.Name == v.ID {
+			if verb.Runtime == nil {
+				verb.Runtime = &VerbRuntime{}
+			}
+
 			switch payload := v.Payload.(type) {
 			case *VerbRuntimeBase:
 				verb.Runtime.Base = *payload
 			case *VerbRuntimeSubscription:
 				verb.Runtime.Subscription = payload
+			default:
+				panic(fmt.Sprintf("unknown verb runtime payload type: %T", payload))
 			}
 		}
 	}
 }
 
 func (v *VerbRuntimeEvent) ToProto() protoreflect.ProtoMessage {
+	var payload *schemapb.VerbRuntimePayload
+	if v.Payload != nil {
+		switch p := v.Payload.(type) {
+		case *VerbRuntimeBase:
+			payload = &schemapb.VerbRuntimePayload{Value: &schemapb.VerbRuntimePayload_VerbRuntimeBase{VerbRuntimeBase: p.ToProto().(*schemapb.VerbRuntimeBase)}} //nolint:forcetypeassert
+		case *VerbRuntimeSubscription:
+			payload = &schemapb.VerbRuntimePayload{Value: &schemapb.VerbRuntimePayload_VerbRuntimeSubscription{VerbRuntimeSubscription: p.ToProto().(*schemapb.VerbRuntimeSubscription)}} //nolint:forcetypeassert
+		}
+	}
+
 	return &schemapb.VerbRuntimeEvent{
 		Id:      v.ID,
-		Payload: v.Payload.ToProto().(*schemapb.VerbRuntimePayload),
+		Payload: payload,
 	}
 }
 
