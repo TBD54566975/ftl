@@ -96,6 +96,10 @@ func (t *Task) Progress(ctx context.Context) error {
 
 				case *provisioner.ProvisioningEvent_DatabaseRuntimeEvent:
 					schema.DatabaseRuntimeEventFromProto(event.GetDatabaseRuntimeEvent()).ApplyTo(module)
+
+				case *provisioner.ProvisioningEvent_TopicRuntimeEvent:
+					topicEvent := schema.TopicRuntimeEventFromProto(event.GetTopicRuntimeEvent())
+					topicEvent.ApplyTo(module)
 				}
 			}
 			return nil

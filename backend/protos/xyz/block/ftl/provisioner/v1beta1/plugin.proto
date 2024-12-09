@@ -35,6 +35,7 @@ message ProvisioningEvent {
   oneof value {
     xyz.block.ftl.schema.v1.ModuleRuntimeEvent module_runtime_event = 1;
     xyz.block.ftl.schema.v1.DatabaseRuntimeEvent database_runtime_event = 2;
+    xyz.block.ftl.schema.v1.TopicRuntimeEvent topic_runtime_event = 3;
   }
 }
 

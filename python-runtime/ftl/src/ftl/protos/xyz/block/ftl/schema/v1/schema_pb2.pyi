@@ -601,6 +601,14 @@ class TopicRuntime(_message.Message):
     topic_id: str
     def __init__(self, kafka_brokers: _Optional[_Iterable[str]] = ..., topic_id: _Optional[str] = ...) -> None: ...
 
+class TopicRuntimeEvent(_message.Message):
+    __slots__ = ("id", "payload")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    PAYLOAD_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    payload: TopicRuntime
+    def __init__(self, id: _Optional[str] = ..., payload: _Optional[_Union[TopicRuntime, _Mapping]] = ...) -> None: ...
+
 class Type(_message.Message):
     __slots__ = ("any", "array", "bool", "bytes", "float", "int", "map", "optional", "ref", "string", "time", "unit")
     ANY_FIELD_NUMBER: _ClassVar[int]
