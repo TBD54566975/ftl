@@ -5,10 +5,10 @@ import (
 	"net/url"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/atomic"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"connectrpc.com/connect"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
