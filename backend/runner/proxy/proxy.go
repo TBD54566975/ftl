@@ -135,7 +135,8 @@ func (r *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	start := time.Now()
 	verbService, ok := r.moduleVerbService[req.Msg.Verb.Module]
 	if !ok {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("module not found in runners route table: %s", req.Msg.Verb.Module))
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("failed to find deployment for module"))
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("deployment not found"))
 	}
 	timelineClient := timeline.ClientFromContext(ctx)
 
