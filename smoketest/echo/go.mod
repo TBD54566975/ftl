@@ -4,12 +4,12 @@ go 1.23.0
 
 replace github.com/TBD54566975/ftl => ../..
 
-require github.com/TBD54566975/ftl v0.408.0
+require github.com/TBD54566975/ftl v0.409.0
 
 require (
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
 	github.com/alecthomas/types v0.17.0 // indirect
-	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
+	github.com/deckarep/golang-set/v2 v2.7.0 // indirect
 	github.com/hashicorp/cronexpr v1.1.2 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/swaggest/jsonschema-go v0.3.72 // indirect
