@@ -190,16 +190,16 @@ func (s *service) StreamTimeline(ctx context.Context, req *connect.Request[timel
 
 	timelineReq := req.Msg.Query
 	// Default to last 1 day of events
-	var lastEventId optional.Option[int64]
+	var lastEventID optional.Option[int64]
 	for {
 		newQuery := timelineReq
 		// We always want ascending order for the underlying query.
 		newQuery.Order = timelinepb.GetTimelineRequest_ORDER_ASC
-		if _, ok := lastEventId.Get(); ok {
+		if _, ok := lastEventID.Get(); ok {
 			newQuery.Filters = append(newQuery.Filters, &timelinepb.GetTimelineRequest_Filter{
 				Filter: &timelinepb.GetTimelineRequest_Filter_Id{
 					Id: &timelinepb.GetTimelineRequest_IDFilter{
-						HigherThan: lastEventId.Ptr(),
+						HigherThan: lastEventID.Ptr(),
 					},
 				},
 			})
@@ -212,13 +212,13 @@ func (s *service) StreamTimeline(ctx context.Context, req *connect.Request[timel
 
 		newEvents := make([]*timelinepb.Event, 0, len(resp.Msg.Events))
 		for _, event := range resp.Msg.Events {
-			if lastEventId, ok := lastEventId.Get(); !ok || event.Id != lastEventId {
+			if lastEventID, ok := lastEventID.Get(); !ok || event.Id != lastEventID {
 				// This is not a duplicate event.
 				newEvents = append(newEvents, event)
 			}
 		}
 		if len(newEvents) > 0 {
-			lastEventId = optional.Some(newEvents[len(newEvents)-1].Id)
+			lastEventID = optional.Some(newEvents[len(newEvents)-1].Id)
 
 			if !ascending {
 				// Original query was for descending order, so reverse the events.

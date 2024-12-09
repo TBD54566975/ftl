@@ -3,7 +3,7 @@ package dal
 import (
 	"bytes"
 	"context"
-	"net/http"
+	"net/url"
 	"sync"
 	"testing"
 	"time"
@@ -13,7 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
+	"github.com/TBD54566975/ftl/backend/timeline"
 
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
@@ -21,15 +21,15 @@ import (
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
 func TestDAL(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	timelineClient := timelinev1connect.NewTimelineServiceClient(http.DefaultClient, "http://localhost:8080")
-	ctx = rpc.ContextWithClient(ctx, timelineClient)
+	timelineEndpoint, err := url.Parse("http://localhost:8080")
+	assert.NoError(t, err)
+	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, timelineEndpoint))
 	conn := sqltest.OpenForTesting(ctx, t)
 
 	pubSub := pubsub.New(ctx, conn, optional.None[pubsub.AsyncCallListener]())
@@ -38,7 +38,6 @@ func TestDAL(t *testing.T) {
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
 
-	var err error
 	deploymentChangesCh := dal.DeploymentChanges.Subscribe(nil)
 	deploymentChanges := []DeploymentNotification{}
 	wg := errgroup.Group{}
