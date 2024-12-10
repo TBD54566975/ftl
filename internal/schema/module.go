@@ -265,6 +265,8 @@ func (m *Module) ToProto() proto.Message {
 func (m *Module) GetName() string  { return m.Name }
 func (m *Module) IsExported() bool { return false }
 
+func (m *Module) provisioned() {}
+
 // ModuleFromProtoFile loads a module from the given proto-encoded file.
 func ModuleFromProtoFile(filename string) (*Module, error) {
 	data, err := os.ReadFile(filename)

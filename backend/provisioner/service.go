@@ -19,6 +19,7 @@ import (
 	ftlv1connect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/reflect"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -72,10 +73,13 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	moduleName := req.Msg.Schema.Name
 
 	existingModule, _ := s.currentModules.Load(moduleName)
-	// TODO: copy runtimes
 	desiredModule, err := schema.ModuleFromProto(req.Msg.Schema)
 	if err != nil {
 		return nil, fmt.Errorf("error converting module to schema: %w", err)
+	}
+
+	if existingModule != nil {
+		syncExistingRuntimes(existingModule, desiredModule)
 	}
 
 	// Place artefacts to the metdata
@@ -200,4 +204,32 @@ func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1
 		return nil, fmt.Errorf("call to ftl-controller failed: %w", err)
 	}
 	return connect.NewResponse(resp.Msg), nil
+}
+
+func syncExistingRuntimes(existingModule, desiredModule *schema.Module) {
+	existingResources := schema.GetProvisioned(existingModule)
+	desiredResources := schema.GetProvisioned(desiredModule)
+
+	for id, desired := range desiredResources {
+		if existing, ok := existingResources[id]; ok {
+			switch desired := desired.(type) {
+			case *schema.Database:
+				if existing, ok := existing.(*schema.Database); ok {
+					desired.Runtime = reflect.DeepCopy(existing.Runtime)
+				}
+			case *schema.Topic:
+				if existing, ok := existing.(*schema.Topic); ok {
+					desired.Runtime = reflect.DeepCopy(existing.Runtime)
+				}
+			case *schema.Verb:
+				if existing, ok := existing.(*schema.Verb); ok {
+					desired.Runtime = reflect.DeepCopy(existing.Runtime)
+				}
+			case *schema.Module:
+				if existing, ok := existing.(*schema.Module); ok {
+					desired.Runtime = reflect.DeepCopy(existing.Runtime)
+				}
+			}
+		}
+	}
 }

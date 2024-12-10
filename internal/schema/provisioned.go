@@ -40,11 +40,15 @@ func (r *ProvisionedResource) IsEqual(other *ProvisionedResource) bool {
 }
 
 // Provisioned is a schema element that provisioner acts on to create a runtime resource.
+//
+//sumtype:decl
 type Provisioned interface {
 	Node
 	// Returns the resources provisioned from this schema element.
 	GetProvisioned() ResourceSet
 	ResourceID() string
+
+	provisioned()
 }
 
 type ResourceSet []*ProvisionedResource

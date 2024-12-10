@@ -31,6 +31,7 @@ var _ Provisioned = (*Database)(nil)
 func (d *Database) Position() Position { return d.Pos }
 func (*Database) schemaDecl()          {}
 func (*Database) schemaSymbol()        {}
+func (d *Database) provisioned()       {}
 func (d *Database) schemaChildren() []Node {
 	children := []Node{}
 	for _, c := range d.Metadata {

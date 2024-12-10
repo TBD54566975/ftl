@@ -63,8 +63,10 @@ func (v *Verb) Kind() VerbKind {
 }
 
 func (v *Verb) Position() Position { return v.Pos }
-func (v *Verb) schemaDecl()        {}
-func (v *Verb) schemaSymbol()      {}
+
+func (v *Verb) schemaDecl()   {}
+func (v *Verb) schemaSymbol() {}
+func (v *Verb) provisioned()  {}
 func (v *Verb) schemaChildren() []Node {
 	children := []Node{}
 	if v.Request != nil {

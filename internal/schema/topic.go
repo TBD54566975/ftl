@@ -29,6 +29,7 @@ var _ Provisioned = (*Topic)(nil)
 func (t *Topic) Position() Position { return t.Pos }
 func (*Topic) schemaDecl()          {}
 func (*Topic) schemaSymbol()        {}
+func (t *Topic) provisioned()       {}
 func (t *Topic) schemaChildren() []Node {
 	if t.Event == nil {
 		return nil
