@@ -65,7 +65,7 @@ func TestDeploymentState(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	cs := state.NewInMemoryState()
 	view := cs.View()
-	assert.Equal(t, 0, len(view.Deployments()))
+	assert.Equal(t, 0, len(view.GetDeployments()))
 
 	deploymentKey := model.NewDeploymentKey("test-deployment")
 	create := time.Now()
@@ -76,9 +76,9 @@ func TestDeploymentState(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	view = cs.View()
-	assert.Equal(t, 1, len(view.Deployments()))
-	assert.Equal(t, deploymentKey, view.Deployments()[deploymentKey.String()].Key)
-	assert.Equal(t, create, view.Deployments()[deploymentKey.String()].CreatedAt)
+	assert.Equal(t, 1, len(view.GetDeployments()))
+	assert.Equal(t, deploymentKey, view.GetDeployments()[deploymentKey.String()].Key)
+	assert.Equal(t, create, view.GetDeployments()[deploymentKey.String()].CreatedAt)
 
 	activate := time.Now()
 	err = cs.Publish(ctx, &state.DeploymentActivatedEvent{
@@ -88,8 +88,8 @@ func TestDeploymentState(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	view = cs.View()
-	assert.Equal(t, 1, view.Deployments()[deploymentKey.String()].MinReplicas)
-	assert.Equal(t, activate, view.Deployments()[deploymentKey.String()].ActivatedAt.MustGet())
+	assert.Equal(t, 1, view.GetDeployments()[deploymentKey.String()].MinReplicas)
+	assert.Equal(t, activate, view.GetDeployments()[deploymentKey.String()].ActivatedAt.MustGet())
 
 	err = cs.Publish(ctx, &state.DeploymentDeactivatedEvent{
 		Key: deploymentKey,
@@ -97,5 +97,5 @@ func TestDeploymentState(t *testing.T) {
 	assert.NoError(t, err)
 	view = cs.View()
 
-	assert.Equal(t, 0, view.Deployments()[deploymentKey.String()].MinReplicas)
+	assert.Equal(t, 0, view.GetDeployments()[deploymentKey.String()].MinReplicas)
 }

@@ -27,7 +27,6 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/admin"
@@ -336,10 +335,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	controller := dalmodel.Controller{Key: s.key, Endpoint: s.config.Bind.String()}
 	currentState := s.controllerState.View()
 	runners := currentState.Runners()
-	status, err := s.dal.GetActiveDeployments()
-	if err != nil {
-		return nil, fmt.Errorf("could not get status: %w", err)
-	}
+	status := currentState.GetActiveDeployments()
 	allModules := s.routeTable.Current()
 	routes := slices.Map(allModules.Schema().Modules, func(module *schema.Module) (out *ftlv1.StatusResponse_Route) {
 		key := ""
@@ -368,11 +364,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	if err != nil {
 		return nil, err
 	}
-	deployments, err := slices.MapErr(status, func(d dalmodel.Deployment) (*ftlv1.StatusResponse_Deployment, error) {
-		labels, err := structpb.NewStruct(d.Labels)
-		if err != nil {
-			return nil, fmt.Errorf("could not marshal attributes for deployment %s: %w", d.Key.String(), err)
-		}
+	deployments, err := slices.MapErr(maps.Values(status), func(d *state.Deployment) (*ftlv1.StatusResponse_Deployment, error) {
 		return &ftlv1.StatusResponse_Deployment{
 			Key:         d.Key.String(),
 			Language:    d.Language,
@@ -380,7 +372,6 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 			MinReplicas: int32(d.MinReplicas),
 			Replicas:    replicas[d.Key.String()],
 			Schema:      d.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
-			Labels:      labels,
 		}, nil
 	})
 	if err != nil {
@@ -432,10 +423,8 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 }
 
 func (s *Service) GetSchema(ctx context.Context, c *connect.Request[ftlv1.GetSchemaRequest]) (*connect.Response[ftlv1.GetSchemaResponse], error) {
-	schemas, err := s.dal.GetActiveDeploymentSchemas(ctx)
-	if err != nil {
-		return nil, err
-	}
+	view := s.controllerState.View()
+	schemas := view.GetActiveDeploymentSchemas()
 	modules := []*schemapb.Module{ //nolint:forcetypeassert
 		schema.Builtins().ToProto().(*schemapb.Module),
 	}
@@ -467,7 +456,10 @@ func (s *Service) UpdateDeploymentRuntime(ctx context.Context, req *connect.Requ
 	}
 	event := schema.ModuleRuntimeEventFromProto(req.Msg.Event)
 	module.Runtime.ApplyEvent(event)
-	err = s.dal.UpdateModuleSchema(ctx, deployment, module)
+	err = s.controllerState.Publish(ctx, &state.DeploymentSchemaUpdatedEvent{
+		Key:    deployment,
+		Schema: module,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("could not update schema for module %s: %w", module.Name, err)
 	}
@@ -666,17 +658,14 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 
 // GetDeploymentContext retrieves config, secrets and DSNs for a module.
 func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request[ftldeployment.GetDeploymentContextRequest], resp *connect.ServerStream[ftldeployment.GetDeploymentContextResponse]) error {
-
 	logger := log.FromContext(ctx)
 	updates := s.routeTable.Subscribe()
 	defer s.routeTable.Unsubscribe(updates)
+	view := s.controllerState.View()
 	depName := req.Msg.Deployment
 	if !strings.HasPrefix(depName, "dpl-") {
 		// For hot reload endponts we might not have a deployment key
-		deps, err := s.dal.GetActiveDeployments()
-		if err != nil {
-			return fmt.Errorf("could not get active deployments: %w", err)
-		}
+		deps := view.GetActiveDeployments()
 		for _, dep := range deps {
 			if dep.Module == depName {
 				depName = dep.Key.String()
@@ -1041,11 +1030,9 @@ func stripNonAlphanumeric(s string) string {
 // Load schemas for existing modules, combine with our new one, and validate the new module in the context
 // of the whole schema.
 func (s *Service) validateModuleSchema(ctx context.Context, module *schema.Module) (*schema.Module, error) {
-	existingModules, err := s.dal.GetActiveDeploymentSchemas(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not get existing schemas: %w", err)
-	}
-	schemaMap := ftlmaps.FromSlice(existingModules, func(el *schema.Module) (string, *schema.Module) { return el.Name, el })
+	view := s.controllerState.View()
+	existingModules := view.GetActiveDeployments()
+	schemaMap := ftlmaps.FromSlice[string, *schema.Module, *state.Deployment](maps.Values(existingModules), func(el *state.Deployment) (string, *schema.Module) { return el.Module, el.Schema })
 	schemaMap[module.Name] = module
 	fullSchema := &schema.Schema{Modules: maps.Values(schemaMap)}
 	schema, err := schema.ValidateModuleInSchema(fullSchema, optional.Some[*schema.Module](module))
@@ -1117,7 +1104,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	view := s.controllerState.View()
 
 	// Seed the notification channel with the current deployments.
-	seedDeployments := view.ActiveDeployments()
+	seedDeployments := view.GetActiveDeployments()
 	initialCount := len(seedDeployments)
 
 	builtins := schema.Builtins().ToProto().(*schemapb.Module) //nolint:forcetypeassert
@@ -1154,14 +1141,16 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 			return nil
 
 		case notification := <-updates:
-			var response *ftlv1.PullSchemaResponse
 			switch event := notification.(type) {
 			case *state.DeploymentCreatedEvent:
-				response = &ftlv1.PullSchemaResponse{
+				err := sendChange(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
 					ModuleName:    event.Module,
 					DeploymentKey: proto.String(event.Key.String()),
 					Schema:        event.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
 					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
+				})
+				if err != nil {
+					return err
 				}
 			case *state.DeploymentDeactivatedEvent:
 				view := s.controllerState.View()
@@ -1170,12 +1159,15 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 					logger.Errorf(err, "Deployment not found: %s", event.Key)
 					continue
 				}
-				response = &ftlv1.PullSchemaResponse{
+				err = sendChange(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
 					ModuleName:    dep.Module,
 					DeploymentKey: proto.String(event.Key.String()),
 					Schema:        dep.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
 					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED,
 					ModuleRemoved: event.ModuleRemoved,
+				})
+				if err != nil {
+					return err
 				}
 			case *state.DeploymentSchemaUpdatedEvent:
 				view := s.controllerState.View()
@@ -1184,25 +1176,19 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 					logger.Errorf(err, "Deployment not found: %s", event.Key)
 					continue
 				}
-				response = &ftlv1.PullSchemaResponse{
+				err = sendChange(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
 					ModuleName:    dep.Module,
 					DeploymentKey: proto.String(event.Key.String()),
 					Schema:        event.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
 					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_CHANGED,
+				})
+				if err != nil {
+					return err
 				}
 			default:
 				continue
 			}
 
-			if response != nil {
-				logger.Tracef("Sending change %s", response.ChangeType)
-				err := sendChange(response)
-				if err != nil {
-					return err
-				}
-			} else {
-				logger.Tracef("No change")
-			}
 		}
 	}
 }

@@ -9,7 +9,6 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/admin"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
-	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
@@ -20,7 +19,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type ConsoleService struct {
@@ -80,57 +78,50 @@ func verbSchemaString(sch *schema.Schema, verb *schema.Verb) (string, error) {
 }
 
 func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pbconsole.GetModulesRequest]) (*connect.Response[pbconsole.GetModulesResponse], error) {
-	deployments, err := c.dal.GetActiveDeployments()
-	if err != nil {
-		return nil, err
-	}
-
-	sch := &schema.Schema{
-		Modules: slices.Map(deployments, func(d dalmodel.Deployment) *schema.Module {
-			return d.Schema
-		}),
-	}
-	sch.Modules = append(sch.Modules, schema.Builtins())
+	sch := c.schemaEventSource.View()
 
 	nilMap := map[schema.RefKey]map[schema.RefKey]bool{}
 	var modules []*pbconsole.Module
-	for _, deployment := range deployments {
+	for _, mod := range sch.Modules {
+		if mod.Runtime == nil || mod.Runtime.Deployment == nil {
+			continue
+		}
 		var verbs []*pbconsole.Verb
 		var data []*pbconsole.Data
 		var secrets []*pbconsole.Secret
 		var configs []*pbconsole.Config
 
-		for _, decl := range deployment.Schema.Decls {
+		for _, decl := range mod.Decls {
 			switch decl := decl.(type) {
 			case *schema.Verb:
-				verb, err := verbFromDecl(decl, sch, deployment.Module, nilMap)
+				verb, err := verbFromDecl(decl, sch, mod.Name, nilMap)
 				if err != nil {
 					return nil, err
 				}
 				verbs = append(verbs, verb)
 
 			case *schema.Data:
-				data = append(data, dataFromDecl(decl, deployment.Module, nilMap))
+				data = append(data, dataFromDecl(decl, mod.Name, nilMap))
 
 			case *schema.Secret:
-				secrets = append(secrets, secretFromDecl(decl, deployment.Module, nilMap))
+				secrets = append(secrets, secretFromDecl(decl, mod.Name, nilMap))
 
 			case *schema.Config:
-				configs = append(configs, configFromDecl(decl, deployment.Module, nilMap))
+				configs = append(configs, configFromDecl(decl, mod.Name, nilMap))
 
 			case *schema.Database, *schema.Enum, *schema.TypeAlias, *schema.Topic:
 			}
 		}
 
 		modules = append(modules, &pbconsole.Module{
-			Name:          deployment.Module,
-			DeploymentKey: deployment.Key.String(),
-			Language:      deployment.Language,
+			Name:          mod.Name,
+			DeploymentKey: mod.Runtime.Deployment.DeploymentKey,
+			Language:      mod.Runtime.Base.Language,
 			Verbs:         verbs,
 			Data:          data,
 			Secrets:       secrets,
 			Configs:       configs,
-			Schema:        deployment.Schema.String(),
+			Schema:        mod.String(),
 		})
 	}
 
@@ -154,16 +145,16 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 	}), nil
 }
 
-func moduleFromDeployment(deployment dalmodel.Deployment, sch *schema.Schema, refMap map[schema.RefKey]map[schema.RefKey]bool) (*pbconsole.Module, error) {
-	module, err := moduleFromDecls(deployment.Schema.Decls, sch, deployment.Module, refMap)
+func moduleFromDeployment(deployment *schema.Module, sch *schema.Schema, refMap map[schema.RefKey]map[schema.RefKey]bool) (*pbconsole.Module, error) {
+	module, err := moduleFromDecls(deployment.Decls, sch, deployment.Name, refMap)
 	if err != nil {
 		return nil, err
 	}
 
-	module.Name = deployment.Module
-	module.DeploymentKey = deployment.Key.String()
-	module.Language = deployment.Language
-	module.Schema = deployment.Schema.String()
+	module.Name = deployment.Name
+	module.DeploymentKey = deployment.Runtime.Deployment.DeploymentKey
+	module.Language = deployment.Runtime.Base.Language
+	module.Schema = deployment.String()
 
 	return module, nil
 }
@@ -350,17 +341,17 @@ func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request
 
 // filterDeployments removes any duplicate modules by selecting the deployment with the
 // latest CreatedAt.
-func (c *ConsoleService) filterDeployments(unfilteredDeployments []dalmodel.Deployment) []dalmodel.Deployment {
-	latest := make(map[string]dalmodel.Deployment)
+func (c *ConsoleService) filterDeployments(unfilteredDeployments *schema.Schema) []*schema.Module {
+	latest := make(map[string]*schema.Module)
 
-	for _, deployment := range unfilteredDeployments {
-		if existing, found := latest[deployment.Module]; !found || deployment.CreatedAt.After(existing.CreatedAt) {
-			latest[deployment.Module] = deployment
+	for _, deployment := range unfilteredDeployments.Modules {
+		if existing, found := latest[deployment.Name]; !found || deployment.Runtime.Base.CreateTime.After(existing.Runtime.Base.CreateTime) {
+			latest[deployment.Name] = deployment
 
 		}
 	}
 
-	var result []dalmodel.Deployment
+	var result []*schema.Module
 	for _, value := range latest {
 		result = append(result, value)
 	}
@@ -369,15 +360,11 @@ func (c *ConsoleService) filterDeployments(unfilteredDeployments []dalmodel.Depl
 }
 
 func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *connect.ServerStream[pbconsole.StreamModulesResponse]) error {
-	unfilteredDeployments, err := c.dal.GetActiveDeployments()
-	if err != nil {
-		return fmt.Errorf("failed to get deployments: %w", err)
-	}
+	unfilteredDeployments := c.schemaEventSource.View()
+
 	deployments := c.filterDeployments(unfilteredDeployments)
 	sch := &schema.Schema{
-		Modules: slices.Map(deployments, func(d dalmodel.Deployment) *schema.Module {
-			return d.Schema
-		}),
+		Modules: deployments,
 	}
 	builtin := schema.Builtins()
 	sch.Modules = append(sch.Modules, builtin)
@@ -404,6 +391,9 @@ func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *conn
 
 	var modules []*pbconsole.Module
 	for _, deployment := range deployments {
+		if deployment.Runtime == nil || deployment.Runtime.Deployment == nil {
+			continue
+		}
 		module, err := moduleFromDeployment(deployment, sch, refMap)
 		if err != nil {
 			return err

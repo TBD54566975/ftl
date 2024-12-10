@@ -13,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
+	ftlv1connect2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/timeline"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	cf "github.com/TBD54566975/ftl/internal/configuration"
@@ -72,6 +73,8 @@ func main() {
 
 	leaseClient := rpc.Dial(ftlv1connect.NewLeaseServiceClient, cli.LeaseEndpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, leaseClient)
+	schemaClient := rpc.Dial(ftlv1connect2.NewSchemaServiceClient, cli.ControllerConfig.Bind.String(), log.Error)
+	ctx = rpc.ContextWithClient(ctx, schemaClient)
 	// The FTL controller currently only supports AWS Secrets Manager as a secrets provider.
 	awsConfig, err := config.LoadDefaultConfig(ctx)
 	kctx.FatalIfErrorf(err)

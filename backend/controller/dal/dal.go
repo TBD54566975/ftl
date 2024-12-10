@@ -11,15 +11,12 @@ import (
 	xmaps "golang.org/x/exp/maps"
 
 	aregistry "github.com/TBD54566975/ftl/backend/controller/artefacts"
-	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/state"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/timeline"
-	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 func New(registry aregistry.Service, state state.ControllerState) *DAL {
@@ -36,21 +33,6 @@ type DAL struct {
 	pubsub   *pubsub.Service
 	registry aregistry.Service
 	state    state.ControllerState
-}
-
-func (d *DAL) GetActiveDeployments() ([]dalmodel.Deployment, error) {
-	view := d.state.View()
-
-	deployments := view.ActiveDeployments()
-	return slices.Map(xmaps.Values(deployments), func(in *state.Deployment) dalmodel.Deployment {
-		return dalmodel.Deployment{
-			Key:         in.Key,
-			Module:      in.Module,
-			Language:    in.Language,
-			MinReplicas: in.MinReplicas,
-			Schema:      in.Schema,
-		}
-	}), nil
 }
 
 // SetDeploymentReplicas activates the given deployment.
@@ -107,7 +89,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	var replacedDeploymentKey optional.Option[model.DeploymentKey]
 	// TODO: remove all this, it needs to be event driven
 	var oldDeployment *state.Deployment
-	for _, dep := range view.ActiveDeployments() {
+	for _, dep := range view.GetActiveDeployments() {
 		if dep.Module == newDeployment.Module {
 			oldDeployment = dep
 			break
@@ -149,19 +131,22 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 
 // GetActiveSchema returns the schema for all active deployments.
 func (d *DAL) GetActiveSchema(ctx context.Context) (*schema.Schema, error) {
-	deployments, err := d.GetActiveDeployments()
-	if err != nil {
-		return nil, err
-	}
+	view := d.state.View()
+	deployments := view.GetActiveDeployments()
 
 	schemaMap := map[string]*schema.Module{}
+	timeMap := map[string]time.Time{}
 	for _, dep := range deployments {
-		if _, ok := schemaMap[dep.Module]; !ok {
-			// We only take the older ones
-			// If new ones exist they are not live yet
-			// Or the old ones would be gone
-			schemaMap[dep.Module] = dep.Schema
+		if _, ok := schemaMap[dep.Module]; ok {
+			if timeMap[dep.Module].Before(dep.CreatedAt) {
+				continue
+			}
 		}
+		// We only take the older ones
+		// If new ones exist they are not live yet
+		// Or the old ones would be gone
+		schemaMap[dep.Module] = dep.Schema
+		timeMap[dep.Module] = dep.CreatedAt
 	}
 	fullSchema := &schema.Schema{Modules: xmaps.Values(schemaMap)}
 	sch, err := schema.ValidateSchema(fullSchema)
@@ -169,37 +154,6 @@ func (d *DAL) GetActiveSchema(ctx context.Context) (*schema.Schema, error) {
 		return nil, fmt.Errorf("could not validate schema: %w", err)
 	}
 	return sch, nil
-}
-
-// UpdateModuleSchema updates the schema for a deployment in place.
-//
-// Note that this is racey as the deployment can be updated by another process. This will go away once we ditch the DB.
-func (d *DAL) UpdateModuleSchema(ctx context.Context, deployment model.DeploymentKey, module *schema.Module) error {
-	err := d.state.Publish(ctx, &state.DeploymentSchemaUpdatedEvent{
-		Key:    deployment,
-		Schema: module,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to update deployment schema: %w", err)
-	}
-	return nil
-}
-
-func (d *DAL) GetActiveDeploymentSchemas(ctx context.Context) ([]*schema.Module, error) {
-	view := d.state.View()
-	rows := view.ActiveDeployments()
-	return slices.Map(xmaps.Values(rows), func(in *state.Deployment) *schema.Module { return in.Schema }), nil
-}
-
-// GetActiveDeploymentSchemasByDeploymentKey returns the schema for all active deployments by deployment key.
-//
-// model.DeploymentKey is not used directly as a key as it's not a valid map key.
-func (d *DAL) GetActiveDeploymentSchemasByDeploymentKey(ctx context.Context) (map[string]*schema.Module, error) {
-	view := d.state.View()
-	rows := view.ActiveDeployments()
-	return maps.MapValues[string, *state.Deployment, *schema.Module](rows, func(dep string, in *state.Deployment) *schema.Module {
-		return in.Schema
-	}), nil
 }
 
 type ProcessRunner struct {
