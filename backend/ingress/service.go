@@ -45,6 +45,7 @@ type service struct {
 // Start the HTTP ingress service. Blocks until the context is cancelled.
 func Start(ctx context.Context, config Config, schemaEventSource schemaeventsource.EventSource, client routing.CallClient) error {
 	logger := log.FromContext(ctx).Scope("http-ingress")
+	ctx = log.ContextWithLogger(ctx, logger)
 	svc := &service{
 		view:   syncView(ctx, schemaEventSource),
 		client: client,
