@@ -3,10 +3,6 @@ package schema
 import (
 	"fmt"
 	"strings"
-
-	"google.golang.org/protobuf/proto"
-
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 // MetadataCalls represents a metadata block with a list of calls.
@@ -50,10 +46,3 @@ func (m *MetadataCalls) schemaChildren() []Node {
 	return out
 }
 func (*MetadataCalls) schemaMetadata() {}
-
-func (m *MetadataCalls) ToProto() proto.Message {
-	return &schemapb.MetadataCalls{
-		Pos:   posToProto(m.Pos),
-		Calls: nodeListToProto[*schemapb.Ref](m.Calls),
-	}
-}

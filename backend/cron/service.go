@@ -10,7 +10,6 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/TBD54566975/ftl/backend/cron/observability"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/cron"
@@ -113,7 +112,7 @@ func callCronJob(ctx context.Context, verbClient routing.CallClient, cronJob cro
 	ref := schema.Ref{Module: cronJob.module, Name: cronJob.verb.Name}
 	logger.Debugf("Calling cron job %s", cronJob)
 	resp, err := verbClient.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{
-		Verb:     ref.ToProto().(*schemapb.Ref),
+		Verb:     ref.ToProto(),
 		Body:     []byte(`{}`),
 		Metadata: &ftlv1.Metadata{},
 	}))

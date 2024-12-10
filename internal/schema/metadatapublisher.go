@@ -3,10 +3,6 @@ package schema
 import (
 	"fmt"
 	"strings"
-
-	"google.golang.org/protobuf/proto"
-
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 //protobuf:12,optional
@@ -48,10 +44,3 @@ func (m *MetadataPublisher) schemaChildren() []Node {
 	return out
 }
 func (*MetadataPublisher) schemaMetadata() {}
-
-func (m *MetadataPublisher) ToProto() proto.Message {
-	return &schemapb.MetadataPublisher{
-		Pos:    posToProto(m.Pos),
-		Topics: nodeListToProto[*schemapb.Ref](m.Topics),
-	}
-}

@@ -498,7 +498,7 @@ func readSchema(bctx buildContext) (*schemapb.Module, error) {
 		},
 	}
 
-	moduleProto := moduleSchema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	moduleProto := moduleSchema.ToProto()
 	return moduleProto, nil
 }
 

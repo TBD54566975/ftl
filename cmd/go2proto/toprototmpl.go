@@ -24,6 +24,7 @@ var go2protoTmpl = template.Must(template.New("go2proto.mapper.go").
 			}
 			return false
 		},
+		"protoName": protoName,
 		"goProtoImport": func(g Go2ProtoContext) (string, error) {
 			unquoted, err := strconv.Unquote(g.Options["go_package"])
 			if err != nil {
@@ -33,7 +34,7 @@ var go2protoTmpl = template.Must(template.New("go2proto.mapper.go").
 			return parts[0], nil
 		},
 		"sumTypeVariantName": func(s string, v string) string {
-			return strings.TrimPrefix(v, s)
+			return protoName(strings.TrimPrefix(v, s))
 		},
 		"toLower":      strings.ToLower,
 		"toUpper":      strings.ToUpper,
@@ -57,30 +58,67 @@ var _ fmt.Stringer
 var _ = timestamppb.Timestamp{}
 var _ = durationpb.Duration{}
 
+// protoSlice converts a slice of values to a slice of protobuf values.
+func protoSlice[P any, T interface{ ToProto() P }](values []T) []P {
+	out := make([]P, len(values))
+	for i, v := range values {
+		out[i] = v.ToProto()
+	}
+	return out
+}
+
+// protoSlicef converts a slice of values to a slice of protobuf values using a mapping function.
+func protoSlicef[P, T any](values []T, f func(T) P) []P {
+	out := make([]P, len(values))
+	for i, v := range values {
+		out[i] = f(v)
+	}
+	return out
+}
+
 {{range $decl := .OrderedDecls }}
 {{- if eq (typeof $decl) "Message" }}
 func (x *{{ .Name }}) ToProto() *destpb.{{ .Name }} {
-	out := &destpb.{{ .Name }}{}
+	if x == nil {
+		return nil
+	}
+	return &destpb.{{ .Name }}{
 {{- range $field := .Fields }}
 {{- if . | isBuiltin }}
 {{- if $field.Optional}}
-	out.{{ $field.EscapedName }} = proto.{{ $field.ProtoGoType | toUpperCamel }}({{ $field.ProtoGoType }}({{if $field.Pointer}}*{{end}}x.{{ $field.Name }}))
+		{{ $field.EscapedName }}: proto.{{ $field.ProtoGoType | toUpperCamel }}({{ $field.ProtoGoType }}({{if $field.Pointer}}*{{end}}x.{{ $field.Name }})),
+{{- else if .Repeated}}
+		{{ $field.EscapedName }}: protoSlicef(x.{{ $field.Name }}, func(v {{ $field.Type }}) {{ $field.ProtoGoType }} { return {{ $field.ProtoGoType }}(v) }),
 {{- else }}
-	out.{{ $field.EscapedName }} = {{ $field.ProtoGoType }}(x.{{ $field.Name }})
+		{{ $field.EscapedName }}: {{ $field.ProtoGoType }}(x.{{ $field.Name }}),
 {{- end}}
 {{- else if eq $field.Type "google.protobuf.Timestamp" }}
-	out.{{ $field.EscapedName }} = timestamppb.New(x.{{ $field.Name }})
+		{{ $field.EscapedName }}: timestamppb.New(x.{{ $field.Name }}),
 {{- else if eq $field.Type "google.protobuf.Duration" }}
-	out.{{ $field.EscapedName }} = durationpb.New(x.{{ $field.Name }})
+		{{ $field.EscapedName }}: durationpb.New(x.{{ $field.Name }}),
 {{- else if eq (.Type | $.TypeOf) "Message" }}
-	out.{{ $field.EscapedName }} = x.{{ $field.Name }}.ToProto()
+{{- if .Repeated }}
+		{{ $field.EscapedName }}: protoSlice[*destpb.{{ .Type }}](x.{{ $field.Name }}),
+{{- else}}
+		{{ $field.EscapedName }}: x.{{ $field.Name }}.ToProto(),
+{{- end}}
 {{- else if eq (.Type | $.TypeOf) "Enum" }}
-	out.{{ $field.EscapedName }} = x.{{ $field.Name }}.ToProto()
+{{- if .Repeated }}
+		{{ $field.EscapedName }}: protoSlice[destpb.{{ .Type }}](x.{{ $field.Name }}),
+{{- else}}
+		{{ $field.EscapedName }}: x.{{ $field.Name }}.ToProto(),
+{{- end}}
 {{- else if eq (.Type | $.TypeOf) "SumType" }}
-	out.{{ $field.EscapedName }} = {{ $field.Type }}ToProto(x.{{ $field.Name }})
+{{- if .Repeated }}
+		{{ $field.EscapedName }}: protoSlicef(x.{{ $field.Name }}, {{$field.Type}}ToProto),
+{{- else}}
+		{{ $field.EscapedName }}: {{ $field.Type }}ToProto(x.{{ $field.Name }}),
+{{- end}}
+{{- else }}
+		{{ $field.EscapedName }}: ??, // x.{{ $field.Name }}.ToProto() // Unknown type: {{ $field.Type }}
 {{- end}}
 {{- end}}
-	return out
+	}
 }
 {{- else if eq (typeof $decl) "Enum" }}
 func (x {{ .Name }}) ToProto() destpb.{{ .Name }} {
@@ -88,12 +126,15 @@ func (x {{ .Name }}) ToProto() destpb.{{ .Name }} {
 }
 {{- else if eq (typeof $decl) "SumType" }}
 {{- $sumtype := . }}
+// {{ .Name }}ToProto converts a {{ .Name }} sum type to a protobuf message.
 func {{ .Name }}ToProto(value {{ .Name }}) *destpb.{{ .Name }} {
 	switch value := value.(type) {
+	case nil:
+		return nil
 	{{- range $variant, $id := .Variants }}
 	case *{{ $variant }}:
 		return &destpb.{{ $sumtype.Name }}{
-			Value: &destpb.{{ $sumtype.Name }}_{{ sumTypeVariantName $sumtype.Name $variant }}{value.ToProto()},
+			Value: &destpb.{{ $sumtype.Name | toUpperCamel }}_{{ sumTypeVariantName $sumtype.Name $variant }}{value.ToProto()},
 		}
 	{{- end }}
 	default:

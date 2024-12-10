@@ -5,8 +5,6 @@ import (
 	"database/sql/driver"
 	"fmt"
 
-	"google.golang.org/protobuf/proto"
-
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -58,15 +56,6 @@ func (r *Ref) Scan(src any) error {
 
 func (r Ref) ToRefKey() RefKey {
 	return RefKey{Module: r.Module, Name: r.Name}
-}
-
-func (r *Ref) ToProto() proto.Message {
-	return &schemapb.Ref{
-		Pos:            posToProto(r.Pos),
-		Module:         r.Module,
-		Name:           r.Name,
-		TypeParameters: slices.Map(r.TypeParameters, TypeToProto),
-	}
 }
 
 func (r *Ref) Equal(other Type) bool {

@@ -7,7 +7,6 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -56,7 +55,7 @@ func (a AsyncExecute) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, err
 				Timestamp:      timestamppb.New(a.Time),
 				Error:          a.Error.Ptr(),
 				Duration:       durationpb.New(time.Since(a.Time)),
-				VerbRef:        (&a.Verb).ToProto().(*schemapb.Ref), //nolint:forcetypeassert
+				VerbRef:        (&a.Verb).ToProto(), //nolint:forcetypeassert
 				AsyncEventType: asyncExecuteEventTypeToProto(a.EventType),
 			},
 		},

@@ -45,11 +45,11 @@ func (t *Task) Start(ctx context.Context) error {
 
 	var previous *schemapb.Module
 	if t.deployment.Previous != nil {
-		previous = t.deployment.Previous.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+		previous = t.deployment.Previous.ToProto()
 	}
 
 	resp, err := t.binding.Provisioner.Provision(ctx, connect.NewRequest(&provisioner.ProvisionRequest{
-		DesiredModule: t.deployment.Module.ToProto().(*schemapb.Module),
+		DesiredModule: t.deployment.Module.ToProto(),
 		// TODO: We need a proper cluster specific ID here
 		FtlClusterId:   "ftl",
 		PreviousModule: previous,
@@ -77,7 +77,7 @@ func (t *Task) Progress(ctx context.Context) error {
 	for {
 		resp, err := t.binding.Provisioner.Status(ctx, connect.NewRequest(&provisioner.StatusRequest{
 			ProvisioningToken: t.runningToken,
-			DesiredModule:     t.deployment.Module.ToProto().(*schemapb.Module),
+			DesiredModule:     t.deployment.Module.ToProto(),
 		}))
 		if err != nil {
 			t.state = TaskStateFailed

@@ -213,14 +213,13 @@ func moduleFromDecls(decls []schema.Decl, sch *schema.Schema, module string, ref
 func configFromDecl(decl *schema.Config, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Config {
 	return &pbconsole.Config{
 		//nolint:forcetypeassert
-		Config:     decl.ToProto().(*schemapb.Config),
+		Config:     decl.ToProto(),
 		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
 func dataFromDecl(decl *schema.Data, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Data {
-	//nolint:forcetypeassert
-	d := decl.ToProto().(*schemapb.Data)
+	d := decl.ToProto()
 	return &pbconsole.Data{
 		Data:       d,
 		Schema:     schema.DataFromProto(d).String(),
@@ -230,47 +229,41 @@ func dataFromDecl(decl *schema.Data, module string, refMap map[schema.RefKey]map
 
 func databaseFromDecl(decl *schema.Database, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Database {
 	return &pbconsole.Database{
-		//nolint:forcetypeassert
-		Database:   decl.ToProto().(*schemapb.Database),
+		Database:   decl.ToProto(),
 		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
 func enumFromDecl(decl *schema.Enum, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Enum {
 	return &pbconsole.Enum{
-		//nolint:forcetypeassert
-		Enum:       decl.ToProto().(*schemapb.Enum),
+		Enum:       decl.ToProto(),
 		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
 func topicFromDecl(decl *schema.Topic, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Topic {
 	return &pbconsole.Topic{
-		//nolint:forcetypeassert
-		Topic:      decl.ToProto().(*schemapb.Topic),
+		Topic:      decl.ToProto(),
 		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
 func typealiasFromDecl(decl *schema.TypeAlias, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.TypeAlias {
 	return &pbconsole.TypeAlias{
-		//nolint:forcetypeassert
-		Typealias:  decl.ToProto().(*schemapb.TypeAlias),
+		Typealias:  decl.ToProto(),
 		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
 func secretFromDecl(decl *schema.Secret, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Secret {
 	return &pbconsole.Secret{
-		//nolint:forcetypeassert
-		Secret:     decl.ToProto().(*schemapb.Secret),
+		Secret:     decl.ToProto(),
 		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
 func verbFromDecl(decl *schema.Verb, sch *schema.Schema, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) (*pbconsole.Verb, error) {
-	//nolint:forcetypeassert
-	v := decl.ToProto().(*schemapb.Verb)
+	v := decl.ToProto()
 	verbSchema := schema.VerbFromProto(v)
 	var jsonRequestSchema string
 	if verbSchema.Request != nil {

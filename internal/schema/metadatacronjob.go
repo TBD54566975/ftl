@@ -2,10 +2,6 @@ package schema
 
 import (
 	"fmt"
-
-	"google.golang.org/protobuf/proto"
-
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 //protobuf:3
@@ -27,10 +23,3 @@ func (m *MetadataCronJob) schemaChildren() []Node {
 }
 
 func (*MetadataCronJob) schemaMetadata() {}
-
-func (m *MetadataCronJob) ToProto() proto.Message {
-	return &schemapb.MetadataCronJob{
-		Pos:  posToProto(m.Pos),
-		Cron: m.Cron,
-	}
-}

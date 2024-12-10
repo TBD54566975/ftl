@@ -7,7 +7,6 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -30,7 +29,7 @@ func (e CronScheduled) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, er
 		Entry: &timelinepb.CreateEventsRequest_EventEntry_CronScheduled{
 			CronScheduled: &timelinepb.CronScheduledEvent{
 				DeploymentKey: e.DeploymentKey.String(),
-				VerbRef:       (&e.Verb).ToProto().(*schemapb.Ref), //nolint:forcetypeassert
+				VerbRef:       (&e.Verb).ToProto(), //nolint:forcetypeassert
 				Timestamp:     timestamppb.New(e.Time),
 				ScheduledAt:   timestamppb.New(e.ScheduledAt),
 				Schedule:      e.Schedule,

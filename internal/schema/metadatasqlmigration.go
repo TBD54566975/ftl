@@ -2,10 +2,6 @@ package schema
 
 import (
 	"fmt"
-
-	"google.golang.org/protobuf/proto"
-
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 //protobuf:13
@@ -22,11 +18,4 @@ func (m *MetadataSQLMigration) schemaChildren() []Node { return nil }
 func (m *MetadataSQLMigration) Position() Position     { return m.Pos }
 func (m *MetadataSQLMigration) String() string {
 	return fmt.Sprintf("+migration sha256:%v", m.Digest)
-}
-
-func (m *MetadataSQLMigration) ToProto() proto.Message {
-	return &schemapb.MetadataSQLMigration{
-		Pos:    posToProto(m.Pos),
-		Digest: m.Digest,
-	}
 }

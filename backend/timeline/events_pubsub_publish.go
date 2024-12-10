@@ -7,7 +7,6 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -32,7 +31,7 @@ func (p PubSubPublish) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, er
 			PubsubPublish: &timelinepb.PubSubPublishEvent{
 				DeploymentKey: p.DeploymentKey.String(),
 				RequestKey:    p.RequestKey.Ptr(),
-				VerbRef:       (&p.SourceVerb).ToProto().(*schemapb.Ref), //nolint:forcetypeassert
+				VerbRef:       (&p.SourceVerb).ToProto(), //nolint:forcetypeassert
 				Timestamp:     timestamppb.New(p.Time),
 				Duration:      durationpb.New(time.Since(p.Time)),
 				Topic:         p.Topic,

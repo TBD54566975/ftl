@@ -3,10 +3,6 @@ package schema
 import (
 	"fmt"
 	"strings"
-
-	"google.golang.org/protobuf/proto"
-
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 type FromOffset int
@@ -40,17 +36,6 @@ func (o FromOffset) String() string {
 	}
 }
 
-func (o FromOffset) ToProto() schemapb.FromOffset {
-	switch o {
-	case FromOffsetBeginning:
-		return schemapb.FromOffset_FROM_OFFSET_BEGINNING
-	case FromOffsetLatest:
-		return schemapb.FromOffset_FROM_OFFSET_LATEST
-	default:
-		panic("unexpected value")
-	}
-}
-
 //protobuf:7
 type MetadataSubscriber struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
@@ -80,14 +65,4 @@ func (m *MetadataSubscriber) String() string {
 		components = append(components, "deadletter")
 	}
 	return strings.Join(components, " ")
-}
-
-func (m *MetadataSubscriber) ToProto() proto.Message {
-	return &schemapb.MetadataSubscriber{
-		Pos: posToProto(m.Pos),
-
-		Topic:      m.Topic.ToProto().(*schemapb.Ref), //nolint:forcetypeassert
-		FromOffset: m.FromOffset.ToProto(),
-		DeadLetter: m.DeadLetter,
-	}
 }

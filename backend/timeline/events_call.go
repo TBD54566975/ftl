@@ -46,7 +46,7 @@ func (c Call) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, error) {
 	}
 	var sourceVerb *schemapb.Ref
 	if len(c.Callers) > 0 {
-		sourceVerb = c.Callers[0].ToProto().(*schemapb.Ref) //nolint:forcetypeassert
+		sourceVerb = c.Callers[0].ToProto() //nolint:forcetypeassert
 	}
 
 	return &timelinepb.CreateEventsRequest_EventEntry{
@@ -58,7 +58,7 @@ func (c Call) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, error) {
 				Response:           string(responseBody),
 				Error:              respError,
 				SourceVerbRef:      sourceVerb,
-				DestinationVerbRef: c.DestVerb.ToProto().(*schemapb.Ref), //nolint:forcetypeassert
+				DestinationVerbRef: c.DestVerb.ToProto(), //nolint:forcetypeassert
 				Duration:           durationpb.New(time.Since(c.StartTime)),
 				Request:            string(c.Request.GetBody()),
 				Stack:              stack,

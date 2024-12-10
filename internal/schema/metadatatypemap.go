@@ -2,10 +2,6 @@ package schema
 
 import (
 	"fmt"
-
-	"google.golang.org/protobuf/reflect/protoreflect"
-
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 //protobuf:8
@@ -22,14 +18,6 @@ func (m *MetadataTypeMap) Position() Position { return m.Pos }
 
 func (m *MetadataTypeMap) String() string {
 	return fmt.Sprintf("+typemap %s %q", m.Runtime, m.NativeName)
-}
-
-func (m *MetadataTypeMap) ToProto() protoreflect.ProtoMessage {
-	return &schemapb.MetadataTypeMap{
-		Pos:        posToProto(m.Pos),
-		Runtime:    m.Runtime,
-		NativeName: m.NativeName,
-	}
 }
 
 func (m *MetadataTypeMap) schemaChildren() []Node { return nil }

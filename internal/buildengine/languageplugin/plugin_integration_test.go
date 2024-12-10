@@ -331,11 +331,9 @@ func generateStubs(moduleSchs ...*schema.Module) in.Action {
 				err = os.MkdirAll(path, 0750)
 				assert.NoError(t, err)
 
-				moduleProto, ok := moduleSch.ToProto().(*schemapb.Module) //nolint:forcetypeassert
-				assert.True(t, ok)
 				_, err = client.generateStubs(wgctx, connect.NewRequest(&langpb.GenerateStubsRequest{
 					Dir:                path,
-					Module:             moduleProto,
+					Module:             moduleSch.ToProto(),
 					ModuleConfig:       configForStubProto,
 					NativeModuleConfig: nativeConfigProto,
 				}))
@@ -370,7 +368,7 @@ func build(rebuildAutomatically bool, dependencies []string, sch *schema.Schema,
 		configProto, err := langpb.ModuleConfigToProto(config.Abs())
 		assert.NoError(t, err)
 
-		schemaProto := sch.ToProto().(*schemapb.Schema) //nolint:forcetypeassert
+		schemaProto := sch.ToProto()
 		buildChan, buildChanCancel, err = client.build(ic.Context, connect.NewRequest(&langpb.BuildRequest{
 			ProjectRoot: ic.WorkingDir(),
 			StubsRoot:   filepath.Join(ic.WorkingDir(), ".ftl", config.Language, "modules"),
@@ -391,7 +389,7 @@ func sendUpdatedBuildContext(contextId string, dependencies []string, sch *schem
 		configProto, err := langpb.ModuleConfigToProto(config.Abs())
 		assert.NoError(t, err)
 
-		schemaProto := sch.ToProto().(*schemapb.Schema) //nolint:forcetypeassert
+		schemaProto := sch.ToProto()
 		_, err = client.buildContextUpdated(ic.Context, connect.NewRequest(&langpb.BuildContextUpdatedRequest{
 			BuildContext: &langpb.BuildContext{
 				Id:           contextId,

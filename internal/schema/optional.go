@@ -1,11 +1,5 @@
 package schema
 
-import (
-	"google.golang.org/protobuf/proto"
-
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
-)
-
 // Optional represents a Type whose value may be optional.
 //
 //protobuf:12
@@ -30,6 +24,3 @@ func (o *Optional) String() string         { return o.Type.String() + "?" }
 func (*Optional) schemaType()              {}
 func (*Optional) schemaSymbol()            {}
 func (o *Optional) schemaChildren() []Node { return []Node{o.Type} }
-func (o *Optional) ToProto() proto.Message {
-	return &schemapb.Optional{Pos: posToProto(o.Pos), Type: TypeToProto(o.Type)}
-}

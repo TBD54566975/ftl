@@ -3,10 +3,6 @@ package schema
 import (
 	"fmt"
 	"strings"
-
-	"google.golang.org/protobuf/proto"
-
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 // MetadataConfig represents a metadata block with a list of config items that are used.
@@ -50,10 +46,3 @@ func (m *MetadataConfig) schemaChildren() []Node {
 	return out
 }
 func (*MetadataConfig) schemaMetadata() {}
-
-func (m *MetadataConfig) ToProto() proto.Message {
-	return &schemapb.MetadataConfig{
-		Pos:    posToProto(m.Pos),
-		Config: nodeListToProto[*schemapb.Ref](m.Config),
-	}
-}

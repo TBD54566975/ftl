@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"google.golang.org/protobuf/proto"
-
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
@@ -46,16 +44,6 @@ func (t *TypeAlias) schemaChildren() []Node {
 		children = append(children, t.Type)
 	}
 	return children
-}
-func (t *TypeAlias) ToProto() proto.Message {
-	return &schemapb.TypeAlias{
-		Pos:      posToProto(t.Pos),
-		Comments: t.Comments,
-		Name:     t.Name,
-		Export:   t.Export,
-		Type:     TypeToProto(t.Type),
-		Metadata: metadataListToProto(t.Metadata),
-	}
 }
 
 func (t *TypeAlias) GetName() string  { return t.Name }

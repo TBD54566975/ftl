@@ -246,22 +246,6 @@ func (m *Module) Imports() []string {
 	return importStrs
 }
 
-func (m *Module) ToProto() proto.Message {
-	var runtime *schemapb.ModuleRuntime
-	if m.Runtime != nil {
-		runtime = m.Runtime.ToProto().(*schemapb.ModuleRuntime) //nolint:forcetypeassert
-	}
-	return &schemapb.Module{
-		Pos:      posToProto(m.Pos),
-		Builtin:  m.Builtin,
-		Name:     m.Name,
-		Comments: m.Comments,
-		Decls:    declListToProto(m.Decls),
-		Runtime:  runtime,
-		Metadata: metadataListToProto(m.Metadata),
-	}
-}
-
 func (m *Module) GetName() string  { return m.Name }
 func (m *Module) IsExported() bool { return false }
 

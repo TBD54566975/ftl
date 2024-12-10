@@ -12,33 +12,60 @@ var _ fmt.Stringer
 var _ = timestamppb.Timestamp{}
 var _ = durationpb.Duration{}
 
+// protoSlice converts a slice of values to a slice of protobuf values.
+func protoSlice[P any, T interface{ ToProto() P }](values []T) []P {
+	out := make([]P, len(values))
+	for i, v := range values {
+		out[i] = v.ToProto()
+	}
+	return out
+}
+
+// protoSlicef converts a slice of values to a slice of protobuf values using a mapping function.
+func protoSlicef[P, T any](values []T, f func(T) P) []P {
+	out := make([]P, len(values))
+	for i, v := range values {
+		out[i] = f(v)
+	}
+	return out
+}
+
 
 func (x Enum) ToProto() destpb.Enum {
 	return destpb.Enum(x)
 }
 
 func (x *Message) ToProto() *destpb.Message {
-	out := &destpb.Message{}
-	out.Time = timestamppb.New(x.Time)
-	out.Duration = durationpb.New(x.Duration)
-	return out
+	if x == nil {
+		return nil
+	}
+	return &destpb.Message{
+		Time: timestamppb.New(x.Time),
+		Duration: durationpb.New(x.Duration),
+	}
 }
 
 func (x *Root) ToProto() *destpb.Root {
-	out := &destpb.Root{}
-	out.Int = int64(x.Int)
-	out.String_ = string(x.String)
-	out.MessagePtr = x.MessagePtr.ToProto()
-	out.Enum = x.Enum.ToProto()
-	out.SumType = SumTypeToProto(x.SumType)
-	out.OptionalInt = proto.Int64(int64(x.OptionalInt))
-	out.OptionalIntPtr = proto.Int64(int64(*x.OptionalIntPtr))
-	out.OptionalMsg = x.OptionalMsg.ToProto()
-	return out
+	if x == nil {
+		return nil
+	}
+	return &destpb.Root{
+		Int: int64(x.Int),
+		String_: string(x.String),
+		MessagePtr: x.MessagePtr.ToProto(),
+		Enum: x.Enum.ToProto(),
+		SumType: SumTypeToProto(x.SumType),
+		OptionalInt: proto.Int64(int64(x.OptionalInt)),
+		OptionalIntPtr: proto.Int64(int64(*x.OptionalIntPtr)),
+		OptionalMsg: x.OptionalMsg.ToProto(),
+	}
 }
 
+// SumTypeToProto converts a SumType sum type to a protobuf message.
 func SumTypeToProto(value SumType) *destpb.SumType {
 	switch value := value.(type) {
+	case nil:
+		return nil
 	case *SumTypeA:
 		return &destpb.SumType{
 			Value: &destpb.SumType_A{value.ToProto()},
@@ -57,21 +84,30 @@ func SumTypeToProto(value SumType) *destpb.SumType {
 }
 
 func (x *SumTypeA) ToProto() *destpb.SumTypeA {
-	out := &destpb.SumTypeA{}
-	out.A = string(x.A)
-	return out
+	if x == nil {
+		return nil
+	}
+	return &destpb.SumTypeA{
+		A: string(x.A),
+	}
 }
 
 func (x *SumTypeB) ToProto() *destpb.SumTypeB {
-	out := &destpb.SumTypeB{}
-	out.B = int64(x.B)
-	return out
+	if x == nil {
+		return nil
+	}
+	return &destpb.SumTypeB{
+		B: int64(x.B),
+	}
 }
 
 func (x *SumTypeC) ToProto() *destpb.SumTypeC {
-	out := &destpb.SumTypeC{}
-	out.C = float64(x.C)
-	return out
+	if x == nil {
+		return nil
+	}
+	return &destpb.SumTypeC{
+		C: float64(x.C),
+	}
 }
 
 		

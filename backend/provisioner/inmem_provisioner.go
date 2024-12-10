@@ -176,23 +176,23 @@ func eventsToProto(events []*RuntimeEvent) []*provisioner.ProvisioningEvent {
 			switch event := e.Module.(type) {
 			case *schema.ModuleRuntimeDeployment:
 				return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_ModuleRuntimeEvent{ModuleRuntimeEvent: &schemapb.ModuleRuntimeEvent{
-					Value: &schemapb.ModuleRuntimeEvent_ModuleRuntimeDeployment{ModuleRuntimeDeployment: event.ToProto().(*schemapb.ModuleRuntimeDeployment)}, //nolint:forcetypeassert
+					Value: &schemapb.ModuleRuntimeEvent_ModuleRuntimeDeployment{ModuleRuntimeDeployment: event.ToProto()},
 				}}}
 			case *schema.ModuleRuntimeScaling:
 				return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_ModuleRuntimeEvent{ModuleRuntimeEvent: &schemapb.ModuleRuntimeEvent{
-					Value: &schemapb.ModuleRuntimeEvent_ModuleRuntimeScaling{ModuleRuntimeScaling: event.ToProto().(*schemapb.ModuleRuntimeScaling)}, //nolint:forcetypeassert
+					Value: &schemapb.ModuleRuntimeEvent_ModuleRuntimeScaling{ModuleRuntimeScaling: event.ToProto()},
 				}}}
 			case *schema.ModuleRuntimeBase:
 				return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_ModuleRuntimeEvent{ModuleRuntimeEvent: &schemapb.ModuleRuntimeEvent{
-					Value: &schemapb.ModuleRuntimeEvent_ModuleRuntimeBase{ModuleRuntimeBase: event.ToProto().(*schemapb.ModuleRuntimeBase)}, //nolint:forcetypeassert
+					Value: &schemapb.ModuleRuntimeEvent_ModuleRuntimeBase{ModuleRuntimeBase: event.ToProto()},
 				}}}
 			default:
 				panic("unknown module event type")
 			}
 		case e.Topic != nil:
-			return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_TopicRuntimeEvent{TopicRuntimeEvent: e.Topic.ToProto().(*schemapb.TopicRuntimeEvent)}} //nolint:forcetypeassert
+			return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_TopicRuntimeEvent{TopicRuntimeEvent: e.Topic.ToProto()}}
 		case e.Verb != nil:
-			return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_VerbRuntimeEvent{VerbRuntimeEvent: e.Verb.ToProto().(*schemapb.VerbRuntimeEvent)}} //nolint:forcetypeassert
+			return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_VerbRuntimeEvent{VerbRuntimeEvent: e.Verb.ToProto()}}
 		default:
 			panic("unknown event type")
 		}
