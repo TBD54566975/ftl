@@ -562,7 +562,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
 		// The created event does not matter if it is a new runner or not.
-		err = s.controllerState.Publish(&state.RunnerRegisteredEvent{
+		err = s.controllerState.Publish(ctx, &state.RunnerRegisteredEvent{
 			Key:        runnerKey,
 			Endpoint:   msg.Endpoint,
 			Deployment: deploymentKey,
@@ -574,7 +574,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 		if !deferredDeregistration {
 			// Deregister the runner if the Runner disconnects.
 			defer func() {
-				err := s.controllerState.Publish(&state.RunnerDeletedEvent{Key: runnerKey})
+				err := s.controllerState.Publish(ctx, &state.RunnerDeletedEvent{Key: runnerKey})
 				if err != nil {
 					logger.Errorf(err, "Could not deregister runner %s", runnerStr)
 				}
@@ -977,7 +977,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 			logger.Errorf(err, "Invalid digest %s", artefact.Digest)
 			return nil, fmt.Errorf("invalid digest: %w", err)
 		}
-		err = s.controllerState.Publish(&state.DeploymentArtefactCreatedEvent{})
+		err = s.controllerState.Publish(ctx, &state.DeploymentArtefactCreatedEvent{})
 		if err != nil {
 			return nil, fmt.Errorf("could not create deployment artefact: %w", err)
 		}
@@ -1010,7 +1010,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		logger.Errorf(err, "Could not create deployment")
 		return nil, fmt.Errorf("could not create deployment: %w", err)
 	}
-	err = s.controllerState.Publish(&state.DeploymentCreatedEvent{
+	err = s.controllerState.Publish(ctx, &state.DeploymentCreatedEvent{
 		Module:    module.Name,
 		Key:       dkey,
 		CreatedAt: time.Now(),
@@ -1103,7 +1103,7 @@ func (s *Service) reapStaleRunners(ctx context.Context) (time.Duration, error) {
 		if runner.LastSeen.Add(s.config.RunnerTimeout).Before(time.Now()) {
 			runnerKey := runner.Key
 			logger.Debugf("Reaping stale runner %s with last seen %v", runnerKey, runner.LastSeen.String())
-			if err := s.controllerState.Publish(&state.RunnerDeletedEvent{Key: runnerKey}); err != nil {
+			if err := s.controllerState.Publish(ctx, &state.RunnerDeletedEvent{Key: runnerKey}); err != nil {
 				return 0, fmt.Errorf("failed to publish runner deleted event: %w", err)
 			}
 		}

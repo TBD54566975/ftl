@@ -505,7 +505,7 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.DAL, call *dal.
 }
 
 func (s *Service) watchEventStream(ctx context.Context) {
-	sub := s.controllerState.Subscribe()
+	sub := s.controllerState.Subscribe(ctx)
 	logger := log.FromContext(ctx).Scope("pubsub")
 	for {
 		select {
@@ -513,7 +513,7 @@ func (s *Service) watchEventStream(ctx context.Context) {
 			return
 		case event := <-sub:
 			switch e := event.(type) {
-			case state.DeploymentActivatedEvent:
+			case *state.DeploymentActivatedEvent:
 				view := s.controllerState.View()
 				deployment, err := view.GetDeployment(e.Key)
 				if err != nil {
@@ -530,7 +530,7 @@ func (s *Service) watchEventStream(ctx context.Context) {
 					logger.Errorf(err, "Failed to create subscribers for %s", e.Key)
 					continue
 				}
-			case state.DeploymentDeactivatedEvent:
+			case *state.DeploymentDeactivatedEvent:
 				err := s.RemoveSubscriptionsAndSubscribers(ctx, e.Key)
 				if err != nil {
 					logger.Errorf(err, "Could not remove subscriptions and subscribers")

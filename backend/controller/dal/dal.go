@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/alecthomas/types/optional"
 	inprocesspubsub "github.com/alecthomas/types/pubsub"
@@ -17,7 +18,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/state"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/timeline"
-	"github.com/TBD54566975/ftl/internal/eventstream"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -145,6 +145,17 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 	if err != nil {
 		return libdal.TranslatePGError(err)
 	}
+	if minReplicas == 0 {
+		err = d.state.Publish(ctx, &state.DeploymentDeactivatedEvent{Key: key})
+		if err != nil {
+			return libdal.TranslatePGError(err)
+		}
+	} else if deployment.MinReplicas == 0 {
+		err = d.state.Publish(ctx, &state.DeploymentActivatedEvent{Key: key, ActivatedAt: time.Now(), MinReplicas: minReplicas})
+		if err != nil {
+			return libdal.TranslatePGError(err)
+		}
+	}
 	timeline.ClientFromContext(ctx).Publish(ctx, timeline.DeploymentUpdated{
 		DeploymentKey:   key,
 		MinReplicas:     minReplicas,
@@ -173,6 +184,11 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		return fmt.Errorf("replace deployment failed to get deployment for %v: %w", newDeploymentKey, libdal.TranslatePGError(err))
 	}
 
+	err = d.state.Publish(ctx, &state.DeploymentActivatedEvent{Key: newDeploymentKey, ActivatedAt: time.Now(), MinReplicas: minReplicas})
+	if err != nil {
+		return libdal.TranslatePGError(err)
+	}
+
 	// If there's an existing deployment, set its desired replicas to 0
 	var replacedDeploymentKey optional.Option[model.DeploymentKey]
 	oldDeployment, err := tx.db.GetExistingDeploymentForModule(ctx, newDeployment.Module)
@@ -183,6 +199,10 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		err = tx.db.SetDeploymentDesiredReplicas(ctx, newDeploymentKey, int32(minReplicas))
 		if err != nil {
 			return fmt.Errorf("replace deployment failed to set new deployment replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, libdal.TranslatePGError(err))
+		}
+		err = d.state.Publish(ctx, &state.DeploymentDeactivatedEvent{Key: oldDeployment.Key})
+		if err != nil {
+			return libdal.TranslatePGError(err)
 		}
 		replacedDeploymentKey = optional.Some(oldDeployment.Key)
 	} else if !libdal.IsNotFound(err) {

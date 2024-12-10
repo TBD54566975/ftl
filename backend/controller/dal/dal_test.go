@@ -50,7 +50,7 @@ func TestDAL(t *testing.T) {
 	t.Run("CreateDeployment", func(t *testing.T) {
 		deploymentKey, err = dal.CreateDeployment(ctx, "go", module)
 		assert.NoError(t, err)
-		err = dal.state.Publish(&state.DeploymentCreatedEvent{
+		err = dal.state.Publish(ctx, &state.DeploymentCreatedEvent{
 			Key:       deploymentKey,
 			CreatedAt: time.Now(),
 			Module:    module.Name,

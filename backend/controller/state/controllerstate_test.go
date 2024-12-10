@@ -1,6 +1,7 @@
 package state_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/state"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
@@ -20,7 +22,9 @@ func TestRunnerState(t *testing.T) {
 	endpoint := "http://localhost:8080"
 	module := "test"
 	deploymentKey := model.NewDeploymentKey(module)
-	err := cs.Publish(&state.RunnerRegisteredEvent{
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+
+	err := cs.Publish(ctx, &state.RunnerRegisteredEvent{
 		Key:        key,
 		Time:       create,
 		Endpoint:   endpoint,
@@ -37,7 +41,7 @@ func TestRunnerState(t *testing.T) {
 	assert.Equal(t, module, view.Runners()[0].Module)
 	assert.Equal(t, deploymentKey, view.Runners()[0].Deployment)
 	seen := time.Now()
-	err = cs.Publish(&state.RunnerRegisteredEvent{
+	err = cs.Publish(ctx, &state.RunnerRegisteredEvent{
 		Key:        key,
 		Time:       seen,
 		Endpoint:   endpoint,
@@ -48,7 +52,7 @@ func TestRunnerState(t *testing.T) {
 	view = cs.View()
 	assert.Equal(t, seen, view.Runners()[0].LastSeen)
 
-	err = cs.Publish(&state.RunnerDeletedEvent{
+	err = cs.Publish(ctx, &state.RunnerDeletedEvent{
 		Key: key,
 	})
 	assert.NoError(t, err)
@@ -58,13 +62,14 @@ func TestRunnerState(t *testing.T) {
 }
 
 func TestDeploymentState(t *testing.T) {
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	cs := state.NewInMemoryState()
 	view := cs.View()
 	assert.Equal(t, 0, len(view.Deployments()))
 
 	deploymentKey := model.NewDeploymentKey("test-deployment")
 	create := time.Now()
-	err := cs.Publish(&state.DeploymentCreatedEvent{
+	err := cs.Publish(ctx, &state.DeploymentCreatedEvent{
 		Key:       deploymentKey,
 		CreatedAt: create,
 		Schema:    &schemapb.Module{Name: "test"},
@@ -76,7 +81,7 @@ func TestDeploymentState(t *testing.T) {
 	assert.Equal(t, create, view.Deployments()[deploymentKey.String()].CreatedAt)
 
 	activate := time.Now()
-	err = cs.Publish(&state.DeploymentActivatedEvent{
+	err = cs.Publish(ctx, &state.DeploymentActivatedEvent{
 		Key:         deploymentKey,
 		ActivatedAt: activate,
 		MinReplicas: 1,
@@ -86,7 +91,7 @@ func TestDeploymentState(t *testing.T) {
 	assert.Equal(t, 1, view.Deployments()[deploymentKey.String()].MinReplicas)
 	assert.Equal(t, activate, view.Deployments()[deploymentKey.String()].ActivatedAt.MustGet())
 
-	err = cs.Publish(&state.DeploymentDeactivatedEvent{
+	err = cs.Publish(ctx, &state.DeploymentDeactivatedEvent{
 		Key: deploymentKey,
 	})
 	assert.NoError(t, err)
