@@ -1166,6 +1166,9 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED,
 					ModuleRemoved: event.ModuleRemoved,
 				})
+				if err != nil {
+					return err
+				}
 			case *state.DeploymentSchemaUpdatedEvent:
 				view := s.controllerState.View()
 				dep, err := view.GetDeployment(event.Key)
