@@ -33,12 +33,12 @@ class GetDeploymentContextResponse(_message.Message):
         dsn: str
         def __init__(self, name: _Optional[str] = ..., type: _Optional[_Union[GetDeploymentContextResponse.DbType, str]] = ..., dsn: _Optional[str] = ...) -> None: ...
     class Route(_message.Message):
-        __slots__ = ("module", "uri")
-        MODULE_FIELD_NUMBER: _ClassVar[int]
+        __slots__ = ("deployment", "uri")
+        DEPLOYMENT_FIELD_NUMBER: _ClassVar[int]
         URI_FIELD_NUMBER: _ClassVar[int]
-        module: str
+        deployment: str
         uri: str
-        def __init__(self, module: _Optional[str] = ..., uri: _Optional[str] = ...) -> None: ...
+        def __init__(self, deployment: _Optional[str] = ..., uri: _Optional[str] = ...) -> None: ...
     class ConfigsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]

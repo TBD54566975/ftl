@@ -25,7 +25,7 @@ message GetDeploymentContextResponse {
   }
 
   message Route {
-    string module = 1;
+    string deployment = 1;
     string uri = 2;
   }
 
