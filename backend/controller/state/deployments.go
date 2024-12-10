@@ -7,7 +7,6 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
-	"github.com/TBD54566975/ftl/internal/eventstream"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
@@ -20,6 +19,7 @@ type Deployment struct {
 	CreatedAt   time.Time
 	ActivatedAt optional.Option[time.Time]
 	Artefacts   map[string]*DeploymentArtefact
+	Language    string
 }
 
 func (r *State) GetDeployment(deployment model.DeploymentKey) (*Deployment, error) {
@@ -34,9 +34,13 @@ func (r *State) Deployments() map[string]*Deployment {
 	return r.deployments
 }
 
-var _ eventstream.Event[State] = (*DeploymentCreatedEvent)(nil)
-var _ eventstream.Event[State] = (*DeploymentActivatedEvent)(nil)
-var _ eventstream.Event[State] = (*DeploymentDeactivatedEvent)(nil)
+func (r *State) ActiveDeployments() map[string]*Deployment {
+	return r.activeDeployments
+}
+
+var _ ControllerEvent = (*DeploymentCreatedEvent)(nil)
+var _ ControllerEvent = (*DeploymentActivatedEvent)(nil)
+var _ ControllerEvent = (*DeploymentDeactivatedEvent)(nil)
 
 type DeploymentCreatedEvent struct {
 	Key       model.DeploymentKey
@@ -44,6 +48,7 @@ type DeploymentCreatedEvent struct {
 	Module    string
 	Schema    *schemapb.Module
 	Artefacts []*DeploymentArtefact
+	Language  string
 }
 
 func (r *DeploymentCreatedEvent) Handle(t State) (State, error) {
@@ -94,7 +99,7 @@ type DeploymentDeactivatedEvent struct {
 	Key model.DeploymentKey
 }
 
-func (r DeploymentDeactivatedEvent) Handle(t State) (State, error) {
+func (r *DeploymentDeactivatedEvent) Handle(t State) (State, error) {
 	existing, ok := t.deployments[r.Key.String()]
 	if !ok {
 		return t, fmt.Errorf("deployment %s not found", r.Key)

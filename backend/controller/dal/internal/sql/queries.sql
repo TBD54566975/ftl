@@ -4,16 +4,6 @@ VALUES ($1, $2)
 ON CONFLICT (name) DO UPDATE SET language = $1
 RETURNING id;
 
--- name: GetDeploymentsByID :many
-SELECT *
-FROM deployments
-WHERE id = ANY (@ids::BIGINT[]);
-
--- name: GetModulesByID :many
-SELECT *
-FROM modules
-WHERE id = ANY (@ids::BIGINT[]);
-
 -- name: CreateDeployment :exec
 INSERT INTO deployments (module_id, "schema", "key")
 VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::module_schema_pb, @key::deployment_key);
@@ -26,20 +16,6 @@ UPDATE deployments
 SET schema = @schema::module_schema_pb
 WHERE key = @key::deployment_key
 RETURNING 1;
-
--- name: GetDeployment :one
-SELECT sqlc.embed(d), m.language, m.name AS module_name, d.min_replicas
-FROM deployments d
-         INNER JOIN modules m ON m.id = d.module_id
-WHERE d.key = sqlc.arg('key')::deployment_key;
-
--- name: GetActiveDeployments :many
-SELECT sqlc.embed(d), m.name AS module_name, m.language
-FROM deployments d
-  JOIN modules m ON d.module_id = m.id
-WHERE min_replicas > 0
-GROUP BY d.id, m.name, m.language
-ORDER BY d.last_activated_at;
 
 -- name: GetDeploymentsWithMinReplicas :many
 SELECT sqlc.embed(d), m.name AS module_name, m.language

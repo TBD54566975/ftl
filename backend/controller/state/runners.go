@@ -5,7 +5,6 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/internal/eventstream"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
@@ -42,8 +41,8 @@ func (r *State) RunnersForDeployment(deployment string) []Runner {
 	return ret
 }
 
-var _ eventstream.Event[State] = (*RunnerRegisteredEvent)(nil)
-var _ eventstream.Event[State] = (*RunnerDeletedEvent)(nil)
+var _ ControllerEvent = (*RunnerRegisteredEvent)(nil)
+var _ ControllerEvent = (*RunnerDeletedEvent)(nil)
 
 type RunnerRegisteredEvent struct {
 	Key        model.RunnerKey
@@ -75,7 +74,7 @@ type RunnerDeletedEvent struct {
 	Key model.RunnerKey
 }
 
-func (r RunnerDeletedEvent) Handle(t State) (State, error) {
+func (r *RunnerDeletedEvent) Handle(t State) (State, error) {
 	existing := t.runners[r.Key.String()]
 	if existing != nil {
 		delete(t.runners, r.Key.String())

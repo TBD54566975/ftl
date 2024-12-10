@@ -8,17 +8,13 @@ import (
 	"time"
 
 	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types/optional"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	"github.com/TBD54566975/ftl/backend/timeline"
-	"github.com/TBD54566975/ftl/internal/routing"
-	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
-
-	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
-	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
+	"github.com/TBD54566975/ftl/backend/controller/state"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -32,8 +28,7 @@ func TestDAL(t *testing.T) {
 	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, timelineEndpoint))
 	conn := sqltest.OpenForTesting(ctx, t)
 
-	pubSub := pubsub.New(ctx, conn, routing.New(ctx, schemaeventsource.NewUnattached()))
-	dal := New(ctx, conn, pubSub, artefacts.NewForTesting())
+	dal := New(ctx, conn, artefacts.NewForTesting(), state.NewInMemoryState())
 
 	deploymentChangesCh := dal.DeploymentChanges.Subscribe(nil)
 	deploymentChanges := []DeploymentNotification{}
@@ -55,24 +50,18 @@ func TestDAL(t *testing.T) {
 	t.Run("CreateDeployment", func(t *testing.T) {
 		deploymentKey, err = dal.CreateDeployment(ctx, "go", module)
 		assert.NoError(t, err)
+		err = dal.state.Publish(ctx, &state.DeploymentCreatedEvent{
+			Key:       deploymentKey,
+			CreatedAt: time.Now(),
+			Module:    module.Name,
+			Schema:    &schemapb.Module{Name: module.Name},
+		})
+		assert.NoError(t, err)
 	})
 
 	t.Run("SetDeploymentReplicas", func(t *testing.T) {
 		err := dal.SetDeploymentReplicas(ctx, deploymentKey, 1)
 		assert.NoError(t, err)
-	})
-
-	t.Run("VerifyDeploymentNotifications", func(t *testing.T) {
-		t.Skip("Skipping this test since we're not using the deployment notification system")
-		dal.DeploymentChanges.Unsubscribe(deploymentChangesCh)
-		expectedDeploymentChanges := []DeploymentNotification{
-			{Message: optional.Some(dalmodel.Deployment{Language: "go", Module: "test", Schema: &schema.Module{Name: "test"}})},
-			{Message: optional.Some(dalmodel.Deployment{Language: "go", Module: "test", MinReplicas: 1, Schema: &schema.Module{Name: "test"}})},
-		}
-		err = wg.Wait()
-		assert.NoError(t, err)
-		assert.Equal(t, expectedDeploymentChanges, deploymentChanges,
-			assert.Exclude[model.DeploymentKey](), assert.Exclude[time.Time](), assert.IgnoreGoStringer())
 	})
 }
 
@@ -80,13 +69,12 @@ func TestCreateArtefactConflict(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
 
-	pubSub := pubsub.New(ctx, conn, routing.New(ctx, schemaeventsource.NewUnattached()))
-
-	dal := New(ctx, conn, pubSub, artefacts.NewForTesting())
+	dal := New(ctx, conn, artefacts.NewForTesting(), state.NewInMemoryState())
 
 	idch := make(chan sha256.SHA256, 2)
 
 	wg := sync.WaitGroup{}
+
 	wg.Add(2)
 	createContent := func() {
 		defer wg.Done()

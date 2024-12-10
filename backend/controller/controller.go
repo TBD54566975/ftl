@@ -56,7 +56,6 @@ import (
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 	"github.com/TBD54566975/ftl/internal/dsn"
-	"github.com/TBD54566975/ftl/internal/eventstream"
 	"github.com/TBD54566975/ftl/internal/log"
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -216,7 +215,7 @@ type Service struct {
 
 	clientLock      sync.Mutex
 	routeTable      *routing.RouteTable
-	controllerState eventstream.EventStream[state.State]
+	controllerState state.ControllerState
 }
 
 func New(
@@ -260,9 +259,9 @@ func New(
 		controllerState:         state.NewInMemoryState(),
 	}
 
-	pubSub := pubsub.New(ctx, conn, routingTable)
+	pubSub := pubsub.New(ctx, conn, routingTable, svc.controllerState)
 	svc.pubSub = pubSub
-	svc.dal = dal.New(ctx, conn, pubSub, svc.storage)
+	svc.dal = dal.New(ctx, conn, svc.storage, svc.controllerState)
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx)
 
@@ -340,7 +339,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	controller := dalmodel.Controller{Key: s.key, Endpoint: s.config.Bind.String()}
 	currentState := s.controllerState.View()
 	runners := currentState.Runners()
-	status, err := s.dal.GetDeploymentStatus(ctx)
+	status, err := s.dal.GetActiveDeployments()
 	if err != nil {
 		return nil, fmt.Errorf("could not get status: %w", err)
 	}
@@ -560,7 +559,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
 		// The created event does not matter if it is a new runner or not.
-		err = s.controllerState.Publish(&state.RunnerRegisteredEvent{
+		err = s.controllerState.Publish(ctx, &state.RunnerRegisteredEvent{
 			Key:        runnerKey,
 			Endpoint:   msg.Endpoint,
 			Deployment: deploymentKey,
@@ -572,7 +571,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 		if !deferredDeregistration {
 			// Deregister the runner if the Runner disconnects.
 			defer func() {
-				err := s.controllerState.Publish(&state.RunnerDeletedEvent{Key: runnerKey})
+				err := s.controllerState.Publish(ctx, &state.RunnerDeletedEvent{Key: runnerKey})
 				if err != nil {
 					logger.Errorf(err, "Could not deregister runner %s", runnerStr)
 				}
@@ -677,7 +676,7 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 	depName := req.Msg.Deployment
 	if !strings.HasPrefix(depName, "dpl-") {
 		// For hot reload endponts we might not have a deployment key
-		deps, err := s.dal.GetActiveDeployments(ctx)
+		deps, err := s.dal.GetActiveDeployments()
 		if err != nil {
 			return fmt.Errorf("could not get active deployments: %w", err)
 		}
@@ -975,7 +974,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 			logger.Errorf(err, "Invalid digest %s", artefact.Digest)
 			return nil, fmt.Errorf("invalid digest: %w", err)
 		}
-		err = s.controllerState.Publish(&state.DeploymentArtefactCreatedEvent{})
+		err = s.controllerState.Publish(ctx, &state.DeploymentArtefactCreatedEvent{})
 		if err != nil {
 			return nil, fmt.Errorf("could not create deployment artefact: %w", err)
 		}
@@ -1008,12 +1007,13 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		logger.Errorf(err, "Could not create deployment")
 		return nil, fmt.Errorf("could not create deployment: %w", err)
 	}
-	err = s.controllerState.Publish(&state.DeploymentCreatedEvent{
+	err = s.controllerState.Publish(ctx, &state.DeploymentCreatedEvent{
 		Module:    module.Name,
 		Key:       dkey,
 		CreatedAt: time.Now(),
 		Schema:    ms,
 		Artefacts: artefacts,
+		Language:  ms.Runtime.Base.Language,
 	})
 	if err != nil {
 		logger.Errorf(err, "Could not create deployment event")
@@ -1100,7 +1100,7 @@ func (s *Service) reapStaleRunners(ctx context.Context) (time.Duration, error) {
 		if runner.LastSeen.Add(s.config.RunnerTimeout).Before(time.Now()) {
 			runnerKey := runner.Key
 			logger.Debugf("Reaping stale runner %s with last seen %v", runnerKey, runner.LastSeen.String())
-			if err := s.controllerState.Publish(&state.RunnerDeletedEvent{Key: runnerKey}); err != nil {
+			if err := s.controllerState.Publish(ctx, &state.RunnerDeletedEvent{Key: runnerKey}); err != nil {
 				return 0, fmt.Errorf("failed to publish runner deleted event: %w", err)
 			}
 		}
@@ -1120,7 +1120,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	schemaByDeploymentKey := map[string]*schemapb.Module{}
 
 	// Seed the notification channel with the current deployments.
-	seedDeployments, err := s.dal.GetActiveDeployments(ctx)
+	seedDeployments, err := s.dal.GetActiveDeployments()
 	if err != nil {
 		return err
 	}
