@@ -77,7 +77,7 @@ func verbSchemaString(sch *schema.Schema, verb *schema.Verb) (string, error) {
 }
 
 func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pbconsole.GetModulesRequest]) (*connect.Response[pbconsole.GetModulesResponse], error) {
-	deployments, err := c.dal.GetDeploymentsWithMinReplicas(ctx)
+	deployments, err := c.dal.GetActiveDeployments()
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +371,7 @@ func (c *ConsoleService) filterDeployments(unfilteredDeployments []dalmodel.Depl
 }
 
 func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *connect.ServerStream[pbconsole.StreamModulesResponse]) error {
-	unfilteredDeployments, err := c.dal.GetDeploymentsWithMinReplicas(ctx)
+	unfilteredDeployments, err := c.dal.GetActiveDeployments()
 	if err != nil {
 		return fmt.Errorf("failed to get deployments: %w", err)
 	}

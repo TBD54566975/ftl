@@ -46,7 +46,7 @@ func (d *DAL) PollDeployments(ctx context.Context) {
 		delay := time.Millisecond * 500
 		currentDeployments := make(map[string]deploymentState)
 
-		deployments, err := d.GetDeploymentsWithMinReplicas(ctx)
+		deployments, err := d.GetActiveDeployments()
 		if err != nil {
 			if errors.Is(ctx.Err(), context.Canceled) {
 				logger.Tracef("Polling stopped: %v", ctx.Err())

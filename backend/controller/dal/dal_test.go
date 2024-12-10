@@ -11,9 +11,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/controller/state"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -26,9 +24,8 @@ func TestDAL(t *testing.T) {
 	timelineEndpoint, err := url.Parse("http://localhost:8080")
 	assert.NoError(t, err)
 	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, timelineEndpoint))
-	conn := sqltest.OpenForTesting(ctx, t)
 
-	dal := New(ctx, conn, artefacts.NewForTesting(), state.NewInMemoryState())
+	dal := New(artefacts.NewForTesting(), state.NewInMemoryState())
 
 	deploymentChangesCh := dal.DeploymentChanges.Subscribe(nil)
 	deploymentChanges := []DeploymentNotification{}
@@ -40,21 +37,15 @@ func TestDAL(t *testing.T) {
 		return nil
 	})
 
-	t.Run("UpsertModule", func(t *testing.T) {
-		err = dal.UpsertModule(ctx, "go", "test")
-		assert.NoError(t, err)
-	})
-
 	module := &schema.Module{Name: "test"}
 	var deploymentKey model.DeploymentKey
 	t.Run("CreateDeployment", func(t *testing.T) {
-		deploymentKey, err = dal.CreateDeployment(ctx, "go", module)
-		assert.NoError(t, err)
+		deploymentKey = model.NewDeploymentKey(module.Name)
 		err = dal.state.Publish(ctx, &state.DeploymentCreatedEvent{
 			Key:       deploymentKey,
 			CreatedAt: time.Now(),
 			Module:    module.Name,
-			Schema:    &schemapb.Module{Name: module.Name},
+			Schema:    &schema.Module{Name: module.Name},
 		})
 		assert.NoError(t, err)
 	})
@@ -67,9 +58,8 @@ func TestDAL(t *testing.T) {
 
 func TestCreateArtefactConflict(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	conn := sqltest.OpenForTesting(ctx, t)
 
-	dal := New(ctx, conn, artefacts.NewForTesting(), state.NewInMemoryState())
+	dal := New(artefacts.NewForTesting(), state.NewInMemoryState())
 
 	idch := make(chan sha256.SHA256, 2)
 
@@ -78,12 +68,9 @@ func TestCreateArtefactConflict(t *testing.T) {
 	wg.Add(2)
 	createContent := func() {
 		defer wg.Done()
-		tx1, err := dal.Begin(ctx)
-		assert.NoError(t, err)
 		digest, err := dal.registry.Upload(ctx, artefacts.Artefact{Content: []byte("content")})
 		assert.NoError(t, err)
 		time.Sleep(time.Second * 2)
-		err = tx1.Commit(ctx)
 		assert.NoError(t, err)
 		idch <- digest
 	}

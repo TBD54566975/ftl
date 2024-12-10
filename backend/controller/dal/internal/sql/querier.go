@@ -9,22 +9,16 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/alecthomas/types/optional"
 )
 
 type Querier interface {
 	BeginConsumingTopicEvent(ctx context.Context, subscription model.SubscriptionKey, event model.TopicEventKey) error
 	CompleteEventForSubscription(ctx context.Context, name string, module string) error
-	CreateDeployment(ctx context.Context, moduleName string, schema *schema.Module, key model.DeploymentKey) error
 	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error)
 	DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriptionKey, error)
-	GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error)
-	GetDeploymentsWithMinReplicas(ctx context.Context) ([]GetDeploymentsWithMinReplicasRow, error)
-	GetExistingDeploymentForModule(ctx context.Context, name string) (GetExistingDeploymentForModuleRow, error)
 	GetNextEventForSubscription(ctx context.Context, consumptionDelay sqltypes.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
 	GetRandomSubscriber(ctx context.Context, key model.SubscriptionKey) (GetRandomSubscriberRow, error)
-	GetSchemaForDeployment(ctx context.Context, key model.DeploymentKey) (*schema.Module, error)
 	GetSubscription(ctx context.Context, column1 string, column2 string) (TopicSubscription, error)
 	// Results may not be ready to be scheduled yet due to event consumption delay
 	// Sorting ensures that brand new events (that may not be ready for consumption)
@@ -35,13 +29,7 @@ type Querier interface {
 	GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent, error)
 	InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error
 	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error
-	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
 	SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error
-	// Note that this can result in a race condition if the deployment is being updated by another process. This will go
-	// away once we ditch the DB.
-	//
-	UpdateDeploymentSchema(ctx context.Context, schema *schema.Module, key model.DeploymentKey) error
-	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) (UpsertSubscriptionRow, error)
 	UpsertTopic(ctx context.Context, arg UpsertTopicParams) error
 }

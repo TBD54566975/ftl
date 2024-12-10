@@ -505,7 +505,8 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.DAL, call *dal.
 }
 
 func (s *Service) watchEventStream(ctx context.Context) {
-	sub := s.controllerState.Subscribe(ctx)
+	sub := s.controllerState.Updates().Subscribe(nil)
+	defer s.controllerState.Updates().Unsubscribe(sub)
 	logger := log.FromContext(ctx).Scope("pubsub")
 	for {
 		select {
@@ -513,6 +514,19 @@ func (s *Service) watchEventStream(ctx context.Context) {
 			return
 		case event := <-sub:
 			switch e := event.(type) {
+			case *state.DeploymentCreatedEvent:
+
+				// upsert topics
+				for _, decl := range e.Schema.Decls {
+					if topic, ok := decl.(*schema.Topic); ok {
+						tk := model.NewTopicKey(e.Module, topic.GetName())
+						err := s.dal.UpsertTopic(ctx, tk, topic.Event.String())
+						if err != nil {
+							logger.Errorf(err, "Failed to upsert topic %s", topic)
+						}
+					}
+
+				}
 			case *state.DeploymentActivatedEvent:
 				view := s.controllerState.View()
 				deployment, err := view.GetDeployment(e.Key)

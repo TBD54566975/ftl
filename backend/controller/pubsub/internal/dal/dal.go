@@ -352,3 +352,16 @@ func (d *DAL) RemoveSubscriptionsAndSubscribers(ctx context.Context, key model.D
 
 	return nil
 }
+
+func (d *DAL) UpsertTopic(ctx context.Context, topic model.TopicKey, eventType string) error {
+	err := d.db.UpsertTopic(ctx, dalsql.UpsertTopicParams{
+		Topic:     topic,
+		Module:    topic.Payload.Module,
+		Name:      topic.Payload.Name,
+		EventType: eventType,
+	})
+	if err != nil {
+		return fmt.Errorf("could not upsert topic: %w", libdal.TranslatePGError(err))
+	}
+	return nil
+}

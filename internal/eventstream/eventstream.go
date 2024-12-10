@@ -17,7 +17,7 @@ type EventStream[View any, E Event[View]] interface {
 
 	View() View
 
-	Subscribe(ctx context.Context) <-chan E
+	Updates() *pubsub.Topic[E]
 }
 
 // StreamView is a view of an event stream that can be subscribed to, without modifying the stream.
@@ -52,7 +52,7 @@ func (i *inMemoryEventStream[T, E]) Publish(ctx context.Context, e E) error {
 	defer i.lock.Unlock()
 	logger := log.FromContext(ctx)
 
-	logger.Debugf("Publishing event %v", e)
+	logger.Debugf("Publishing event %T%v", e, e)
 	newView, err := e.Handle(reflect.DeepCopy(i.view))
 	if err != nil {
 		return fmt.Errorf("failed to handle event: %w", err)
@@ -66,8 +66,6 @@ func (i *inMemoryEventStream[T, E]) View() T {
 	return i.view
 }
 
-func (i *inMemoryEventStream[T, E]) Subscribe(ctx context.Context) <-chan E {
-	ret := i.topic.Subscribe(nil)
-
-	return ret
+func (i *inMemoryEventStream[T, E]) Updates() *pubsub.Topic[E] {
+	return i.topic
 }

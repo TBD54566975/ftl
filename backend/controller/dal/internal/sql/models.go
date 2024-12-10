@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/alecthomas/types/optional"
 	"github.com/sqlc-dev/pqtype"
 )
@@ -56,17 +55,6 @@ func (ns NullTopicSubscriptionState) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.TopicSubscriptionState), nil
-}
-
-type Deployment struct {
-	ID              int64
-	CreatedAt       time.Time
-	ModuleID        int64
-	Key             model.DeploymentKey
-	Schema          *schema.Module
-	Labels          json.RawMessage
-	MinReplicas     int32
-	LastActivatedAt time.Time
 }
 
 type Topic struct {

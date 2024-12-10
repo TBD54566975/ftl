@@ -261,7 +261,7 @@ func New(
 
 	pubSub := pubsub.New(ctx, conn, routingTable, svc.controllerState)
 	svc.pubSub = pubSub
-	svc.dal = dal.New(ctx, conn, svc.storage, svc.controllerState)
+	svc.dal = dal.New(svc.storage, svc.controllerState)
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx)
 
@@ -1002,16 +1002,12 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		return nil, fmt.Errorf("invalid module schema: %w", err)
 	}
 
-	dkey, err := s.dal.CreateDeployment(ctx, ms.Runtime.Base.Language, module)
-	if err != nil {
-		logger.Errorf(err, "Could not create deployment")
-		return nil, fmt.Errorf("could not create deployment: %w", err)
-	}
+	dkey := model.NewDeploymentKey(module.Name)
 	err = s.controllerState.Publish(ctx, &state.DeploymentCreatedEvent{
 		Module:    module.Name,
 		Key:       dkey,
 		CreatedAt: time.Now(),
-		Schema:    ms,
+		Schema:    module,
 		Artefacts: artefacts,
 		Language:  ms.Runtime.Base.Language,
 	})
