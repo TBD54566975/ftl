@@ -18,6 +18,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub/internal/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
+	"github.com/TBD54566975/ftl/backend/controller/state"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlpubsubv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -42,20 +43,23 @@ type Scheduler interface {
 }
 
 type Service struct {
-	dal            *dal.DAL
-	eventPublished chan struct{}
-	routeTable     *routing.RouteTable
-	verbRouting    *routing.VerbCallRouter
-	asyncCallsLock sync.Mutex
+	dal             *dal.DAL
+	eventPublished  chan struct{}
+	routeTable      *routing.RouteTable
+	verbRouting     *routing.VerbCallRouter
+	asyncCallsLock  sync.Mutex
+	controllerState state.ControllerState
 }
 
-func New(ctx context.Context, conn libdal.Connection, rt *routing.RouteTable) *Service {
+func New(ctx context.Context, conn libdal.Connection, rt *routing.RouteTable, controllerState state.ControllerState) *Service {
 	m := &Service{
-		dal:            dal.New(conn),
-		eventPublished: make(chan struct{}),
-		routeTable:     rt,
-		verbRouting:    routing.NewVerbRouterFromTable(ctx, rt),
+		dal:             dal.New(conn),
+		eventPublished:  make(chan struct{}),
+		routeTable:      rt,
+		verbRouting:     routing.NewVerbRouterFromTable(ctx, rt),
+		controllerState: controllerState,
 	}
+	go m.watchEventStream(ctx)
 	go m.poll(ctx)
 	return m
 }
@@ -498,4 +502,40 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.DAL, call *dal.
 		panic(fmt.Errorf("unsupported async call origin: %v", call.Origin))
 	}
 	return nil
+}
+
+func (s *Service) watchEventStream(ctx context.Context) {
+	sub := s.controllerState.Subscribe()
+	logger := log.FromContext(ctx).Scope("pubsub")
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case event := <-sub:
+			switch e := event.(type) {
+			case state.DeploymentActivatedEvent:
+				view := s.controllerState.View()
+				deployment, err := view.GetDeployment(e.Key)
+				if err != nil {
+					logger.Errorf(err, "Deployment %s not found", e.Key)
+					continue
+				}
+				err = s.CreateSubscriptions(ctx, e.Key, deployment.Schema)
+				if err != nil {
+					logger.Errorf(err, "Failed to create subscriptions for %s", e.Key)
+					continue
+				}
+				err = s.CreateSubscribers(ctx, e.Key, deployment.Schema)
+				if err != nil {
+					logger.Errorf(err, "Failed to create subscribers for %s", e.Key)
+					continue
+				}
+			case state.DeploymentDeactivatedEvent:
+				err := s.RemoveSubscriptionsAndSubscribers(ctx, e.Key)
+				if err != nil {
+					logger.Errorf(err, "Could not remove subscriptions and subscribers")
+				}
+			}
+		}
+	}
 }

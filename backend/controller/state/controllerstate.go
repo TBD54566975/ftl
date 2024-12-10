@@ -12,8 +12,14 @@ type State struct {
 	artifacts           map[string]bool
 }
 
-func NewInMemoryState() eventstream.EventStream[State] {
-	return eventstream.NewInMemory(State{
+type ControllerEvent interface {
+	Handle(view State) (State, error)
+}
+
+type ControllerState eventstream.EventStream[State, ControllerEvent]
+
+func NewInMemoryState() ControllerState {
+	return eventstream.NewInMemory[State, ControllerEvent](State{
 		runners:             map[string]*Runner{},
 		runnersByDeployment: map[string][]*Runner{},
 	})

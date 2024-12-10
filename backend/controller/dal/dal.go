@@ -24,7 +24,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
-func New(ctx context.Context, conn libdal.Connection, pubsub *pubsub.Service, registry aregistry.Service) *DAL {
+func New(ctx context.Context, conn libdal.Connection, registry aregistry.Service) *DAL {
 	var d *DAL
 	db := dalsql.New(conn)
 	d = &DAL{
@@ -34,7 +34,6 @@ func New(ctx context.Context, conn libdal.Connection, pubsub *pubsub.Service, re
 			return &DAL{
 				Handle:            h,
 				db:                dalsql.New(h.Connection),
-				pubsub:            pubsub,
 				registry:          registry,
 				DeploymentChanges: d.DeploymentChanges,
 			}
@@ -153,17 +152,6 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 	if err != nil {
 		return libdal.TranslatePGError(err)
 	}
-	if minReplicas == 0 {
-		err = tx.deploymentWillDeactivate(ctx, key)
-		if err != nil {
-			return libdal.TranslatePGError(err)
-		}
-	} else if deployment.MinReplicas == 0 {
-		err = tx.deploymentWillActivate(ctx, key)
-		if err != nil {
-			return libdal.TranslatePGError(err)
-		}
-	}
 	timeline.ClientFromContext(ctx).Publish(ctx, timeline.DeploymentUpdated{
 		DeploymentKey:   key,
 		MinReplicas:     minReplicas,
@@ -191,12 +179,6 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		return fmt.Errorf("replace deployment failed to get deployment for %v: %w", newDeploymentKey, libdal.TranslatePGError(err))
 	}
 
-	// must be called before deploymentWillDeactivate for the old deployment
-	err = tx.deploymentWillActivate(ctx, newDeploymentKey)
-	if err != nil {
-		return fmt.Errorf("replace deployment failed willActivate trigger for %v: %w", newDeploymentKey, libdal.TranslatePGError(err))
-	}
-
 	// If there's an existing deployment, set its desired replicas to 0
 	var replacedDeploymentKey optional.Option[model.DeploymentKey]
 	oldDeployment, err := tx.db.GetExistingDeploymentForModule(ctx, newDeployment.ModuleName)
@@ -207,10 +189,6 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		err = tx.db.SetDeploymentDesiredReplicas(ctx, newDeploymentKey, int32(minReplicas))
 		if err != nil {
 			return fmt.Errorf("replace deployment failed to set new deployment replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, libdal.TranslatePGError(err))
-		}
-		err = tx.deploymentWillDeactivate(ctx, oldDeployment.Key)
-		if err != nil {
-			return fmt.Errorf("replace deployment failed willDeactivate trigger from %v to %v: %w", oldDeployment.Key, newDeploymentKey, libdal.TranslatePGError(err))
 		}
 		replacedDeploymentKey = optional.Some(oldDeployment.Key)
 	} else if !libdal.IsNotFound(err) {
@@ -233,37 +211,6 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	})
 	if err != nil {
 		return fmt.Errorf("replace deployment failed to create event: %w", libdal.TranslatePGError(err))
-	}
-	return nil
-}
-
-// deploymentWillActivate is called whenever a deployment goes from min_replicas=0 to min_replicas>0.
-//
-// When replacing a deployment, this should be called first before calling deploymentWillDeactivate on the old deployment.
-// This allows the new deployment to migrate from the old deployment (such as subscriptions).
-func (d *DAL) deploymentWillActivate(ctx context.Context, key model.DeploymentKey) error {
-	module, err := d.db.GetSchemaForDeployment(ctx, key)
-	if err != nil {
-		return fmt.Errorf("could not get schema: %w", libdal.TranslatePGError(err))
-	}
-	err = d.pubsub.CreateSubscriptions(ctx, key, module)
-	if err != nil {
-		return err
-	}
-	err = d.pubsub.CreateSubscribers(ctx, key, module)
-	if err != nil {
-		return fmt.Errorf("could not create subscribers: %w", err)
-	}
-	return nil
-}
-
-// deploymentWillDeactivate is called whenever a deployment goes to min_replicas=0.
-//
-// it may be called when min_replicas was already 0
-func (d *DAL) deploymentWillDeactivate(ctx context.Context, key model.DeploymentKey) error {
-	err := d.pubsub.RemoveSubscriptionsAndSubscribers(ctx, key)
-	if err != nil {
-		return fmt.Errorf("could not remove subscriptions and subscribers: %w", err)
 	}
 	return nil
 }

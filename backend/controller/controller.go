@@ -57,7 +57,6 @@ import (
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 	"github.com/TBD54566975/ftl/internal/dsn"
-	"github.com/TBD54566975/ftl/internal/eventstream"
 	"github.com/TBD54566975/ftl/internal/log"
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -218,7 +217,7 @@ type Service struct {
 
 	clientLock      sync.Mutex
 	routeTable      *routing.RouteTable
-	controllerState eventstream.EventStream[state.State]
+	controllerState state.ControllerState
 }
 
 func New(
@@ -262,9 +261,9 @@ func New(
 		controllerState:         state.NewInMemoryState(),
 	}
 
-	pubSub := pubsub.New(ctx, conn, routingTable)
+	pubSub := pubsub.New(ctx, conn, routingTable, svc.controllerState)
 	svc.pubSub = pubSub
-	svc.dal = dal.New(ctx, conn, pubSub, svc.storage)
+	svc.dal = dal.New(ctx, conn, svc.storage)
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx)
 

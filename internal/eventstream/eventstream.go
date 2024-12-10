@@ -10,12 +10,12 @@ import (
 )
 
 // EventStream is a stream of events that can be published and subscribed to, that update a materialized view
-type EventStream[View any] interface {
-	Publish(event Event[View]) error
+type EventStream[View any, E Event[View]] interface {
+	Publish(event E) error
 
 	View() View
 
-	Subscribe() <-chan Event[View]
+	Subscribe() <-chan E
 }
 
 // StreamView is a view of an event stream that can be subscribed to, without modifying the stream.
@@ -32,20 +32,20 @@ type Event[View any] interface {
 	Handle(view View) (View, error)
 }
 
-func NewInMemory[View any](initial View) EventStream[View] {
-	return &inMemoryEventStream[View]{
+func NewInMemory[View any, E Event[View]](initial View) EventStream[View, E] {
+	return &inMemoryEventStream[View, E]{
 		view:  initial,
-		topic: pubsub.New[Event[View]](),
+		topic: pubsub.New[E](),
 	}
 }
 
-type inMemoryEventStream[View any] struct {
+type inMemoryEventStream[View any, E Event[View]] struct {
 	view  View
 	lock  sync.Mutex
-	topic *pubsub.Topic[Event[View]]
+	topic *pubsub.Topic[E]
 }
 
-func (i *inMemoryEventStream[T]) Publish(e Event[T]) error {
+func (i *inMemoryEventStream[T, E]) Publish(e E) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -58,11 +58,11 @@ func (i *inMemoryEventStream[T]) Publish(e Event[T]) error {
 	return nil
 }
 
-func (i *inMemoryEventStream[T]) View() T {
+func (i *inMemoryEventStream[T, E]) View() T {
 	return i.view
 }
 
-func (i *inMemoryEventStream[T]) Subscribe() <-chan Event[T] {
+func (i *inMemoryEventStream[T, E]) Subscribe() <-chan E {
 	ret := i.topic.Subscribe(nil)
 	return ret
 }

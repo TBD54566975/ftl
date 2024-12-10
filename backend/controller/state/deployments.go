@@ -78,7 +78,7 @@ type DeploymentActivatedEvent struct {
 	MinReplicas int
 }
 
-func (r *DeploymentActivatedEvent) Handle(t State) (State, error) {
+func (r DeploymentActivatedEvent) Handle(t State) (State, error) {
 	existing, ok := t.deployments[r.Key.String()]
 	if !ok {
 		return t, fmt.Errorf("deployment %s not found", r.Key)

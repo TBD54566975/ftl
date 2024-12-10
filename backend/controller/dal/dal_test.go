@@ -12,13 +12,9 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	"github.com/TBD54566975/ftl/backend/timeline"
-	"github.com/TBD54566975/ftl/internal/routing"
-	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
-
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
-	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -32,8 +28,7 @@ func TestDAL(t *testing.T) {
 	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, timelineEndpoint))
 	conn := sqltest.OpenForTesting(ctx, t)
 
-	pubSub := pubsub.New(ctx, conn, routing.New(ctx, schemaeventsource.NewUnattached()))
-	dal := New(ctx, conn, pubSub, artefacts.NewForTesting())
+	dal := New(ctx, conn, artefacts.NewForTesting())
 
 	deploymentChangesCh := dal.DeploymentChanges.Subscribe(nil)
 	deploymentChanges := []DeploymentNotification{}
@@ -80,13 +75,12 @@ func TestCreateArtefactConflict(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
 
-	pubSub := pubsub.New(ctx, conn, routing.New(ctx, schemaeventsource.NewUnattached()))
-
-	dal := New(ctx, conn, pubSub, artefacts.NewForTesting())
+	dal := New(ctx, conn, artefacts.NewForTesting())
 
 	idch := make(chan sha256.SHA256, 2)
 
 	wg := sync.WaitGroup{}
+
 	wg.Add(2)
 	createContent := func() {
 		defer wg.Done()
