@@ -131,10 +131,10 @@ func (reg *ProvisionerRegistry) CreateDeployment(ctx context.Context, desiredMod
 	allExisting := schema.GetProvisionedResources(existingModule)
 
 	for _, binding := range reg.listBindings() {
-		desired := allDesired.Filter(binding.Types...)
-		existing := allExisting.Filter(binding.Types...)
+		desired := allDesired.FilterByType(binding.Types...)
+		existing := allExisting.FilterByType(binding.Types...)
 
-		if !desired.EqualSets(existing) {
+		if !desired.IsEqual(existing) {
 			logger.Debugf("Adding task for module %s: %s", module, binding.ID)
 			deployment.Tasks = append(deployment.Tasks, &Task{
 				module:     module,

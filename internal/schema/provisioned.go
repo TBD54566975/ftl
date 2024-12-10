@@ -1,7 +1,6 @@
 package schema
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -23,6 +22,11 @@ const (
 	ResourceTypeRunner       ResourceType = "runner"
 )
 
+// ProvisionedResource is metadata of a resource that can be provisioned
+// from a schema element.
+//
+// One schema element can result into multiple different resources.
+// For example, a database node can be provisioned into a physical database, and a schema migration
 type ProvisionedResource struct {
 	// Kind is the kind of resource provisioned.
 	Kind ResourceType
@@ -45,13 +49,13 @@ type Provisioned interface {
 
 type ResourceSet []*ProvisionedResource
 
-func (s ResourceSet) EqualSets(other ResourceSet) bool {
+func (s ResourceSet) IsEqual(other ResourceSet) bool {
 	return cmp.Equal(s, other, cmpopts.SortSlices(func(x, y *ProvisionedResource) bool {
 		return x.Kind < y.Kind
 	}))
 }
 
-func (s ResourceSet) Filter(kinds ...ResourceType) ResourceSet {
+func (s ResourceSet) FilterByType(kinds ...ResourceType) ResourceSet {
 	return slices.Filter(s, func(x *ProvisionedResource) bool {
 		for _, k := range kinds {
 			if x.Kind == k {
@@ -97,13 +101,4 @@ func GetProvisioned(root Node) map[string]Provisioned {
 		return next()
 	})
 	return result
-}
-
-func FindProvisioned(module *Module, id string) (Provisioned, error) {
-	resources := GetProvisioned(module)
-	found, ok := resources[id]
-	if !ok {
-		return nil, fmt.Errorf("resource %s not found", id)
-	}
-	return found, nil
 }
