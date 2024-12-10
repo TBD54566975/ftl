@@ -162,3 +162,41 @@ class SecretUnsetRequest(_message.Message):
 class SecretUnsetResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
+
+class MapConfigsForModuleRequest(_message.Message):
+    __slots__ = ("module",)
+    MODULE_FIELD_NUMBER: _ClassVar[int]
+    module: str
+    def __init__(self, module: _Optional[str] = ...) -> None: ...
+
+class MapConfigsForModuleResponse(_message.Message):
+    __slots__ = ("values",)
+    class ValuesEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: bytes
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[bytes] = ...) -> None: ...
+    VALUES_FIELD_NUMBER: _ClassVar[int]
+    values: _containers.ScalarMap[str, bytes]
+    def __init__(self, values: _Optional[_Mapping[str, bytes]] = ...) -> None: ...
+
+class MapSecretsForModuleRequest(_message.Message):
+    __slots__ = ("module",)
+    MODULE_FIELD_NUMBER: _ClassVar[int]
+    module: str
+    def __init__(self, module: _Optional[str] = ...) -> None: ...
+
+class MapSecretsForModuleResponse(_message.Message):
+    __slots__ = ("values",)
+    class ValuesEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: bytes
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[bytes] = ...) -> None: ...
+    VALUES_FIELD_NUMBER: _ClassVar[int]
+    values: _containers.ScalarMap[str, bytes]
+    def __init__(self, values: _Optional[_Mapping[str, bytes]] = ...) -> None: ...

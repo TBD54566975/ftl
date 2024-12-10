@@ -855,3 +855,151 @@ export class SecretUnsetResponse extends Message<SecretUnsetResponse> {
   }
 }
 
+/**
+ * @generated from message xyz.block.ftl.v1.MapConfigsForModuleRequest
+ */
+export class MapConfigsForModuleRequest extends Message<MapConfigsForModuleRequest> {
+  /**
+   * @generated from field: string module = 1;
+   */
+  module = "";
+
+  constructor(data?: PartialMessage<MapConfigsForModuleRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.MapConfigsForModuleRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MapConfigsForModuleRequest {
+    return new MapConfigsForModuleRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MapConfigsForModuleRequest {
+    return new MapConfigsForModuleRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MapConfigsForModuleRequest {
+    return new MapConfigsForModuleRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MapConfigsForModuleRequest | PlainMessage<MapConfigsForModuleRequest> | undefined, b: MapConfigsForModuleRequest | PlainMessage<MapConfigsForModuleRequest> | undefined): boolean {
+    return proto3.util.equals(MapConfigsForModuleRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.MapConfigsForModuleResponse
+ */
+export class MapConfigsForModuleResponse extends Message<MapConfigsForModuleResponse> {
+  /**
+   * @generated from field: map<string, bytes> values = 1;
+   */
+  values: { [key: string]: Uint8Array } = {};
+
+  constructor(data?: PartialMessage<MapConfigsForModuleResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.MapConfigsForModuleResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "values", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 12 /* ScalarType.BYTES */} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MapConfigsForModuleResponse {
+    return new MapConfigsForModuleResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MapConfigsForModuleResponse {
+    return new MapConfigsForModuleResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MapConfigsForModuleResponse {
+    return new MapConfigsForModuleResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MapConfigsForModuleResponse | PlainMessage<MapConfigsForModuleResponse> | undefined, b: MapConfigsForModuleResponse | PlainMessage<MapConfigsForModuleResponse> | undefined): boolean {
+    return proto3.util.equals(MapConfigsForModuleResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.MapSecretsForModuleRequest
+ */
+export class MapSecretsForModuleRequest extends Message<MapSecretsForModuleRequest> {
+  /**
+   * @generated from field: string module = 1;
+   */
+  module = "";
+
+  constructor(data?: PartialMessage<MapSecretsForModuleRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.MapSecretsForModuleRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MapSecretsForModuleRequest {
+    return new MapSecretsForModuleRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MapSecretsForModuleRequest {
+    return new MapSecretsForModuleRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MapSecretsForModuleRequest {
+    return new MapSecretsForModuleRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MapSecretsForModuleRequest | PlainMessage<MapSecretsForModuleRequest> | undefined, b: MapSecretsForModuleRequest | PlainMessage<MapSecretsForModuleRequest> | undefined): boolean {
+    return proto3.util.equals(MapSecretsForModuleRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.MapSecretsForModuleResponse
+ */
+export class MapSecretsForModuleResponse extends Message<MapSecretsForModuleResponse> {
+  /**
+   * @generated from field: map<string, bytes> values = 1;
+   */
+  values: { [key: string]: Uint8Array } = {};
+
+  constructor(data?: PartialMessage<MapSecretsForModuleResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.MapSecretsForModuleResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "values", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 12 /* ScalarType.BYTES */} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MapSecretsForModuleResponse {
+    return new MapSecretsForModuleResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MapSecretsForModuleResponse {
+    return new MapSecretsForModuleResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MapSecretsForModuleResponse {
+    return new MapSecretsForModuleResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MapSecretsForModuleResponse | PlainMessage<MapSecretsForModuleResponse> | undefined, b: MapSecretsForModuleResponse | PlainMessage<MapSecretsForModuleResponse> | undefined): boolean {
+    return proto3.util.equals(MapSecretsForModuleResponse, a, b);
+  }
+}
+

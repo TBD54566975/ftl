@@ -9,7 +9,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/TBD54566975/ftl/backend/controller/admin"
+	"github.com/TBD54566975/ftl/backend/admin"
 	consolepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"

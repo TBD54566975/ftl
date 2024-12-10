@@ -19,8 +19,8 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/backend/admin"
 	"github.com/TBD54566975/ftl/backend/controller"
-	"github.com/TBD54566975/ftl/backend/controller/admin"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/controller/console"
 	"github.com/TBD54566975/ftl/backend/cron"
@@ -71,6 +71,7 @@ type serveCommonConfig struct {
 	Timeline            timeline.Config      `embed:"" prefix:"timeline-"`
 	Console             console.Config       `embed:"" prefix:"console-"`
 	Lease               lease.Config         `embed:"" prefix:"lease-"`
+	Admin               admin.Config         `embed:"" prefix:"admin-"`
 	Recreate            bool                 `help:"Recreate any stateful resources if they already exist." default:"false"`
 	controller.CommonConfig
 	provisioner.CommonProvisionerConfig
@@ -264,7 +265,7 @@ func (s *serveCommonConfig) run(
 		}
 
 		wg.Go(func() error {
-			if err := controller.Start(controllerCtx, config, storage, cm, sm, timelineClient, conn, true); err != nil {
+			if err := controller.Start(controllerCtx, config, storage, adminClient, timelineClient, conn, true); err != nil {
 				logger.Errorf(err, "controller%d failed: %v", i, err)
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}
@@ -371,6 +372,14 @@ func (s *serveCommonConfig) run(
 	// Start Leases
 	wg.Go(func() error {
 		err := lease.Start(ctx, s.Lease)
+		if err != nil {
+			return fmt.Errorf("lease failed: %w", err)
+		}
+		return nil
+	})
+	// Start Admin
+	wg.Go(func() error {
+		err := admin.Start(ctx, s.Admin, cm, sm, admin.NewSchemaRetreiver(schemaEventSourceFactory()))
 		if err != nil {
 			return fmt.Errorf("lease failed: %w", err)
 		}

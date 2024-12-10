@@ -89,6 +89,7 @@ func WithKubernetes() Option {
 		o.kube = true
 		o.startController = false
 		o.startProvisioner = false
+		o.startTimeline = false
 	}
 }
 

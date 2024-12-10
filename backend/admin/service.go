@@ -2,10 +2,13 @@ package admin
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/kong"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -13,10 +16,37 @@ import (
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
+	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
+	internalobservability "github.com/TBD54566975/ftl/internal/observability"
+	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
+
+type Config struct {
+	Bind                 *url.URL `help:"Socket to bind to." default:"http://127.0.0.1:8896" env:"FTL_BIND"`
+	DSN                  string   `help:"DAL DSN." default:"${dsn}" env:"FTL_DSN"`
+	MaxOpenDBConnections int      `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
+	MaxIdleDBConnections int      `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
+}
+
+func (c *Config) SetDefaults() {
+	if err := kong.ApplyDefaults(c, kong.Vars{"dsn": dsn.PostgresDSN("ftl")}); err != nil {
+		panic(err)
+	}
+}
+
+func (c *Config) OpenDBAndInstrument() (*sql.DB, error) {
+	conn, err := internalobservability.OpenDBAndInstrument(c.DSN)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open DB connection: %w", err)
+	}
+	conn.SetMaxIdleConns(c.MaxIdleDBConnections)
+	conn.SetMaxOpenConns(c.MaxOpenDBConnections)
+	return conn, nil
+}
 
 type AdminService struct {
 	schr SchemaRetriever
@@ -29,6 +59,12 @@ var _ ftlv1connect.AdminServiceHandler = (*AdminService)(nil)
 type SchemaRetriever interface {
 	// BindAllocator is required if the schema is retrieved from disk using language plugins
 	GetActiveSchema(ctx context.Context) (*schema.Schema, error)
+}
+
+func NewSchemaRetreiver(source schemaeventsource.EventSource) SchemaRetriever {
+	return &streamSchemaRetriever{
+		source: source,
+	}
 }
 
 type streamSchemaRetriever struct {
@@ -48,6 +84,28 @@ func NewAdminService(cm *manager.Manager[configuration.Configuration], sm *manag
 		cm:   cm,
 		sm:   sm,
 	}
+}
+
+func Start(
+	ctx context.Context,
+	config Config,
+	cm *manager.Manager[configuration.Configuration],
+	sm *manager.Manager[configuration.Secrets],
+	schr SchemaRetriever,
+) error {
+	config.SetDefaults()
+
+	logger := log.FromContext(ctx).Scope("admin")
+	svc := NewAdminService(cm, sm, schr)
+
+	logger.Debugf("Admin service listening on: %s", config.Bind)
+	err := rpc.Serve(ctx, config.Bind,
+		rpc.GRPC(ftlv1connect.NewAdminServiceHandler, svc),
+	)
+	if err != nil {
+		return fmt.Errorf("admin service stopped serving: %w", err)
+	}
+	return nil
 }
 
 func (s *AdminService) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
@@ -219,6 +277,24 @@ func (s *AdminService) SecretUnset(ctx context.Context, req *connect.Request[ftl
 	return connect.NewResponse(&ftlv1.SecretUnsetResponse{}), nil
 }
 
+// MapConfigsForModule combines all configuration values visible to the module.
+func (s *AdminService) MapConfigsForModule(ctx context.Context, req *connect.Request[ftlv1.MapConfigsForModuleRequest]) (*connect.Response[ftlv1.MapConfigsForModuleResponse], error) {
+	values, err := s.cm.MapForModule(ctx, req.Msg.Module)
+	if err != nil {
+		return nil, fmt.Errorf("failed to map configs for module: %w", err)
+	}
+	return connect.NewResponse(&ftlv1.MapConfigsForModuleResponse{Values: values}), nil
+}
+
+// MapSecretsForModule combines all secrets visible to the module.
+func (s *AdminService) MapSecretsForModule(ctx context.Context, req *connect.Request[ftlv1.MapSecretsForModuleRequest]) (*connect.Response[ftlv1.MapSecretsForModuleResponse], error) {
+	values, err := s.sm.MapForModule(ctx, req.Msg.Module)
+	if err != nil {
+		return nil, fmt.Errorf("failed to map secrets for module: %w", err)
+	}
+	return connect.NewResponse(&ftlv1.MapSecretsForModuleResponse{Values: values}), nil
+}
+
 func refFromConfigRef(cr *ftlv1.ConfigRef) configuration.Ref {
 	return configuration.NewRef(cr.GetModule(), cr.GetName())
 }
@@ -272,10 +348,4 @@ func (s *AdminService) validateAgainstSchema(ctx context.Context, isSecret bool,
 	}
 
 	return nil
-}
-
-func NewSchemaRetreiver(source schemaeventsource.EventSource) SchemaRetriever {
-	return &streamSchemaRetriever{
-		source: source,
-	}
 }

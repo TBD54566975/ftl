@@ -70,3 +70,9 @@ registry:
     repository: "ftl-registry:5000/ftl-artefacts"
     allowInsecure: "true"
     create: true
+
+admin:
+  image:
+    repository: "ftl:5000/ftl-admin"
+    tag: "latest"
+    pullPolicy: Always    

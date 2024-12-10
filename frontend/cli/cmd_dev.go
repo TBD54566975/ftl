@@ -11,7 +11,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/TBD54566975/ftl/backend/controller/admin"
+	"github.com/TBD54566975/ftl/backend/admin"
 	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/timeline"

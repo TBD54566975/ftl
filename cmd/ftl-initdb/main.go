@@ -14,7 +14,7 @@ import (
 var cli struct {
 	log.Config
 	Recreate bool   `help:"Drop and recreate the database."`
-	DSN      string `help:"Postgres DSN." default:"${dsn}" env:"FTL_CONTROLLER_DSN"`
+	DSN      string `help:"Postgres DSN." default:"${dsn}" env:"FTL_DSN"`
 }
 
 func main() {

@@ -10,7 +10,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/admin"
+	"github.com/TBD54566975/ftl/backend/admin"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/configuration"
 )
