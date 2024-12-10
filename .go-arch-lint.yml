@@ -6,19 +6,41 @@ components:
   ftl-controller-cmd: { in: cmd/ftl-controller/** }
   common: { in: common/** }
   internal: { in: internal/** }
-  dal: { in: backend/dal/** }
+
   protos: { in: backend/protos/** }
+  libdal: { in: backend/libdal/** }
+  lease-service: { in: backend/lease/** }
+  cron-service: { in: backend/cron/** }
+  ingress-service: { in: backend/ingress/** }
+  timeline-service: { in: backend/timeline/** }
+  provisioner-service: { in: backend/provisioner/** }
+
   schema: { in: internal/schema/** }
   ftl: { in: . }
-  ftl-cmd: { in: frontend/cli/ftl/** }
+
   go-runtime: { in: go-runtime/** }
   jvm-runtime: { in: jvm-runtime/** }
+  python-runtime: { in: python-runtime/** }
+
   runner: { in: backend/runner/** }
-  ftl-runner-cmd: { in: cmd/ftl-runner/** }
+
+  ftl-cmd: { in: frontend/cli/** }
   frontend: { in: frontend/console/** }
+
+  ftl-runner-cmd: { in: cmd/ftl-runner/** }
   ftl-gen-lsp-cmd: { in: cmd/ftl-gen-lsp/** }
   ftl-initdb-cmd: { in: cmd/ftl-initdb/** }
+  ftl-ftl-provisioner-cloudformation-cmd: { in: cmd/ftl-provisioner-cloudformation/** }
+  ftl-lease-cmd: { in: cmd/ftl-lease/** }
+  ftl-http-ingress-cmd: { in: cmd/ftl-http-ingress/** }
+  ftl-cron-cmd: { in: cmd/ftl-cron/** }
+  ftl-timeline-cmd: { in: cmd/ftl-timeline/** }
+  ftl-provisioner-cmd: { in: cmd/ftl-provisioner/** }
+  ftl-proxy-pg-cmd: { in: cmd/ftl-proxy-pg/** }
+  devel-provisioner-cmd: { in: cmd/devel-provisioner/** }
+
   go2proto: { in: cmd/go2proto/** }
+
   lint-commit-or-rollback-cmd: { in: cmd/lint-commit-or-rollback/** }
   databasetesting: { in: backend/controller/sql/databasetesting/** }
   sql: { in: backend/controller/sql/** }
@@ -27,6 +49,9 @@ components:
   # TODO: Nothing outside of the go-runtime package should depend on reflection.
   encoding: { in: go-runtime/encoding/** }
   leases: { in: backend/controller/leases/** }
+
+  smoketest: { in: smoketest/** }
+
 
 excludeFiles:
   - ".*/testdata/.*"
@@ -40,67 +65,86 @@ allow:
 commonComponents:
   - common
   - internal
-  - dal
   - protos
   - schema
   - ftl
+  - libdal
 
 deps:
   controller:
     mayDependOn:
       - controller
       - frontend
+      - timeline-service #TODO: Timeline should have a separate client package.
   runner:
     mayDependOn:
-      - common
-      - internal
       - runner
   go-runtime:
     mayDependOn:
-      - common
-      - internal
       - go-runtime
+  python-runtime:
+    mayDependOn:
+      - python-runtime
   ftl-cmd:
     mayDependOn:
       - controller
-      - common
-      - internal
-      - dal
       - protos
       - schema
       - ftl
       - jvm-runtime # TODO: When we decouple runtimes, this should be removed.
       - go-runtime # TODO: When we decouple runtimes, this should be removed.
+      - provisioner-service
+      - timeline-service
+      - ingress-service
+      - cron-service
   ftl-controller-cmd:
     mayDependOn:
       - controller
-      - common
-      - internal
-      - dal
       - protos
       - schema
       - ftl
+      - timeline-service #TODO: Timeline should have a separate client package.
   ftl-runner-cmd:
     mayDependOn:
-      - common
-      - internal
       - runner
   ftl-initdb-cmd:
     mayDependOn:
       - databasetesting
+  ftl-cron-cmd:
+    mayDependOn:
+      - cron-service
+      - timeline-service #TODO: Timeline should have a separate client package.
+  ftl-http-ingress-cmd:
+    mayDependOn:
+      - ingress-service
+      - timeline-service #TODO: Timeline should have a separate client package.
+  ftl-provisioner-cmd:
+    mayDependOn:
+      - provisioner-service
+  ftl-timeline-cmd:
+    mayDependOn:
+      - timeline-service
+  ftl-lease-cmd:
+    mayDependOn:
+      - lease-service
   databasetesting:
     mayDependOn:
-      - common
-      - internal
-      - dal
       - sql
   sql:
     mayDependOn:
-      - common
-      - internal
       - sql
       - leases
-  encoding:
+  cron-service:
     mayDependOn:
-      - common
-      - internal
+      - cron-service
+      - timeline-service #TODO: Timeline should have a separate client package.
+  ingress-service:
+    mayDependOn:
+      - ingress-service
+      - timeline-service #TODO: Timeline should have a separate client package.
+  provisioner-service:
+    mayDependOn:
+      - provisioner-service
+  smoketest:
+    mayDependOn:
+      - go-runtime
