@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/types/optional"
-	inprocesspubsub "github.com/alecthomas/types/pubsub"
 	xmaps "golang.org/x/exp/maps"
 
 	aregistry "github.com/TBD54566975/ftl/backend/controller/artefacts"
@@ -20,16 +19,14 @@ import (
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 func New(registry aregistry.Service, state state.ControllerState) *DAL {
 	var d *DAL
 	d = &DAL{
-		registry:          registry,
-		state:             state,
-		DeploymentChanges: inprocesspubsub.New[DeploymentNotification](),
+		registry: registry,
+		state:    state,
 	}
 
 	return d
@@ -39,9 +36,6 @@ type DAL struct {
 	pubsub   *pubsub.Service
 	registry aregistry.Service
 	state    state.ControllerState
-
-	// DeploymentChanges is a Topic that receives changes to the deployments table.
-	DeploymentChanges *inprocesspubsub.Topic[DeploymentNotification]
 }
 
 func (d *DAL) GetActiveDeployments() ([]dalmodel.Deployment, error) {
@@ -73,7 +67,7 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 		return libdal.TranslatePGError(err)
 	}
 	if minReplicas == 0 {
-		err = d.state.Publish(ctx, &state.DeploymentDeactivatedEvent{Key: key})
+		err = d.state.Publish(ctx, &state.DeploymentDeactivatedEvent{Key: key, ModuleRemoved: true})
 		if err != nil {
 			return libdal.TranslatePGError(err)
 		}
@@ -219,8 +213,4 @@ type Process struct {
 	MinReplicas int
 	Labels      model.Labels
 	Runner      optional.Option[ProcessRunner]
-}
-
-func sha256esToBytes(digests []sha256.SHA256) [][]byte {
-	return slices.Map(digests, func(digest sha256.SHA256) []byte { return digest[:] })
 }

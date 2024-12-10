@@ -128,7 +128,8 @@ func (r *DeploymentActivatedEvent) Handle(t State) (State, error) {
 }
 
 type DeploymentDeactivatedEvent struct {
-	Key model.DeploymentKey
+	Key           model.DeploymentKey
+	ModuleRemoved bool
 }
 
 func (r *DeploymentDeactivatedEvent) Handle(t State) (State, error) {

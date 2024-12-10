@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"bytes"
 	"context"
 	sha "crypto/sha256"
 	"database/sql"
@@ -152,7 +151,7 @@ func Start(
 	logger.Debugf("Advertising as %s", config.Advertise)
 
 	admin := admin.NewAdminService(cm, sm, svc.dal)
-	console := console.NewService(svc.dal, admin)
+	console := console.NewService(svc.dal, admin, schemaeventsource.New(ctx, rpc.ClientFromContext[ftlv1connect.SchemaServiceClient](ctx)))
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -170,8 +169,6 @@ func Start(
 			rpc.PProf(),
 		)
 	})
-
-	go svc.dal.PollDeployments(ctx)
 
 	return g.Wait()
 }
@@ -242,7 +239,7 @@ func New(
 	ldb := leases.NewClientLeaser(ctx)
 	scheduler := scheduledtask.New(ctx, key, ldb)
 
-	routingTable := routing.New(ctx, schemaeventsource.New(ctx, rpc.Dial[ftlv1connect.SchemaServiceClient](ftlv1connect.NewSchemaServiceClient, config.Bind.String(), log.Error)))
+	routingTable := routing.New(ctx, schemaeventsource.New(ctx, rpc.ClientFromContext[ftlv1connect.SchemaServiceClient](ctx)))
 
 	svc := &Service{
 		cm:                      cm,
@@ -1114,26 +1111,14 @@ func (s *Service) reapStaleRunners(ctx context.Context) (time.Duration, error) {
 
 func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(response *ftlv1.PullSchemaResponse) error) error {
 	logger := log.FromContext(ctx)
-	type moduleStateEntry struct {
-		hash        []byte
-		minReplicas int
-	}
-	deploymentState := map[string]moduleStateEntry{}
-	moduleByDeploymentKey := map[string]string{}
-	aliveDeploymentsForModule := map[string]map[string]bool{}
-	schemaByDeploymentKey := map[string]*schemapb.Module{}
+
+	updates := s.controllerState.Updates().Subscribe(nil)
+	defer s.controllerState.Updates().Unsubscribe(updates)
+	view := s.controllerState.View()
 
 	// Seed the notification channel with the current deployments.
-	seedDeployments, err := s.dal.GetActiveDeployments()
-	if err != nil {
-		return err
-	}
+	seedDeployments := view.ActiveDeployments()
 	initialCount := len(seedDeployments)
-	deploymentChanges := make(chan dal.DeploymentNotification, 32)
-	for _, deployment := range seedDeployments {
-		deploymentChanges <- dal.DeploymentNotification{Message: optional.Some(deployment)}
-	}
-	logger.Debugf("Seeded %d deployments", initialCount)
 
 	builtins := schema.Builtins().ToProto().(*schemapb.Module) //nolint:forcetypeassert
 	builtinsResponse := &ftlv1.PullSchemaResponse{
@@ -1143,117 +1128,70 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 		More:       initialCount > 0,
 	}
 
-	err = sendChange(builtinsResponse)
+	err := sendChange(builtinsResponse)
 	if err != nil {
 		return err
 	}
-
-	// Subscribe to deployment changes.
-	s.dal.DeploymentChanges.Subscribe(deploymentChanges)
-	defer s.dal.DeploymentChanges.Unsubscribe(deploymentChanges)
+	for _, initial := range seedDeployments {
+		initialCount--
+		module := initial.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+		err := sendChange(&ftlv1.PullSchemaResponse{
+			ModuleName:    module.Name,
+			DeploymentKey: proto.String(initial.Key.String()),
+			Schema:        module,
+			ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
+			More:          initialCount > 0,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	logger.Debugf("Seeded %d deployments", initialCount)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 
-		case notification := <-deploymentChanges:
+		case notification := <-updates:
 			var response *ftlv1.PullSchemaResponse
-			// Deleted key
-			if deletion, ok := notification.Deleted.Get(); ok {
-				name := moduleByDeploymentKey[deletion.String()]
-				schema := schemaByDeploymentKey[deletion.String()]
-				moduleRemoved := true
-				if aliveDeploymentsForModule[name] != nil {
-					delete(aliveDeploymentsForModule[name], deletion.String())
-					moduleRemoved = len(aliveDeploymentsForModule[name]) == 0
-					if moduleRemoved {
-						delete(aliveDeploymentsForModule, name)
-					}
+			switch event := notification.(type) {
+			case *state.DeploymentCreatedEvent:
+				response = &ftlv1.PullSchemaResponse{
+					ModuleName:    event.Module,
+					DeploymentKey: proto.String(event.Key.String()),
+					Schema:        event.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
+					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
+				}
+			case *state.DeploymentDeactivatedEvent:
+				view := s.controllerState.View()
+				dep, err := view.GetDeployment(event.Key)
+				if err != nil {
+					logger.Errorf(err, "Deployment not found: %s", event.Key)
+					continue
 				}
 				response = &ftlv1.PullSchemaResponse{
-					ModuleName:    name,
-					DeploymentKey: proto.String(deletion.String()),
+					ModuleName:    dep.Module,
+					DeploymentKey: proto.String(event.Key.String()),
+					Schema:        dep.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
 					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED,
-					ModuleRemoved: moduleRemoved,
-					Schema:        schema,
+					ModuleRemoved: event.ModuleRemoved,
 				}
-				delete(deploymentState, deletion.String())
-				delete(moduleByDeploymentKey, deletion.String())
-				delete(schemaByDeploymentKey, deletion.String())
-			} else if message, ok := notification.Message.Get(); ok {
-				if message.Schema.Runtime == nil {
-					message.Schema.Runtime = &schema.ModuleRuntime{}
-				}
-				message.Schema.Runtime.Scaling = &schema.ModuleRuntimeScaling{
-					MinReplicas: int32(message.MinReplicas),
-				}
-				message.Schema.Runtime.Base.CreateTime = message.CreatedAt
-
-				moduleSchema := message.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
-				hasher := sha.New()
-				data, err := schema.ModuleToBytes(message.Schema)
+			case *state.DeploymentSchemaUpdatedEvent:
+				view := s.controllerState.View()
+				dep, err := view.GetDeployment(event.Key)
 				if err != nil {
-					logger.Errorf(err, "Could not serialize module schema")
-					return fmt.Errorf("could not serialize module schema: %w", err)
+					logger.Errorf(err, "Deployment not found: %s", event.Key)
+					continue
 				}
-				if _, err := hasher.Write(data); err != nil {
-					return err
+				response = &ftlv1.PullSchemaResponse{
+					ModuleName:    dep.Module,
+					DeploymentKey: proto.String(event.Key.String()),
+					Schema:        event.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
+					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_CHANGED,
 				}
-
-				newState := moduleStateEntry{
-					hash:        hasher.Sum(nil),
-					minReplicas: message.MinReplicas,
-				}
-				if current, ok := deploymentState[message.Key.String()]; ok {
-					if !bytes.Equal(current.hash, newState.hash) || current.minReplicas != newState.minReplicas {
-						alive := aliveDeploymentsForModule[moduleSchema.Name]
-						if alive == nil {
-							alive = map[string]bool{}
-							aliveDeploymentsForModule[moduleSchema.Name] = alive
-						}
-						if newState.minReplicas > 0 {
-							alive[message.Key.String()] = true
-						} else {
-							delete(alive, message.Key.String())
-						}
-						changeType := ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_CHANGED
-						// A deployment is considered removed if its minReplicas is set to 0.
-						moduleRemoved := false
-						if current.minReplicas > 0 && message.MinReplicas == 0 {
-							changeType = ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED
-							moduleRemoved = len(alive) == 0
-							logger.Infof("Deployment %s was deleted via update notfication with module removed %v", deletion, moduleRemoved)
-						}
-						response = &ftlv1.PullSchemaResponse{
-							ModuleName:    moduleSchema.Name,
-							DeploymentKey: proto.String(message.Key.String()),
-							Schema:        moduleSchema,
-							ChangeType:    changeType,
-							ModuleRemoved: moduleRemoved,
-						}
-					}
-				} else {
-					alive := aliveDeploymentsForModule[moduleSchema.Name]
-					if alive == nil {
-						alive = map[string]bool{}
-						aliveDeploymentsForModule[moduleSchema.Name] = alive
-					}
-					alive[message.Key.String()] = true
-					response = &ftlv1.PullSchemaResponse{
-						ModuleName:    moduleSchema.Name,
-						DeploymentKey: proto.String(message.Key.String()),
-						Schema:        moduleSchema,
-						ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
-						More:          initialCount > 1,
-					}
-					if initialCount > 0 {
-						initialCount--
-					}
-				}
-				deploymentState[message.Key.String()] = newState
-				moduleByDeploymentKey[message.Key.String()] = message.Schema.Name
-				schemaByDeploymentKey[message.Key.String()] = moduleSchema
+			default:
+				continue
 			}
 
 			if response != nil {

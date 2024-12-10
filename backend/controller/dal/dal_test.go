@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/assert/v2"
-	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/controller/state"
@@ -26,16 +25,6 @@ func TestDAL(t *testing.T) {
 	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, timelineEndpoint))
 
 	dal := New(artefacts.NewForTesting(), state.NewInMemoryState())
-
-	deploymentChangesCh := dal.DeploymentChanges.Subscribe(nil)
-	deploymentChanges := []DeploymentNotification{}
-	wg := errgroup.Group{}
-	wg.Go(func() error {
-		for change := range deploymentChangesCh {
-			deploymentChanges = append(deploymentChanges, change)
-		}
-		return nil
-	})
 
 	module := &schema.Module{Name: "test"}
 	var deploymentKey model.DeploymentKey

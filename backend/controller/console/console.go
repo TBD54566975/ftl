@@ -19,21 +19,24 @@ import (
 	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type ConsoleService struct {
-	dal   *dal.DAL
-	admin *admin.AdminService
+	dal               *dal.DAL
+	admin             *admin.AdminService
+	schemaEventSource schemaeventsource.EventSource
 }
 
 var _ pbconsoleconnect.ConsoleServiceHandler = (*ConsoleService)(nil)
 var _ timelinev1connect.TimelineServiceHandler = (*ConsoleService)(nil)
 
-func NewService(dal *dal.DAL, admin *admin.AdminService) *ConsoleService {
+func NewService(dal *dal.DAL, admin *admin.AdminService, schemaEventSource schemaeventsource.EventSource) *ConsoleService {
 	return &ConsoleService{
-		dal:   dal,
-		admin: admin,
+		dal:               dal,
+		admin:             admin,
+		schemaEventSource: schemaEventSource,
 	}
 }
 
@@ -325,11 +328,6 @@ func getReferencesFromMap(refMap map[schema.RefKey]map[schema.RefKey]bool, modul
 }
 
 func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request[pbconsole.StreamModulesRequest], stream *connect.ServerStream[pbconsole.StreamModulesResponse]) error {
-	deploymentChanges := make(chan dal.DeploymentNotification, 32)
-
-	// Subscribe to deployment changes.
-	c.dal.DeploymentChanges.Subscribe(deploymentChanges)
-	defer c.dal.DeploymentChanges.Unsubscribe(deploymentChanges)
 
 	err := c.sendStreamModulesResp(ctx, stream)
 	if err != nil {
@@ -341,7 +339,7 @@ func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request
 		case <-ctx.Done():
 			return nil
 
-		case <-deploymentChanges:
+		case <-c.schemaEventSource.Events():
 			err = c.sendStreamModulesResp(ctx, stream)
 			if err != nil {
 				return err
