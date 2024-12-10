@@ -47,6 +47,7 @@ func (c cronJob) String() string {
 // Start the cron service. Blocks until the context is cancelled.
 func Start(ctx context.Context, eventSource schemaeventsource.EventSource, client routing.CallClient) error {
 	logger := log.FromContext(ctx).Scope("cron")
+	ctx = log.ContextWithLogger(ctx, logger)
 	// Map of cron jobs for each module.
 	cronJobs := map[string][]cronJob{}
 	// Cron jobs ordered by next execution.

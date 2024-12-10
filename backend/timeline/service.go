@@ -44,6 +44,7 @@ func Start(ctx context.Context, config Config) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx).Scope("timeline")
+	ctx = log.ContextWithLogger(ctx, logger)
 	svc := &service{
 		config: config,
 		events: make([]*timelinepb.Event, 0),

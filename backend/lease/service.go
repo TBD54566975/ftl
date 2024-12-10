@@ -41,6 +41,7 @@ func Start(ctx context.Context, config Config) error {
 	svc := &service{
 		leases: make(map[string]*time.Time),
 	}
+	ctx = log.ContextWithLogger(ctx, logger)
 
 	logger.Debugf("Lease service listening on: %s", config.Bind)
 	err := rpc.Serve(ctx, config.Bind,
