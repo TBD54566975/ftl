@@ -69,12 +69,6 @@ type Deployment struct {
 	LastActivatedAt time.Time
 }
 
-type Module struct {
-	ID       int64
-	Language string
-	Name     string
-}
-
 type Topic struct {
 	ID         int64
 	Key        model.TopicKey

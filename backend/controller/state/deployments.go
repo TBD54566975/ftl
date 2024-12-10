@@ -20,6 +20,7 @@ type Deployment struct {
 	CreatedAt   time.Time
 	ActivatedAt optional.Option[time.Time]
 	Artefacts   map[string]*DeploymentArtefact
+	Language    string
 }
 
 func (r *State) GetDeployment(deployment model.DeploymentKey) (*Deployment, error) {
@@ -34,6 +35,10 @@ func (r *State) Deployments() map[string]*Deployment {
 	return r.deployments
 }
 
+func (r *State) ActiveDeployments() map[string]*Deployment {
+	return r.activeDeployments
+}
+
 var _ eventstream.Event[State] = (*DeploymentCreatedEvent)(nil)
 var _ eventstream.Event[State] = (*DeploymentActivatedEvent)(nil)
 var _ eventstream.Event[State] = (*DeploymentDeactivatedEvent)(nil)
@@ -44,6 +49,7 @@ type DeploymentCreatedEvent struct {
 	Module    string
 	Schema    *schemapb.Module
 	Artefacts []*DeploymentArtefact
+	Language  string
 }
 
 func (r *DeploymentCreatedEvent) Handle(t State) (State, error) {

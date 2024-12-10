@@ -3,7 +3,6 @@ package dal
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -15,8 +14,10 @@ import (
 	dalsql "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
+	"github.com/TBD54566975/ftl/backend/controller/state"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/timeline"
+	"github.com/TBD54566975/ftl/internal/eventstream"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -24,18 +25,20 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
-func New(ctx context.Context, conn libdal.Connection, registry aregistry.Service) *DAL {
+func New(ctx context.Context, conn libdal.Connection, registry aregistry.Service, state state.ControllerState) *DAL {
 	var d *DAL
 	db := dalsql.New(conn)
 	d = &DAL{
 		db:       db,
 		registry: registry,
+		state:    state,
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{
 				Handle:            h,
 				db:                dalsql.New(h.Connection),
 				registry:          registry,
 				DeploymentChanges: d.DeploymentChanges,
+				state:             state,
 			}
 		}),
 		DeploymentChanges: inprocesspubsub.New[DeploymentNotification](),
@@ -50,36 +53,25 @@ type DAL struct {
 
 	pubsub   *pubsub.Service
 	registry aregistry.Service
+	state    state.ControllerState
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *inprocesspubsub.Topic[DeploymentNotification]
 }
 
-func (d *DAL) GetDeploymentStatus(ctx context.Context) ([]dalmodel.Deployment, error) {
-	deployments, err := d.db.GetActiveDeployments(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not get active deployments: %w", libdal.TranslatePGError(err))
-	}
-	statusDeployments, err := slices.MapErr(deployments, func(in dalsql.GetActiveDeploymentsRow) (dalmodel.Deployment, error) {
-		labels := model.Labels{}
-		err = json.Unmarshal(in.Deployment.Labels, &labels)
-		if err != nil {
-			return dalmodel.Deployment{}, fmt.Errorf("%q: invalid labels in database: %w", in.ModuleName, err)
-		}
-		return dalmodel.Deployment{
-			Key:         in.Deployment.Key,
-			Module:      in.ModuleName,
-			Language:    in.Language,
-			MinReplicas: int(in.Deployment.MinReplicas),
-			Schema:      in.Deployment.Schema,
-			Labels:      labels,
-		}, nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("could not parse deployments: %w", err)
-	}
+func (d *DAL) GetActiveDeployments() ([]dalmodel.Deployment, error) {
+	view := d.state.View()
 
-	return statusDeployments, nil
+	deployments := view.ActiveDeployments()
+	return slices.Map(xmaps.Values(deployments), func(in *state.Deployment) dalmodel.Deployment {
+		return dalmodel.Deployment{
+			Key:         in.Key,
+			Module:      in.Module,
+			Language:    in.Language,
+			MinReplicas: in.MinReplicas,
+			Schema:      in.Schema,
+		}
+	}), nil
 }
 
 func (d *DAL) UpsertModule(ctx context.Context, language, name string) (err error) {
@@ -143,9 +135,10 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
-	deployment, err := tx.db.GetDeployment(ctx, key)
+	view := d.state.View()
+	deployment, err := view.GetDeployment(key)
 	if err != nil {
-		return libdal.TranslatePGError(err)
+		return fmt.Errorf("could not get deployment: %w", err)
 	}
 
 	err = tx.db.SetDeploymentDesiredReplicas(ctx, key, int32(minReplicas))
@@ -174,14 +167,15 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	}
 
 	defer tx.CommitOrRollback(ctx, &err)
-	newDeployment, err := tx.db.GetDeployment(ctx, newDeploymentKey)
+	view := d.state.View()
+	newDeployment, err := view.GetDeployment(newDeploymentKey)
 	if err != nil {
 		return fmt.Errorf("replace deployment failed to get deployment for %v: %w", newDeploymentKey, libdal.TranslatePGError(err))
 	}
 
 	// If there's an existing deployment, set its desired replicas to 0
 	var replacedDeploymentKey optional.Option[model.DeploymentKey]
-	oldDeployment, err := tx.db.GetExistingDeploymentForModule(ctx, newDeployment.ModuleName)
+	oldDeployment, err := tx.db.GetExistingDeploymentForModule(ctx, newDeployment.Module)
 	if err == nil {
 		if oldDeployment.Key.String() == newDeploymentKey.String() {
 			return fmt.Errorf("replace deployment failed: deployment already exists from %v to %v: %w", oldDeployment.Key, newDeploymentKey, ErrReplaceDeploymentAlreadyActive)
@@ -205,7 +199,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	timeline.ClientFromContext(ctx).Publish(ctx, timeline.DeploymentCreated{
 		DeploymentKey:      newDeploymentKey,
 		Language:           newDeployment.Language,
-		ModuleName:         newDeployment.ModuleName,
+		ModuleName:         newDeployment.Module,
 		MinReplicas:        minReplicas,
 		ReplacedDeployment: replacedDeploymentKey,
 	})
@@ -215,30 +209,9 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	return nil
 }
 
-// GetActiveDeployments returns all active deployments.
-func (d *DAL) GetActiveDeployments(ctx context.Context) ([]dalmodel.Deployment, error) {
-	rows, err := d.db.GetActiveDeployments(ctx)
-	if err != nil {
-		if libdal.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, libdal.TranslatePGError(err)
-	}
-	return slices.Map(rows, func(in dalsql.GetActiveDeploymentsRow) dalmodel.Deployment {
-		return dalmodel.Deployment{
-			Key:         in.Deployment.Key,
-			Module:      in.ModuleName,
-			Language:    in.Language,
-			MinReplicas: int(in.Deployment.MinReplicas),
-			Schema:      in.Deployment.Schema,
-			CreatedAt:   in.Deployment.CreatedAt,
-		}
-	}), nil
-}
-
 // GetActiveSchema returns the schema for all active deployments.
 func (d *DAL) GetActiveSchema(ctx context.Context) (*schema.Schema, error) {
-	deployments, err := d.GetActiveDeployments(ctx)
+	deployments, err := d.GetActiveDeployments()
 	if err != nil {
 		return nil, err
 	}

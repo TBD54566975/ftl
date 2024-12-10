@@ -263,7 +263,7 @@ func New(
 
 	pubSub := pubsub.New(ctx, conn, routingTable, svc.controllerState)
 	svc.pubSub = pubSub
-	svc.dal = dal.New(ctx, conn, svc.storage)
+	svc.dal = dal.New(ctx, conn, svc.storage, svc.controllerState)
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx)
 
@@ -342,7 +342,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	controller := dalmodel.Controller{Key: s.key, Endpoint: s.config.Bind.String()}
 	currentState := s.controllerState.View()
 	runners := currentState.Runners()
-	status, err := s.dal.GetDeploymentStatus(ctx)
+	status, err := s.dal.GetActiveDeployments()
 	if err != nil {
 		return nil, fmt.Errorf("could not get status: %w", err)
 	}
@@ -679,7 +679,7 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 	depName := req.Msg.Deployment
 	if !strings.HasPrefix(depName, "dpl-") {
 		// For hot reload endponts we might not have a deployment key
-		deps, err := s.dal.GetActiveDeployments(ctx)
+		deps, err := s.dal.GetActiveDeployments()
 		if err != nil {
 			return fmt.Errorf("could not get active deployments: %w", err)
 		}
@@ -1016,6 +1016,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		CreatedAt: time.Now(),
 		Schema:    ms,
 		Artefacts: artefacts,
+		Language:  ms.Runtime.Base.Language,
 	})
 	if err != nil {
 		logger.Errorf(err, "Could not create deployment event")
@@ -1122,7 +1123,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	schemaByDeploymentKey := map[string]*schemapb.Module{}
 
 	// Seed the notification channel with the current deployments.
-	seedDeployments, err := s.dal.GetActiveDeployments(ctx)
+	seedDeployments, err := s.dal.GetActiveDeployments()
 	if err != nil {
 		return err
 	}

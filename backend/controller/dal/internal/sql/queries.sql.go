@@ -14,7 +14,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/alecthomas/types/optional"
-	"github.com/lib/pq"
 	"github.com/sqlc-dev/pqtype"
 )
 
@@ -147,126 +146,6 @@ func (q *Queries) GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDe
 	return items, nil
 }
 
-const getActiveDeployments = `-- name: GetActiveDeployments :many
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, m.name AS module_name, m.language
-FROM deployments d
-  JOIN modules m ON d.module_id = m.id
-WHERE min_replicas > 0
-GROUP BY d.id, m.name, m.language
-ORDER BY d.last_activated_at
-`
-
-type GetActiveDeploymentsRow struct {
-	Deployment Deployment
-	ModuleName string
-	Language   string
-}
-
-func (q *Queries) GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getActiveDeployments)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetActiveDeploymentsRow
-	for rows.Next() {
-		var i GetActiveDeploymentsRow
-		if err := rows.Scan(
-			&i.Deployment.ID,
-			&i.Deployment.CreatedAt,
-			&i.Deployment.ModuleID,
-			&i.Deployment.Key,
-			&i.Deployment.Schema,
-			&i.Deployment.Labels,
-			&i.Deployment.MinReplicas,
-			&i.Deployment.LastActivatedAt,
-			&i.ModuleName,
-			&i.Language,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getDeployment = `-- name: GetDeployment :one
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, m.language, m.name AS module_name, d.min_replicas
-FROM deployments d
-         INNER JOIN modules m ON m.id = d.module_id
-WHERE d.key = $1::deployment_key
-`
-
-type GetDeploymentRow struct {
-	Deployment  Deployment
-	Language    string
-	ModuleName  string
-	MinReplicas int32
-}
-
-func (q *Queries) GetDeployment(ctx context.Context, key model.DeploymentKey) (GetDeploymentRow, error) {
-	row := q.db.QueryRowContext(ctx, getDeployment, key)
-	var i GetDeploymentRow
-	err := row.Scan(
-		&i.Deployment.ID,
-		&i.Deployment.CreatedAt,
-		&i.Deployment.ModuleID,
-		&i.Deployment.Key,
-		&i.Deployment.Schema,
-		&i.Deployment.Labels,
-		&i.Deployment.MinReplicas,
-		&i.Deployment.LastActivatedAt,
-		&i.Language,
-		&i.ModuleName,
-		&i.MinReplicas,
-	)
-	return i, err
-}
-
-const getDeploymentsByID = `-- name: GetDeploymentsByID :many
-SELECT id, created_at, module_id, key, schema, labels, min_replicas, last_activated_at
-FROM deployments
-WHERE id = ANY ($1::BIGINT[])
-`
-
-func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error) {
-	rows, err := q.db.QueryContext(ctx, getDeploymentsByID, pq.Array(ids))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Deployment
-	for rows.Next() {
-		var i Deployment
-		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.ModuleID,
-			&i.Key,
-			&i.Schema,
-			&i.Labels,
-			&i.MinReplicas,
-			&i.LastActivatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getDeploymentsWithMinReplicas = `-- name: GetDeploymentsWithMinReplicas :many
 SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, m.name AS module_name, m.language
 FROM deployments d
@@ -355,35 +234,6 @@ func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name strin
 		&i.Name,
 	)
 	return i, err
-}
-
-const getModulesByID = `-- name: GetModulesByID :many
-SELECT id, language, name
-FROM modules
-WHERE id = ANY ($1::BIGINT[])
-`
-
-func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, error) {
-	rows, err := q.db.QueryContext(ctx, getModulesByID, pq.Array(ids))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Module
-	for rows.Next() {
-		var i Module
-		if err := rows.Scan(&i.ID, &i.Language, &i.Name); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getNextEventForSubscription = `-- name: GetNextEventForSubscription :one
