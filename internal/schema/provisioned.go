@@ -31,7 +31,7 @@ type ProvisionedResource struct {
 	Config any
 }
 
-func (r *ProvisionedResource) Equal(other *ProvisionedResource) bool {
+func (r *ProvisionedResource) IsEqual(other *ProvisionedResource) bool {
 	return cmp.Equal(r, other)
 }
 

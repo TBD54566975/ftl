@@ -99,7 +99,7 @@ func (d *InMemProvisioner) Provision(ctx context.Context, req *connect.Request[p
 		previous, ok := previousNodes[id]
 
 		for _, resource := range desired.GetProvisioned() {
-			if !ok || !resource.Equal(previous.GetProvisioned().Get(resource.Kind)) {
+			if !ok || !resource.IsEqual(previous.GetProvisioned().Get(resource.Kind)) {
 				if slices.Contains(kinds, resource.Kind) {
 					if handler, ok := d.handlers[resource.Kind]; ok {
 						step := &inMemProvisioningStep{Done: atomic.New(false)}
