@@ -23,7 +23,8 @@ import (
 )
 
 type Config struct {
-	Bind *url.URL `help:"Socket to bind to." default:"http://127.0.0.1:8894" env:"FTL_BIND"`
+	Bind              *url.URL       `help:"Socket to bind to." default:"http://127.0.0.1:8894" env:"FTL_BIND"`
+	EventLogRetention *time.Duration `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
 }
 
 func (c *Config) SetDefaults() {
@@ -33,6 +34,7 @@ func (c *Config) SetDefaults() {
 }
 
 type service struct {
+	config Config
 	lock   sync.RWMutex
 	nextID int
 	events []*timelinepb.Event
@@ -43,9 +45,12 @@ func Start(ctx context.Context, config Config) error {
 
 	logger := log.FromContext(ctx).Scope("timeline")
 	svc := &service{
+		config: config,
 		events: make([]*timelinepb.Event, 0),
 		nextID: 0,
 	}
+
+	go svc.reapCallEvents(ctx)
 
 	logger.Debugf("Timeline service listening on: %s", config.Bind)
 	err := rpc.Serve(ctx, config.Bind,
@@ -270,4 +275,37 @@ func (s *service) DeleteOldEvents(ctx context.Context, req *connect.Request[time
 	return connect.NewResponse(&timelinepb.DeleteOldEventsResponse{
 		DeletedCount: deleted,
 	}), nil
+}
+
+func (s *service) reapCallEvents(ctx context.Context) {
+	logger := log.FromContext(ctx)
+	var interval time.Duration
+	if s.config.EventLogRetention == nil {
+		interval = time.Hour
+	} else {
+		interval = *s.config.EventLogRetention / 20
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(interval):
+			if s.config.EventLogRetention == nil {
+				logger.Tracef("Event log retention is disabled, will not prune.")
+				continue
+			}
+
+			resp, err := s.DeleteOldEvents(ctx, connect.NewRequest(&timelinepb.DeleteOldEventsRequest{
+				EventType:  timelinepb.EventType_EVENT_TYPE_CALL,
+				AgeSeconds: int64(s.config.EventLogRetention.Seconds()),
+			}))
+			if err != nil {
+				logger.Errorf(err, "Failed to prune call events")
+				continue
+			}
+			if resp.Msg.DeletedCount > 0 {
+				logger.Debugf("Pruned %d call events older than %s", resp.Msg.DeletedCount, s.config.EventLogRetention)
+			}
+		}
+	}
 }
