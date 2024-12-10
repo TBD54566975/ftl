@@ -9,6 +9,7 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/cron"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
@@ -35,10 +36,10 @@ func main() {
 	err := observability.Init(ctx, false, "", "ftl-cron", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
-	// ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, cli.TimelineEndpoint))
-
 	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.CronConfig.SchemaServiceEndpoint.String(), log.Error)
 	eventSource := schemaeventsource.New(ctx, schemaClient)
+
+	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, cli.CronConfig.TimelineEndpoint))
 
 	routeManager := routing.NewVerbRouter(ctx, schemaeventsource.New(ctx, schemaClient))
 	err = cron.Start(ctx, eventSource, routeManager)
