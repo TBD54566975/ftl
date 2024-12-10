@@ -8,7 +8,6 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/TBD54566975/ftl/backend/controller/admin"
-	"github.com/TBD54566975/ftl/backend/controller/dal"
 	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
@@ -22,7 +21,6 @@ import (
 )
 
 type ConsoleService struct {
-	dal               *dal.DAL
 	admin             *admin.AdminService
 	schemaEventSource schemaeventsource.EventSource
 }
@@ -30,9 +28,8 @@ type ConsoleService struct {
 var _ pbconsoleconnect.ConsoleServiceHandler = (*ConsoleService)(nil)
 var _ timelinev1connect.TimelineServiceHandler = (*ConsoleService)(nil)
 
-func NewService(dal *dal.DAL, admin *admin.AdminService, schemaEventSource schemaeventsource.EventSource) *ConsoleService {
+func NewService(admin *admin.AdminService, schemaEventSource schemaeventsource.EventSource) *ConsoleService {
 	return &ConsoleService{
-		dal:               dal,
 		admin:             admin,
 		schemaEventSource: schemaEventSource,
 	}
