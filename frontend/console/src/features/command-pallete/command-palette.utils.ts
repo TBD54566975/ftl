@@ -1,6 +1,7 @@
 import { type HugeiconsProps, PackageIcon } from 'hugeicons-react'
-import type { PullSchemaResponse } from '../../protos/xyz/block/ftl/v1/schemaservice_pb'
-import { declIcon, declTypeName, declUrl } from '../modules/module.utils'
+import type { StreamModulesResult } from '../../api/modules/use-stream-modules'
+import { Data } from '../../protos/xyz/block/ftl/schema/v1/schema_pb'
+import { declIcon, declTypeName, declUrl, moduleTreeFromStream } from '../modules/module.utils'
 
 export interface PaletteItem {
   id: string
@@ -11,42 +12,44 @@ export interface PaletteItem {
   url: string
 }
 
-export const paletteItems = (schema: PullSchemaResponse[]): PaletteItem[] => {
+export const paletteItems = (result: StreamModulesResult): PaletteItem[] => {
   const items: PaletteItem[] = []
 
-  for (const module of schema) {
+  const tree = moduleTreeFromStream(result?.modules || [])
+
+  for (const module of tree) {
     items.push({
-      id: `${module.moduleName}-module`,
+      id: `${module.name}-module`,
       icon: PackageIcon,
       iconType: 'module',
-      title: module.moduleName,
-      subtitle: module.moduleName,
-      url: `/modules/${module.moduleName}`,
+      title: module.name,
+      subtitle: module.name,
+      url: `/modules/${module.name}`,
     })
 
-    for (const decl of module.schema?.decls ?? []) {
-      if (!decl.value || !decl.value.case || !decl.value.value) {
+    for (const decl of module?.decls ?? []) {
+      if (!decl.value || !decl.declType || !decl.decl) {
         return []
       }
 
       items.push({
-        id: `${module.moduleName}-${decl.value.value.name}`,
-        icon: declIcon(decl.value.case, decl.value.value),
-        iconType: declTypeName(decl.value.case, decl.value.value),
-        title: decl.value.value.name,
-        subtitle: `${module.moduleName}.${decl.value.value.name}`,
-        url: declUrl(module.moduleName, decl),
+        id: `${module.name}-${decl.value.name}`,
+        icon: declIcon(decl.declType, decl.value),
+        iconType: declTypeName(decl.declType, decl.value),
+        title: decl.value.name,
+        subtitle: `${module.name}.${decl.value.name}`,
+        url: declUrl(module.name, decl.decl),
       })
 
-      if (decl.value.case === 'data') {
-        for (const field of decl.value.value.fields) {
+      if (decl.decl instanceof Data) {
+        for (const field of decl.decl.fields) {
           items.push({
-            id: `${module.moduleName}-${decl.value.value.name}-${field.name}`,
-            icon: declIcon(decl.value.case, decl.value.value),
-            iconType: declTypeName(decl.value.case, decl.value.value),
+            id: `${module.name}-${decl.value.name}-${field.name}`,
+            icon: declIcon(decl.declType, decl.value),
+            iconType: declTypeName(decl.declType, decl.value),
             title: field.name,
-            subtitle: `${module.moduleName}.${decl.value.value.name}.${field.name}`,
-            url: declUrl(module.moduleName, decl),
+            subtitle: `${module.name}.${decl.value.name}.${field.name}`,
+            url: declUrl(module.name, decl.decl),
           })
         }
       }

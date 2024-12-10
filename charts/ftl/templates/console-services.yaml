@@ -1,0 +1,24 @@
+{{- if .Values.console.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    {{- include "ftl.labels" . | nindent 4 }}
+  name: {{ include "ftl.fullname" . }}-console
+  {{- if .Values.console.service.annotations }}
+  annotations:
+    {{- toYaml .Values.console.service.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+    {{- range .Values.console.service.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      protocol: {{ .protocol | default "TCP" }}
+      targetPort: {{ .targetPort }}
+    {{- end }}
+  selector:
+    {{- include "ftl-console.selectorLabels" . | nindent 4 }}
+  type: {{ .Values.console.service.type | default "ClusterIP" }}
+
+{{- end }}

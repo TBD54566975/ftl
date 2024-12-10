@@ -1,12 +1,12 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 import { useQuery } from '@tanstack/react-query'
 import { useClient } from '../../hooks/use-client'
-import { ControllerService } from '../../protos/xyz/block/ftl/v1/controller_connect'
+import { ConsoleService } from '../../protos/xyz/block/ftl/console/v1/console_connect'
 
 const useStatusKey = 'status'
 
 export const useStatus = () => {
-  const client = useClient(ControllerService)
+  const client = useClient(ConsoleService)
 
   const fetchStatus = async (signal: AbortSignal) => {
     try {

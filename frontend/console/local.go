@@ -24,7 +24,7 @@ import (
 var proxyURL, _ = url.Parse("http://localhost:5173") //nolint:errcheck
 var proxy = httputil.NewSingleHostReverseProxy(proxyURL)
 
-func Server(ctx context.Context, timestamp time.Time, publicURL *url.URL, allowOrigin *url.URL) (http.Handler, error) {
+func Server(ctx context.Context, timestamp time.Time, allowOrigin *url.URL) (http.Handler, error) {
 	gitRoot, ok := internal.GitRoot(os.Getenv("FTL_DIR")).Get()
 	if !ok {
 		return nil, fmt.Errorf("failed to find Git root")
