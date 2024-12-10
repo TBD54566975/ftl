@@ -190,9 +190,9 @@ export class GetDeploymentContextResponse_DSN extends Message<GetDeploymentConte
  */
 export class GetDeploymentContextResponse_Route extends Message<GetDeploymentContextResponse_Route> {
   /**
-   * @generated from field: string module = 1;
+   * @generated from field: string deployment = 1;
    */
-  module = "";
+  deployment = "";
 
   /**
    * @generated from field: string uri = 2;
@@ -207,7 +207,7 @@ export class GetDeploymentContextResponse_Route extends Message<GetDeploymentCon
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.deployment.v1.GetDeploymentContextResponse.Route";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "uri", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 

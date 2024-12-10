@@ -726,8 +726,12 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 		configs, err := s.cm.MapForModule(ctx, module)
 		routeTable := map[string]string{}
 		for _, module := range callableModuleNames {
-			if route, ok := routeView.GetForModule(module).Get(); ok {
-				routeTable[module] = route.String()
+			deployment, ok := routeView.GetDeployment(module).Get()
+			if !ok {
+				continue
+			}
+			if route, ok := routeView.Get(deployment).Get(); ok {
+				routeTable[deployment.String()] = route.String()
 			}
 		}
 		if deployment.Schema.Runtime != nil && deployment.Schema.Runtime.Deployment != nil {
@@ -854,13 +858,6 @@ func (s *Service) callWithRequest(
 		currentCaller = callers[len(callers)-1]
 	}
 
-	module := verbRef.Module
-	route, ok := routes.GetForModule(module).Get()
-	if !ok {
-		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("no routes for module"))
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no routes for module %q", module))
-	}
-
 	var requestKey model.RequestKey
 	var isNewRequestKey bool
 	if k, ok := key.Get(); ok {
@@ -884,11 +881,13 @@ func (s *Service) callWithRequest(
 		headers.SetRequestKey(req.Header(), requestKey)
 	}
 
+	module := verbRef.Module
 	deployment, ok := routes.GetDeployment(module).Get()
 	if !ok {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("failed to find deployment"))
 		return nil, fmt.Errorf("deployment not found for module %q", module)
 	}
+
 	callEvent := &timeline.Call{
 		DeploymentKey:    deployment,
 		RequestKey:       requestKey,
@@ -897,6 +896,15 @@ func (s *Service) callWithRequest(
 		DestVerb:         verbRef,
 		Callers:          callers,
 		Request:          req.Msg,
+	}
+
+	route, ok := routes.Get(deployment).Get()
+	if !ok {
+		err = fmt.Errorf("no routes for module %q", module)
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("no routes for module"))
+		callEvent.Response = result.Err[*ftlv1.CallResponse](err)
+		timeline.ClientFromContext(ctx).Publish(ctx, callEvent)
+		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
 	if currentCaller != nil && currentCaller.Module != module && !verb.IsExported() {

@@ -66,6 +66,8 @@ data:
                   value: "http://0.0.0.0:{{ (index .Values.runner.ports 0).containerPort }}"
                 - name: FTL_LEASE_ENDPOINT
                   value: http://ftl-lease:8892
+                - name: FTL_TIMELINE_ENDPOINT
+                  value: "http://{{ .Values.timeline.service.name }}:{{ .Values.timeline.service.port }}"
                 - name: FTL_ARTEFACT_REGISTRY_ALLOW_INSECURE
                   value: "{{ .Values.registry.allowInsecure }}"
                 - name: FTL_ARTEFACT_REGISTRY_USERNAME

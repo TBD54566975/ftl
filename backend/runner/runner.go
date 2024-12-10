@@ -39,6 +39,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/runner/observability"
 	"github.com/TBD54566975/ftl/backend/runner/proxy"
 	"github.com/TBD54566975/ftl/backend/runner/pubsub"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/download"
 	"github.com/TBD54566975/ftl/internal/dsn"
@@ -59,6 +60,7 @@ type Config struct {
 	Key                   model.RunnerKey          `help:"Runner key (auto)."`
 	ControllerEndpoint    *url.URL                 `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
 	LeaseEndpoint         *url.URL                 `name:"ftl-lease-endpoint" help:"Lease endpoint endpoint." env:"FTL_LEASE_ENDPOINT" default:"http://127.0.0.1:8895"`
+	TimelineEndpoint      *url.URL                 `help:"Timeline endpoint." env:"FTL_TIMELINE_ENDPOINT" default:"http://127.0.0.1:8894"`
 	TemplateDir           string                   `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
 	DeploymentDir         string                   `help:"Directory to store deployments in." default:"${deploymentdir}"`
 	DeploymentKeepHistory int                      `help:"Number of deployments to keep history for." default:"3"`
@@ -84,6 +86,8 @@ func Start(ctx context.Context, config Config, storage *artefacts.OCIArtefactSer
 
 	logger := log.FromContext(ctx).Attrs(map[string]string{"runner": config.Key.String()})
 	logger.Debugf("Starting FTL Runner")
+
+	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, config.TimelineEndpoint))
 
 	err = manageDeploymentDirectory(logger, config)
 	if err != nil {
