@@ -777,17 +777,14 @@ func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 
 	buildGroup.Go(func() error {
 		return e.buildWithCallback(ctx, func(buildCtx context.Context, module Module) error {
-			buildGroup.Go(func() error {
-				e.modulesToBuild.Store(module.Config.Module, false)
-				e.rawEngineUpdates <- ModuleDeployStarted{Module: module.Config.Module}
-				err := Deploy(buildCtx, e.projectConfig, module, module.Deploy, replicas, waitForDeployOnline, e.client)
-				if err != nil {
-					e.rawEngineUpdates <- ModuleDeployFailed{Module: module.Config.Module, Error: err}
-					return err
-				}
-				e.rawEngineUpdates <- ModuleDeploySuccess{Module: module.Config.Module}
-				return nil
-			})
+			e.modulesToBuild.Store(module.Config.Module, false)
+			e.rawEngineUpdates <- ModuleDeployStarted{Module: module.Config.Module}
+			err := Deploy(buildCtx, e.projectConfig, module, module.Deploy, replicas, true, e.client)
+			if err != nil {
+				e.rawEngineUpdates <- ModuleDeployFailed{Module: module.Config.Module, Error: err}
+				return err
+			}
+			e.rawEngineUpdates <- ModuleDeploySuccess{Module: module.Config.Module}
 			return nil
 		}, moduleNames...)
 	})
@@ -814,6 +811,7 @@ func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 type buildCallback func(ctx context.Context, module Module) error
 
 func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, moduleNames ...string) error {
+	logger := log.FromContext(ctx)
 	if len(moduleNames) == 0 {
 		e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
 			moduleNames = append(moduleNames, name)
@@ -885,6 +883,8 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 
 		wg := errgroup.Group{}
 		wg.SetLimit(e.parallelism)
+
+		logger.Debugf("Building group: %v", group)
 		for _, moduleName := range group {
 			wg.Go(func() error {
 				logger := log.FromContext(ctx).Module(moduleName).Scope("build")
