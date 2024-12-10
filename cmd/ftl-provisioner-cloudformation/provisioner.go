@@ -22,6 +22,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 const (
@@ -93,7 +94,7 @@ func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.
 	if _, ok := c.running.LoadOrStore(token, task); ok {
 		return nil, fmt.Errorf("provisioner already running: %s", token)
 	}
-	logger.Debugf("Starting task for module %s: %s (%s)", req.Msg.Module, token, changeSetID)
+	logger.Debugf("Starting task for module %s: %s (%s)", req.Msg.DesiredModule.Name, token, changeSetID)
 	task.Start(ctx, c.client, c.secrets, changeSetID)
 	return connect.NewResponse(&provisioner.ProvisionResponse{
 		Status:            provisioner.ProvisionResponse_PROVISION_RESPONSE_STATUS_SUBMITTED,
@@ -128,7 +129,7 @@ func (c *CloudformationProvisioner) createChangeSet(ctx context.Context, req *pr
 }
 
 func stackName(req *provisioner.ProvisionRequest) string {
-	return sanitize(req.FtlClusterId) + "-" + sanitize(req.Module)
+	return sanitize(req.FtlClusterId) + "-" + sanitize(req.DesiredModule.Name)
 }
 
 func generateChangeSetName(stack string) string {
@@ -137,33 +138,45 @@ func generateChangeSetName(stack string) string {
 
 func (c *CloudformationProvisioner) createTemplate(req *provisioner.ProvisionRequest) (string, error) {
 	template := goformation.NewTemplate()
-	for _, resourceCtx := range req.DesiredResources {
-		var templater ResourceTemplater
-		switch resourceCtx.Resource.Resource.(type) {
-		case *provisioner.Resource_Postgres:
-			templater = &PostgresTemplater{
-				resourceID: resourceCtx.Resource.ResourceId,
-				cluster:    req.FtlClusterId,
-				module:     req.Module,
-				config:     c.confg,
-			}
-		case *provisioner.Resource_Mysql:
-			templater = &MySQLTemplater{
-				resourceID: resourceCtx.Resource.ResourceId,
-				cluster:    req.FtlClusterId,
-				module:     req.Module,
-				config:     c.confg,
-			}
-		default:
-			continue
-		}
 
-		if err := templater.AddToTemplate(template); err != nil {
-			return "", fmt.Errorf("failed to add resource to template: %w", err)
+	module, err := schema.ModuleFromProto(req.DesiredModule)
+	if err != nil {
+		return "", fmt.Errorf("failed to create module from proto: %w", err)
+	}
+	var acceptedKinds []schema.ResourceType
+	for _, k := range req.Kinds {
+		acceptedKinds = append(acceptedKinds, schema.ResourceType(k))
+	}
+
+	for _, provisioned := range schema.GetProvisioned(module) {
+		for _, resource := range provisioned.GetProvisioned().FilterByType(acceptedKinds...) {
+			var templater ResourceTemplater
+			switch resource.Kind {
+			case schema.ResourceTypePostgres:
+				templater = &PostgresTemplater{
+					resourceID: provisioned.ResourceID(),
+					cluster:    req.FtlClusterId,
+					module:     req.DesiredModule.Name,
+					config:     c.confg,
+				}
+			case schema.ResourceTypeMysql:
+				templater = &MySQLTemplater{
+					resourceID: provisioned.ResourceID(),
+					cluster:    req.FtlClusterId,
+					module:     req.DesiredModule.Name,
+					config:     c.confg,
+				}
+			default:
+				continue
+			}
+
+			if err := templater.AddToTemplate(template); err != nil {
+				return "", fmt.Errorf("failed to add resource to template: %w", err)
+			}
 		}
 	}
 	// Stack can not be empty, insert a null resource to keep the stack around
-	if len(req.DesiredResources) == 0 {
+	if req.DesiredModule == nil {
 		template.Resources["NullResource"] = &cf.WaitConditionHandle{}
 	}
 

@@ -2,23 +2,26 @@ package provisioner
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"sync/atomic"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/atomic"
 	"github.com/google/uuid"
 	"github.com/puzpuzpuz/xsync/v3"
 
 	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
 	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type inMemProvisioningTask struct {
 	steps []*inMemProvisioningStep
+
+	events []*RuntimeEvent
 }
 
 func (t *inMemProvisioningTask) Done() (bool, error) {
@@ -35,13 +38,20 @@ func (t *inMemProvisioningTask) Done() (bool, error) {
 }
 
 type inMemProvisioningStep struct {
-	Resource *provisioner.Resource
-	Err      error
-	Done     atomic.Bool
+	Err  error
+	Done *atomic.Value[bool]
 }
 
-// InMemResourceProvisionerFn is a function that provisions a resource
-type InMemResourceProvisionerFn func(context.Context, *provisioner.ResourceContext, string, string, *provisioner.Resource) (*provisioner.Resource, error)
+// RuntimeEvent is a union type of all runtime events
+// TODO: Remove once we have fully typed provisioners
+type RuntimeEvent struct {
+	Module   schema.ModuleRuntimeEvent
+	Database *schema.DatabaseRuntimeEvent
+	Topic    *schema.TopicRuntimeEvent
+	Verb     *schema.VerbRuntimeEvent
+}
+
+type InMemResourceProvisionerFn func(ctx context.Context, module string, resource schema.Provisioned) (*RuntimeEvent, error)
 
 // InMemProvisioner for running an in memory provisioner, constructing all resources concurrently
 //
@@ -65,36 +75,53 @@ func (d *InMemProvisioner) Ping(context.Context, *connect.Request[ftlv1.PingRequ
 	return &connect.Response[ftlv1.PingResponse]{}, nil
 }
 
-func (d *InMemProvisioner) Plan(context.Context, *connect.Request[provisioner.PlanRequest]) (*connect.Response[provisioner.PlanResponse], error) {
-	panic("unimplemented")
-}
-
 func (d *InMemProvisioner) Provision(ctx context.Context, req *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
 	logger := log.FromContext(ctx)
 
-	previous := map[string]*provisioner.Resource{}
-	for _, r := range req.Msg.ExistingResources {
-		previous[r.ResourceId] = r
+	var previousModule *schema.Module
+	if req.Msg.PreviousModule != nil {
+		pm, err := schema.ModuleFromProto(req.Msg.PreviousModule)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+		previousModule = pm
 	}
+	desiredModule, err := schema.ModuleFromProto(req.Msg.DesiredModule)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	kinds := slices.Map(req.Msg.Kinds, func(k string) schema.ResourceType { return schema.ResourceType(k) })
+	previousNodes := schema.GetProvisioned(previousModule)
+	desiredNodes := schema.GetProvisioned(desiredModule)
 
 	task := &inMemProvisioningTask{}
-	for _, r := range req.Msg.DesiredResources {
-		if handler, ok := d.handlers[TypeOf(r.Resource)]; ok {
-			step := &inMemProvisioningStep{Resource: r.Resource}
-			task.steps = append(task.steps, step)
-			go func() {
-				defer step.Done.Store(true)
-				output, err := handler(ctx, r, req.Msg.Module, r.Resource.ResourceId, previous[r.Resource.ResourceId])
-				if err != nil {
-					step.Err = err
-					logger.Errorf(err, "failed to provision resource %s", r.Resource.ResourceId)
-					return
+	for id, desired := range desiredNodes {
+		previous, ok := previousNodes[id]
+
+		for _, resource := range desired.GetProvisioned() {
+			if !ok || !resource.IsEqual(previous.GetProvisioned().Get(resource.Kind)) {
+				if slices.Contains(kinds, resource.Kind) {
+					if handler, ok := d.handlers[resource.Kind]; ok {
+						step := &inMemProvisioningStep{Done: atomic.New(false)}
+						task.steps = append(task.steps, step)
+						go func() {
+							defer step.Done.Store(true)
+							event, err := handler(ctx, desiredModule.Name, desired)
+							if err != nil {
+								step.Err = err
+								logger.Errorf(err, "failed to provision resource %s:%s", resource.Kind, desired.ResourceID())
+								return
+							}
+							if event != nil {
+								task.events = append(task.events, event)
+							}
+						}()
+					} else {
+						err := fmt.Errorf("unsupported resource type: %s", resource.Kind)
+						return nil, connect.NewError(connect.CodeInvalidArgument, err)
+					}
 				}
-				step.Resource = output
-			}()
-		} else {
-			err := fmt.Errorf("unsupported resource type: %T", r.Resource.Resource)
-			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+			}
 		}
 	}
 
@@ -114,12 +141,12 @@ func (d *InMemProvisioner) Status(ctx context.Context, req *connect.Request[prov
 	token := req.Msg.ProvisioningToken
 	task, ok := d.running.Load(token)
 	if !ok {
-		return statusFailure(fmt.Sprintf("unknown token: %s", token), connect.CodeNotFound)
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("unknown token: %s", token))
 	}
 	done, err := task.Done()
 	if err != nil {
 		logger.Debugf("task with token %s failed with error: %s", token, err.Error())
-		return statusFailure(err.Error(), connect.CodeInternal)
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	if !done {
@@ -129,24 +156,45 @@ func (d *InMemProvisioner) Status(ctx context.Context, req *connect.Request[prov
 	}
 	logger.Debugf("task with token %s is done", token)
 
-	var resources []*provisioner.Resource
-	for _, step := range task.steps {
-		if step.Err != nil {
-			return statusFailure(step.Err.Error(), connect.CodeInternal)
-		}
-		resources = append(resources, step.Resource)
-	}
 	d.running.Delete(token)
 
 	return connect.NewResponse(&provisioner.StatusResponse{
 		Status: &provisioner.StatusResponse_Success{
 			Success: &provisioner.StatusResponse_ProvisioningSuccess{
-				UpdatedResources: resources,
+				Events: eventsToProto(task.events),
 			},
 		},
 	}), nil
 }
 
-func statusFailure(message string, code connect.Code) (*connect.Response[provisioner.StatusResponse], error) {
-	return nil, connect.NewError(code, errors.New(message))
+func eventsToProto(events []*RuntimeEvent) []*provisioner.ProvisioningEvent {
+	return slices.Map(events, func(e *RuntimeEvent) *provisioner.ProvisioningEvent {
+		switch {
+		case e.Database != nil:
+			return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_DatabaseRuntimeEvent{DatabaseRuntimeEvent: e.Database.ToProto()}}
+		case e.Module != nil:
+			switch event := e.Module.(type) {
+			case *schema.ModuleRuntimeDeployment:
+				return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_ModuleRuntimeEvent{ModuleRuntimeEvent: &schemapb.ModuleRuntimeEvent{
+					Value: &schemapb.ModuleRuntimeEvent_ModuleRuntimeDeployment{ModuleRuntimeDeployment: event.ToProto().(*schemapb.ModuleRuntimeDeployment)}, //nolint:forcetypeassert
+				}}}
+			case *schema.ModuleRuntimeScaling:
+				return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_ModuleRuntimeEvent{ModuleRuntimeEvent: &schemapb.ModuleRuntimeEvent{
+					Value: &schemapb.ModuleRuntimeEvent_ModuleRuntimeScaling{ModuleRuntimeScaling: event.ToProto().(*schemapb.ModuleRuntimeScaling)}, //nolint:forcetypeassert
+				}}}
+			case *schema.ModuleRuntimeBase:
+				return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_ModuleRuntimeEvent{ModuleRuntimeEvent: &schemapb.ModuleRuntimeEvent{
+					Value: &schemapb.ModuleRuntimeEvent_ModuleRuntimeBase{ModuleRuntimeBase: event.ToProto().(*schemapb.ModuleRuntimeBase)}, //nolint:forcetypeassert
+				}}}
+			default:
+				panic("unknown module event type")
+			}
+		case e.Topic != nil:
+			return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_TopicRuntimeEvent{TopicRuntimeEvent: e.Topic.ToProto().(*schemapb.TopicRuntimeEvent)}} //nolint:forcetypeassert
+		case e.Verb != nil:
+			return &provisioner.ProvisioningEvent{Value: &provisioner.ProvisioningEvent_VerbRuntimeEvent{VerbRuntimeEvent: e.Verb.ToProto().(*schemapb.VerbRuntimeEvent)}} //nolint:forcetypeassert
+		default:
+			panic("unknown event type")
+		}
+	})
 }

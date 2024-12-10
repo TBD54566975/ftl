@@ -10,16 +10,12 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
-var _ Runtime = (*ModuleRuntime)(nil)
-
 // ModuleRuntime is runtime configuration for a module that can be dynamically updated.
 type ModuleRuntime struct {
 	Base       ModuleRuntimeBase        `protobuf:"1"` // Base is always present.
 	Scaling    *ModuleRuntimeScaling    `protobuf:"2,optional"`
 	Deployment *ModuleRuntimeDeployment `protobuf:"3,optional"`
 }
-
-func (*ModuleRuntime) runtime() {}
 
 // ApplyEvent applies a ModuleRuntimeEvent to the ModuleRuntime.
 func (m *ModuleRuntime) ApplyEvent(event ModuleRuntimeEvent) {
@@ -38,7 +34,7 @@ func ModuleRuntimeFromProto(s *schemapb.ModuleRuntime) *ModuleRuntime {
 		return nil
 	}
 	return &ModuleRuntime{
-		Base:       ModuleRuntimeBaseFromProto(s.Base),
+		Base:       *ModuleRuntimeBaseFromProto(s.Base),
 		Scaling:    ModuleRuntimeScalingFromProto(s.Scaling),
 		Deployment: ModuleRuntimeDeploymentFromProto(s.Deployment),
 	}
@@ -46,12 +42,12 @@ func ModuleRuntimeFromProto(s *schemapb.ModuleRuntime) *ModuleRuntime {
 
 func (m *ModuleRuntime) ToProto() protoreflect.ProtoMessage {
 	s := &schemapb.ModuleRuntime{}
-	s.Base = m.Base.ToProto()
+	s.Base = m.Base.ToProto().(*schemapb.ModuleRuntimeBase) //nolint:forcetypeassert
 	if m.Deployment != nil {
-		s.Deployment = m.Deployment.ToProto()
+		s.Deployment = m.Deployment.ToProto().(*schemapb.ModuleRuntimeDeployment) //nolint:forcetypeassert
 	}
 	if m.Scaling != nil {
-		s.Scaling = m.Scaling.ToProto()
+		s.Scaling = m.Scaling.ToProto().(*schemapb.ModuleRuntimeScaling) //nolint:forcetypeassert
 	}
 	return s
 }
@@ -75,6 +71,7 @@ func ModuleRuntimeEventFromProto(s *schemapb.ModuleRuntimeEvent) ModuleRuntimeEv
 //sumtype:decl
 type ModuleRuntimeEvent interface {
 	moduleRuntime()
+	ToProto() protoreflect.ProtoMessage
 }
 
 //protobuf:1
@@ -90,11 +87,11 @@ type ModuleRuntimeBase struct {
 
 func (ModuleRuntimeBase) moduleRuntime() {}
 
-func ModuleRuntimeBaseFromProto(s *schemapb.ModuleRuntimeBase) ModuleRuntimeBase {
+func ModuleRuntimeBaseFromProto(s *schemapb.ModuleRuntimeBase) *ModuleRuntimeBase {
 	if s == nil {
-		return ModuleRuntimeBase{}
+		return &ModuleRuntimeBase{}
 	}
-	return ModuleRuntimeBase{
+	return &ModuleRuntimeBase{
 		CreateTime: s.GetCreateTime().AsTime(),
 		Language:   s.GetLanguage(),
 		OS:         s.GetOs(),
@@ -103,7 +100,7 @@ func ModuleRuntimeBaseFromProto(s *schemapb.ModuleRuntimeBase) ModuleRuntimeBase
 	}
 }
 
-func (m *ModuleRuntimeBase) ToProto() *schemapb.ModuleRuntimeBase {
+func (m *ModuleRuntimeBase) ToProto() protoreflect.ProtoMessage {
 	if m == nil {
 		return nil
 	}
@@ -139,7 +136,7 @@ func ModuleRuntimeScalingFromProto(s *schemapb.ModuleRuntimeScaling) *ModuleRunt
 	}
 }
 
-func (m *ModuleRuntimeScaling) ToProto() *schemapb.ModuleRuntimeScaling {
+func (m *ModuleRuntimeScaling) ToProto() protoreflect.ProtoMessage {
 	if m == nil {
 		return nil
 	}
@@ -167,7 +164,7 @@ func ModuleRuntimeDeploymentFromProto(s *schemapb.ModuleRuntimeDeployment) *Modu
 	}
 }
 
-func (m *ModuleRuntimeDeployment) ToProto() *schemapb.ModuleRuntimeDeployment {
+func (m *ModuleRuntimeDeployment) ToProto() protoreflect.ProtoMessage {
 	if m == nil {
 		return nil
 	}

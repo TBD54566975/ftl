@@ -89,6 +89,11 @@ message DatabaseRuntimeConnectionsEvent {
 }
 
 message DatabaseRuntimeEvent {
+  string id = 1;
+  DatabaseRuntimeEventPayload payload = 2;
+}
+
+message DatabaseRuntimeEventPayload {
   oneof value {
     DatabaseRuntimeConnectionsEvent database_runtime_connections_event = 1;
   }
@@ -372,6 +377,11 @@ message TopicRuntime {
   string topic_id = 2;
 }
 
+message TopicRuntimeEvent {
+  string id = 1;
+  TopicRuntime payload = 2;
+}
+
 message Type {
   oneof value {
     Any any = 9;
@@ -432,7 +442,27 @@ message Verb {
 }
 
 message VerbRuntime {
+  VerbRuntimeBase base = 1;
+  optional VerbRuntimeSubscription subscription = 2;
+}
+
+message VerbRuntimeBase {
   optional google.protobuf.Timestamp create_time = 1;
   optional google.protobuf.Timestamp start_time = 2;
-  repeated string kafka_brokers = 3;
+}
+
+message VerbRuntimeEvent {
+  string id = 1;
+  VerbRuntimePayload payload = 2;
+}
+
+message VerbRuntimePayload {
+  oneof value {
+    VerbRuntimeBase verb_runtime_base = 1;
+    VerbRuntimeSubscription verb_runtime_subscription = 2;
+  }
+}
+
+message VerbRuntimeSubscription {
+  repeated string kafka_brokers = 1;
 }
