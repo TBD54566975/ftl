@@ -23,7 +23,7 @@ type DeploymentMetrics struct {
 	replicasRemoved        metric.Int64Counter
 }
 
-func initDeploymentMetrics() (*DeploymentMetrics, error) {
+func initDeploymentMetrics() *DeploymentMetrics {
 	result := &DeploymentMetrics{
 		reconciliationFailures: noop.Int64Counter{},
 		reconciliationsActive:  noop.Int64UpDownCounter{},
@@ -38,31 +38,31 @@ func initDeploymentMetrics() (*DeploymentMetrics, error) {
 	if result.reconciliationFailures, err = meter.Int64Counter(
 		signalName,
 		metric.WithDescription("the number of failed runner deployment reconciliation tasks")); err != nil {
-		return nil, wrapErr(signalName, err)
+		observability.FatalError(signalName, err)
 	}
 
 	signalName = fmt.Sprintf("%s.reconciliations.active", deploymentMeterName)
 	if result.reconciliationsActive, err = meter.Int64UpDownCounter(
 		signalName,
 		metric.WithDescription("the number of active deployment reconciliation tasks")); err != nil {
-		return nil, wrapErr(signalName, err)
+		observability.FatalError(signalName, err)
 	}
 
 	signalName = fmt.Sprintf("%s.replicas.added", deploymentMeterName)
 	if result.replicasAdded, err = meter.Int64Counter(
 		signalName,
 		metric.WithDescription("the number of runner replicas added by the deployment reconciliation tasks")); err != nil {
-		return nil, wrapErr(signalName, err)
+		observability.FatalError(signalName, err)
 	}
 
 	signalName = fmt.Sprintf("%s.replicas.removed", deploymentMeterName)
 	if result.replicasRemoved, err = meter.Int64Counter(
 		signalName,
 		metric.WithDescription("the number of runner replicas removed by the deployment reconciliation tasks")); err != nil {
-		return nil, wrapErr(signalName, err)
+		observability.FatalError(signalName, err)
 	}
 
-	return result, nil
+	return result
 }
 
 func (m *DeploymentMetrics) ReconciliationFailure(ctx context.Context, module string, key string) {

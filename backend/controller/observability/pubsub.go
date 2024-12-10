@@ -35,7 +35,7 @@ type PubSubMetrics struct {
 	sinkCalled        metric.Int64Counter
 }
 
-func initPubSubMetrics() (*PubSubMetrics, error) {
+func initPubSubMetrics() *PubSubMetrics {
 	result := &PubSubMetrics{
 		published:         noop.Int64Counter{},
 		propagationFailed: noop.Int64Counter{},
@@ -50,7 +50,7 @@ func initPubSubMetrics() (*PubSubMetrics, error) {
 		counterName,
 		metric.WithUnit("1"),
 		metric.WithDescription("the number of times that an event is published to a topic")); err != nil {
-		return nil, wrapErr(counterName, err)
+		observability.FatalError(counterName, err)
 	}
 
 	counterName = fmt.Sprintf("%s.propagation.failed", pubsubMeterName)
@@ -58,7 +58,7 @@ func initPubSubMetrics() (*PubSubMetrics, error) {
 		counterName,
 		metric.WithUnit("1"),
 		metric.WithDescription("the number of times that subscriptions fail to progress")); err != nil {
-		return nil, wrapErr(counterName, err)
+		observability.FatalError(counterName, err)
 	}
 
 	counterName = fmt.Sprintf("%s.sink.called", pubsubMeterName)
@@ -66,10 +66,10 @@ func initPubSubMetrics() (*PubSubMetrics, error) {
 		counterName,
 		metric.WithUnit("1"),
 		metric.WithDescription("the number of times that a pubsub event has been enqueued to asynchronously send to a subscriber")); err != nil {
-		return nil, wrapErr(counterName, err)
+		observability.FatalError(counterName, err)
 	}
 
-	return result, nil
+	return result
 }
 
 func (m *PubSubMetrics) Published(ctx context.Context, module, topic, caller string, maybeErr error) {
