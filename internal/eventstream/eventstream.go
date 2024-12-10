@@ -52,7 +52,11 @@ func (i *inMemoryEventStream[T, E]) Publish(ctx context.Context, e E) error {
 	defer i.lock.Unlock()
 	logger := log.FromContext(ctx)
 
-	logger.Debugf("Publishing event %T%v", e, e)
+	if _, ok := any(e).(VerboseMessage); ok {
+		logger.Tracef("Publishing event %T%v", e, e)
+	} else {
+		logger.Debugf("Publishing event %T%v", e, e)
+	}
 	newView, err := e.Handle(reflect.DeepCopy(i.view))
 	if err != nil {
 		return fmt.Errorf("failed to handle event: %w", err)
@@ -68,4 +72,8 @@ func (i *inMemoryEventStream[T, E]) View() T {
 
 func (i *inMemoryEventStream[T, E]) Updates() *pubsub.Topic[E] {
 	return i.topic
+}
+
+type VerboseMessage interface {
+	VerboseMessage()
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/internal/eventstream"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
@@ -42,6 +43,7 @@ func (r *State) RunnersForDeployment(deployment string) []Runner {
 }
 
 var _ ControllerEvent = (*RunnerRegisteredEvent)(nil)
+var _ eventstream.VerboseMessage = (*RunnerRegisteredEvent)(nil)
 var _ ControllerEvent = (*RunnerDeletedEvent)(nil)
 
 type RunnerRegisteredEvent struct {
@@ -50,6 +52,10 @@ type RunnerRegisteredEvent struct {
 	Endpoint   string
 	Module     string
 	Deployment model.DeploymentKey
+}
+
+func (r *RunnerRegisteredEvent) VerboseMessage() {
+	// Stops this message being logged every second
 }
 
 func (r *RunnerRegisteredEvent) Handle(t State) (State, error) {
