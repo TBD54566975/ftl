@@ -15,6 +15,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
 type AdminService struct {
@@ -28,6 +29,15 @@ var _ ftlv1connect.AdminServiceHandler = (*AdminService)(nil)
 type SchemaRetriever interface {
 	// BindAllocator is required if the schema is retrieved from disk using language plugins
 	GetActiveSchema(ctx context.Context) (*schema.Schema, error)
+}
+
+type streamSchemaRetriever struct {
+	source schemaeventsource.EventSource
+}
+
+func (c streamSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Schema, error) {
+	view := c.source.View()
+	return &schema.Schema{Modules: view.Modules}, nil
 }
 
 // NewAdminService creates a new AdminService.
@@ -262,4 +272,10 @@ func (s *AdminService) validateAgainstSchema(ctx context.Context, isSecret bool,
 	}
 
 	return nil
+}
+
+func NewSchemaRetreiver(source schemaeventsource.EventSource) SchemaRetriever {
+	return &streamSchemaRetriever{
+		source: source,
+	}
 }

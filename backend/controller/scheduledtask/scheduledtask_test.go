@@ -10,8 +10,8 @@ import (
 	"github.com/benbjohnson/clock"
 	"github.com/jpillora/backoff"
 
-	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
+	"github.com/TBD54566975/ftl/backend/controller/state"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
@@ -26,15 +26,15 @@ func TestScheduledTask(t *testing.T) {
 	var multiCount atomic.Int64
 
 	type controller struct {
-		controller dalmodel.Controller
+		controller state.Controller
 		cron       *Scheduler
 	}
 
 	controllers := []*controller{
-		{controller: dalmodel.Controller{Key: model.NewControllerKey("localhost", "8080")}},
-		{controller: dalmodel.Controller{Key: model.NewControllerKey("localhost", "8081")}},
-		{controller: dalmodel.Controller{Key: model.NewControllerKey("localhost", "8082")}},
-		{controller: dalmodel.Controller{Key: model.NewControllerKey("localhost", "8083")}},
+		{controller: state.Controller{Key: model.NewControllerKey("localhost", "8080")}},
+		{controller: state.Controller{Key: model.NewControllerKey("localhost", "8081")}},
+		{controller: state.Controller{Key: model.NewControllerKey("localhost", "8082")}},
+		{controller: state.Controller{Key: model.NewControllerKey("localhost", "8083")}},
 	}
 
 	clock := clock.NewMock()

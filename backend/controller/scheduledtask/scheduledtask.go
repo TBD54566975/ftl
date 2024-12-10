@@ -11,7 +11,6 @@ import (
 	"github.com/benbjohnson/clock"
 	"github.com/jpillora/backoff"
 
-	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -32,8 +31,6 @@ type descriptor struct {
 // The Job itself controls its schedule by returning the next time it should
 // run.
 type Job func(ctx context.Context) (time.Duration, error)
-
-type DALFunc func(ctx context.Context, all bool) ([]dalmodel.Controller, error)
 
 // Scheduler is a task scheduler for the controller.
 //
