@@ -3,9 +3,10 @@ package schema
 import (
 	"reflect"
 
-	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // ResourceType is a type of resource used to configure provisioners

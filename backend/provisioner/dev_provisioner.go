@@ -248,7 +248,7 @@ func provisionSubscription() InMemResourceProvisionerFn {
 		if !ok {
 			panic(fmt.Errorf("unexpected resource type: %T", res))
 		}
-		for _ = range slices.FilterVariants[*schema.MetadataSubscriber](verb.Metadata) {
+		for range slices.FilterVariants[*schema.MetadataSubscriber](verb.Metadata) {
 			logger.Infof("Provisioning subscription for verb: %s", verb.Name)
 			return &RuntimeEvent{
 				Verb: &schema.VerbRuntimeEvent{
