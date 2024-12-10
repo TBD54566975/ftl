@@ -1,0 +1,8 @@
+{{- if .Values.console.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.console.serviceAccountName }}
+  namespace: {{ .Release.Namespace }}
+
+{{- end }}

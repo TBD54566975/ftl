@@ -46,6 +46,11 @@ timeline:
     repository: "ftl:5000/ftl-timeline"
     tag: "latest"
     pullPolicy: Always
+console:
+  image:
+    repository: "ftl:5000/ftl-console"
+    tag: "latest"
+    pullPolicy: Always
 
 cron:
   image:

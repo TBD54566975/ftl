@@ -67,3 +67,8 @@ app.kubernetes.io/name: {{ include "ftl.fullname" . }}
 app.kubernetes.io/component: lease
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
+{{- define "ftl-console.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "ftl.fullname" . }}
+app.kubernetes.io/component: console
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}

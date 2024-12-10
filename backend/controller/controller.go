@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"net/http"
 	"net/url"
 	"sort"
 	"strings"
@@ -31,22 +30,18 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/admin"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	"github.com/TBD54566975/ftl/backend/controller/console"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/state"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
 	deploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
 	ftlv1connect2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/timeline"
-	frontend "github.com/TBD54566975/ftl/frontend/console"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/deploymentcontext"
@@ -66,7 +61,6 @@ import (
 
 // CommonConfig between the production controller and development server.
 type CommonConfig struct {
-	NoConsole      bool          `help:"Disable the console."`
 	IdleRunners    int           `help:"Number of idle runners to keep around (not supported in production)." default:"3"`
 	WaitFor        []string      `help:"Wait for these modules to be deployed before becoming ready." placeholder:"MODULE"`
 	CronJobTimeout time.Duration `help:"Timeout for cron jobs." default:"5m"`
@@ -77,8 +71,6 @@ type Config struct {
 	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"KEY"`
 	DSN                          string              `help:"DAL DSN." default:"${dsn}" env:"FTL_CONTROLLER_DSN"`
 	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_ADVERTISE"`
-	ConsoleURL                   *url.URL            `help:"The public URL of the console (for CORS)." env:"FTL_CONTROLLER_CONSOLE_URL"`
-	ContentTime                  time.Time           `help:"Time to use for console resource timestamps." default:"${timestamp=1970-01-01T00:00:00Z}"`
 	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
 	ControllerTimeout            time.Duration       `help:"Controller heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
@@ -123,21 +115,6 @@ func Start(
 	logger := log.FromContext(ctx)
 	logger.Debugf("Starting FTL controller")
 
-	var consoleHandler http.Handler
-	var err error
-	if config.NoConsole {
-		consoleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNotImplemented)
-			_, _ = w.Write([]byte("Console not installed.")) //nolint:errcheck
-		})
-	} else {
-		consoleHandler, err = frontend.Server(ctx, config.ContentTime, config.Bind, config.ConsoleURL)
-		if err != nil {
-			return fmt.Errorf("could not start console: %w", err)
-		}
-		logger.Infof("Web console available at: %s", config.Bind)
-	}
-
 	svc, err := New(ctx, conn, cm, sm, storage, config, devel)
 	if err != nil {
 		return err
@@ -146,7 +123,6 @@ func Start(
 	logger.Debugf("Advertising as %s", config.Advertise)
 
 	admin := admin.NewAdminService(cm, sm, admin.NewSchemaRetreiver(schemaeventsource.New(ctx, rpc.ClientFromContext[ftlv1connect.SchemaServiceClient](ctx))))
-	console := console.NewService(admin, schemaeventsource.New(ctx, rpc.ClientFromContext[ftlv1connect.SchemaServiceClient](ctx)))
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -157,10 +133,7 @@ func Start(
 			rpc.GRPC(ftlv1connect.NewControllerServiceHandler, svc),
 			rpc.GRPC(ftlv1connect.NewSchemaServiceHandler, svc),
 			rpc.GRPC(ftlv1connect.NewAdminServiceHandler, admin),
-			rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
-			rpc.GRPC(timelinev1connect.NewTimelineServiceHandler, console),
 			rpc.GRPC(ftlv1connect2.NewLegacyPubsubServiceHandler, svc.pubSub),
-			rpc.HTTP("/", consoleHandler),
 			rpc.PProf(),
 		)
 	})
