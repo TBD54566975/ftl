@@ -18,7 +18,7 @@ import (
 	kongcompletion "github.com/jotaen/kong-completion"
 
 	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/backend/controller/admin"
+	"github.com/TBD54566975/ftl/backend/admin"
 	leasev1connext "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
 	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
 	ftlv1pubsubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
@@ -44,6 +44,7 @@ type InteractiveCLI struct {
 	ProvisionerEndpoint *url.URL         `help:"Provisioner endpoint." env:"FTL_PROVISIONER_ENDPOINT" default:"http://127.0.0.1:8893"`
 	TimelineEndpoint    *url.URL         `help:"Timeline endpoint." env:"FTL_TIMELINE_ENDPOINT" default:"http://127.0.0.1:8894"`
 	LeaseEndpoint       *url.URL         `help:"Lease endpoint." env:"FTL_LEASE_ENDPOINT" default:"http://127.0.0.1:8895"`
+	AdminEndpoint       *url.URL         `help:"Admin endpoint." env:"FTL_ADMIN_ENDPOINT" default:"http://127.0.0.1:8896"`
 
 	Ping     pingCmd     `cmd:"" help:"Ping the FTL cluster."`
 	Status   statusCmd   `cmd:"" help:"Show FTL status."`
@@ -246,6 +247,10 @@ func makeBindContext(logger *log.Logger, cancel context.CancelFunc) terminal.Kon
 		ctx = rpc.ContextWithClient(ctx, leaseClient)
 		kctx.BindTo(leaseClient, (*leasev1connext.LeaseServiceClient)(nil))
 
+		adminClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, cli.AdminEndpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, adminClient)
+		kctx.BindTo(adminClient, (*ftlv1connect.AdminServiceClient)(nil))
+
 		err = kctx.BindToProvider(func() (*providers.Registry[configuration.Configuration], error) {
 			return providers.NewDefaultConfigRegistry(), nil
 		})
@@ -294,14 +299,14 @@ func provideAdminClient(
 	cli *CLI,
 	cm *manager.Manager[configuration.Configuration],
 	sm *manager.Manager[configuration.Secrets],
+	adminClient ftlv1connect.AdminServiceClient,
 ) (client admin.Client, err error) {
-	adminServiceClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, cli.Endpoint.String(), log.Error)
-	shouldUseLocalClient, err := admin.ShouldUseLocalClient(ctx, adminServiceClient, cli.Endpoint)
+	shouldUseLocalClient, err := admin.ShouldUseLocalClient(ctx, adminClient, cli.AdminEndpoint)
 	if err != nil {
 		return client, fmt.Errorf("could not create admin client: %w", err)
 	}
 	if shouldUseLocalClient {
 		return admin.NewLocalClient(cm, sm), nil
 	}
-	return adminServiceClient, nil
+	return adminClient, nil
 }

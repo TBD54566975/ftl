@@ -1,0 +1,87 @@
+{{ $version := printf "v%s" .Chart.Version -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ftl.fullname" . }}-admin
+  labels:
+    {{- include "ftl.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.admin.replicas }}
+  revisionHistoryLimit: {{ .Values.admin.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "ftl-admin.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ftl-admin.selectorLabels" . | nindent 8 }}
+      {{- if .Values.admin.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.admin.podAnnotations | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.admin.serviceAccountName }}
+      containers:
+        - name: app
+          image: "{{ .Values.admin.image.repository }}:{{ .Values.admin.image.tag | default $version }}"
+          imagePullPolicy: {{ .Values.admin.image.pullPolicy }}
+          resources:
+            limits:
+              cpu: "{{ .Values.admin.resources.limits.cpu }}"
+              memory: "{{ .Values.admin.resources.limits.memory }}"
+            requests:
+              cpu: "{{ .Values.admin.resources.requests.cpu }}"
+              memory: "{{ .Values.admin.resources.requests.memory }}"
+          {{- if .Values.admin.envFrom }}
+          envFrom:
+            {{- if .Values.admin.envFrom }}
+            {{- toYaml .Values.admin.envFrom | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          env:
+            {{- if .Values.admin.env }}
+            {{- toYaml .Values.admin.env | nindent 12 }}
+            {{- end }}
+            {{- if not .Values.postgresql.enabled }}
+            - name: FTL_DSN
+              value: "{{ .Values.admin.dbConnectionString }}"
+            {{- else }}
+            - name: FTL_DSN
+              value: "postgres://{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.global.postgresql.auth.database }}?sslmode=disable&user={{ .Values.postgresql.global.postgresql.auth.username }}&password={{ .Values.postgresql.global.postgresql.auth.password }}"
+            {{- end }}
+
+          ports:
+            {{- range .Values.admin.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .containerPort }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+          readinessProbe:
+            {{- if .Values.admin.readinessProbe }}
+            {{- toYaml .Values.admin.readinessProbe | nindent 12 }}
+            {{- else }}
+            httpGet:
+              path: /healthz
+              port: 8892
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 15
+            {{- end }}
+      {{- if .Values.admin.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.admin.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.admin.affinity }}
+      affinity:
+        {{- toYaml .Values.admin.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.admin.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.admin.topologySpreadConstraints | nindent 8 }}
+      {{- end }}
+      {{- if .Values.admin.tolerations }}
+      tolerations:
+        {{- toYaml .Values.admin.tolerations | nindent 8 }}
+      {{- end }}
