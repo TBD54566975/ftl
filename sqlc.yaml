@@ -11,7 +11,7 @@ sql:
       go: &gengo
         package: "sql"
         omit_unused_structs: true
-        out: "backend/controller/dal/internal/sql"
+        out: "backend/controller/pubsub/internal/sql"
         emit_interface: true
         query_parameter_limit: 3
         overrides:
