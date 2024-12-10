@@ -149,7 +149,7 @@ func (c *CloudformationProvisioner) createTemplate(req *provisioner.ProvisionReq
 	}
 
 	for _, provisioned := range schema.GetProvisioned(module) {
-		for _, resource := range provisioned.GetProvisioned().Filter(acceptedKinds...) {
+		for _, resource := range provisioned.GetProvisioned().FilterByType(acceptedKinds...) {
 			var templater ResourceTemplater
 			switch resource.Kind {
 			case schema.ResourceTypePostgres:
