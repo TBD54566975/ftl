@@ -5,6 +5,7 @@ import { useVisibility } from '../../hooks/use-visibility'
 import type { Event } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
 import { TimelineService } from '../../protos/xyz/block/ftl/timeline/v1/timeline_connect'
 import { type GetTimelineRequest_Filter, GetTimelineRequest_Order } from '../../protos/xyz/block/ftl/timeline/v1/timeline_pb'
+import { compareTimestamps } from '../../utils/date.utils'
 
 const timelineKey = 'timeline'
 const maxTimelineEntries = 1000
@@ -49,7 +50,7 @@ export const useTimeline = (isStreaming: boolean, filters: GetTimelineRequest_Fi
         console.debug('timeline-response:', response)
         if (response.events) {
           queryClient.setQueryData<Event[]>(queryKey, (prev = []) => {
-            return [...response.events, ...prev].slice(0, maxTimelineEntries)
+            return [...response.events, ...prev].sort((a, b) => compareTimestamps(b.timestamp, a.timestamp)).slice(0, maxTimelineEntries)
           })
         }
       }
