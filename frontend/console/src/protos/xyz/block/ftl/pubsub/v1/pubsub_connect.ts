@@ -8,7 +8,7 @@ import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 import { PublishEventRequest, PublishEventResponse, ResetSubscriptionRequest, ResetSubscriptionResponse } from "./pubsub_pb.js";
 
 /**
- * ModuleService is the service that modules use to interact with the Controller.
+ * LegacyPubsubService is the service that modules use to interact with the Controller.
  *
  * @generated from service xyz.block.ftl.pubsub.v1.LegacyPubsubService
  */

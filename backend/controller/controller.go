@@ -175,14 +175,7 @@ type clients struct {
 	verb ftlv1connect.VerbServiceClient
 }
 
-// ControllerListListener is regularly notified of the current list of controllers
-// This is often used to update a hash ring to distribute work.
-type ControllerListListener interface {
-	UpdatedControllerList(ctx context.Context, controllers []state.Controller)
-}
-
 type Service struct {
-	conn               *sql.DB
 	leaser             leases.Leaser
 	key                model.ControllerKey
 	deploymentLogsSink *deploymentLogsSink
@@ -190,21 +183,16 @@ type Service struct {
 	cm *cf.Manager[configuration.Configuration]
 	sm *cf.Manager[configuration.Secrets]
 
-	tasks                   *scheduledtask.Scheduler
-	pubSub                  *pubsub.Service
-	storage                 *artefacts.OCIArtefactService
-	controllerListListeners []ControllerListListener
+	tasks   *scheduledtask.Scheduler
+	pubSub  *pubsub.Service
+	storage *artefacts.OCIArtefactService
 
 	// Map from runnerKey.String() to client.
-	clients *ttlcache.Cache[string, clients]
-
-	schemaSyncLock sync.Mutex
+	clients    *ttlcache.Cache[string, clients]
+	clientLock sync.Mutex
 
 	config Config
 
-	increaseReplicaFailures map[string]int
-
-	clientLock      sync.Mutex
 	routeTable      *routing.RouteTable
 	controllerState state.ControllerState
 }
@@ -236,18 +224,16 @@ func New(
 	routingTable := routing.New(ctx, schemaeventsource.New(ctx, rpc.ClientFromContext[ftlv1connect.SchemaServiceClient](ctx)))
 
 	svc := &Service{
-		cm:                      cm,
-		sm:                      sm,
-		tasks:                   scheduler,
-		leaser:                  ldb,
-		conn:                    conn,
-		key:                     key,
-		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
-		config:                  config,
-		increaseReplicaFailures: map[string]int{},
-		routeTable:              routingTable,
-		storage:                 storage,
-		controllerState:         state.NewInMemoryState(),
+		cm:              cm,
+		sm:              sm,
+		tasks:           scheduler,
+		leaser:          ldb,
+		key:             key,
+		clients:         ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
+		config:          config,
+		routeTable:      routingTable,
+		storage:         storage,
+		controllerState: state.NewInMemoryState(),
 	}
 
 	pubSub := pubsub.New(ctx, conn, routingTable, svc.controllerState)
