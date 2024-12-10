@@ -47,7 +47,6 @@ import (
 	deploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
 	ftlv1connect2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
-	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -91,7 +90,6 @@ type Config struct {
 	ControllerTimeout            time.Duration       `help:"Controller heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
 	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
-	EventLogRetention            *time.Duration      `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 	MaxOpenDBConnections         int                 `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
 	MaxIdleDBConnections         int                 `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
@@ -314,7 +312,6 @@ func New(
 
 	// Singleton tasks use leases to only run on a single controller.
 	singletonTask(svc.reapStaleRunners, "reap-stale-runners", time.Second*2, time.Second, time.Second*10)
-	singletonTask(svc.reapCallEvents, "reap-call-events", time.Minute*5, time.Minute, time.Minute*30)
 	singletonTask(svc.pubSub.ReapAsyncCalls, "reap-async-calls", time.Second*5, time.Second, time.Second*5)
 	return svc, nil
 }
@@ -1275,30 +1272,6 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 	}
 
 	return log.FromContext(ctx).AddSink(s.deploymentLogsSink).Attrs(attrs)
-}
-
-func (s *Service) reapCallEvents(ctx context.Context) (time.Duration, error) {
-	logger := log.FromContext(ctx)
-
-	if s.config.EventLogRetention == nil {
-		logger.Tracef("Event log retention is disabled, will not prune.")
-		return time.Hour, nil
-	}
-
-	client := timeline.ClientFromContext(ctx)
-	resp, err := client.DeleteOldEvents(ctx, connect.NewRequest(&timelinepb.DeleteOldEventsRequest{
-		EventType:  timelinepb.EventType_EVENT_TYPE_CALL,
-		AgeSeconds: int64(s.config.EventLogRetention.Seconds()),
-	}))
-	if err != nil {
-		return 0, fmt.Errorf("failed to prune call events: %w", err)
-	}
-	if resp.Msg.DeletedCount > 0 {
-		logger.Debugf("Pruned %d call events older than %s", resp.Msg.DeletedCount, s.config.EventLogRetention)
-	}
-
-	// Prune every 5% of the retention period.
-	return *s.config.EventLogRetention / 20, nil
 }
 
 func makeBackoff(min, max time.Duration) backoff.Backoff {
