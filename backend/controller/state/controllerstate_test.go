@@ -7,6 +7,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/backend/controller/state"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
@@ -54,4 +55,42 @@ func TestRunnerState(t *testing.T) {
 	view = cs.View()
 	assert.Equal(t, 0, len(view.Runners()))
 
+}
+
+func TestDeploymentState(t *testing.T) {
+	cs := state.NewInMemoryState()
+	view := cs.View()
+	assert.Equal(t, 0, len(view.Deployments()))
+
+	deploymentKey := model.NewDeploymentKey("test-deployment")
+	create := time.Now()
+	err := cs.Publish(&state.DeploymentCreatedEvent{
+		Key:       deploymentKey,
+		CreatedAt: create,
+		Schema:    &schemapb.Module{Name: "test"},
+	})
+	assert.NoError(t, err)
+	view = cs.View()
+	assert.Equal(t, 1, len(view.Deployments()))
+	assert.Equal(t, deploymentKey, view.Deployments()[deploymentKey.String()].Key)
+	assert.Equal(t, create, view.Deployments()[deploymentKey.String()].CreatedAt)
+
+	activate := time.Now()
+	err = cs.Publish(&state.DeploymentActivatedEvent{
+		Key:         deploymentKey,
+		ActivatedAt: activate,
+		MinReplicas: 1,
+	})
+	assert.NoError(t, err)
+	view = cs.View()
+	assert.Equal(t, 1, view.Deployments()[deploymentKey.String()].MinReplicas)
+	assert.Equal(t, activate, view.Deployments()[deploymentKey.String()].ActivatedAt.MustGet())
+
+	err = cs.Publish(&state.DeploymentDeactivatedEvent{
+		Key: deploymentKey,
+	})
+	assert.NoError(t, err)
+	view = cs.View()
+
+	assert.Equal(t, 0, view.Deployments()[deploymentKey.String()].MinReplicas)
 }

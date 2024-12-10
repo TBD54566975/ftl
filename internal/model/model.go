@@ -9,11 +9,10 @@ import (
 )
 
 type Deployment struct {
-	Module    string
-	Language  string
-	Key       DeploymentKey
-	Schema    *schema.Module
-	Artefacts []*Artefact
+	Module   string
+	Language string
+	Key      DeploymentKey
+	Schema   *schema.Module
 }
 
 type Artefact struct {

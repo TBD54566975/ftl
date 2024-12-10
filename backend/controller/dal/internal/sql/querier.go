@@ -17,7 +17,6 @@ type Querier interface {
 	// Reserve a pending async call for execution, returning the associated lease
 	// reservation key and accompanying metadata.
 	AcquireAsyncCall(ctx context.Context) (AcquireAsyncCallRow, error)
-	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
 	AsyncCallQueueDepth(ctx context.Context) (int64, error)
 	BeginConsumingTopicEvent(ctx context.Context, subscription model.SubscriptionKey, event model.TopicEventKey) error
 	CompleteEventForSubscription(ctx context.Context, name string, module string) error
@@ -29,14 +28,8 @@ type Querier interface {
 	FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallWithRetryParams) (bool, error)
 	GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error)
 	GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error)
-	// Return the digests that exist in the database.
-	GetArtefactDigests(ctx context.Context, digests [][]byte) ([][]byte, error)
 	GetDeployment(ctx context.Context, key model.DeploymentKey) (GetDeploymentRow, error)
-	// Get all artefacts matching the given digests.
-	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
 	GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error)
-	// Get all deployments that have artefacts matching the given digests.
-	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, schema []byte, count int64) ([]GetDeploymentsWithArtefactsRow, error)
 	GetDeploymentsWithMinReplicas(ctx context.Context) ([]GetDeploymentsWithMinReplicasRow, error)
 	GetExistingDeploymentForModule(ctx context.Context, name string) (GetExistingDeploymentForModuleRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
