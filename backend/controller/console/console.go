@@ -4,38 +4,71 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"time"
 
 	"connectrpc.com/connect"
 
 	"github.com/TBD54566975/ftl/backend/controller/admin"
-	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
+	consolepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/timeline"
+	frontend "github.com/TBD54566975/ftl/frontend/console"
 	"github.com/TBD54566975/ftl/internal/buildengine"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
-type ConsoleService struct {
-	admin             *admin.AdminService
+type Config struct {
+	ConsoleURL  *url.URL  `help:"The public URL of the console (for CORS)." env:"FTL_CONTROLLER_CONSOLE_URL"`
+	ContentTime time.Time `help:"Time to use for console resource timestamps." default:"${timestamp=1970-01-01T00:00:00Z}"`
+	Bind        *url.URL  `help:"Socket to bind to." default:"http://127.0.0.1:8897" env:"FTL_BIND"`
+}
+
+type service struct {
 	schemaEventSource schemaeventsource.EventSource
+	controllerClient  ftlv1connect.ControllerServiceClient
+	timelineClient    *timeline.Client
+	adminClient       admin.Client
 }
 
-var _ pbconsoleconnect.ConsoleServiceHandler = (*ConsoleService)(nil)
-var _ timelinev1connect.TimelineServiceHandler = (*ConsoleService)(nil)
+var _ pbconsoleconnect.ConsoleServiceHandler = (*service)(nil)
 
-func NewService(admin *admin.AdminService, schemaEventSource schemaeventsource.EventSource) *ConsoleService {
-	return &ConsoleService{
-		admin:             admin,
-		schemaEventSource: schemaEventSource,
+func Start(ctx context.Context, config Config, eventSource schemaeventsource.EventSource, controllerClient ftlv1connect.ControllerServiceClient, timelineClient *timeline.Client, adminClient admin.Client) error {
+	logger := log.FromContext(ctx).Scope("console")
+	ctx = log.ContextWithLogger(ctx, logger)
+
+	svc := &service{
+		schemaEventSource: eventSource,
+		controllerClient:  controllerClient,
+		timelineClient:    timelineClient,
+		adminClient:       adminClient,
 	}
+
+	consoleHandler, err := frontend.Server(ctx, config.ContentTime, config.Bind)
+	if err != nil {
+		return fmt.Errorf("could not start console: %w", err)
+	}
+	logger.Infof("Web console available at: %s", config.Bind)
+
+	logger.Debugf("Console service listening on: %s", config.Bind)
+	err = rpc.Serve(ctx, config.Bind,
+		rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, svc),
+		rpc.HTTP("/", consoleHandler),
+	)
+	if err != nil {
+		return fmt.Errorf("console service stopped serving: %w", err)
+	}
+	return nil
 }
 
-func (*ConsoleService) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
+func (s *service) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
@@ -74,19 +107,19 @@ func verbSchemaString(sch *schema.Schema, verb *schema.Verb) (string, error) {
 	return verbString, nil
 }
 
-func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pbconsole.GetModulesRequest]) (*connect.Response[pbconsole.GetModulesResponse], error) {
-	sch := c.schemaEventSource.View()
+func (s *service) GetModules(ctx context.Context, req *connect.Request[consolepb.GetModulesRequest]) (*connect.Response[consolepb.GetModulesResponse], error) {
+	sch := s.schemaEventSource.View()
 
 	nilMap := map[schema.RefKey]map[schema.RefKey]bool{}
-	var modules []*pbconsole.Module
+	var modules []*consolepb.Module
 	for _, mod := range sch.Modules {
 		if mod.Runtime == nil || mod.Runtime.Deployment == nil {
 			continue
 		}
-		var verbs []*pbconsole.Verb
-		var data []*pbconsole.Data
-		var secrets []*pbconsole.Secret
-		var configs []*pbconsole.Config
+		var verbs []*consolepb.Verb
+		var data []*consolepb.Data
+		var secrets []*consolepb.Secret
+		var configs []*consolepb.Config
 
 		for _, decl := range mod.Decls {
 			switch decl := decl.(type) {
@@ -110,7 +143,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 			}
 		}
 
-		modules = append(modules, &pbconsole.Module{
+		modules = append(modules, &consolepb.Module{
 			Name:          mod.Name,
 			DeploymentKey: mod.Runtime.Deployment.DeploymentKey,
 			Language:      mod.Runtime.Base.Language,
@@ -126,23 +159,23 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 	if err != nil {
 		return nil, fmt.Errorf("failed to sort modules: %w", err)
 	}
-	topology := &pbconsole.Topology{
-		Levels: make([]*pbconsole.TopologyGroup, len(sorted)),
+	topology := &consolepb.Topology{
+		Levels: make([]*consolepb.TopologyGroup, len(sorted)),
 	}
 	for i, level := range sorted {
-		group := &pbconsole.TopologyGroup{
+		group := &consolepb.TopologyGroup{
 			Modules: level,
 		}
 		topology.Levels[i] = group
 	}
 
-	return connect.NewResponse(&pbconsole.GetModulesResponse{
+	return connect.NewResponse(&consolepb.GetModulesResponse{
 		Modules:  modules,
 		Topology: topology,
 	}), nil
 }
 
-func moduleFromDeployment(deployment *schema.Module, sch *schema.Schema, refMap map[schema.RefKey]map[schema.RefKey]bool) (*pbconsole.Module, error) {
+func moduleFromDeployment(deployment *schema.Module, sch *schema.Schema, refMap map[schema.RefKey]map[schema.RefKey]bool) (*consolepb.Module, error) {
 	module, err := moduleFromDecls(deployment.Decls, sch, deployment.Name, refMap)
 	if err != nil {
 		return nil, err
@@ -156,15 +189,15 @@ func moduleFromDeployment(deployment *schema.Module, sch *schema.Schema, refMap 
 	return module, nil
 }
 
-func moduleFromDecls(decls []schema.Decl, sch *schema.Schema, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) (*pbconsole.Module, error) {
-	var configs []*pbconsole.Config
-	var data []*pbconsole.Data
-	var databases []*pbconsole.Database
-	var enums []*pbconsole.Enum
-	var topics []*pbconsole.Topic
-	var typealiases []*pbconsole.TypeAlias
-	var secrets []*pbconsole.Secret
-	var verbs []*pbconsole.Verb
+func moduleFromDecls(decls []schema.Decl, sch *schema.Schema, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) (*consolepb.Module, error) {
+	var configs []*consolepb.Config
+	var data []*consolepb.Data
+	var databases []*consolepb.Database
+	var enums []*consolepb.Enum
+	var topics []*consolepb.Topic
+	var typealiases []*consolepb.TypeAlias
+	var secrets []*consolepb.Secret
+	var verbs []*consolepb.Verb
 
 	for _, d := range decls {
 		switch decl := d.(type) {
@@ -198,7 +231,7 @@ func moduleFromDecls(decls []schema.Decl, sch *schema.Schema, module string, ref
 		}
 	}
 
-	return &pbconsole.Module{
+	return &consolepb.Module{
 		Configs:     configs,
 		Data:        data,
 		Databases:   databases,
@@ -210,59 +243,59 @@ func moduleFromDecls(decls []schema.Decl, sch *schema.Schema, module string, ref
 	}, nil
 }
 
-func configFromDecl(decl *schema.Config, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Config {
-	return &pbconsole.Config{
+func configFromDecl(decl *schema.Config, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *consolepb.Config {
+	return &consolepb.Config{
 		//nolint:forcetypeassert
 		Config:     decl.ToProto(),
 		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func dataFromDecl(decl *schema.Data, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Data {
+func dataFromDecl(decl *schema.Data, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *consolepb.Data {
 	d := decl.ToProto()
-	return &pbconsole.Data{
+	return &consolepb.Data{
 		Data:       d,
 		Schema:     schema.DataFromProto(d).String(),
 		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func databaseFromDecl(decl *schema.Database, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Database {
-	return &pbconsole.Database{
+func databaseFromDecl(decl *schema.Database, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *consolepb.Database {
+	return &consolepb.Database{
 		Database:   decl.ToProto(),
 		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func enumFromDecl(decl *schema.Enum, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Enum {
-	return &pbconsole.Enum{
+func enumFromDecl(decl *schema.Enum, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *consolepb.Enum {
+	return &consolepb.Enum{
 		Enum:       decl.ToProto(),
 		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func topicFromDecl(decl *schema.Topic, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Topic {
-	return &pbconsole.Topic{
+func topicFromDecl(decl *schema.Topic, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *consolepb.Topic {
+	return &consolepb.Topic{
 		Topic:      decl.ToProto(),
 		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func typealiasFromDecl(decl *schema.TypeAlias, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.TypeAlias {
-	return &pbconsole.TypeAlias{
+func typealiasFromDecl(decl *schema.TypeAlias, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *consolepb.TypeAlias {
+	return &consolepb.TypeAlias{
 		Typealias:  decl.ToProto(),
 		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func secretFromDecl(decl *schema.Secret, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Secret {
-	return &pbconsole.Secret{
+func secretFromDecl(decl *schema.Secret, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *consolepb.Secret {
+	return &consolepb.Secret{
 		Secret:     decl.ToProto(),
 		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func verbFromDecl(decl *schema.Verb, sch *schema.Schema, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) (*pbconsole.Verb, error) {
+func verbFromDecl(decl *schema.Verb, sch *schema.Schema, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) (*consolepb.Verb, error) {
 	v := decl.ToProto()
 	verbSchema := schema.VerbFromProto(v)
 	var jsonRequestSchema string
@@ -284,7 +317,7 @@ func verbFromDecl(decl *schema.Verb, sch *schema.Schema, module string, refMap m
 	if err != nil {
 		return nil, err
 	}
-	return &pbconsole.Verb{
+	return &consolepb.Verb{
 		Verb:              v,
 		Schema:            schemaString,
 		JsonRequestSchema: jsonRequestSchema,
@@ -308,9 +341,9 @@ func getReferencesFromMap(refMap map[schema.RefKey]map[schema.RefKey]bool, modul
 	return out
 }
 
-func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request[pbconsole.StreamModulesRequest], stream *connect.ServerStream[pbconsole.StreamModulesResponse]) error {
+func (s *service) StreamModules(ctx context.Context, req *connect.Request[consolepb.StreamModulesRequest], stream *connect.ServerStream[consolepb.StreamModulesResponse]) error {
 
-	err := c.sendStreamModulesResp(ctx, stream)
+	err := s.sendStreamModulesResp(ctx, stream)
 	if err != nil {
 		return err
 	}
@@ -320,8 +353,8 @@ func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request
 		case <-ctx.Done():
 			return nil
 
-		case <-c.schemaEventSource.Events():
-			err = c.sendStreamModulesResp(ctx, stream)
+		case <-s.schemaEventSource.Events():
+			err = s.sendStreamModulesResp(ctx, stream)
 			if err != nil {
 				return err
 			}
@@ -331,7 +364,7 @@ func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request
 
 // filterDeployments removes any duplicate modules by selecting the deployment with the
 // latest CreatedAt.
-func (c *ConsoleService) filterDeployments(unfilteredDeployments *schema.Schema) []*schema.Module {
+func (s *service) filterDeployments(unfilteredDeployments *schema.Schema) []*schema.Module {
 	latest := make(map[string]*schema.Module)
 
 	for _, deployment := range unfilteredDeployments.Modules {
@@ -349,10 +382,10 @@ func (c *ConsoleService) filterDeployments(unfilteredDeployments *schema.Schema)
 	return result
 }
 
-func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *connect.ServerStream[pbconsole.StreamModulesResponse]) error {
-	unfilteredDeployments := c.schemaEventSource.View()
+func (s *service) sendStreamModulesResp(ctx context.Context, stream *connect.ServerStream[consolepb.StreamModulesResponse]) error {
+	unfilteredDeployments := s.schemaEventSource.View()
 
-	deployments := c.filterDeployments(unfilteredDeployments)
+	deployments := s.filterDeployments(unfilteredDeployments)
 	sch := &schema.Schema{
 		Modules: deployments,
 	}
@@ -364,11 +397,11 @@ func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *conn
 	if err != nil {
 		return fmt.Errorf("failed to sort modules: %w", err)
 	}
-	topology := &pbconsole.Topology{
-		Levels: make([]*pbconsole.TopologyGroup, len(sorted)),
+	topology := &consolepb.Topology{
+		Levels: make([]*consolepb.TopologyGroup, len(sorted)),
 	}
 	for i, level := range sorted {
-		group := &pbconsole.TopologyGroup{
+		group := &consolepb.TopologyGroup{
 			Modules: level,
 		}
 		topology.Levels[i] = group
@@ -379,7 +412,7 @@ func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *conn
 		return fmt.Errorf("failed to find references: %w", err)
 	}
 
-	var modules []*pbconsole.Module
+	var modules []*consolepb.Module
 	for _, deployment := range deployments {
 		if deployment.Runtime == nil || deployment.Runtime.Deployment == nil {
 			continue
@@ -400,7 +433,7 @@ func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *conn
 	builtinModule.Schema = builtin.String()
 	modules = append(modules, builtinModule)
 
-	err = stream.Send(&pbconsole.StreamModulesResponse{
+	err = stream.Send(&consolepb.StreamModulesResponse{
 		Modules:  modules,
 		Topology: topology,
 	})
@@ -443,8 +476,8 @@ func addRefToSetMap(m map[schema.RefKey]map[schema.RefKey]bool, key schema.RefKe
 	m[key][value.ToRefKey()] = true
 }
 
-func (c *ConsoleService) GetConfig(ctx context.Context, req *connect.Request[pbconsole.GetConfigRequest]) (*connect.Response[pbconsole.GetConfigResponse], error) {
-	resp, err := c.admin.ConfigGet(ctx, connect.NewRequest(&ftlv1.ConfigGetRequest{
+func (s *service) GetConfig(ctx context.Context, req *connect.Request[consolepb.GetConfigRequest]) (*connect.Response[consolepb.GetConfigResponse], error) {
+	resp, err := s.adminClient.ConfigGet(ctx, connect.NewRequest(&ftlv1.ConfigGetRequest{
 		Ref: &ftlv1.ConfigRef{
 			Module: req.Msg.Module,
 			Name:   req.Msg.Name,
@@ -453,13 +486,13 @@ func (c *ConsoleService) GetConfig(ctx context.Context, req *connect.Request[pbc
 	if err != nil {
 		return nil, fmt.Errorf("failed to get config: %w", err)
 	}
-	return connect.NewResponse(&pbconsole.GetConfigResponse{
+	return connect.NewResponse(&consolepb.GetConfigResponse{
 		Value: resp.Msg.Value,
 	}), nil
 }
 
-func (c *ConsoleService) SetConfig(ctx context.Context, req *connect.Request[pbconsole.SetConfigRequest]) (*connect.Response[pbconsole.SetConfigResponse], error) {
-	_, err := c.admin.ConfigSet(ctx, connect.NewRequest(&ftlv1.ConfigSetRequest{
+func (s *service) SetConfig(ctx context.Context, req *connect.Request[consolepb.SetConfigRequest]) (*connect.Response[consolepb.SetConfigResponse], error) {
+	_, err := s.adminClient.ConfigSet(ctx, connect.NewRequest(&ftlv1.ConfigSetRequest{
 		Ref: &ftlv1.ConfigRef{
 			Module: req.Msg.Module,
 			Name:   req.Msg.Name,
@@ -469,11 +502,11 @@ func (c *ConsoleService) SetConfig(ctx context.Context, req *connect.Request[pbc
 	if err != nil {
 		return nil, fmt.Errorf("failed to set config: %w", err)
 	}
-	return connect.NewResponse(&pbconsole.SetConfigResponse{}), nil
+	return connect.NewResponse(&consolepb.SetConfigResponse{}), nil
 }
 
-func (c *ConsoleService) GetSecret(ctx context.Context, req *connect.Request[pbconsole.GetSecretRequest]) (*connect.Response[pbconsole.GetSecretResponse], error) {
-	resp, err := c.admin.SecretGet(ctx, connect.NewRequest(&ftlv1.SecretGetRequest{
+func (s *service) GetSecret(ctx context.Context, req *connect.Request[consolepb.GetSecretRequest]) (*connect.Response[consolepb.GetSecretResponse], error) {
+	resp, err := s.adminClient.SecretGet(ctx, connect.NewRequest(&ftlv1.SecretGetRequest{
 		Ref: &ftlv1.ConfigRef{
 			Name:   req.Msg.Name,
 			Module: req.Msg.Module,
@@ -482,13 +515,13 @@ func (c *ConsoleService) GetSecret(ctx context.Context, req *connect.Request[pbc
 	if err != nil {
 		return nil, fmt.Errorf("failed to get secret: %w", err)
 	}
-	return connect.NewResponse(&pbconsole.GetSecretResponse{
+	return connect.NewResponse(&consolepb.GetSecretResponse{
 		Value: resp.Msg.Value,
 	}), nil
 }
 
-func (c *ConsoleService) SetSecret(ctx context.Context, req *connect.Request[pbconsole.SetSecretRequest]) (*connect.Response[pbconsole.SetSecretResponse], error) {
-	_, err := c.admin.SecretSet(ctx, connect.NewRequest(&ftlv1.SecretSetRequest{
+func (s *service) SetSecret(ctx context.Context, req *connect.Request[consolepb.SetSecretRequest]) (*connect.Response[consolepb.SetSecretResponse], error) {
+	_, err := s.adminClient.SecretSet(ctx, connect.NewRequest(&ftlv1.SecretSetRequest{
 		Ref: &ftlv1.ConfigRef{
 			Name:   req.Msg.Name,
 			Module: req.Msg.Module,
@@ -498,7 +531,8 @@ func (c *ConsoleService) SetSecret(ctx context.Context, req *connect.Request[pbc
 	if err != nil {
 		return nil, fmt.Errorf("failed to set secret: %w", err)
 	}
-	return connect.NewResponse(&pbconsole.SetSecretResponse{}), nil
+
+	return connect.NewResponse(&consolepb.SetSecretResponse{}), nil
 }
 
 func graph(sch *schema.Schema) map[string][]string {
@@ -526,7 +560,7 @@ func buildGraph(sch *schema.Schema, module *schema.Module, out map[string][]stri
 	}
 }
 
-func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[timelinepb.GetTimelineRequest]) (*connect.Response[timelinepb.GetTimelineResponse], error) {
+func (s *service) GetTimeline(ctx context.Context, req *connect.Request[timelinepb.GetTimelineRequest]) (*connect.Response[timelinepb.GetTimelineResponse], error) {
 	client := timeline.ClientFromContext(ctx)
 	resp, err := client.GetTimeline(ctx, connect.NewRequest(req.Msg))
 	if err != nil {
@@ -535,7 +569,7 @@ func (c *ConsoleService) GetTimeline(ctx context.Context, req *connect.Request[t
 	return connect.NewResponse(resp.Msg), nil
 }
 
-func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Request[timelinepb.StreamTimelineRequest], out *connect.ServerStream[timelinepb.StreamTimelineResponse]) error {
+func (s *service) StreamTimeline(ctx context.Context, req *connect.Request[timelinepb.StreamTimelineRequest], out *connect.ServerStream[timelinepb.StreamTimelineResponse]) error {
 	client := timeline.ClientFromContext(ctx)
 	stream, err := client.StreamTimeline(ctx, req)
 	if err != nil {
@@ -554,10 +588,11 @@ func (c *ConsoleService) StreamTimeline(ctx context.Context, req *connect.Reques
 	}
 	return nil
 }
-func (c *ConsoleService) CreateEvents(ctx context.Context, req *connect.Request[timelinepb.CreateEventsRequest]) (*connect.Response[timelinepb.CreateEventsResponse], error) {
-	return nil, fmt.Errorf("not implemented")
-}
 
-func (c *ConsoleService) DeleteOldEvents(ctx context.Context, req *connect.Request[timelinepb.DeleteOldEventsRequest]) (*connect.Response[timelinepb.DeleteOldEventsResponse], error) {
-	return nil, fmt.Errorf("not implemented")
+func (s *service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error) {
+	resp, err := s.controllerClient.Status(ctx, connect.NewRequest(req.Msg))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get status from controller: %w", err)
+	}
+	return connect.NewResponse(resp.Msg), nil
 }

@@ -2,8 +2,8 @@ import { Code, ConnectError } from '@connectrpc/connect'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useClient } from '../../hooks/use-client'
 import { useVisibility } from '../../hooks/use-visibility'
+import { ConsoleService } from '../../protos/xyz/block/ftl/console/v1/console_connect'
 import type { Event } from '../../protos/xyz/block/ftl/timeline/v1/event_pb'
-import { TimelineService } from '../../protos/xyz/block/ftl/timeline/v1/timeline_connect'
 import { type GetTimelineRequest_Filter, GetTimelineRequest_Order } from '../../protos/xyz/block/ftl/timeline/v1/timeline_pb'
 import { compareTimestamps } from '../../utils/date.utils'
 
@@ -11,7 +11,7 @@ const timelineKey = 'timeline'
 const maxTimelineEntries = 1000
 
 export const useTimeline = (isStreaming: boolean, filters: GetTimelineRequest_Filter[], updateIntervalMs = 1000, enabled = true) => {
-  const client = useClient(TimelineService)
+  const client = useClient(ConsoleService)
   const queryClient = useQueryClient()
   const isVisible = useVisibility()
 

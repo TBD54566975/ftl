@@ -43,6 +43,7 @@ DOCKER_IMAGES := '''
     "extra_binaries": ["ftl-provisioner-cloudformation"],
     "extra_files": ["ftl-provisioner-config.toml"]
   },
+  "console": {},
   "cron": {},
   "http-ingress": {},
   "runner": {},

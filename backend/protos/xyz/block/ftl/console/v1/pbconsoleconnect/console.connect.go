@@ -9,6 +9,7 @@ import (
 	context "context"
 	errors "errors"
 	v11 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
+	v12 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	v1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	http "net/http"
 	strings "strings"
@@ -42,6 +43,12 @@ const (
 	// ConsoleServiceStreamModulesProcedure is the fully-qualified name of the ConsoleService's
 	// StreamModules RPC.
 	ConsoleServiceStreamModulesProcedure = "/xyz.block.ftl.console.v1.ConsoleService/StreamModules"
+	// ConsoleServiceGetTimelineProcedure is the fully-qualified name of the ConsoleService's
+	// GetTimeline RPC.
+	ConsoleServiceGetTimelineProcedure = "/xyz.block.ftl.console.v1.ConsoleService/GetTimeline"
+	// ConsoleServiceStreamTimelineProcedure is the fully-qualified name of the ConsoleService's
+	// StreamTimeline RPC.
+	ConsoleServiceStreamTimelineProcedure = "/xyz.block.ftl.console.v1.ConsoleService/StreamTimeline"
 	// ConsoleServiceGetConfigProcedure is the fully-qualified name of the ConsoleService's GetConfig
 	// RPC.
 	ConsoleServiceGetConfigProcedure = "/xyz.block.ftl.console.v1.ConsoleService/GetConfig"
@@ -54,6 +61,8 @@ const (
 	// ConsoleServiceSetSecretProcedure is the fully-qualified name of the ConsoleService's SetSecret
 	// RPC.
 	ConsoleServiceSetSecretProcedure = "/xyz.block.ftl.console.v1.ConsoleService/SetSecret"
+	// ConsoleServiceStatusProcedure is the fully-qualified name of the ConsoleService's Status RPC.
+	ConsoleServiceStatusProcedure = "/xyz.block.ftl.console.v1.ConsoleService/Status"
 )
 
 // ConsoleServiceClient is a client for the xyz.block.ftl.console.v1.ConsoleService service.
@@ -62,10 +71,13 @@ type ConsoleServiceClient interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	GetModules(context.Context, *connect.Request[v11.GetModulesRequest]) (*connect.Response[v11.GetModulesResponse], error)
 	StreamModules(context.Context, *connect.Request[v11.StreamModulesRequest]) (*connect.ServerStreamForClient[v11.StreamModulesResponse], error)
+	GetTimeline(context.Context, *connect.Request[v12.GetTimelineRequest]) (*connect.Response[v12.GetTimelineResponse], error)
+	StreamTimeline(context.Context, *connect.Request[v12.StreamTimelineRequest]) (*connect.ServerStreamForClient[v12.StreamTimelineResponse], error)
 	GetConfig(context.Context, *connect.Request[v11.GetConfigRequest]) (*connect.Response[v11.GetConfigResponse], error)
 	SetConfig(context.Context, *connect.Request[v11.SetConfigRequest]) (*connect.Response[v11.SetConfigResponse], error)
 	GetSecret(context.Context, *connect.Request[v11.GetSecretRequest]) (*connect.Response[v11.GetSecretResponse], error)
 	SetSecret(context.Context, *connect.Request[v11.SetSecretRequest]) (*connect.Response[v11.SetSecretResponse], error)
+	Status(context.Context, *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error)
 }
 
 // NewConsoleServiceClient constructs a client for the xyz.block.ftl.console.v1.ConsoleService
@@ -94,6 +106,16 @@ func NewConsoleServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			baseURL+ConsoleServiceStreamModulesProcedure,
 			opts...,
 		),
+		getTimeline: connect.NewClient[v12.GetTimelineRequest, v12.GetTimelineResponse](
+			httpClient,
+			baseURL+ConsoleServiceGetTimelineProcedure,
+			opts...,
+		),
+		streamTimeline: connect.NewClient[v12.StreamTimelineRequest, v12.StreamTimelineResponse](
+			httpClient,
+			baseURL+ConsoleServiceStreamTimelineProcedure,
+			opts...,
+		),
 		getConfig: connect.NewClient[v11.GetConfigRequest, v11.GetConfigResponse](
 			httpClient,
 			baseURL+ConsoleServiceGetConfigProcedure,
@@ -114,18 +136,26 @@ func NewConsoleServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			baseURL+ConsoleServiceSetSecretProcedure,
 			opts...,
 		),
+		status: connect.NewClient[v1.StatusRequest, v1.StatusResponse](
+			httpClient,
+			baseURL+ConsoleServiceStatusProcedure,
+			opts...,
+		),
 	}
 }
 
 // consoleServiceClient implements ConsoleServiceClient.
 type consoleServiceClient struct {
-	ping          *connect.Client[v1.PingRequest, v1.PingResponse]
-	getModules    *connect.Client[v11.GetModulesRequest, v11.GetModulesResponse]
-	streamModules *connect.Client[v11.StreamModulesRequest, v11.StreamModulesResponse]
-	getConfig     *connect.Client[v11.GetConfigRequest, v11.GetConfigResponse]
-	setConfig     *connect.Client[v11.SetConfigRequest, v11.SetConfigResponse]
-	getSecret     *connect.Client[v11.GetSecretRequest, v11.GetSecretResponse]
-	setSecret     *connect.Client[v11.SetSecretRequest, v11.SetSecretResponse]
+	ping           *connect.Client[v1.PingRequest, v1.PingResponse]
+	getModules     *connect.Client[v11.GetModulesRequest, v11.GetModulesResponse]
+	streamModules  *connect.Client[v11.StreamModulesRequest, v11.StreamModulesResponse]
+	getTimeline    *connect.Client[v12.GetTimelineRequest, v12.GetTimelineResponse]
+	streamTimeline *connect.Client[v12.StreamTimelineRequest, v12.StreamTimelineResponse]
+	getConfig      *connect.Client[v11.GetConfigRequest, v11.GetConfigResponse]
+	setConfig      *connect.Client[v11.SetConfigRequest, v11.SetConfigResponse]
+	getSecret      *connect.Client[v11.GetSecretRequest, v11.GetSecretResponse]
+	setSecret      *connect.Client[v11.SetSecretRequest, v11.SetSecretResponse]
+	status         *connect.Client[v1.StatusRequest, v1.StatusResponse]
 }
 
 // Ping calls xyz.block.ftl.console.v1.ConsoleService.Ping.
@@ -141,6 +171,16 @@ func (c *consoleServiceClient) GetModules(ctx context.Context, req *connect.Requ
 // StreamModules calls xyz.block.ftl.console.v1.ConsoleService.StreamModules.
 func (c *consoleServiceClient) StreamModules(ctx context.Context, req *connect.Request[v11.StreamModulesRequest]) (*connect.ServerStreamForClient[v11.StreamModulesResponse], error) {
 	return c.streamModules.CallServerStream(ctx, req)
+}
+
+// GetTimeline calls xyz.block.ftl.console.v1.ConsoleService.GetTimeline.
+func (c *consoleServiceClient) GetTimeline(ctx context.Context, req *connect.Request[v12.GetTimelineRequest]) (*connect.Response[v12.GetTimelineResponse], error) {
+	return c.getTimeline.CallUnary(ctx, req)
+}
+
+// StreamTimeline calls xyz.block.ftl.console.v1.ConsoleService.StreamTimeline.
+func (c *consoleServiceClient) StreamTimeline(ctx context.Context, req *connect.Request[v12.StreamTimelineRequest]) (*connect.ServerStreamForClient[v12.StreamTimelineResponse], error) {
+	return c.streamTimeline.CallServerStream(ctx, req)
 }
 
 // GetConfig calls xyz.block.ftl.console.v1.ConsoleService.GetConfig.
@@ -163,6 +203,11 @@ func (c *consoleServiceClient) SetSecret(ctx context.Context, req *connect.Reque
 	return c.setSecret.CallUnary(ctx, req)
 }
 
+// Status calls xyz.block.ftl.console.v1.ConsoleService.Status.
+func (c *consoleServiceClient) Status(ctx context.Context, req *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error) {
+	return c.status.CallUnary(ctx, req)
+}
+
 // ConsoleServiceHandler is an implementation of the xyz.block.ftl.console.v1.ConsoleService
 // service.
 type ConsoleServiceHandler interface {
@@ -170,10 +215,13 @@ type ConsoleServiceHandler interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	GetModules(context.Context, *connect.Request[v11.GetModulesRequest]) (*connect.Response[v11.GetModulesResponse], error)
 	StreamModules(context.Context, *connect.Request[v11.StreamModulesRequest], *connect.ServerStream[v11.StreamModulesResponse]) error
+	GetTimeline(context.Context, *connect.Request[v12.GetTimelineRequest]) (*connect.Response[v12.GetTimelineResponse], error)
+	StreamTimeline(context.Context, *connect.Request[v12.StreamTimelineRequest], *connect.ServerStream[v12.StreamTimelineResponse]) error
 	GetConfig(context.Context, *connect.Request[v11.GetConfigRequest]) (*connect.Response[v11.GetConfigResponse], error)
 	SetConfig(context.Context, *connect.Request[v11.SetConfigRequest]) (*connect.Response[v11.SetConfigResponse], error)
 	GetSecret(context.Context, *connect.Request[v11.GetSecretRequest]) (*connect.Response[v11.GetSecretResponse], error)
 	SetSecret(context.Context, *connect.Request[v11.SetSecretRequest]) (*connect.Response[v11.SetSecretResponse], error)
+	Status(context.Context, *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error)
 }
 
 // NewConsoleServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -198,6 +246,16 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 		svc.StreamModules,
 		opts...,
 	)
+	consoleServiceGetTimelineHandler := connect.NewUnaryHandler(
+		ConsoleServiceGetTimelineProcedure,
+		svc.GetTimeline,
+		opts...,
+	)
+	consoleServiceStreamTimelineHandler := connect.NewServerStreamHandler(
+		ConsoleServiceStreamTimelineProcedure,
+		svc.StreamTimeline,
+		opts...,
+	)
 	consoleServiceGetConfigHandler := connect.NewUnaryHandler(
 		ConsoleServiceGetConfigProcedure,
 		svc.GetConfig,
@@ -218,6 +276,11 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 		svc.SetSecret,
 		opts...,
 	)
+	consoleServiceStatusHandler := connect.NewUnaryHandler(
+		ConsoleServiceStatusProcedure,
+		svc.Status,
+		opts...,
+	)
 	return "/xyz.block.ftl.console.v1.ConsoleService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ConsoleServicePingProcedure:
@@ -226,6 +289,10 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 			consoleServiceGetModulesHandler.ServeHTTP(w, r)
 		case ConsoleServiceStreamModulesProcedure:
 			consoleServiceStreamModulesHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetTimelineProcedure:
+			consoleServiceGetTimelineHandler.ServeHTTP(w, r)
+		case ConsoleServiceStreamTimelineProcedure:
+			consoleServiceStreamTimelineHandler.ServeHTTP(w, r)
 		case ConsoleServiceGetConfigProcedure:
 			consoleServiceGetConfigHandler.ServeHTTP(w, r)
 		case ConsoleServiceSetConfigProcedure:
@@ -234,6 +301,8 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 			consoleServiceGetSecretHandler.ServeHTTP(w, r)
 		case ConsoleServiceSetSecretProcedure:
 			consoleServiceSetSecretHandler.ServeHTTP(w, r)
+		case ConsoleServiceStatusProcedure:
+			consoleServiceStatusHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -255,6 +324,14 @@ func (UnimplementedConsoleServiceHandler) StreamModules(context.Context, *connec
 	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.console.v1.ConsoleService.StreamModules is not implemented"))
 }
 
+func (UnimplementedConsoleServiceHandler) GetTimeline(context.Context, *connect.Request[v12.GetTimelineRequest]) (*connect.Response[v12.GetTimelineResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.console.v1.ConsoleService.GetTimeline is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) StreamTimeline(context.Context, *connect.Request[v12.StreamTimelineRequest], *connect.ServerStream[v12.StreamTimelineResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.console.v1.ConsoleService.StreamTimeline is not implemented"))
+}
+
 func (UnimplementedConsoleServiceHandler) GetConfig(context.Context, *connect.Request[v11.GetConfigRequest]) (*connect.Response[v11.GetConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.console.v1.ConsoleService.GetConfig is not implemented"))
 }
@@ -269,4 +346,8 @@ func (UnimplementedConsoleServiceHandler) GetSecret(context.Context, *connect.Re
 
 func (UnimplementedConsoleServiceHandler) SetSecret(context.Context, *connect.Request[v11.SetSecretRequest]) (*connect.Response[v11.SetSecretResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.console.v1.ConsoleService.SetSecret is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) Status(context.Context, *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.console.v1.ConsoleService.Status is not implemented"))
 }
