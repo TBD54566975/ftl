@@ -1,7 +1,6 @@
 package model
 
 import (
-	"encoding"
 	"fmt"
 	"time"
 
@@ -12,27 +11,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/sha256"
 )
-
-// NotificationPayload is a row from the database.
-//
-//sumtype:decl
-type NotificationPayload interface{ notification() }
-
-// A Notification from the database.
-type Notification[T NotificationPayload, Key any, KeyP interface {
-	*Key
-	encoding.TextUnmarshaler
-}] struct {
-	Deleted optional.Option[Key] // If present the object was deleted.
-	Message optional.Option[T]
-}
-
-func (n Notification[T, Key, KeyP]) String() string {
-	if key, ok := n.Deleted.Get(); ok {
-		return fmt.Sprintf("deleted %v", key)
-	}
-	return fmt.Sprintf("message %v", n.Message)
-}
 
 type Runner struct {
 	Key                model.RunnerKey

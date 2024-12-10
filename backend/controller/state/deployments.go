@@ -5,9 +5,11 @@ import (
 	"time"
 
 	"github.com/alecthomas/types/optional"
+	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type Deployment struct {
@@ -29,12 +31,17 @@ func (r *State) GetDeployment(deployment model.DeploymentKey) (*Deployment, erro
 	return d, nil
 }
 
-func (r *State) Deployments() map[string]*Deployment {
+func (r *State) GetDeployments() map[string]*Deployment {
 	return r.deployments
 }
 
-func (r *State) ActiveDeployments() map[string]*Deployment {
+func (r *State) GetActiveDeployments() map[string]*Deployment {
 	return r.activeDeployments
+}
+
+func (r *State) GetActiveDeploymentSchemas() []*schema.Module {
+	rows := r.GetActiveDeployments()
+	return slices.Map(maps.Values(rows), func(in *Deployment) *schema.Module { return in.Schema })
 }
 
 var _ ControllerEvent = (*DeploymentCreatedEvent)(nil)
@@ -128,7 +135,8 @@ func (r *DeploymentActivatedEvent) Handle(t State) (State, error) {
 }
 
 type DeploymentDeactivatedEvent struct {
-	Key model.DeploymentKey
+	Key           model.DeploymentKey
+	ModuleRemoved bool
 }
 
 func (r *DeploymentDeactivatedEvent) Handle(t State) (State, error) {
