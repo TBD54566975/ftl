@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
 
@@ -14,45 +13,41 @@ import (
 )
 
 func (c *CloudformationProvisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
+	token := req.Msg.ProvisioningToken
+	// if the task is not in the map, it means that the provisioner has crashed since starting the task
+	// in that case, we start a new task to query the existing stack
+	task, loaded := c.running.LoadOrStore(token, &task{stackID: token})
+	if !loaded {
+		task.Start(ctx, c.client, c.secrets, "")
+	}
+
+	if task.err.Load() != nil {
+		c.running.Delete(token)
+		return nil, connect.NewError(connect.CodeUnknown, task.err.Load())
+	}
+
+	if task.outputs.Load() != nil {
+		c.running.Delete(token)
+
+		events, err := c.updateResources(ctx, task.outputs.Load())
+		if err != nil {
+			return nil, err
+		}
+		return connect.NewResponse(&provisioner.StatusResponse{
+			Status: &provisioner.StatusResponse_Success{
+				Success: &provisioner.StatusResponse_ProvisioningSuccess{
+					Events: events,
+				},
+			},
+		}), nil
+	}
+
+	return connect.NewResponse(&provisioner.StatusResponse{
+		Status: &provisioner.StatusResponse_Running{
+			Running: &provisioner.StatusResponse_ProvisioningRunning{},
+		},
+	}), nil
 }
-
-// func (c *CloudformationProvisioner) LegacyStatus(ctx context.Context, req *connect.Request[provisioner.LegacyStatusRequest]) (*connect.Response[provisioner.LegacyStatusResponse], error) {
-// 	token := req.Msg.ProvisioningToken
-// 	// if the task is not in the map, it means that the provisioner has crashed since starting the task
-// 	// in that case, we start a new task to query the existing stack
-// 	task, loaded := c.running.LoadOrStore(token, &task{stackID: token})
-// 	if !loaded {
-// 		task.Start(ctx, c.client, c.secrets, "")
-// 	}
-
-// 	if task.err.Load() != nil {
-// 		c.running.Delete(token)
-// 		return nil, connect.NewError(connect.CodeUnknown, task.err.Load())
-// 	}
-
-// 	if task.outputs.Load() != nil {
-// 		c.running.Delete(token)
-
-// 		resources := req.Msg.DesiredResources
-// 		if err := c.updateResources(ctx, task.outputs.Load(), resources); err != nil {
-// 			return nil, err
-// 		}
-// 		return connect.NewResponse(&provisioner.LegacyStatusResponse{
-// 			Status: &provisioner.LegacyStatusResponse_Success{
-// 				Success: &provisioner.LegacyStatusResponse_ProvisioningSuccess{
-// 					UpdatedResources: resources,
-// 				},
-// 			},
-// 		}), nil
-// 	}
-
-// 	return connect.NewResponse(&provisioner.LegacyStatusResponse{
-// 		Status: &provisioner.LegacyStatusResponse_Running{
-// 			Running: &provisioner.LegacyStatusResponse_ProvisioningRunning{},
-// 		},
-// 	}), nil
-// }
 
 func outputsByResourceID(outputs []types.Output) (map[string][]types.Output, error) {
 	m := make(map[string][]types.Output)
@@ -62,6 +57,18 @@ func outputsByResourceID(outputs []types.Output) (map[string][]types.Output, err
 			return nil, fmt.Errorf("failed to decode output key: %w", err)
 		}
 		m[key.ResourceID] = append(m[key.ResourceID], output)
+	}
+	return m, nil
+}
+
+func outputsByKind(outputs []types.Output) (map[string][]types.Output, error) {
+	m := make(map[string][]types.Output)
+	for _, output := range outputs {
+		key, err := decodeOutputKey(output)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode output key: %w", err)
+		}
+		m[key.ResourceKind] = append(m[key.ResourceKind], output)
 	}
 	return m, nil
 }
@@ -78,30 +85,34 @@ func outputsByPropertyName(outputs []types.Output) (map[string]types.Output, err
 	return m, nil
 }
 
-// func (c *CloudformationProvisioner) updateResources(ctx context.Context, outputs []types.Output, update []*provisioner.Resource) error {
-// 	byResourceID, err := outputsByResourceID(outputs)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to group outputs by resource ID: %w", err)
-// 	}
+func (c *CloudformationProvisioner) updateResources(ctx context.Context, outputs []types.Output) ([]*provisioner.ProvisioningEvent, error) {
+	byKind, err := outputsByKind(outputs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to group outputs by kind: %w", err)
+	}
 
-// 	for _, resource := range update {
-// 		if postgres, ok := resource.Resource.(*provisioner.Resource_Postgres); ok {
-// 			if postgres.Postgres == nil {
-// 				postgres.Postgres = &provisioner.PostgresResource{}
-// 			}
-// 			if postgres.Postgres.Output == nil {
-// 				postgres.Postgres.Output = &schemapb.DatabaseRuntime{}
-// 			}
+	var events []*provisioner.ProvisioningEvent
 
-// 			if err := updatePostgresOutputs(ctx, postgres.Postgres.Output, resource.ResourceId, byResourceID[resource.ResourceId]); err != nil {
-// 				return fmt.Errorf("failed to update postgres outputs: %w", err)
-// 			}
-// 		} else if _, ok := resource.Resource.(*provisioner.Resource_Mysql); ok {
-// 			panic("mysql not implemented")
-// 		}
-// 	}
-// 	return nil
-// }
+	for kind, outputs := range byKind {
+		byResourceID, err := outputsByResourceID(outputs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to group outputs by resource ID: %w", err)
+		}
+		for id, outputs := range byResourceID {
+			switch kind {
+			case ResourceKindPostgres:
+				e, err := updatePostgresOutputs(ctx, id, outputs)
+				if err != nil {
+					return nil, fmt.Errorf("failed to update postgres outputs: %w", err)
+				}
+				events = append(events, e...)
+			case ResourceKindMySQL:
+				panic("mysql not implemented")
+			}
+		}
+	}
+	return events, nil
+}
 
 func endpointToDSN(endpoint *string, database string, port int, username, password string) string {
 	url := url.URL{

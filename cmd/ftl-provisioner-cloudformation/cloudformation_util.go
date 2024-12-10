@@ -121,6 +121,7 @@ func createSecretsClient(ctx context.Context) (*secretsmanager.Client, error) {
 // CloudformationOutputKey is structured key to be used as an output from a CF stack
 type CloudformationOutputKey struct {
 	ResourceID   string `json:"r"`
+	ResourceKind string `json:"k"`
 	PropertyName string `json:"p"`
 }
 
