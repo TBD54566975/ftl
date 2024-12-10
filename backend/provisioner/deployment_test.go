@@ -2,7 +2,6 @@ package provisioner_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -11,7 +10,6 @@ import (
 
 	proto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
 	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/provisioner"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -32,10 +30,6 @@ func (m *MockProvisioner) Ping(context.Context, *connect.Request[ftlv1.PingReque
 	return &connect.Response[ftlv1.PingResponse]{}, nil
 }
 
-func (m *MockProvisioner) Plan(context.Context, *connect.Request[proto.PlanRequest]) (*connect.Response[proto.PlanResponse], error) {
-	panic("unimplemented")
-}
-
 func (m *MockProvisioner) Provision(ctx context.Context, req *connect.Request[proto.ProvisionRequest]) (*connect.Response[proto.ProvisionResponse], error) {
 	if m.ProvisionFn != nil {
 		resp, err := m.ProvisionFn(ctx, req.Msg)
@@ -50,7 +44,6 @@ func (m *MockProvisioner) Provision(ctx context.Context, req *connect.Request[pr
 	}), nil
 }
 
-// Status implements provisionerconnect.ProvisionerPluginServiceClient.
 func (m *MockProvisioner) Status(ctx context.Context, req *connect.Request[proto.StatusRequest]) (*connect.Response[proto.StatusResponse], error) {
 	m.stateCalls++
 	if m.stateCalls <= 1 {
@@ -70,7 +63,7 @@ func (m *MockProvisioner) Status(ctx context.Context, req *connect.Request[proto
 	return connect.NewResponse(&proto.StatusResponse{
 		Status: &proto.StatusResponse_Success{
 			Success: &proto.StatusResponse_ProvisioningSuccess{
-				UpdatedResources: req.Msg.DesiredResources,
+				Events: []*proto.ProvisioningEvent{},
 			},
 		},
 	}), nil
@@ -93,11 +86,13 @@ func TestDeployment_Progress(t *testing.T) {
 		registry.Register("mock", mock, schema.ResourceTypePostgres)
 		registry.Register("mock", mock, schema.ResourceTypeMysql)
 
-		graph := &provisioner.ResourceGraph{}
-		graph.AddNode(&proto.Resource{ResourceId: "a", Resource: &proto.Resource_Mysql{}})
-		graph.AddNode(&proto.Resource{ResourceId: "b", Resource: &proto.Resource_Postgres{}})
-
-		dpl := registry.CreateDeployment(ctx, "test-module", graph, &provisioner.ResourceGraph{})
+		dpl := registry.CreateDeployment(ctx, &schema.Module{
+			Name: "test-module",
+			Decls: []schema.Decl{
+				&schema.Database{Name: "a", Type: "mysql"},
+				&schema.Database{Name: "b", Type: "postgres"},
+			},
+		}, nil)
 
 		assert.Equal(t, 2, len(dpl.State().Pending))
 
@@ -114,75 +109,5 @@ func TestDeployment_Progress(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 2, len(dpl.State().Done))
 		assert.False(t, running)
-	})
-
-	t.Run("uses output of previous task in a follow up task", func(t *testing.T) {
-		dbMock := &MockProvisioner{
-			StatusFn: func(ctx context.Context, req *proto.StatusRequest) (*proto.StatusResponse, error) {
-				if psql, ok := req.DesiredResources[0].Resource.(*proto.Resource_Postgres); ok {
-					if psql.Postgres == nil {
-						psql.Postgres = &proto.PostgresResource{}
-					}
-					if psql.Postgres.Output == nil {
-						psql.Postgres.Output = &schemapb.DatabaseRuntime{
-							Connections: &schemapb.DatabaseRuntimeConnections{
-								Write: &schemapb.DatabaseConnector{
-									Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
-										DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{
-											Dsn: "postgres://localhost:5432/foo",
-										},
-									},
-								},
-							},
-						}
-					}
-				} else {
-					return nil, fmt.Errorf("expected postgres resource, got %T", req.DesiredResources[0].Resource)
-				}
-
-				return &proto.StatusResponse{
-					Status: &proto.StatusResponse_Success{
-						Success: &proto.StatusResponse_ProvisioningSuccess{
-							UpdatedResources: req.DesiredResources,
-						},
-					},
-				}, nil
-			},
-		}
-
-		moduleMock := &MockProvisioner{
-			ProvisionFn: func(ctx context.Context, req *proto.ProvisionRequest) (*proto.ProvisionResponse, error) {
-				for _, res := range req.DesiredResources {
-					for _, dep := range res.Dependencies {
-						if psql, ok := dep.Resource.(*proto.Resource_Postgres); ok && psql.Postgres != nil {
-							if psql.Postgres.Output == nil {
-								return nil, fmt.Errorf("output is nil")
-							}
-						}
-					}
-				}
-				return &proto.ProvisionResponse{
-					ProvisioningToken: uuid.New().String(),
-				}, nil
-			},
-		}
-
-		registry := provisioner.ProvisionerRegistry{}
-		registry.Register("mockdb", dbMock, schema.ResourceTypePostgres)
-		registry.Register("mockmod", moduleMock, schema.ResourceTypeModule)
-
-		// Check that the deployment finishes without errors
-		graph := &provisioner.ResourceGraph{}
-		graph.AddNode(&proto.Resource{ResourceId: "db", Resource: &proto.Resource_Postgres{}})
-		graph.AddNode(&proto.Resource{ResourceId: "mod", Resource: &proto.Resource_Module{}})
-
-		dpl := registry.CreateDeployment(ctx, "test-module", graph, &provisioner.ResourceGraph{})
-
-		running := true
-		for running {
-			r, err := dpl.Progress(ctx)
-			assert.NoError(t, err)
-			running = r
-		}
 	})
 }

@@ -673,15 +673,14 @@ export class DatabaseRuntimeConnectionsEvent extends Message<DatabaseRuntimeConn
  */
 export class DatabaseRuntimeEvent extends Message<DatabaseRuntimeEvent> {
   /**
-   * @generated from oneof xyz.block.ftl.schema.v1.DatabaseRuntimeEvent.value
+   * @generated from field: string id = 1;
    */
-  value: {
-    /**
-     * @generated from field: xyz.block.ftl.schema.v1.DatabaseRuntimeConnectionsEvent database_runtime_connections_event = 1;
-     */
-    value: DatabaseRuntimeConnectionsEvent;
-    case: "databaseRuntimeConnectionsEvent";
-  } | { case: undefined; value?: undefined } = { case: undefined };
+  id = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.schema.v1.DatabaseRuntimeEventPayload payload = 2;
+   */
+  payload?: DatabaseRuntimeEventPayload;
 
   constructor(data?: PartialMessage<DatabaseRuntimeEvent>) {
     super();
@@ -691,7 +690,8 @@ export class DatabaseRuntimeEvent extends Message<DatabaseRuntimeEvent> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.schema.v1.DatabaseRuntimeEvent";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "database_runtime_connections_event", kind: "message", T: DatabaseRuntimeConnectionsEvent, oneof: "value" },
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "payload", kind: "message", T: DatabaseRuntimeEventPayload },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DatabaseRuntimeEvent {
@@ -708,6 +708,49 @@ export class DatabaseRuntimeEvent extends Message<DatabaseRuntimeEvent> {
 
   static equals(a: DatabaseRuntimeEvent | PlainMessage<DatabaseRuntimeEvent> | undefined, b: DatabaseRuntimeEvent | PlainMessage<DatabaseRuntimeEvent> | undefined): boolean {
     return proto3.util.equals(DatabaseRuntimeEvent, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.schema.v1.DatabaseRuntimeEventPayload
+ */
+export class DatabaseRuntimeEventPayload extends Message<DatabaseRuntimeEventPayload> {
+  /**
+   * @generated from oneof xyz.block.ftl.schema.v1.DatabaseRuntimeEventPayload.value
+   */
+  value: {
+    /**
+     * @generated from field: xyz.block.ftl.schema.v1.DatabaseRuntimeConnectionsEvent database_runtime_connections_event = 1;
+     */
+    value: DatabaseRuntimeConnectionsEvent;
+    case: "databaseRuntimeConnectionsEvent";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<DatabaseRuntimeEventPayload>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.schema.v1.DatabaseRuntimeEventPayload";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "database_runtime_connections_event", kind: "message", T: DatabaseRuntimeConnectionsEvent, oneof: "value" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DatabaseRuntimeEventPayload {
+    return new DatabaseRuntimeEventPayload().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DatabaseRuntimeEventPayload {
+    return new DatabaseRuntimeEventPayload().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DatabaseRuntimeEventPayload {
+    return new DatabaseRuntimeEventPayload().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DatabaseRuntimeEventPayload | PlainMessage<DatabaseRuntimeEventPayload> | undefined, b: DatabaseRuntimeEventPayload | PlainMessage<DatabaseRuntimeEventPayload> | undefined): boolean {
+    return proto3.util.equals(DatabaseRuntimeEventPayload, a, b);
   }
 }
 
@@ -2889,6 +2932,49 @@ export class TopicRuntime extends Message<TopicRuntime> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.schema.v1.TopicRuntimeEvent
+ */
+export class TopicRuntimeEvent extends Message<TopicRuntimeEvent> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.schema.v1.TopicRuntime payload = 2;
+   */
+  payload?: TopicRuntime;
+
+  constructor(data?: PartialMessage<TopicRuntimeEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.schema.v1.TopicRuntimeEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "payload", kind: "message", T: TopicRuntime },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TopicRuntimeEvent {
+    return new TopicRuntimeEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TopicRuntimeEvent {
+    return new TopicRuntimeEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TopicRuntimeEvent {
+    return new TopicRuntimeEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TopicRuntimeEvent | PlainMessage<TopicRuntimeEvent> | undefined, b: TopicRuntimeEvent | PlainMessage<TopicRuntimeEvent> | undefined): boolean {
+    return proto3.util.equals(TopicRuntimeEvent, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.schema.v1.Type
  */
 export class Type extends Message<Type> {
@@ -3339,19 +3425,14 @@ export class Verb extends Message<Verb> {
  */
 export class VerbRuntime extends Message<VerbRuntime> {
   /**
-   * @generated from field: optional google.protobuf.Timestamp create_time = 1;
+   * @generated from field: xyz.block.ftl.schema.v1.VerbRuntimeBase base = 1;
    */
-  createTime?: Timestamp;
+  base?: VerbRuntimeBase;
 
   /**
-   * @generated from field: optional google.protobuf.Timestamp start_time = 2;
+   * @generated from field: optional xyz.block.ftl.schema.v1.VerbRuntimeSubscription subscription = 2;
    */
-  startTime?: Timestamp;
-
-  /**
-   * @generated from field: repeated string kafka_brokers = 3;
-   */
-  kafkaBrokers: string[] = [];
+  subscription?: VerbRuntimeSubscription;
 
   constructor(data?: PartialMessage<VerbRuntime>) {
     super();
@@ -3361,9 +3442,8 @@ export class VerbRuntime extends Message<VerbRuntime> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.schema.v1.VerbRuntime";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "create_time", kind: "message", T: Timestamp, opt: true },
-    { no: 2, name: "start_time", kind: "message", T: Timestamp, opt: true },
-    { no: 3, name: "kafka_brokers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 1, name: "base", kind: "message", T: VerbRuntimeBase },
+    { no: 2, name: "subscription", kind: "message", T: VerbRuntimeSubscription, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerbRuntime {
@@ -3380,6 +3460,179 @@ export class VerbRuntime extends Message<VerbRuntime> {
 
   static equals(a: VerbRuntime | PlainMessage<VerbRuntime> | undefined, b: VerbRuntime | PlainMessage<VerbRuntime> | undefined): boolean {
     return proto3.util.equals(VerbRuntime, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.schema.v1.VerbRuntimeBase
+ */
+export class VerbRuntimeBase extends Message<VerbRuntimeBase> {
+  /**
+   * @generated from field: optional google.protobuf.Timestamp create_time = 1;
+   */
+  createTime?: Timestamp;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp start_time = 2;
+   */
+  startTime?: Timestamp;
+
+  constructor(data?: PartialMessage<VerbRuntimeBase>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.schema.v1.VerbRuntimeBase";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "create_time", kind: "message", T: Timestamp, opt: true },
+    { no: 2, name: "start_time", kind: "message", T: Timestamp, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerbRuntimeBase {
+    return new VerbRuntimeBase().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerbRuntimeBase {
+    return new VerbRuntimeBase().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerbRuntimeBase {
+    return new VerbRuntimeBase().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VerbRuntimeBase | PlainMessage<VerbRuntimeBase> | undefined, b: VerbRuntimeBase | PlainMessage<VerbRuntimeBase> | undefined): boolean {
+    return proto3.util.equals(VerbRuntimeBase, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.schema.v1.VerbRuntimeEvent
+ */
+export class VerbRuntimeEvent extends Message<VerbRuntimeEvent> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.schema.v1.VerbRuntimePayload payload = 2;
+   */
+  payload?: VerbRuntimePayload;
+
+  constructor(data?: PartialMessage<VerbRuntimeEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.schema.v1.VerbRuntimeEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "payload", kind: "message", T: VerbRuntimePayload },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerbRuntimeEvent {
+    return new VerbRuntimeEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerbRuntimeEvent {
+    return new VerbRuntimeEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerbRuntimeEvent {
+    return new VerbRuntimeEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VerbRuntimeEvent | PlainMessage<VerbRuntimeEvent> | undefined, b: VerbRuntimeEvent | PlainMessage<VerbRuntimeEvent> | undefined): boolean {
+    return proto3.util.equals(VerbRuntimeEvent, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.schema.v1.VerbRuntimePayload
+ */
+export class VerbRuntimePayload extends Message<VerbRuntimePayload> {
+  /**
+   * @generated from oneof xyz.block.ftl.schema.v1.VerbRuntimePayload.value
+   */
+  value: {
+    /**
+     * @generated from field: xyz.block.ftl.schema.v1.VerbRuntimeBase verb_runtime_base = 1;
+     */
+    value: VerbRuntimeBase;
+    case: "verbRuntimeBase";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.schema.v1.VerbRuntimeSubscription verb_runtime_subscription = 2;
+     */
+    value: VerbRuntimeSubscription;
+    case: "verbRuntimeSubscription";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<VerbRuntimePayload>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.schema.v1.VerbRuntimePayload";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "verb_runtime_base", kind: "message", T: VerbRuntimeBase, oneof: "value" },
+    { no: 2, name: "verb_runtime_subscription", kind: "message", T: VerbRuntimeSubscription, oneof: "value" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerbRuntimePayload {
+    return new VerbRuntimePayload().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerbRuntimePayload {
+    return new VerbRuntimePayload().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerbRuntimePayload {
+    return new VerbRuntimePayload().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VerbRuntimePayload | PlainMessage<VerbRuntimePayload> | undefined, b: VerbRuntimePayload | PlainMessage<VerbRuntimePayload> | undefined): boolean {
+    return proto3.util.equals(VerbRuntimePayload, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.schema.v1.VerbRuntimeSubscription
+ */
+export class VerbRuntimeSubscription extends Message<VerbRuntimeSubscription> {
+  /**
+   * @generated from field: repeated string kafka_brokers = 1;
+   */
+  kafkaBrokers: string[] = [];
+
+  constructor(data?: PartialMessage<VerbRuntimeSubscription>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.schema.v1.VerbRuntimeSubscription";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "kafka_brokers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerbRuntimeSubscription {
+    return new VerbRuntimeSubscription().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerbRuntimeSubscription {
+    return new VerbRuntimeSubscription().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerbRuntimeSubscription {
+    return new VerbRuntimeSubscription().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VerbRuntimeSubscription | PlainMessage<VerbRuntimeSubscription> | undefined, b: VerbRuntimeSubscription | PlainMessage<VerbRuntimeSubscription> | undefined): boolean {
+    return proto3.util.equals(VerbRuntimeSubscription, a, b);
   }
 }
 

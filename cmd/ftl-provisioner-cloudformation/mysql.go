@@ -39,14 +39,17 @@ func (p *MySQLTemplater) AddToTemplate(template *goformation.Template) error {
 	}
 	addOutput(template.Outputs, goformation.GetAtt(clusterID, "Endpoint.Address"), &CloudformationOutputKey{
 		ResourceID:   p.resourceID,
+		ResourceKind: ResourceKindMySQL,
 		PropertyName: PropertyMySQLWriteEndpoint,
 	})
 	addOutput(template.Outputs, goformation.GetAtt(clusterID, "ReadEndpoint.Address"), &CloudformationOutputKey{
 		ResourceID:   p.resourceID,
+		ResourceKind: ResourceKindMySQL,
 		PropertyName: PropertyMySQLReadEndpoint,
 	})
 	addOutput(template.Outputs, goformation.GetAtt(clusterID, "MasterUserSecret.SecretArn"), &CloudformationOutputKey{
 		ResourceID:   p.resourceID,
+		ResourceKind: ResourceKindMySQL,
 		PropertyName: PropertyMySQLMasterUserARN,
 	})
 	return nil

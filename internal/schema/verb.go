@@ -3,25 +3,13 @@ package schema
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
-
-type VerbRuntime struct {
-	CreateTime   *time.Time `protobuf:"1,optional"`
-	StartTime    *time.Time `protobuf:"2,optional"`
-	KafkaBrokers []string   `protobuf:"3,optional"`
-}
-
-var _ Runtime = (*VerbRuntime)(nil)
-
-func (v *VerbRuntime) runtime() {}
 
 //protobuf:2
 type Verb struct {
@@ -39,6 +27,7 @@ type Verb struct {
 
 var _ Decl = (*Verb)(nil)
 var _ Symbol = (*Verb)(nil)
+var _ Provisioned = (*Verb)(nil)
 
 // VerbKind is the kind of Verb: verb, sink, source or empty.
 type VerbKind string
@@ -74,8 +63,10 @@ func (v *Verb) Kind() VerbKind {
 }
 
 func (v *Verb) Position() Position { return v.Pos }
-func (v *Verb) schemaDecl()        {}
-func (v *Verb) schemaSymbol()      {}
+
+func (v *Verb) schemaDecl()   {}
+func (v *Verb) schemaSymbol() {}
+func (v *Verb) provisioned()  {}
 func (v *Verb) schemaChildren() []Node {
 	children := []Node{}
 	if v.Request != nil {
@@ -174,15 +165,9 @@ func (v *Verb) GetMetadataCronJob() optional.Option[*MetadataCronJob] {
 func (v *Verb) ToProto() proto.Message {
 	var runtime *schemapb.VerbRuntime
 	if v.Runtime != nil {
-		runtime = &schemapb.VerbRuntime{}
-		if v.Runtime.CreateTime != nil {
-			runtime.CreateTime = timestamppb.New(*v.Runtime.CreateTime)
-		}
-		if v.Runtime.StartTime != nil {
-			runtime.StartTime = timestamppb.New(*v.Runtime.StartTime)
-		}
-		if v.Runtime.KafkaBrokers != nil {
-			runtime.KafkaBrokers = v.Runtime.KafkaBrokers
+		runtime = &schemapb.VerbRuntime{ //nolint:forcetypeassert
+			Base:         v.Runtime.Base.ToProto().(*schemapb.VerbRuntimeBase),                 //nolint:forcetypeassert
+			Subscription: v.Runtime.Subscription.ToProto().(*schemapb.VerbRuntimeSubscription), //nolint:forcetypeassert
 		}
 	}
 	return &schemapb.Verb{
@@ -197,22 +182,31 @@ func (v *Verb) ToProto() proto.Message {
 	}
 }
 
+func (v *Verb) GetProvisioned() ResourceSet {
+	var result ResourceSet
+	for sub := range slices.FilterVariants[*MetadataSubscriber](v.Metadata) {
+		result = append(result, &ProvisionedResource{
+			Kind: ResourceTypeSubscription,
+			Config: &MetadataSubscriber{
+				Topic:      sub.Topic,
+				FromOffset: sub.FromOffset,
+				DeadLetter: sub.DeadLetter,
+			},
+		})
+	}
+	return result
+}
+
+func (v *Verb) ResourceID() string {
+	return v.Name
+}
+
 func VerbFromProto(s *schemapb.Verb) *Verb {
 	var runtime *VerbRuntime
 	if s.Runtime != nil {
-		runtime = &VerbRuntime{}
-		if s.Runtime.CreateTime != nil {
-			createTime := s.Runtime.CreateTime.AsTime()
-			runtime.CreateTime = &createTime
-		}
-		if s.Runtime.StartTime != nil {
-			startTime := s.Runtime.StartTime.AsTime()
-			runtime.StartTime = &startTime
-		}
-		if s.Runtime.KafkaBrokers != nil {
-			brokers := []string{}
-			brokers = append(brokers, s.Runtime.KafkaBrokers...)
-			runtime.KafkaBrokers = brokers
+		runtime = &VerbRuntime{
+			Base:         *VerbRuntimeBaseFromProto(s.Runtime.Base),
+			Subscription: VerbRuntimeSubscriptionFromProto(s.Runtime.Subscription),
 		}
 	}
 	return &Verb{

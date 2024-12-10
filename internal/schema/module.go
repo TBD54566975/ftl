@@ -34,6 +34,7 @@ var _ Node = (*Module)(nil)
 var _ Symbol = (*Module)(nil)
 var _ sql.Scanner = (*Module)(nil)
 var _ driver.Valuer = (*Module)(nil)
+var _ Provisioned = (*Module)(nil)
 
 func (m *Module) Value() (driver.Value, error) {
 	value, err := proto.Marshal(Redact(m).ToProto())
@@ -53,6 +54,27 @@ func (m *Module) Scan(src any) error {
 		return nil
 	default:
 		return fmt.Errorf("cannot scan %T", src)
+	}
+}
+
+func (m *Module) ResourceID() string {
+	hash, err := m.Hash()
+	if err != nil {
+		panic(err)
+	}
+	return hash.String()
+}
+
+func (m *Module) GetProvisioned() ResourceSet {
+	return ResourceSet{
+		{
+			Kind:   ResourceTypeModule,
+			Config: struct{}{},
+		},
+		{
+			Kind:   ResourceTypeRunner,
+			Config: struct{}{},
+		},
 	}
 }
 
@@ -242,6 +264,8 @@ func (m *Module) ToProto() proto.Message {
 
 func (m *Module) GetName() string  { return m.Name }
 func (m *Module) IsExported() bool { return false }
+
+func (m *Module) provisioned() {}
 
 // ModuleFromProtoFile loads a module from the given proto-encoded file.
 func ModuleFromProtoFile(filename string) (*Module, error) {

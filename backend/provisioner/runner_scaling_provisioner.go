@@ -8,7 +8,6 @@ import (
 	"connectrpc.com/connect"
 	_ "github.com/go-sql-driver/mysql"
 
-	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -19,6 +18,7 @@ import (
 )
 
 // NewRunnerScalingProvisioner creates a new provisioner that provisions resources locally when running FTL in dev mode
+
 func NewRunnerScalingProvisioner(runners scaling.RunnerScaling) *InMemProvisioner {
 	return NewEmbeddedProvisioner(map[schema.ResourceType]InMemResourceProvisionerFn{
 		schema.ResourceTypeRunner: provisionRunner(runners),
@@ -26,36 +26,24 @@ func NewRunnerScalingProvisioner(runners scaling.RunnerScaling) *InMemProvisione
 }
 
 func provisionRunner(scaling scaling.RunnerScaling) InMemResourceProvisionerFn {
-	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string, previous *provisioner.Resource) (*provisioner.Resource, error) {
+	return func(ctx context.Context, moduleName string, rc schema.Provisioned) (*RuntimeEvent, error) {
 		logger := log.FromContext(ctx)
-		runner, ok := rc.Resource.Resource.(*provisioner.Resource_Runner)
+
+		module, ok := rc.(*schema.Module)
 		if !ok {
-			panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
+			return nil, fmt.Errorf("expected module, got %T", rc)
 		}
-		deployment := ""
-		var sch *schemapb.Module
-		for _, dep := range rc.Dependencies {
-			switch mod := dep.Resource.(type) {
-			case *provisioner.Resource_Module:
-				deployment = mod.Module.Output.DeploymentKey
-				sch = mod.Module.Schema
-			default:
-			}
-		}
+
+		deployment := module.Runtime.Deployment.DeploymentKey
 		if deployment == "" {
-			return rc.Resource, fmt.Errorf("failed to find deployment for runner")
+			return nil, fmt.Errorf("failed to find deployment for runner")
 		}
-		schema, err := schema.ModuleFromProto(sch)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse schema: %w", err)
-		}
-		logger.Debugf("provisioning runner: %s.%s for deployment %s", module, id, deployment)
-		err = scaling.StartDeployment(ctx, module, deployment, schema, false, false)
-		if err != nil {
+		logger.Debugf("provisioning runner: %s.%s for deployment %s", module, rc.ResourceID(), deployment)
+		if err := scaling.StartDeployment(ctx, module.Name, deployment, module, false, false); err != nil {
 			logger.Infof("failed to start deployment: %v", err)
 			return nil, fmt.Errorf("failed to start deployment: %w", err)
 		}
-		endpoint, err := scaling.GetEndpointForDeployment(ctx, module, deployment)
+		endpoint, err := scaling.GetEndpointForDeployment(ctx, module.Name, deployment)
 		if err != nil || !endpoint.Ok() {
 			return nil, fmt.Errorf("failed to get endpoint for deployment: %w", err)
 		}
@@ -82,11 +70,8 @@ func provisionRunner(scaling scaling.RunnerScaling) InMemResourceProvisionerFn {
 
 		schemaClient := rpc.ClientFromContext[ftlv1connect.SchemaServiceClient](ctx)
 		controllerClient := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
-		runner.Runner.Output = &provisioner.RunnerResource_RunnerResourceOutput{
-			RunnerUri:     endpointURI,
-			DeploymentKey: deployment,
-		}
-		deps, err := scaling.TerminatePreviousDeployments(ctx, module, deployment)
+
+		deps, err := scaling.TerminatePreviousDeployments(ctx, module.Name, deployment)
 		if err != nil {
 			logger.Errorf(err, "failed to terminate previous deployments")
 		} else {
@@ -104,6 +89,11 @@ func provisionRunner(scaling scaling.RunnerScaling) InMemResourceProvisionerFn {
 		if err != nil {
 			return nil, fmt.Errorf("failed to update module runtime: %w", err)
 		}
-		return rc.Resource, nil
+		return &RuntimeEvent{
+			Module: &schema.ModuleRuntimeDeployment{
+				DeploymentKey: deployment,
+				Endpoint:      endpointURI,
+			},
+		}, nil
 	}
 }

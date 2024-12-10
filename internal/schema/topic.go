@@ -5,8 +5,10 @@ import (
 	"strings"
 
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 //protobuf:9
@@ -22,10 +24,12 @@ type Topic struct {
 
 var _ Decl = (*Topic)(nil)
 var _ Symbol = (*Topic)(nil)
+var _ Provisioned = (*Topic)(nil)
 
 func (t *Topic) Position() Position { return t.Pos }
 func (*Topic) schemaDecl()          {}
 func (*Topic) schemaSymbol()        {}
+func (t *Topic) provisioned()       {}
 func (t *Topic) schemaChildren() []Node {
 	if t.Event == nil {
 		return nil
@@ -61,6 +65,19 @@ func (t *Topic) ToProto() proto.Message {
 	return pb
 }
 
+func (t *Topic) GetProvisioned() ResourceSet {
+	return ResourceSet{
+		{
+			Kind:   ResourceTypeTopic,
+			Config: &Topic{Name: t.Name},
+		},
+	}
+}
+
+func (t *Topic) ResourceID() string {
+	return t.Name
+}
+
 func TopicFromProto(t *schemapb.Topic) *Topic {
 	return &Topic{
 		Pos:     PosFromProto(t.Pos),
@@ -78,10 +95,6 @@ type TopicRuntime struct {
 	TopicID      string   `parser:"" protobuf:"2"`
 }
 
-var _ Runtime = (*TopicRuntime)(nil)
-
-func (t *TopicRuntime) runtime() {}
-
 func (t *TopicRuntime) ToProto() *schemapb.TopicRuntime {
 	return &schemapb.TopicRuntime{
 		KafkaBrokers: t.KafkaBrokers,
@@ -96,5 +109,32 @@ func TopicRuntimeFromProto(t *schemapb.TopicRuntime) *TopicRuntime {
 	return &TopicRuntime{
 		KafkaBrokers: t.KafkaBrokers,
 		TopicID:      t.TopicId,
+	}
+}
+
+type TopicRuntimeEvent struct {
+	ID      string        `parser:"" protobuf:"1"`
+	Payload *TopicRuntime `parser:"" protobuf:"2"`
+}
+
+func (t *TopicRuntimeEvent) ToProto() protoreflect.ProtoMessage {
+	return &schemapb.TopicRuntimeEvent{
+		Id:      t.ID,
+		Payload: t.Payload.ToProto(),
+	}
+}
+
+func TopicRuntimeEventFromProto(t *schemapb.TopicRuntimeEvent) *TopicRuntimeEvent {
+	return &TopicRuntimeEvent{
+		ID:      t.Id,
+		Payload: TopicRuntimeFromProto(t.Payload),
+	}
+}
+
+func (t *TopicRuntimeEvent) ApplyTo(m *Module) {
+	for topic := range slices.FilterVariants[*Topic](m.Decls) {
+		if topic.Name == t.ID {
+			topic.Runtime = t.Payload
+		}
 	}
 }

@@ -10,7 +10,6 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
 	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 func (c *CloudformationProvisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
@@ -30,14 +29,14 @@ func (c *CloudformationProvisioner) Status(ctx context.Context, req *connect.Req
 	if task.outputs.Load() != nil {
 		c.running.Delete(token)
 
-		resources := req.Msg.DesiredResources
-		if err := c.updateResources(ctx, task.outputs.Load(), resources); err != nil {
+		events, err := c.updateResources(ctx, task.outputs.Load())
+		if err != nil {
 			return nil, err
 		}
 		return connect.NewResponse(&provisioner.StatusResponse{
 			Status: &provisioner.StatusResponse_Success{
 				Success: &provisioner.StatusResponse_ProvisioningSuccess{
-					UpdatedResources: resources,
+					Events: events,
 				},
 			},
 		}), nil
@@ -62,6 +61,18 @@ func outputsByResourceID(outputs []types.Output) (map[string][]types.Output, err
 	return m, nil
 }
 
+func outputsByKind(outputs []types.Output) (map[string][]types.Output, error) {
+	m := make(map[string][]types.Output)
+	for _, output := range outputs {
+		key, err := decodeOutputKey(output)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode output key: %w", err)
+		}
+		m[key.ResourceKind] = append(m[key.ResourceKind], output)
+	}
+	return m, nil
+}
+
 func outputsByPropertyName(outputs []types.Output) (map[string]types.Output, error) {
 	m := make(map[string]types.Output)
 	for _, output := range outputs {
@@ -74,29 +85,33 @@ func outputsByPropertyName(outputs []types.Output) (map[string]types.Output, err
 	return m, nil
 }
 
-func (c *CloudformationProvisioner) updateResources(ctx context.Context, outputs []types.Output, update []*provisioner.Resource) error {
-	byResourceID, err := outputsByResourceID(outputs)
+func (c *CloudformationProvisioner) updateResources(ctx context.Context, outputs []types.Output) ([]*provisioner.ProvisioningEvent, error) {
+	byKind, err := outputsByKind(outputs)
 	if err != nil {
-		return fmt.Errorf("failed to group outputs by resource ID: %w", err)
+		return nil, fmt.Errorf("failed to group outputs by kind: %w", err)
 	}
 
-	for _, resource := range update {
-		if postgres, ok := resource.Resource.(*provisioner.Resource_Postgres); ok {
-			if postgres.Postgres == nil {
-				postgres.Postgres = &provisioner.PostgresResource{}
-			}
-			if postgres.Postgres.Output == nil {
-				postgres.Postgres.Output = &schemapb.DatabaseRuntime{}
-			}
+	var events []*provisioner.ProvisioningEvent
 
-			if err := updatePostgresOutputs(ctx, postgres.Postgres.Output, resource.ResourceId, byResourceID[resource.ResourceId]); err != nil {
-				return fmt.Errorf("failed to update postgres outputs: %w", err)
+	for kind, outputs := range byKind {
+		byResourceID, err := outputsByResourceID(outputs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to group outputs by resource ID: %w", err)
+		}
+		for id, outputs := range byResourceID {
+			switch kind {
+			case ResourceKindPostgres:
+				e, err := updatePostgresOutputs(ctx, id, outputs)
+				if err != nil {
+					return nil, fmt.Errorf("failed to update postgres outputs: %w", err)
+				}
+				events = append(events, e...)
+			case ResourceKindMySQL:
+				panic("mysql not implemented")
 			}
-		} else if _, ok := resource.Resource.(*provisioner.Resource_Mysql); ok {
-			panic("mysql not implemented")
 		}
 	}
-	return nil
+	return events, nil
 }
 
 func endpointToDSN(endpoint *string, database string, port int, username, password string) string {

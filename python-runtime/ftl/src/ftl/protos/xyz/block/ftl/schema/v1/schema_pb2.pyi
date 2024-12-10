@@ -144,6 +144,14 @@ class DatabaseRuntimeConnectionsEvent(_message.Message):
     def __init__(self, connections: _Optional[_Union[DatabaseRuntimeConnections, _Mapping]] = ...) -> None: ...
 
 class DatabaseRuntimeEvent(_message.Message):
+    __slots__ = ("id", "payload")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    PAYLOAD_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    payload: DatabaseRuntimeEventPayload
+    def __init__(self, id: _Optional[str] = ..., payload: _Optional[_Union[DatabaseRuntimeEventPayload, _Mapping]] = ...) -> None: ...
+
+class DatabaseRuntimeEventPayload(_message.Message):
     __slots__ = ("database_runtime_connections_event",)
     DATABASE_RUNTIME_CONNECTIONS_EVENT_FIELD_NUMBER: _ClassVar[int]
     database_runtime_connections_event: DatabaseRuntimeConnectionsEvent
@@ -593,6 +601,14 @@ class TopicRuntime(_message.Message):
     topic_id: str
     def __init__(self, kafka_brokers: _Optional[_Iterable[str]] = ..., topic_id: _Optional[str] = ...) -> None: ...
 
+class TopicRuntimeEvent(_message.Message):
+    __slots__ = ("id", "payload")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    PAYLOAD_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    payload: TopicRuntime
+    def __init__(self, id: _Optional[str] = ..., payload: _Optional[_Union[TopicRuntime, _Mapping]] = ...) -> None: ...
+
 class Type(_message.Message):
     __slots__ = ("any", "array", "bool", "bytes", "float", "int", "map", "optional", "ref", "string", "time", "unit")
     ANY_FIELD_NUMBER: _ClassVar[int]
@@ -690,11 +706,39 @@ class Verb(_message.Message):
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., export: bool = ..., name: _Optional[str] = ..., request: _Optional[_Union[Type, _Mapping]] = ..., response: _Optional[_Union[Type, _Mapping]] = ..., metadata: _Optional[_Iterable[_Union[Metadata, _Mapping]]] = ..., runtime: _Optional[_Union[VerbRuntime, _Mapping]] = ...) -> None: ...
 
 class VerbRuntime(_message.Message):
-    __slots__ = ("create_time", "start_time", "kafka_brokers")
+    __slots__ = ("base", "subscription")
+    BASE_FIELD_NUMBER: _ClassVar[int]
+    SUBSCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    base: VerbRuntimeBase
+    subscription: VerbRuntimeSubscription
+    def __init__(self, base: _Optional[_Union[VerbRuntimeBase, _Mapping]] = ..., subscription: _Optional[_Union[VerbRuntimeSubscription, _Mapping]] = ...) -> None: ...
+
+class VerbRuntimeBase(_message.Message):
+    __slots__ = ("create_time", "start_time")
     CREATE_TIME_FIELD_NUMBER: _ClassVar[int]
     START_TIME_FIELD_NUMBER: _ClassVar[int]
-    KAFKA_BROKERS_FIELD_NUMBER: _ClassVar[int]
     create_time: _timestamp_pb2.Timestamp
     start_time: _timestamp_pb2.Timestamp
+    def __init__(self, create_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., start_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class VerbRuntimeEvent(_message.Message):
+    __slots__ = ("id", "payload")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    PAYLOAD_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    payload: VerbRuntimePayload
+    def __init__(self, id: _Optional[str] = ..., payload: _Optional[_Union[VerbRuntimePayload, _Mapping]] = ...) -> None: ...
+
+class VerbRuntimePayload(_message.Message):
+    __slots__ = ("verb_runtime_base", "verb_runtime_subscription")
+    VERB_RUNTIME_BASE_FIELD_NUMBER: _ClassVar[int]
+    VERB_RUNTIME_SUBSCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    verb_runtime_base: VerbRuntimeBase
+    verb_runtime_subscription: VerbRuntimeSubscription
+    def __init__(self, verb_runtime_base: _Optional[_Union[VerbRuntimeBase, _Mapping]] = ..., verb_runtime_subscription: _Optional[_Union[VerbRuntimeSubscription, _Mapping]] = ...) -> None: ...
+
+class VerbRuntimeSubscription(_message.Message):
+    __slots__ = ("kafka_brokers",)
+    KAFKA_BROKERS_FIELD_NUMBER: _ClassVar[int]
     kafka_brokers: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, create_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., start_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., kafka_brokers: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(self, kafka_brokers: _Optional[_Iterable[str]] = ...) -> None: ...
