@@ -11,7 +11,8 @@ import (
 	goformation "github.com/awslabs/goformation/v7/cloudformation"
 	"github.com/awslabs/goformation/v7/cloudformation/rds"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type PostgresTemplater struct {
@@ -50,14 +51,17 @@ func (p *PostgresTemplater) AddToTemplate(template *goformation.Template) error 
 	addOutput(template.Outputs, goformation.GetAtt(clusterID, "Endpoint.Address"), &CloudformationOutputKey{
 		ResourceID:   p.resourceID,
 		PropertyName: PropertyPsqlWriteEndpoint,
+		ResourceKind: ResourceKindPostgres,
 	})
 	addOutput(template.Outputs, goformation.GetAtt(clusterID, "ReadEndpoint.Address"), &CloudformationOutputKey{
 		ResourceID:   p.resourceID,
 		PropertyName: PropertyPsqlReadEndpoint,
+		ResourceKind: ResourceKindPostgres,
 	})
 	addOutput(template.Outputs, goformation.GetAtt(clusterID, "MasterUserSecret.SecretArn"), &CloudformationOutputKey{
 		ResourceID:   p.resourceID,
 		PropertyName: PropertyPsqlMasterUserARN,
+		ResourceKind: ResourceKindPostgres,
 	})
 	return nil
 }
@@ -130,34 +134,32 @@ func createPostgresDatabase(ctx context.Context, endpoint, resourceID, username,
 	return nil
 }
 
-func updatePostgresOutputs(_ context.Context, to *schemapb.DatabaseRuntime, resourceID string, outputs []types.Output) error {
+func updatePostgresOutputs(_ context.Context, resourceID string, outputs []types.Output) ([]*provisioner.ProvisioningEvent, error) {
 	byName, err := outputsByPropertyName(outputs)
 	if err != nil {
-		return fmt.Errorf("failed to group outputs by property name: %w", err)
+		return nil, fmt.Errorf("failed to group outputs by property name: %w", err)
 	}
 
-	if to.Connections == nil {
-		to.Connections = &schemapb.DatabaseRuntimeConnections{}
-	}
-
-	to.Connections.Write = &schemapb.DatabaseConnector{
-		Value: &schemapb.DatabaseConnector_AwsiamAuthDatabaseConnector{
-			AwsiamAuthDatabaseConnector: &schemapb.AWSIAMAuthDatabaseConnector{
-				Endpoint: fmt.Sprintf("%s:%d", *byName[PropertyPsqlWriteEndpoint].OutputValue, 5432),
-				Database: resourceID,
-				Username: "ftluser",
+	event := schema.DatabaseRuntimeEvent{
+		ID: resourceID,
+		Payload: &schema.DatabaseRuntimeConnectionsEvent{
+			Connections: &schema.DatabaseRuntimeConnections{
+				Write: &schema.AWSIAMAuthDatabaseConnector{
+					Endpoint: fmt.Sprintf("%s:%d", *byName[PropertyPsqlWriteEndpoint].OutputValue, 5432),
+					Database: resourceID,
+					Username: "ftluser",
+				},
+				Read: &schema.AWSIAMAuthDatabaseConnector{
+					Endpoint: fmt.Sprintf("%s:%d", *byName[PropertyPsqlReadEndpoint].OutputValue, 5432),
+					Database: resourceID,
+					Username: "ftluser",
+				},
 			},
 		},
 	}
-	to.Connections.Read = &schemapb.DatabaseConnector{
-		Value: &schemapb.DatabaseConnector_AwsiamAuthDatabaseConnector{
-			AwsiamAuthDatabaseConnector: &schemapb.AWSIAMAuthDatabaseConnector{
-				Endpoint: fmt.Sprintf("%s:%d", *byName[PropertyPsqlReadEndpoint].OutputValue, 5432),
-				Database: resourceID,
-				Username: "ftluser",
-			},
+	return []*provisioner.ProvisioningEvent{{
+		Value: &provisioner.ProvisioningEvent_DatabaseRuntimeEvent{
+			DatabaseRuntimeEvent: event.ToProto(),
 		},
-	}
-
-	return nil
+	}}, nil
 }

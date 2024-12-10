@@ -12,20 +12,6 @@
     {
       "apiVersion": 2,
       "host": "127.0.0.1",
-      "mode": "auto",
-      "name": "ftl dev",
-      "request": "launch",
-      "type": "go",
-      "cwd": "~/Development/ftl_test",
-      "program": "${workspaceFolder}/frontend/cli",
-      "env": {
-        "FTL_DIR": "${workspaceFolder}"
-      },
-      "args": ["dev"]
-    },
-    {
-      "apiVersion": 2,
-      "host": "127.0.0.1",
       "mode": "remote",
       "name": "FT𝝺 GO - time",
       "port": 8894,
