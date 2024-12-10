@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
-	"github.com/TBD54566975/ftl/internal/slices"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type VerbRuntime struct {
