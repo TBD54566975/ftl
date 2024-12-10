@@ -8,9 +8,9 @@ import (
 	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/backend/controller/state"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 func TestRunnerState(t *testing.T) {
@@ -72,7 +72,7 @@ func TestDeploymentState(t *testing.T) {
 	err := cs.Publish(ctx, &state.DeploymentCreatedEvent{
 		Key:       deploymentKey,
 		CreatedAt: create,
-		Schema:    &schemapb.Module{Name: "test"},
+		Schema:    &schema.Module{Name: "test"},
 	})
 	assert.NoError(t, err)
 	view = cs.View()

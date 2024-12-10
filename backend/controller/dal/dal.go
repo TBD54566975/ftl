@@ -12,7 +12,6 @@ import (
 	xmaps "golang.org/x/exp/maps"
 
 	aregistry "github.com/TBD54566975/ftl/backend/controller/artefacts"
-	dalsql "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/state"
@@ -25,22 +24,11 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
-func New(ctx context.Context, conn libdal.Connection, registry aregistry.Service, state state.ControllerState) *DAL {
+func New(registry aregistry.Service, state state.ControllerState) *DAL {
 	var d *DAL
-	db := dalsql.New(conn)
 	d = &DAL{
-		db:       db,
-		registry: registry,
-		state:    state,
-		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
-			return &DAL{
-				Handle:            h,
-				db:                dalsql.New(h.Connection),
-				registry:          registry,
-				DeploymentChanges: d.DeploymentChanges,
-				state:             state,
-			}
-		}),
+		registry:          registry,
+		state:             state,
 		DeploymentChanges: inprocesspubsub.New[DeploymentNotification](),
 	}
 
@@ -48,9 +36,6 @@ func New(ctx context.Context, conn libdal.Connection, registry aregistry.Service
 }
 
 type DAL struct {
-	*libdal.Handle[DAL]
-	db dalsql.Querier
-
 	pubsub   *pubsub.Service
 	registry aregistry.Service
 	state    state.ControllerState
@@ -74,66 +59,8 @@ func (d *DAL) GetActiveDeployments() ([]dalmodel.Deployment, error) {
 	}), nil
 }
 
-func (d *DAL) UpsertModule(ctx context.Context, language, name string) (err error) {
-	_, err = d.db.UpsertModule(ctx, language, name)
-	return libdal.TranslatePGError(err)
-}
-
-// CreateDeployment (possibly) creates a new deployment and associates
-// previously created artefacts with it.
-//
-// If an existing deployment with identical artefacts exists, it is returned.
-func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchema *schema.Module) (key model.DeploymentKey, err error) {
-
-	// Start the parent transaction
-	tx, err := d.Begin(ctx)
-	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("could not start transaction: %w", err)
-	}
-	defer tx.CommitOrRollback(ctx, &err)
-
-	// TODO(aat): "schema" containing language?
-	_, err = tx.db.UpsertModule(ctx, language, moduleSchema.Name)
-	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("failed to upsert module: %w", libdal.TranslatePGError(err))
-	}
-
-	// upsert topics
-	for _, decl := range moduleSchema.Decls {
-		t, ok := decl.(*schema.Topic)
-		if !ok {
-			continue
-		}
-		err := tx.db.UpsertTopic(ctx, dalsql.UpsertTopicParams{
-			Topic:     model.NewTopicKey(moduleSchema.Name, t.Name),
-			Module:    moduleSchema.Name,
-			Name:      t.Name,
-			EventType: t.Event.String(),
-		})
-		if err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("could not insert topic: %w", libdal.TranslatePGError(err))
-		}
-	}
-
-	deploymentKey := model.NewDeploymentKey(moduleSchema.Name)
-
-	// Create the deployment
-	err = tx.db.CreateDeployment(ctx, moduleSchema.Name, moduleSchema, deploymentKey)
-	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("failed to create deployment: %w", libdal.TranslatePGError(err))
-	}
-
-	return deploymentKey, nil
-}
-
 // SetDeploymentReplicas activates the given deployment.
 func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) (err error) {
-	// Start the transaction
-	tx, err := d.Begin(ctx)
-	if err != nil {
-		return libdal.TranslatePGError(err)
-	}
-	defer tx.CommitOrRollback(ctx, &err)
 
 	view := d.state.View()
 	deployment, err := view.GetDeployment(key)
@@ -141,7 +68,7 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 		return fmt.Errorf("could not get deployment: %w", err)
 	}
 
-	err = tx.db.SetDeploymentDesiredReplicas(ctx, key, int32(minReplicas))
+	err = d.state.Publish(ctx, &state.DeploymentReplicasUpdatedEvent{Key: key, Replicas: minReplicas})
 	if err != nil {
 		return libdal.TranslatePGError(err)
 	}
@@ -171,13 +98,6 @@ var ErrReplaceDeploymentAlreadyActive = errors.New("deployment already active")
 //
 // returns ErrReplaceDeploymentAlreadyActive if the new deployment is already active.
 func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.DeploymentKey, minReplicas int) (err error) {
-	// Start the transaction
-	tx, err := d.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("replace deployment failed to begin transaction for %v: %w", newDeploymentKey, libdal.TranslatePGError(err))
-	}
-
-	defer tx.CommitOrRollback(ctx, &err)
 	view := d.state.View()
 	newDeployment, err := view.GetDeployment(newDeploymentKey)
 	if err != nil {
@@ -191,12 +111,19 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 
 	// If there's an existing deployment, set its desired replicas to 0
 	var replacedDeploymentKey optional.Option[model.DeploymentKey]
-	oldDeployment, err := tx.db.GetExistingDeploymentForModule(ctx, newDeployment.Module)
-	if err == nil {
+	// TODO: remove all this, it needs to be event driven
+	var oldDeployment *state.Deployment
+	for _, dep := range view.ActiveDeployments() {
+		if dep.Module == newDeployment.Module {
+			oldDeployment = dep
+			break
+		}
+	}
+	if oldDeployment != nil {
 		if oldDeployment.Key.String() == newDeploymentKey.String() {
 			return fmt.Errorf("replace deployment failed: deployment already exists from %v to %v: %w", oldDeployment.Key, newDeploymentKey, ErrReplaceDeploymentAlreadyActive)
 		}
-		err = tx.db.SetDeploymentDesiredReplicas(ctx, newDeploymentKey, int32(minReplicas))
+		err = d.state.Publish(ctx, &state.DeploymentReplicasUpdatedEvent{Key: newDeploymentKey, Replicas: minReplicas})
 		if err != nil {
 			return fmt.Errorf("replace deployment failed to set new deployment replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, libdal.TranslatePGError(err))
 		}
@@ -205,12 +132,9 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 			return libdal.TranslatePGError(err)
 		}
 		replacedDeploymentKey = optional.Some(oldDeployment.Key)
-	} else if !libdal.IsNotFound(err) {
-		// any error other than not found
-		return fmt.Errorf("replace deployment failed to get existing deployment for %v: %w", newDeploymentKey, libdal.TranslatePGError(err))
 	} else {
 		// Set the desired replicas for the new deployment
-		err = tx.db.SetDeploymentDesiredReplicas(ctx, newDeploymentKey, int32(minReplicas))
+		err = d.state.Publish(ctx, &state.DeploymentReplicasUpdatedEvent{Key: newDeploymentKey, Replicas: minReplicas})
 		if err != nil {
 			return fmt.Errorf("replace deployment failed to set replicas for %v: %w", newDeploymentKey, libdal.TranslatePGError(err))
 		}
@@ -257,51 +181,30 @@ func (d *DAL) GetActiveSchema(ctx context.Context) (*schema.Schema, error) {
 //
 // Note that this is racey as the deployment can be updated by another process. This will go away once we ditch the DB.
 func (d *DAL) UpdateModuleSchema(ctx context.Context, deployment model.DeploymentKey, module *schema.Module) error {
-	err := d.db.UpdateDeploymentSchema(ctx, module, deployment)
+	err := d.state.Publish(ctx, &state.DeploymentSchemaUpdatedEvent{
+		Key:    deployment,
+		Schema: module,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to update deployment schema: %w", err)
 	}
 	return nil
 }
 
-func (d *DAL) GetDeploymentsWithMinReplicas(ctx context.Context) ([]dalmodel.Deployment, error) {
-	rows, err := d.db.GetDeploymentsWithMinReplicas(ctx)
-	if err != nil {
-		if libdal.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, libdal.TranslatePGError(err)
-	}
-	return slices.Map(rows, func(in dalsql.GetDeploymentsWithMinReplicasRow) dalmodel.Deployment {
-		return dalmodel.Deployment{
-			Key:         in.Deployment.Key,
-			Module:      in.ModuleName,
-			Language:    in.Language,
-			MinReplicas: int(in.Deployment.MinReplicas),
-			Schema:      in.Deployment.Schema,
-			CreatedAt:   in.Deployment.CreatedAt,
-		}
-	}), nil
-}
-
 func (d *DAL) GetActiveDeploymentSchemas(ctx context.Context) ([]*schema.Module, error) {
-	rows, err := d.db.GetActiveDeploymentSchemas(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not get active deployments: %w", libdal.TranslatePGError(err))
-	}
-	return slices.Map(rows, func(in dalsql.GetActiveDeploymentSchemasRow) *schema.Module { return in.Schema }), nil
+	view := d.state.View()
+	rows := view.ActiveDeployments()
+	return slices.Map(xmaps.Values(rows), func(in *state.Deployment) *schema.Module { return in.Schema }), nil
 }
 
 // GetActiveDeploymentSchemasByDeploymentKey returns the schema for all active deployments by deployment key.
 //
 // model.DeploymentKey is not used directly as a key as it's not a valid map key.
 func (d *DAL) GetActiveDeploymentSchemasByDeploymentKey(ctx context.Context) (map[string]*schema.Module, error) {
-	rows, err := d.db.GetActiveDeploymentSchemas(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not get active deployments: %w", libdal.TranslatePGError(err))
-	}
-	return maps.FromSlice(rows, func(in dalsql.GetActiveDeploymentSchemasRow) (string, *schema.Module) {
-		return in.Key.String(), in.Schema
+	view := d.state.View()
+	rows := view.ActiveDeployments()
+	return maps.MapValues[string, *state.Deployment, *schema.Module](rows, func(dep string, in *state.Deployment) *schema.Module {
+		return in.Schema
 	}), nil
 }
 

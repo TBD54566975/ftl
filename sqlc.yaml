@@ -3,7 +3,6 @@ sql:
   - &daldir
     engine: "postgresql"
     queries:
-      - backend/controller/dal/internal/sql/queries.sql
       - backend/controller/pubsub/internal/sql/queries.sql
     schema: "backend/controller/sql/schema"
     database:
@@ -132,15 +131,9 @@ sql:
       # - postgresql-query-too-costly
       # - postgresql-no-seq-scan
   - <<: *daldir
-    queries: "internal/configuration/dal/internal/sql/queries.sql"
-    gen:
-      go:
-        <<: *gengo
-        out: "internal/configuration/dal/internal/sql"
-  - <<: *daldir
     queries:
       - backend/controller/pubsub/internal/sql/queries.sql
-      - backend/controller/dal/internal/sql/async_queries.sql
+      - backend/controller/pubsub/internal/sql/async_queries.sql
     gen:
       go:
         <<: *gengo

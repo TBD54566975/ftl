@@ -8,7 +8,6 @@ package sql
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -43,16 +42,6 @@ WHERE name = $1::TEXT
 
 func (q *Queries) CompleteEventForSubscription(ctx context.Context, name string, module string) error {
 	_, err := q.db.ExecContext(ctx, completeEventForSubscription, name, module)
-	return err
-}
-
-const createDeployment = `-- name: CreateDeployment :exec
-INSERT INTO deployments (module_id, "schema", "key")
-VALUES ((SELECT id FROM modules WHERE name = $1::TEXT LIMIT 1), $2::module_schema_pb, $3::deployment_key)
-`
-
-func (q *Queries) CreateDeployment(ctx context.Context, moduleName string, schema *schema.Module, key model.DeploymentKey) error {
-	_, err := q.db.ExecContext(ctx, createDeployment, moduleName, schema, key)
 	return err
 }
 
@@ -112,128 +101,6 @@ func (q *Queries) DeleteSubscriptions(ctx context.Context, deployment model.Depl
 		return nil, err
 	}
 	return items, nil
-}
-
-const getActiveDeploymentSchemas = `-- name: GetActiveDeploymentSchemas :many
-SELECT key, schema FROM deployments WHERE min_replicas > 0
-`
-
-type GetActiveDeploymentSchemasRow struct {
-	Key    model.DeploymentKey
-	Schema *schema.Module
-}
-
-func (q *Queries) GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error) {
-	rows, err := q.db.QueryContext(ctx, getActiveDeploymentSchemas)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetActiveDeploymentSchemasRow
-	for rows.Next() {
-		var i GetActiveDeploymentSchemasRow
-		if err := rows.Scan(&i.Key, &i.Schema); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getDeploymentsWithMinReplicas = `-- name: GetDeploymentsWithMinReplicas :many
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, m.name AS module_name, m.language
-FROM deployments d
-  INNER JOIN modules m on d.module_id = m.id
-WHERE min_replicas > 0
-ORDER BY d.created_at,d.key
-`
-
-type GetDeploymentsWithMinReplicasRow struct {
-	Deployment Deployment
-	ModuleName string
-	Language   string
-}
-
-func (q *Queries) GetDeploymentsWithMinReplicas(ctx context.Context) ([]GetDeploymentsWithMinReplicasRow, error) {
-	rows, err := q.db.QueryContext(ctx, getDeploymentsWithMinReplicas)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetDeploymentsWithMinReplicasRow
-	for rows.Next() {
-		var i GetDeploymentsWithMinReplicasRow
-		if err := rows.Scan(
-			&i.Deployment.ID,
-			&i.Deployment.CreatedAt,
-			&i.Deployment.ModuleID,
-			&i.Deployment.Key,
-			&i.Deployment.Schema,
-			&i.Deployment.Labels,
-			&i.Deployment.MinReplicas,
-			&i.Deployment.LastActivatedAt,
-			&i.ModuleName,
-			&i.Language,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getExistingDeploymentForModule = `-- name: GetExistingDeploymentForModule :one
-SELECT d.id, created_at, module_id, key, schema, labels, min_replicas, last_activated_at, m.id, language, name
-FROM deployments d
-         INNER JOIN modules m on d.module_id = m.id
-WHERE m.name = $1
-  AND min_replicas > 0
-LIMIT 1
-`
-
-type GetExistingDeploymentForModuleRow struct {
-	ID              int64
-	CreatedAt       time.Time
-	ModuleID        int64
-	Key             model.DeploymentKey
-	Schema          *schema.Module
-	Labels          json.RawMessage
-	MinReplicas     int32
-	LastActivatedAt time.Time
-	ID_2            int64
-	Language        string
-	Name            string
-}
-
-func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name string) (GetExistingDeploymentForModuleRow, error) {
-	row := q.db.QueryRowContext(ctx, getExistingDeploymentForModule, name)
-	var i GetExistingDeploymentForModuleRow
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.ModuleID,
-		&i.Key,
-		&i.Schema,
-		&i.Labels,
-		&i.MinReplicas,
-		&i.LastActivatedAt,
-		&i.ID_2,
-		&i.Language,
-		&i.Name,
-	)
-	return i, err
 }
 
 const getNextEventForSubscription = `-- name: GetNextEventForSubscription :one
@@ -320,17 +187,6 @@ func (q *Queries) GetRandomSubscriber(ctx context.Context, key model.Subscriptio
 		&i.DeploymentKey,
 	)
 	return i, err
-}
-
-const getSchemaForDeployment = `-- name: GetSchemaForDeployment :one
-SELECT schema FROM deployments WHERE key = $1::deployment_key
-`
-
-func (q *Queries) GetSchemaForDeployment(ctx context.Context, key model.DeploymentKey) (*schema.Module, error) {
-	row := q.db.QueryRowContext(ctx, getSchemaForDeployment, key)
-	var schema *schema.Module
-	err := row.Scan(&schema)
-	return schema, err
 }
 
 const getSubscription = `-- name: GetSubscription :one
@@ -563,18 +419,6 @@ func (q *Queries) PublishEventForTopic(ctx context.Context, arg PublishEventForT
 	return err
 }
 
-const setDeploymentDesiredReplicas = `-- name: SetDeploymentDesiredReplicas :exec
-UPDATE deployments
-SET min_replicas = $2, last_activated_at = CASE WHEN min_replicas = 0 THEN (NOW() AT TIME ZONE 'utc') ELSE  last_activated_at END
-WHERE key = $1::deployment_key
-RETURNING 1
-`
-
-func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error {
-	_, err := q.db.ExecContext(ctx, setDeploymentDesiredReplicas, key, minReplicas)
-	return err
-}
-
 const setSubscriptionCursor = `-- name: SetSubscriptionCursor :exec
 WITH event AS (
     SELECT id, created_at, key, topic_id, payload
@@ -589,34 +433,6 @@ WHERE key = $1::subscription_key
 func (q *Queries) SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error {
 	_, err := q.db.ExecContext(ctx, setSubscriptionCursor, column1, column2)
 	return err
-}
-
-const updateDeploymentSchema = `-- name: UpdateDeploymentSchema :exec
-UPDATE deployments
-SET schema = $1::module_schema_pb
-WHERE key = $2::deployment_key
-RETURNING 1
-`
-
-// Note that this can result in a race condition if the deployment is being updated by another process. This will go
-// away once we ditch the DB.
-func (q *Queries) UpdateDeploymentSchema(ctx context.Context, schema *schema.Module, key model.DeploymentKey) error {
-	_, err := q.db.ExecContext(ctx, updateDeploymentSchema, schema, key)
-	return err
-}
-
-const upsertModule = `-- name: UpsertModule :one
-INSERT INTO modules (language, name)
-VALUES ($1, $2)
-ON CONFLICT (name) DO UPDATE SET language = $1
-RETURNING id
-`
-
-func (q *Queries) UpsertModule(ctx context.Context, language string, name string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, upsertModule, language, name)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
 }
 
 const upsertSubscription = `-- name: UpsertSubscription :one

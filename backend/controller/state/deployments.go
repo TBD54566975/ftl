@@ -6,7 +6,6 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
@@ -41,12 +40,14 @@ func (r *State) ActiveDeployments() map[string]*Deployment {
 var _ ControllerEvent = (*DeploymentCreatedEvent)(nil)
 var _ ControllerEvent = (*DeploymentActivatedEvent)(nil)
 var _ ControllerEvent = (*DeploymentDeactivatedEvent)(nil)
+var _ ControllerEvent = (*DeploymentSchemaUpdatedEvent)(nil)
+var _ ControllerEvent = (*DeploymentReplicasUpdatedEvent)(nil)
 
 type DeploymentCreatedEvent struct {
 	Key       model.DeploymentKey
 	CreatedAt time.Time
 	Module    string
-	Schema    *schemapb.Module
+	Schema    *schema.Module
 	Artefacts []*DeploymentArtefact
 	Language  string
 }
@@ -55,14 +56,10 @@ func (r *DeploymentCreatedEvent) Handle(t State) (State, error) {
 	if existing := t.deployments[r.Key.String()]; existing != nil {
 		return t, nil
 	}
-	proto, err := schema.ModuleFromProto(r.Schema)
-	if err != nil {
-		return t, fmt.Errorf("failed to parse schema: %w", err)
-	}
 	n := Deployment{
 		Key:       r.Key,
 		CreatedAt: r.CreatedAt,
-		Schema:    proto,
+		Schema:    r.Schema,
 		Module:    r.Module,
 		Artefacts: map[string]*DeploymentArtefact{},
 	}
@@ -74,6 +71,41 @@ func (r *DeploymentCreatedEvent) Handle(t State) (State, error) {
 		}
 	}
 	t.deployments[r.Key.String()] = &n
+	return t, nil
+}
+
+type DeploymentSchemaUpdatedEvent struct {
+	Key    model.DeploymentKey
+	Schema *schema.Module
+}
+
+func (r *DeploymentSchemaUpdatedEvent) Handle(t State) (State, error) {
+	existing, ok := t.deployments[r.Key.String()]
+	if !ok {
+		return t, fmt.Errorf("deployment %s not found", r.Key)
+	}
+	existing.Schema = r.Schema
+	return t, nil
+}
+
+type DeploymentReplicasUpdatedEvent struct {
+	Key      model.DeploymentKey
+	Replicas int
+}
+
+func (r *DeploymentReplicasUpdatedEvent) Handle(t State) (State, error) {
+	existing, ok := t.deployments[r.Key.String()]
+	if !ok {
+		return t, fmt.Errorf("deployment %s not found", r.Key)
+	}
+	if existing.Schema.Runtime == nil {
+		existing.Schema.Runtime = &schema.ModuleRuntime{}
+	}
+	if existing.Schema.Runtime.Scaling == nil {
+		existing.Schema.Runtime.Scaling = &schema.ModuleRuntimeScaling{}
+	}
+	existing.Schema.Runtime.Scaling.MinReplicas = int32(r.Replicas)
+	existing.MinReplicas = r.Replicas
 	return t, nil
 }
 
