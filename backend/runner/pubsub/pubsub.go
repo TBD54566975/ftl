@@ -9,30 +9,51 @@ import (
 	pb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1"
 	pbconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 	sl "github.com/TBD54566975/ftl/internal/slices"
 )
 
 type Service struct {
 	publishers map[string]*publisher
+	consumers  map[string]*consumer
+}
+
+type VerbClient interface {
+	Call(ctx context.Context, c *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error)
 }
 
 var _ pbconnect.PublishServiceHandler = (*Service)(nil)
 
-func New(module *schema.Module) (*Service, error) {
+func New(ctx context.Context, module *schema.Module, deployment model.DeploymentKey, verbClient VerbClient) (*Service, error) {
 	publishers := map[string]*publisher{}
 	for t := range sl.FilterVariants[*schema.Topic](module.Decls) {
-		publisher, err := newPublisher(module.Name, t)
+		publisher, err := newPublisher(module.Name, t, deployment)
 		if err != nil {
 			return nil, err
 		}
 		publishers[t.Name] = publisher
 	}
 
+	consumers := map[string]*consumer{}
+	for v := range sl.FilterVariants[*schema.Verb](module.Decls) {
+		subscriber, ok := slices.FindVariant[*schema.MetadataSubscriber](v.Metadata)
+		if !ok {
+			continue
+		}
+		consumer, err := newConsumer(ctx, module.Name, v, subscriber, deployment, verbClient)
+		if err != nil {
+			return nil, err
+		}
+		consumers[v.Name] = consumer
+	}
+
 	// TODO: topic producers needs to be closed eventually
 
 	svc := &Service{
 		publishers: publishers,
+		consumers:  consumers,
 	}
 	return svc, nil
 }

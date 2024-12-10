@@ -38,18 +38,17 @@ import (
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
-	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/state"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
 	deploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
-	ftlv1connect2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/runner/pubsub"
 	"github.com/TBD54566975/ftl/backend/timeline"
 	frontend "github.com/TBD54566975/ftl/frontend/console"
 	"github.com/TBD54566975/ftl/internal/configuration"
@@ -165,7 +164,6 @@ func Start(
 			rpc.GRPC(ftlv1connect.NewAdminServiceHandler, admin),
 			rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
 			rpc.GRPC(timelinev1connect.NewTimelineServiceHandler, console),
-			rpc.GRPC(ftlv1connect2.NewLegacyPubsubServiceHandler, svc.pubSub),
 			rpc.HTTP("/", consoleHandler),
 			rpc.PProf(),
 		)
@@ -259,8 +257,6 @@ func New(
 		controllerState:         state.NewInMemoryState(),
 	}
 
-	pubSub := pubsub.New(ctx, conn, routingTable, svc.controllerState)
-	svc.pubSub = pubSub
 	svc.dal = dal.New(svc.storage, svc.controllerState)
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx)
@@ -296,22 +292,13 @@ func New(
 		return makeBackoff(minDelay, maxDelay), job
 	}
 
-	parallelTask := func(job scheduledtask.Job, name string, maxNext, minDelay, maxDelay time.Duration, develBackoff ...backoff.Backoff) {
-		maybeDevelJob, backoff := maybeDevelTask(job, name, maxNext, minDelay, maxDelay, develBackoff...)
-		svc.tasks.Parallel(name, maybeDevelJob, backoff)
-	}
-
 	singletonTask := func(job scheduledtask.Job, name string, maxNext, minDelay, maxDelay time.Duration, develBackoff ...backoff.Backoff) {
 		maybeDevelJob, backoff := maybeDevelTask(job, name, maxNext, minDelay, maxDelay, develBackoff...)
 		svc.tasks.Singleton(name, maybeDevelJob, backoff)
 	}
 
-	// Parallel tasks.
-	parallelTask(svc.pubSub.ExecuteAsyncCalls, "execute-async-calls", time.Second, time.Second*5, time.Second*10)
-
 	// Singleton tasks use leases to only run on a single controller.
 	singletonTask(svc.reapStaleRunners, "reap-stale-runners", time.Second*2, time.Second, time.Second*10)
-	singletonTask(svc.pubSub.ReapAsyncCalls, "reap-async-calls", time.Second*5, time.Second, time.Second*5)
 	return svc, nil
 }
 

@@ -13,14 +13,12 @@ import (
 
 	aregistry "github.com/TBD54566975/ftl/backend/controller/artefacts"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
-	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/state"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
@@ -36,7 +34,6 @@ func New(registry aregistry.Service, state state.ControllerState) *DAL {
 }
 
 type DAL struct {
-	pubsub   *pubsub.Service
 	registry aregistry.Service
 	state    state.ControllerState
 
@@ -219,8 +216,4 @@ type Process struct {
 	MinReplicas int
 	Labels      model.Labels
 	Runner      optional.Option[ProcessRunner]
-}
-
-func sha256esToBytes(digests []sha256.SHA256) [][]byte {
-	return slices.Map(digests, func(digest sha256.SHA256) []byte { return digest[:] })
 }

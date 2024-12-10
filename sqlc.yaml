@@ -133,7 +133,6 @@ sql:
   - <<: *daldir
     queries:
       - backend/controller/pubsub/internal/sql/queries.sql
-      - backend/controller/pubsub/internal/sql/async_queries.sql
     gen:
       go:
         <<: *gengo

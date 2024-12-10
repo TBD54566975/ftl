@@ -33,7 +33,6 @@ import (
 	ftldeploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
 	ftlleaseconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
 	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
-	ftlv1connect2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/runner/observability"
@@ -351,21 +350,19 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 			return fmt.Errorf("failed to download artefacts: %w", err)
 		}
 
-		pubSub, err := pubsub.New(module)
+		deploymentServiceClient := rpc.Dial(ftldeploymentconnect.NewDeploymentServiceClient, s.config.ControllerEndpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, deploymentServiceClient)
+
+		leaseServiceClient := rpc.Dial(ftlleaseconnect.NewLeaseServiceClient, s.config.LeaseEndpoint.String(), log.Error)
+
+		s.proxy = proxy.New(deploymentServiceClient, leaseServiceClient)
+
+		pubSub, err := pubsub.New(ctx, module, key, s.proxy)
 		if err != nil {
 			observability.Deployment.Failure(ctx, optional.Some(key.String()))
 			return fmt.Errorf("failed to create pubsub service: %w", err)
 		}
 		s.pubSub = pubSub
-
-		deploymentServiceClient := rpc.Dial(ftldeploymentconnect.NewDeploymentServiceClient, s.config.ControllerEndpoint.String(), log.Error)
-		ctx = rpc.ContextWithClient(ctx, deploymentServiceClient)
-		pubsubClient := rpc.Dial(ftlv1connect2.NewLegacyPubsubServiceClient, s.config.ControllerEndpoint.String(), log.Error)
-		ctx = rpc.ContextWithClient(ctx, pubsubClient)
-
-		leaseServiceClient := rpc.Dial(ftlleaseconnect.NewLeaseServiceClient, s.config.LeaseEndpoint.String(), log.Error)
-
-		s.proxy = proxy.New(deploymentServiceClient, leaseServiceClient, pubsubClient)
 
 		parse, err := url.Parse("http://127.0.0.1:0")
 		if err != nil {
@@ -376,7 +373,6 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 			rpc.GRPC(ftldeploymentconnect.NewDeploymentServiceHandler, s.proxy),
 			rpc.GRPC(ftlleaseconnect.NewLeaseServiceHandler, s.proxy),
 			rpc.GRPC(pubconnect.NewPublishServiceHandler, s.pubSub),
-			rpc.GRPC(ftlv1connect2.NewLegacyPubsubServiceHandler, s.proxy),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create server: %w", err)
