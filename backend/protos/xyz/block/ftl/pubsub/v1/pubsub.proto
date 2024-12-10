@@ -22,7 +22,7 @@ message ResetSubscriptionRequest {
 }
 message ResetSubscriptionResponse {}
 
-// ModuleService is the service that modules use to interact with the Controller.
+// LegacyPubsubService is the service that modules use to interact with the Controller.
 service LegacyPubsubService {
   // Ping service for readiness.
   rpc Ping(xyz.block.ftl.v1.PingRequest) returns (xyz.block.ftl.v1.PingResponse) {
