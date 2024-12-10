@@ -163,6 +163,7 @@
                         <include>**/ftl.proto</include>
                         <include>**/language.proto</include>
                         <include>**/publish.proto</include>
+                        <include>**/pubsub.proto</include>
                     </includes>
                 </configuration>
             </plugin>

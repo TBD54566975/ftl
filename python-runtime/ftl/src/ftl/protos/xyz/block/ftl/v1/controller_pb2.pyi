@@ -251,13 +251,3 @@ class ProcessListResponse(_message.Message):
     PROCESSES_FIELD_NUMBER: _ClassVar[int]
     processes: _containers.RepeatedCompositeFieldContainer[ProcessListResponse.Process]
     def __init__(self, processes: _Optional[_Iterable[_Union[ProcessListResponse.Process, _Mapping]]] = ...) -> None: ...
-
-class ResetSubscriptionRequest(_message.Message):
-    __slots__ = ("subscription",)
-    SUBSCRIPTION_FIELD_NUMBER: _ClassVar[int]
-    subscription: _schema_pb2.Ref
-    def __init__(self, subscription: _Optional[_Union[_schema_pb2.Ref, _Mapping]] = ...) -> None: ...
-
-class ResetSubscriptionResponse(_message.Message):
-    __slots__ = ()
-    def __init__(self) -> None: ...

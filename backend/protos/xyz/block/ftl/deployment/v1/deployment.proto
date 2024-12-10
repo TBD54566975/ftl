@@ -2,20 +2,10 @@ syntax = "proto3";
 
 package xyz.block.ftl.deployment.v1;
 
-import "xyz/block/ftl/schema/v1/schema.proto";
 import "xyz/block/ftl/v1/ftl.proto";
 
 option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1;ftlv1";
 option java_multiple_files = true;
-
-message PublishEventRequest {
-  ftl.schema.v1.Ref topic = 1;
-  bytes body = 2;
-  // Only verb name is included because this verb will be in the same module as topic
-  string caller = 3;
-}
-
-message PublishEventResponse {}
 
 message GetDeploymentContextRequest {
   string deployment = 1;
@@ -56,7 +46,4 @@ service DeploymentService {
 
   // Get configuration state for the deployment
   rpc GetDeploymentContext(GetDeploymentContextRequest) returns (stream GetDeploymentContextResponse);
-
-  // Publish an event to a topic.
-  rpc PublishEvent(PublishEventRequest) returns (PublishEventResponse);
 }

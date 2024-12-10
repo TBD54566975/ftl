@@ -13,12 +13,17 @@ import (
 )
 
 type Querier interface {
+	// Reserve a pending async call for execution, returning the associated lease
+	// reservation key and accompanying metadata.
+	AcquireAsyncCall(ctx context.Context) (AcquireAsyncCallRow, error)
 	AsyncCallQueueDepth(ctx context.Context) (int64, error)
 	BeginConsumingTopicEvent(ctx context.Context, subscription model.SubscriptionKey, event model.TopicEventKey) error
 	CompleteEventForSubscription(ctx context.Context, name string, module string) error
 	CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error)
 	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error)
 	DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriptionKey, error)
+	FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error)
+	FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallWithRetryParams) (bool, error)
 	GetNextEventForSubscription(ctx context.Context, consumptionDelay sqltypes.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
 	GetRandomSubscriber(ctx context.Context, key model.SubscriptionKey) (GetRandomSubscriberRow, error)
 	GetSubscription(ctx context.Context, column1 string, column2 string) (TopicSubscription, error)
@@ -29,9 +34,12 @@ type Querier interface {
 	GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubscriptionsNeedingUpdateRow, error)
 	GetTopic(ctx context.Context, dollar_1 int64) (Topic, error)
 	GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent, error)
+	GetZombieAsyncCalls(ctx context.Context, limit int32) ([]AsyncCall, error)
 	InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error
+	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
 	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error
 	SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error
+	SucceedAsyncCall(ctx context.Context, response interface{}, iD int64) (bool, error)
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) (UpsertSubscriptionRow, error)
 	UpsertTopic(ctx context.Context, arg UpsertTopicParams) error
 }

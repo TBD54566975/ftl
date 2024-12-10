@@ -39,9 +39,6 @@ const (
 	// DeploymentServiceGetDeploymentContextProcedure is the fully-qualified name of the
 	// DeploymentService's GetDeploymentContext RPC.
 	DeploymentServiceGetDeploymentContextProcedure = "/xyz.block.ftl.deployment.v1.DeploymentService/GetDeploymentContext"
-	// DeploymentServicePublishEventProcedure is the fully-qualified name of the DeploymentService's
-	// PublishEvent RPC.
-	DeploymentServicePublishEventProcedure = "/xyz.block.ftl.deployment.v1.DeploymentService/PublishEvent"
 )
 
 // DeploymentServiceClient is a client for the xyz.block.ftl.deployment.v1.DeploymentService
@@ -51,8 +48,6 @@ type DeploymentServiceClient interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	// Get configuration state for the deployment
 	GetDeploymentContext(context.Context, *connect.Request[v11.GetDeploymentContextRequest]) (*connect.ServerStreamForClient[v11.GetDeploymentContextResponse], error)
-	// Publish an event to a topic.
-	PublishEvent(context.Context, *connect.Request[v11.PublishEventRequest]) (*connect.Response[v11.PublishEventResponse], error)
 }
 
 // NewDeploymentServiceClient constructs a client for the
@@ -77,11 +72,6 @@ func NewDeploymentServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			baseURL+DeploymentServiceGetDeploymentContextProcedure,
 			opts...,
 		),
-		publishEvent: connect.NewClient[v11.PublishEventRequest, v11.PublishEventResponse](
-			httpClient,
-			baseURL+DeploymentServicePublishEventProcedure,
-			opts...,
-		),
 	}
 }
 
@@ -89,7 +79,6 @@ func NewDeploymentServiceClient(httpClient connect.HTTPClient, baseURL string, o
 type deploymentServiceClient struct {
 	ping                 *connect.Client[v1.PingRequest, v1.PingResponse]
 	getDeploymentContext *connect.Client[v11.GetDeploymentContextRequest, v11.GetDeploymentContextResponse]
-	publishEvent         *connect.Client[v11.PublishEventRequest, v11.PublishEventResponse]
 }
 
 // Ping calls xyz.block.ftl.deployment.v1.DeploymentService.Ping.
@@ -102,11 +91,6 @@ func (c *deploymentServiceClient) GetDeploymentContext(ctx context.Context, req 
 	return c.getDeploymentContext.CallServerStream(ctx, req)
 }
 
-// PublishEvent calls xyz.block.ftl.deployment.v1.DeploymentService.PublishEvent.
-func (c *deploymentServiceClient) PublishEvent(ctx context.Context, req *connect.Request[v11.PublishEventRequest]) (*connect.Response[v11.PublishEventResponse], error) {
-	return c.publishEvent.CallUnary(ctx, req)
-}
-
 // DeploymentServiceHandler is an implementation of the
 // xyz.block.ftl.deployment.v1.DeploymentService service.
 type DeploymentServiceHandler interface {
@@ -114,8 +98,6 @@ type DeploymentServiceHandler interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	// Get configuration state for the deployment
 	GetDeploymentContext(context.Context, *connect.Request[v11.GetDeploymentContextRequest], *connect.ServerStream[v11.GetDeploymentContextResponse]) error
-	// Publish an event to a topic.
-	PublishEvent(context.Context, *connect.Request[v11.PublishEventRequest]) (*connect.Response[v11.PublishEventResponse], error)
 }
 
 // NewDeploymentServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -135,19 +117,12 @@ func NewDeploymentServiceHandler(svc DeploymentServiceHandler, opts ...connect.H
 		svc.GetDeploymentContext,
 		opts...,
 	)
-	deploymentServicePublishEventHandler := connect.NewUnaryHandler(
-		DeploymentServicePublishEventProcedure,
-		svc.PublishEvent,
-		opts...,
-	)
 	return "/xyz.block.ftl.deployment.v1.DeploymentService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case DeploymentServicePingProcedure:
 			deploymentServicePingHandler.ServeHTTP(w, r)
 		case DeploymentServiceGetDeploymentContextProcedure:
 			deploymentServiceGetDeploymentContextHandler.ServeHTTP(w, r)
-		case DeploymentServicePublishEventProcedure:
-			deploymentServicePublishEventHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -163,8 +138,4 @@ func (UnimplementedDeploymentServiceHandler) Ping(context.Context, *connect.Requ
 
 func (UnimplementedDeploymentServiceHandler) GetDeploymentContext(context.Context, *connect.Request[v11.GetDeploymentContextRequest], *connect.ServerStream[v11.GetDeploymentContextResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.deployment.v1.DeploymentService.GetDeploymentContext is not implemented"))
-}
-
-func (UnimplementedDeploymentServiceHandler) PublishEvent(context.Context, *connect.Request[v11.PublishEventRequest]) (*connect.Response[v11.PublishEventResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.deployment.v1.DeploymentService.PublishEvent is not implemented"))
 }

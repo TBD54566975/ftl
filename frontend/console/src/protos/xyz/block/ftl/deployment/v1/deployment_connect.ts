@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "../../v1/ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { GetDeploymentContextRequest, GetDeploymentContextResponse, PublishEventRequest, PublishEventResponse } from "./deployment_pb.js";
+import { GetDeploymentContextRequest, GetDeploymentContextResponse } from "./deployment_pb.js";
 
 /**
  * ModuleService is the service that modules use to interact with the Controller.
@@ -37,17 +37,6 @@ export const DeploymentService = {
       I: GetDeploymentContextRequest,
       O: GetDeploymentContextResponse,
       kind: MethodKind.ServerStreaming,
-    },
-    /**
-     * Publish an event to a topic.
-     *
-     * @generated from rpc xyz.block.ftl.deployment.v1.DeploymentService.PublishEvent
-     */
-    publishEvent: {
-      name: "PublishEvent",
-      I: PublishEventRequest,
-      O: PublishEventResponse,
-      kind: MethodKind.Unary,
     },
   }
 } as const;

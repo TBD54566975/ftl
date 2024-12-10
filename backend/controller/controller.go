@@ -20,7 +20,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/kong"
-	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/result"
 	"github.com/jackc/pgx/v5"
@@ -34,7 +33,6 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/admin"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	"github.com/TBD54566975/ftl/backend/controller/async"
 	"github.com/TBD54566975/ftl/backend/controller/console"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
@@ -47,6 +45,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
 	deploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
+	ftlv1connect2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
@@ -169,6 +168,7 @@ func Start(
 			rpc.GRPC(ftlv1connect.NewAdminServiceHandler, admin),
 			rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
 			rpc.GRPC(timelinev1connect.NewTimelineServiceHandler, console),
+			rpc.GRPC(ftlv1connect2.NewLegacyPubsubServiceHandler, svc.pubSub),
 			rpc.HTTP("/", consoleHandler),
 			rpc.PProf(),
 		)
@@ -215,7 +215,6 @@ type Service struct {
 	config Config
 
 	increaseReplicaFailures map[string]int
-	asyncCallsLock          sync.Mutex
 
 	clientLock      sync.Mutex
 	routeTable      *routing.RouteTable
@@ -263,7 +262,7 @@ func New(
 		controllerState:         state.NewInMemoryState(),
 	}
 
-	pubSub := pubsub.New(ctx, conn, optional.Some[pubsub.AsyncCallListener](svc))
+	pubSub := pubsub.New(ctx, conn, routingTable)
 	svc.pubSub = pubSub
 	svc.dal = dal.New(ctx, conn, pubSub, svc.storage)
 
@@ -311,12 +310,12 @@ func New(
 	}
 
 	// Parallel tasks.
-	parallelTask(svc.executeAsyncCalls, "execute-async-calls", time.Second, time.Second*5, time.Second*10)
+	parallelTask(svc.pubSub.ExecuteAsyncCalls, "execute-async-calls", time.Second, time.Second*5, time.Second*10)
 
 	// Singleton tasks use leases to only run on a single controller.
 	singletonTask(svc.reapStaleRunners, "reap-stale-runners", time.Second*2, time.Second, time.Second*10)
 	singletonTask(svc.reapCallEvents, "reap-call-events", time.Minute*5, time.Minute, time.Minute*30)
-	singletonTask(svc.reapAsyncCalls, "reap-async-calls", time.Second*5, time.Second, time.Second*5)
+	singletonTask(svc.pubSub.ReapAsyncCalls, "reap-async-calls", time.Second*5, time.Second, time.Second*5)
 	return svc, nil
 }
 
@@ -811,44 +810,6 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	return s.callWithRequest(ctx, headers.CopyRequestForForwarding(req), optional.None[model.RequestKey](), optional.None[model.RequestKey](), "")
 }
 
-func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftldeployment.PublishEventRequest]) (*connect.Response[ftldeployment.PublishEventResponse], error) {
-	// Publish the event.
-	now := time.Now().UTC()
-	pubishError := optional.None[string]()
-	err := s.pubSub.PublishEventForTopic(ctx, req.Msg.Topic.Module, req.Msg.Topic.Name, req.Msg.Caller, req.Msg.Body)
-	if err != nil {
-		pubishError = optional.Some(err.Error())
-	}
-
-	requestKey := optional.None[string]()
-	if rk, err := rpc.RequestKeyFromContext(ctx); err == nil {
-		if rk, ok := rk.Get(); ok {
-			requestKey = optional.Some(rk.String())
-		}
-	}
-
-	// Add to timeline.
-	module := req.Msg.Topic.Module
-	routes := s.routeTable.Current()
-	route, ok := routes.GetDeployment(module).Get()
-	if ok {
-		timeline.ClientFromContext(ctx).Publish(ctx, timeline.PubSubPublish{
-			DeploymentKey: route,
-			RequestKey:    requestKey,
-			Time:          now,
-			SourceVerb:    schema.Ref{Name: req.Msg.Caller, Module: req.Msg.Topic.Module},
-			Topic:         req.Msg.Topic.Name,
-			Request:       req.Msg.Body,
-			Error:         pubishError,
-		})
-	}
-
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to publish a event to topic %s:%s: %w", req.Msg.Topic.Module, req.Msg.Topic.Name, err))
-	}
-	return connect.NewResponse(&ftldeployment.PublishEventResponse{}), nil
-}
-
 func (s *Service) callWithRequest(
 	ctx context.Context,
 	req *connect.Request[ftlv1.CallRequest],
@@ -1067,21 +1028,6 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: dkey.String()}), nil
 }
 
-func (s *Service) ResetSubscription(ctx context.Context, req *connect.Request[ftlv1.ResetSubscriptionRequest]) (*connect.Response[ftlv1.ResetSubscriptionResponse], error) {
-	err := s.pubSub.ResetSubscription(ctx, req.Msg.Subscription.Module, req.Msg.Subscription.Name)
-	if err != nil {
-		return nil, fmt.Errorf("could not reset subscription: %w", err)
-	}
-	return connect.NewResponse(&ftlv1.ResetSubscriptionResponse{}), nil
-}
-
-func dsnSecretKey(module string, db string) string {
-	return fmt.Sprintf("FTL_DSN_%s_%s",
-		strings.ToUpper(stripNonAlphanumeric(module)),
-		strings.ToUpper(stripNonAlphanumeric(db)),
-	)
-}
-
 func stripNonAlphanumeric(s string) string {
 	var result strings.Builder
 	for _, r := range s {
@@ -1163,295 +1109,6 @@ func (s *Service) reapStaleRunners(ctx context.Context) (time.Duration, error) {
 		}
 	}
 	return s.config.RunnerTimeout, nil
-}
-
-// AsyncCallWasAdded is an optional notification that an async call was added by this controller
-//
-// It allows us to speed up execution of scheduled async calls rather than waiting for the next poll time.
-func (s *Service) AsyncCallWasAdded(ctx context.Context) {
-	go func() {
-		if _, err := s.executeAsyncCalls(ctx); err != nil {
-			log.FromContext(ctx).Errorf(err, "failed to progress subscriptions")
-		}
-	}()
-}
-
-func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration, returnErr error) {
-	// There are multiple entry points into this function, but we want the controller to handle async calls one at a time.
-	s.asyncCallsLock.Lock()
-	defer s.asyncCallsLock.Unlock()
-
-	logger := log.FromContext(ctx)
-	logger.Tracef("Acquiring async call")
-
-	now := time.Now().UTC()
-	sstate := s.routeTable.Current()
-
-	enqueueTimelineEvent := func(call *dal.AsyncCall, err optional.Option[error]) {
-		module := call.Verb.Module
-		deployment, ok := sstate.GetDeployment(module).Get()
-		if ok {
-			eventType := timeline.AsyncExecuteEventTypeUnkown
-			switch call.Origin.(type) {
-			case async.AsyncOriginCron:
-				eventType = timeline.AsyncExecuteEventTypeCron
-			case async.AsyncOriginPubSub:
-				eventType = timeline.AsyncExecuteEventTypePubSub
-			case *async.AsyncOriginPubSub:
-				eventType = timeline.AsyncExecuteEventTypePubSub
-			default:
-				break
-			}
-			errStr := optional.None[string]()
-			if e, ok := err.Get(); ok {
-				errStr = optional.Some(e.Error())
-			}
-			timeline.ClientFromContext(ctx).Publish(ctx, timeline.AsyncExecute{
-				DeploymentKey: deployment,
-				RequestKey:    call.ParentRequestKey,
-				EventType:     eventType,
-				Verb:          *call.Verb.ToRef(),
-				Time:          now,
-				Error:         errStr,
-			})
-		}
-	}
-
-	call, leaseCtx, err := s.dal.AcquireAsyncCall(ctx)
-	if errors.Is(err, libdal.ErrNotFound) {
-		logger.Tracef("No async calls to execute")
-		return time.Second * 2, nil
-	} else if err != nil {
-		if call == nil {
-			observability.AsyncCalls.AcquireFailed(ctx, err)
-		} else {
-			observability.AsyncCalls.Acquired(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, call.Catching, err)
-			enqueueTimelineEvent(call, optional.Some(err))
-		}
-		return 0, err
-	}
-	// use originalCtx for things that should are done outside of the lease lifespan
-	originalCtx := ctx
-	ctx = leaseCtx
-
-	// Extract the otel context from the call
-	ctx, err = observability.ExtractTraceContextToContext(ctx, call.TraceContext)
-	if err != nil {
-		observability.AsyncCalls.Acquired(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, call.Catching, err)
-		enqueueTimelineEvent(call, optional.Some(err))
-		return 0, fmt.Errorf("failed to extract trace context: %w", err)
-	}
-
-	// Extract the request key from the call and attach it as the parent request key
-	parentRequestKey := optional.None[model.RequestKey]()
-	if prk, ok := call.ParentRequestKey.Get(); ok {
-		if rk, err := model.ParseRequestKey(prk); err == nil {
-			parentRequestKey = optional.Some(rk)
-		} else {
-			logger.Tracef("Ignoring invalid request key: %s", prk)
-		}
-	}
-
-	observability.AsyncCalls.Acquired(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, call.Catching, nil)
-
-	defer func() {
-		if returnErr == nil {
-			// Post-commit notification based on origin
-			switch origin := call.Origin.(type) {
-			case async.AsyncOriginCron:
-				break
-
-			case async.AsyncOriginPubSub:
-				go s.pubSub.AsyncCallDidCommit(originalCtx, origin)
-
-			default:
-				break
-			}
-		}
-	}()
-
-	logger = logger.Scope(fmt.Sprintf("%s:%s", call.Origin, call.Verb)).Module(call.Verb.Module)
-
-	if call.Catching {
-		// Retries have been exhausted but catch verb has previously failed
-		// We need to try again to catch the async call
-		return 0, s.catchAsyncCall(ctx, logger, call)
-	}
-
-	logger.Tracef("Executing async call")
-	req := &ftlv1.CallRequest{
-		Verb:     call.Verb.ToProto(),
-		Body:     call.Request,
-		Metadata: metadataForAsyncCall(call),
-	}
-	resp, err := s.callWithRequest(ctx, connect.NewRequest(req), optional.None[model.RequestKey](), parentRequestKey, s.config.Advertise.String())
-	var callResult either.Either[[]byte, string]
-	if err != nil {
-		logger.Warnf("Async call could not be called: %v", err)
-		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, optional.Some("async call could not be called"))
-		callResult = either.RightOf[[]byte](err.Error())
-	} else if perr := resp.Msg.GetError(); perr != nil {
-		logger.Warnf("Async call failed: %s", perr.Message)
-		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, optional.Some("async call failed"))
-		callResult = either.RightOf[[]byte](perr.Message)
-	} else {
-		logger.Debugf("Async call succeeded")
-		callResult = either.LeftOf[string](resp.Msg.GetBody())
-		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, optional.None[string]())
-	}
-
-	queueDepth := call.QueueDepth
-	didScheduleAnotherCall, err := s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.DAL, isFinalResult bool) error {
-		return s.finaliseAsyncCall(ctx, tx, call, callResult, isFinalResult)
-	})
-	if err != nil {
-		observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, queueDepth, err)
-		enqueueTimelineEvent(call, optional.Some(err))
-		return 0, fmt.Errorf("failed to complete async call: %w", err)
-	}
-	if !didScheduleAnotherCall {
-		// Queue depth is queried at acquisition time, which means it includes the async
-		// call that was just executed so we need to decrement
-		queueDepth = call.QueueDepth - 1
-	}
-	observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, queueDepth, nil)
-	enqueueTimelineEvent(call, optional.None[error]())
-	return 0, nil
-}
-
-func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *dal.AsyncCall) error {
-	catchVerb, ok := call.CatchVerb.Get()
-	if !ok {
-		logger.Warnf("Async call %s could not catch, missing catch verb", call.Verb)
-		return fmt.Errorf("async call %s could not catch, missing catch verb", call.Verb)
-	}
-	logger.Debugf("Catching async call %s with %s", call.Verb, catchVerb)
-
-	routeView := s.routeTable.Current()
-	sch := routeView.Schema()
-
-	verb := &schema.Verb{}
-	if err := sch.ResolveToType(call.Verb.ToRef(), verb); err != nil {
-		logger.Warnf("Async call %s could not catch, could not resolve original verb: %s", call.Verb, err)
-		return fmt.Errorf("async call %s could not catch, could not resolve original verb: %w", call.Verb, err)
-	}
-
-	originalError := call.Error.Default("unknown error")
-	originalResult := either.RightOf[[]byte](originalError)
-
-	request := map[string]any{
-		"verb": map[string]string{
-			"module": call.Verb.Module,
-			"name":   call.Verb.Name,
-		},
-		"requestType": verb.Request.String(),
-		"request":     json.RawMessage(call.Request),
-		"error":       originalError,
-	}
-	body, err := json.Marshal(request)
-	if err != nil {
-		logger.Warnf("Async call %s could not marshal body while catching", call.Verb)
-		return fmt.Errorf("async call %s could not marshal body while catching", call.Verb)
-	}
-
-	req := &ftlv1.CallRequest{
-		Verb:     catchVerb.ToProto(),
-		Body:     body,
-		Metadata: metadataForAsyncCall(call),
-	}
-	resp, err := s.callWithRequest(ctx, connect.NewRequest(req), optional.None[model.RequestKey](), optional.None[model.RequestKey](), s.config.Advertise.String())
-	var catchResult either.Either[[]byte, string]
-	if err != nil {
-		// Could not call catch verb
-		logger.Warnf("Async call %s could not call catch verb %s: %s", call.Verb, catchVerb, err)
-		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, optional.Some("async call could not be called"))
-		catchResult = either.RightOf[[]byte](err.Error())
-	} else if perr := resp.Msg.GetError(); perr != nil {
-		// Catch verb failed
-		logger.Warnf("Async call %s had an error while catching (%s): %s", call.Verb, catchVerb, perr.Message)
-		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, optional.Some("async call failed"))
-		catchResult = either.RightOf[[]byte](perr.Message)
-	} else {
-		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, optional.None[string]())
-		catchResult = either.LeftOf[string](resp.Msg.GetBody())
-	}
-	queueDepth := call.QueueDepth
-	didScheduleAnotherCall, err := s.dal.CompleteAsyncCall(ctx, call, catchResult, func(tx *dal.DAL, isFinalResult bool) error {
-		// Exposes the original error to external components such as PubSub
-		return s.finaliseAsyncCall(ctx, tx, call, originalResult, isFinalResult)
-	})
-	if err != nil {
-		logger.Errorf(err, "Async call %s could not complete after catching (%s)", call.Verb, catchVerb)
-		observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, queueDepth, err)
-		return fmt.Errorf("async call %s could not complete after catching (%s): %w", call.Verb, catchVerb, err)
-	}
-	if !didScheduleAnotherCall {
-		// Queue depth is queried at acquisition time, which means it includes the async
-		// call that was just executed so we need to decrement
-		queueDepth = call.QueueDepth - 1
-	}
-	logger.Debugf("Caught async call %s with %s", call.Verb, catchVerb)
-	observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, queueDepth, nil)
-	return nil
-}
-
-// fails async calls that have had their leases reaped
-func (s *Service) reapAsyncCalls(ctx context.Context) (nextInterval time.Duration, err error) {
-	tx, err := s.dal.Begin(ctx)
-	if err != nil {
-		return 0, connect.NewError(connect.CodeInternal, fmt.Errorf("could not start transaction: %w", err))
-	}
-	defer tx.CommitOrRollback(ctx, &err)
-
-	limit := 20
-	calls, err := tx.GetZombieAsyncCalls(ctx, 20)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get zombie async calls: %w", err)
-	}
-	for _, call := range calls {
-		callResult := either.RightOf[[]byte]("async call lease expired")
-		_, err := tx.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.DAL, isFinalResult bool) error {
-			return s.finaliseAsyncCall(ctx, tx, call, callResult, isFinalResult)
-		})
-		if err != nil {
-			return 0, fmt.Errorf("failed to complete zombie async call: %w", err)
-		}
-		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, optional.Some("async call lease failed"))
-	}
-
-	if len(calls) == limit {
-		return 0, nil
-	}
-	return time.Second * 5, nil
-}
-
-func metadataForAsyncCall(call *dal.AsyncCall) *ftlv1.Metadata {
-	switch call.Origin.(type) {
-	case async.AsyncOriginCron:
-		return &ftlv1.Metadata{}
-
-	case async.AsyncOriginPubSub:
-		return &ftlv1.Metadata{}
-
-	default:
-		panic(fmt.Errorf("unsupported async call origin: %v", call.Origin))
-	}
-}
-
-func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.DAL, call *dal.AsyncCall, callResult either.Either[[]byte, string], isFinalResult bool) error {
-	_, failed := callResult.(either.Right[[]byte, string])
-
-	// Allow for handling of completion based on origin
-	switch origin := call.Origin.(type) {
-	case async.AsyncOriginPubSub:
-		if err := s.pubSub.OnCallCompletion(ctx, tx.Connection, origin, failed, isFinalResult); err != nil {
-			return fmt.Errorf("failed to finalize pubsub async call: %w", err)
-		}
-
-	default:
-		panic(fmt.Errorf("unsupported async call origin: %v", call.Origin))
-	}
-	return nil
 }
 
 func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(response *ftlv1.PullSchemaResponse) error) error {
