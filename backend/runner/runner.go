@@ -32,8 +32,6 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	ftldeploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
-	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
 	ftlleaseconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
 	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -70,7 +68,8 @@ type Config struct {
 	HeartbeatJitter       time.Duration            `help:"Jitter to add to heartbeat period." default:"2s"`
 	Deployment            model.DeploymentKey      `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
 	DebugPort             int                      `help:"The port to use for debugging." env:"FTL_DEBUG_PORT"`
-	DevEndpoint           optional.Option[url.URL] `help:"An existing endpoint to connect to in development mode" env:"FTL_DEV_ENDPOINT"`
+	DevEndpoint           optional.Option[url.URL] `help:"An existing endpoint to connect to in development mode" hidden:""`
+	DevRunnerInfoFile     optional.Option[string]  `help:"The path to a file that we write dev endpoint information to." hidden:""`
 }
 
 func Start(ctx context.Context, config Config, storage *artefacts.OCIArtefactService) error {
@@ -124,6 +123,7 @@ func Start(ctx context.Context, config Config, storage *artefacts.OCIArtefactSer
 		deploymentLogQueue: make(chan log.Entry, 10000),
 		cancelFunc:         doneFunc,
 		devEndpoint:        config.DevEndpoint,
+		devRunnerInfoFile:  config.DevRunnerInfoFile,
 	}
 
 	module, err := svc.getModule(ctx, config.Deployment)
@@ -256,6 +256,7 @@ type Service struct {
 	deploymentLogQueue  chan log.Entry
 	cancelFunc          func()
 	devEndpoint         optional.Option[url.URL]
+	devRunnerInfoFile   optional.Option[string]
 	proxy               *proxy.Service
 	pubSub              *pubsub.Service
 	proxyBindAddress    *url.URL
@@ -384,28 +385,15 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 			endpoint: &ep,
 			client:   client,
 		}
-		endpoint := rpc.Dial(languagepbconnect.NewHotReloadServiceClient, ep.String(), log.Error)
-		timeout := time.After(10 * time.Second)
-		message := &languagepb.RunnerStartedRequest{Address: s.proxyBindAddress.String()}
-		dbAddresses.Range(func(key string, value string) bool {
-			message.Databases = append(message.Databases, &languagepb.RunnerStartedRequest_Database{Name: key, Url: value})
-			return true
-		})
-		for {
-			_, err := endpoint.RunnerStarted(ctx, connect.NewRequest(message))
-			if err == nil {
-				logger.Infof("Notified hot reload endpoint runner started")
-				break
-			}
-			logger.Errorf(err, "Failed to notify hot reload endpoint runner started")
-			select {
-			case <-ctx.Done():
-				break
-			case <-timeout:
-				logger.Warnf("failed to notify hot reload endpoint runner started")
-				break
-			case <-time.After(time.Millisecond * 100):
-
+		if file, ok := s.devRunnerInfoFile.Get(); ok {
+			fileContents := "proxy.bind.address=" + s.proxyBindAddress.String()
+			dbAddresses.Range(func(key string, value string) bool {
+				fileContents += fmt.Sprintf("\ndatabase.%s.url=%s", key, value)
+				return true
+			})
+			err = os.WriteFile(file, []byte(fileContents), 0660) // #nosec
+			if err != nil {
+				logger.Errorf(err, "could not create FTL dev Config")
 			}
 		}
 	} else {

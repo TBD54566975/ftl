@@ -219,7 +219,7 @@ class AutoRebuildStarted(_message.Message):
     def __init__(self, context_id: _Optional[str] = ...) -> None: ...
 
 class BuildSuccess(_message.Message):
-    __slots__ = ("context_id", "is_automatic_rebuild", "module", "deploy", "docker_image", "errors", "dev_endpoint", "debug_port")
+    __slots__ = ("context_id", "is_automatic_rebuild", "module", "deploy", "docker_image", "errors", "dev_endpoint", "debug_port", "dev_runner_info_file")
     CONTEXT_ID_FIELD_NUMBER: _ClassVar[int]
     IS_AUTOMATIC_REBUILD_FIELD_NUMBER: _ClassVar[int]
     MODULE_FIELD_NUMBER: _ClassVar[int]
@@ -228,6 +228,7 @@ class BuildSuccess(_message.Message):
     ERRORS_FIELD_NUMBER: _ClassVar[int]
     DEV_ENDPOINT_FIELD_NUMBER: _ClassVar[int]
     DEBUG_PORT_FIELD_NUMBER: _ClassVar[int]
+    DEV_RUNNER_INFO_FILE_FIELD_NUMBER: _ClassVar[int]
     context_id: str
     is_automatic_rebuild: bool
     module: _schema_pb2.Module
@@ -236,7 +237,8 @@ class BuildSuccess(_message.Message):
     errors: ErrorList
     dev_endpoint: str
     debug_port: int
-    def __init__(self, context_id: _Optional[str] = ..., is_automatic_rebuild: bool = ..., module: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., deploy: _Optional[_Iterable[str]] = ..., docker_image: _Optional[str] = ..., errors: _Optional[_Union[ErrorList, _Mapping]] = ..., dev_endpoint: _Optional[str] = ..., debug_port: _Optional[int] = ...) -> None: ...
+    dev_runner_info_file: str
+    def __init__(self, context_id: _Optional[str] = ..., is_automatic_rebuild: bool = ..., module: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., deploy: _Optional[_Iterable[str]] = ..., docker_image: _Optional[str] = ..., errors: _Optional[_Union[ErrorList, _Mapping]] = ..., dev_endpoint: _Optional[str] = ..., debug_port: _Optional[int] = ..., dev_runner_info_file: _Optional[str] = ...) -> None: ...
 
 class BuildFailure(_message.Message):
     __slots__ = ("context_id", "is_automatic_rebuild", "errors", "invalidate_dependencies")
@@ -287,24 +289,5 @@ class SyncStubReferencesRequest(_message.Message):
     def __init__(self, module_config: _Optional[_Union[ModuleConfig, _Mapping]] = ..., stubs_root: _Optional[str] = ..., modules: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SyncStubReferencesResponse(_message.Message):
-    __slots__ = ()
-    def __init__(self) -> None: ...
-
-class RunnerStartedRequest(_message.Message):
-    __slots__ = ("address", "databases")
-    class Database(_message.Message):
-        __slots__ = ("name", "url")
-        NAME_FIELD_NUMBER: _ClassVar[int]
-        URL_FIELD_NUMBER: _ClassVar[int]
-        name: str
-        url: str
-        def __init__(self, name: _Optional[str] = ..., url: _Optional[str] = ...) -> None: ...
-    ADDRESS_FIELD_NUMBER: _ClassVar[int]
-    DATABASES_FIELD_NUMBER: _ClassVar[int]
-    address: str
-    databases: _containers.RepeatedCompositeFieldContainer[RunnerStartedRequest.Database]
-    def __init__(self, address: _Optional[str] = ..., databases: _Optional[_Iterable[_Union[RunnerStartedRequest.Database, _Mapping]]] = ...) -> None: ...
-
-class RunnerStartedResponse(_message.Message):
     __slots__ = ()
     def __init__(self) -> None: ...
