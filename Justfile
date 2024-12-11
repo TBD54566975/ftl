@@ -48,7 +48,8 @@ DOCKER_IMAGES := '''
   "runner": {},
   "runner-jvm": {},
   "timeline": {},
-  "lease": {}
+  "lease": {},
+  "admin": {}
 }
 '''
 

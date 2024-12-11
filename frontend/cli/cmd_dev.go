@@ -48,6 +48,7 @@ func (d *devCmd) Run(
 	controllerClient ftlv1connect.ControllerServiceClient,
 	provisionerClient provisionerconnect.ProvisionerServiceClient,
 	verbClient ftlv1connect.VerbServiceClient,
+	adminClient ftlv1connect.AdminServiceClient,
 ) error {
 	startTime := time.Now()
 	logger := log.FromContext(ctx)
@@ -98,7 +99,7 @@ func (d *devCmd) Run(
 	controllerReady := make(chan bool, 1)
 	if !d.NoServe {
 		if d.ServeCmd.Stop {
-			err := d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, controllerClient, provisionerClient, schemaEventSourceFactory, verbClient, true, nil)
+			err := d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, controllerClient, provisionerClient, adminClient, schemaEventSourceFactory, verbClient, true, nil)
 			if err != nil {
 				return fmt.Errorf("failed to stop server: %w", err)
 			}
@@ -106,7 +107,7 @@ func (d *devCmd) Run(
 		}
 
 		g.Go(func() error {
-			err := d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, controllerClient, provisionerClient, schemaEventSourceFactory, verbClient, true, devModeEndpointUpdates)
+			err := d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, controllerClient, provisionerClient, adminClient, schemaEventSourceFactory, verbClient, true, devModeEndpointUpdates)
 			cancel()
 			return err
 		})

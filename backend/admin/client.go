@@ -42,12 +42,20 @@ type Client interface {
 
 	// Unset a secret.
 	SecretUnset(ctx context.Context, req *connect.Request[ftlv1.SecretUnsetRequest]) (*connect.Response[ftlv1.SecretUnsetResponse], error)
+
+	// MapConfigsForModule combines all configuration values visible to the module.
+	// Local values take precedence.
+	MapConfigsForModule(ctx context.Context, req *connect.Request[ftlv1.MapConfigsForModuleRequest]) (*connect.Response[ftlv1.MapConfigsForModuleResponse], error)
+
+	// MapSecretsForModule combines all secrets visible to the module.
+	// Local values take precedence.
+	MapSecretsForModule(ctx context.Context, req *connect.Request[ftlv1.MapSecretsForModuleRequest]) (*connect.Response[ftlv1.MapSecretsForModuleResponse], error)
 }
 
 // ShouldUseLocalClient returns whether a local admin client should be used based on the admin service client and the endpoint.
 //
-// If the controller is not present AND endpoint is local, then a local client should be used
-// so that the user does not need to spin up a controller just to run the `ftl config/secret` commands.
+// If the service is not present AND endpoint is local, then a local client should be used
+// so that the user does not need to spin up a cluster just to run the `ftl config/secret` commands.
 //
 // If true is returned, use NewLocalClient() to create a local client after setting up config and secret managers for the context.
 func ShouldUseLocalClient(ctx context.Context, adminClient ftlv1connect.AdminServiceClient, endpoint *url.URL) (bool, error) {
