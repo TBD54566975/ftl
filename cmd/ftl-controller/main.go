@@ -69,8 +69,6 @@ func main() {
 	cm, err := manager.New(ctx, configResolver, providers.NewDatabaseConfig(configDal))
 	kctx.FatalIfErrorf(err)
 
-	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, cli.TimelineEndpoint))
-
 	leaseClient := rpc.Dial(ftlv1connect.NewLeaseServiceClient, cli.LeaseEndpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, leaseClient)
 	schemaClient := rpc.Dial(ftlv1connect2.NewSchemaServiceClient, cli.ControllerConfig.Bind.String(), log.Error)
@@ -83,6 +81,7 @@ func main() {
 	sm, err := manager.New[cf.Secrets](ctx, dbSecretResolver, asmSecretProvider)
 	kctx.FatalIfErrorf(err)
 
-	err = controller.Start(ctx, cli.ControllerConfig, storage, cm, sm, conn, false)
+	timelineClient := timeline.NewClient(ctx, cli.TimelineEndpoint)
+	err = controller.Start(ctx, cli.ControllerConfig, storage, cm, sm, timelineClient, conn, false)
 	kctx.FatalIfErrorf(err)
 }

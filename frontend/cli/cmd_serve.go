@@ -264,7 +264,7 @@ func (s *serveCommonConfig) run(
 		}
 
 		wg.Go(func() error {
-			if err := controller.Start(controllerCtx, config, storage, cm, sm, conn, true); err != nil {
+			if err := controller.Start(controllerCtx, config, storage, cm, sm, timelineClient, conn, true); err != nil {
 				logger.Errorf(err, "controller%d failed: %v", i, err)
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}
@@ -337,7 +337,7 @@ func (s *serveCommonConfig) run(
 	if !s.NoConsole {
 		// Start Console
 		wg.Go(func() error {
-			err := console.Start(ctx, s.Console, schemaEventSourceFactory(), controllerClient, timelineClient, adminClient, routing.NewVerbRouter(ctx, schemaEventSourceFactory()))
+			err := console.Start(ctx, s.Console, schemaEventSourceFactory(), controllerClient, timelineClient, adminClient, routing.NewVerbRouter(ctx, schemaEventSourceFactory(), timelineClient))
 			if err != nil {
 				return fmt.Errorf("console failed: %w", err)
 			}
@@ -354,7 +354,7 @@ func (s *serveCommonConfig) run(
 	})
 	// Start Cron
 	wg.Go(func() error {
-		err := cron.Start(ctx, schemaEventSourceFactory(), routing.NewVerbRouter(ctx, schemaEventSourceFactory()))
+		err := cron.Start(ctx, schemaEventSourceFactory(), routing.NewVerbRouter(ctx, schemaEventSourceFactory(), timelineClient), timelineClient)
 		if err != nil {
 			return fmt.Errorf("cron failed: %w", err)
 		}
@@ -362,8 +362,7 @@ func (s *serveCommonConfig) run(
 	})
 	// Start Ingress
 	wg.Go(func() error {
-		routeManager := routing.NewVerbRouter(ctx, schemaEventSourceFactory())
-		err := ingress.Start(ctx, s.Ingress, schemaEventSourceFactory(), routeManager)
+		err := ingress.Start(ctx, s.Ingress, schemaEventSourceFactory(), routing.NewVerbRouter(ctx, schemaEventSourceFactory(), timelineClient), timelineClient)
 		if err != nil {
 			return fmt.Errorf("ingress failed: %w", err)
 		}

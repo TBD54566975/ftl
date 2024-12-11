@@ -39,9 +39,9 @@ func main() {
 	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.CronConfig.SchemaServiceEndpoint.String(), log.Error)
 	eventSource := schemaeventsource.New(ctx, schemaClient)
 
-	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, cli.CronConfig.TimelineEndpoint))
+	timelineClient := timeline.NewClient(ctx, cli.CronConfig.TimelineEndpoint)
+	routeManager := routing.NewVerbRouter(ctx, schemaeventsource.New(ctx, schemaClient), timelineClient)
 
-	routeManager := routing.NewVerbRouter(ctx, schemaeventsource.New(ctx, schemaClient))
-	err = cron.Start(ctx, eventSource, routeManager)
+	err = cron.Start(ctx, eventSource, routeManager, timelineClient)
 	kctx.FatalIfErrorf(err, "failed to start cron")
 }

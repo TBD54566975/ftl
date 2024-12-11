@@ -564,8 +564,7 @@ func buildGraph(sch *schema.Schema, module *schema.Module, out map[string][]stri
 }
 
 func (s *service) GetTimeline(ctx context.Context, req *connect.Request[timelinepb.GetTimelineRequest]) (*connect.Response[timelinepb.GetTimelineResponse], error) {
-	client := timeline.ClientFromContext(ctx)
-	resp, err := client.GetTimeline(ctx, connect.NewRequest(req.Msg))
+	resp, err := s.timelineClient.GetTimeline(ctx, connect.NewRequest(req.Msg))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get timeline from service: %w", err)
 	}
@@ -573,8 +572,7 @@ func (s *service) GetTimeline(ctx context.Context, req *connect.Request[timeline
 }
 
 func (s *service) StreamTimeline(ctx context.Context, req *connect.Request[timelinepb.StreamTimelineRequest], out *connect.ServerStream[timelinepb.StreamTimelineResponse]) error {
-	client := timeline.ClientFromContext(ctx)
-	stream, err := client.StreamTimeline(ctx, req)
+	stream, err := s.timelineClient.StreamTimeline(ctx, connect.NewRequest(req.Msg))
 	if err != nil {
 		return fmt.Errorf("failed to stream timeline from service: %w", err)
 	}

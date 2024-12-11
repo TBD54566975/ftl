@@ -49,15 +49,17 @@ type Service struct {
 	verbRouting     *routing.VerbCallRouter
 	asyncCallsLock  sync.Mutex
 	controllerState state.ControllerState
+	timelineClient  *timeline.Client
 }
 
-func New(ctx context.Context, conn libdal.Connection, rt *routing.RouteTable, controllerState state.ControllerState) *Service {
+func New(ctx context.Context, conn libdal.Connection, rt *routing.RouteTable, controllerState state.ControllerState, timelineClient *timeline.Client) *Service {
 	m := &Service{
-		dal:             dal.New(conn),
+		dal:             dal.New(conn, timelineClient),
 		eventPublished:  make(chan struct{}),
 		routeTable:      rt,
-		verbRouting:     routing.NewVerbRouterFromTable(ctx, rt),
+		verbRouting:     routing.NewVerbRouterFromTable(ctx, rt, timelineClient),
 		controllerState: controllerState,
+		timelineClient:  timelineClient,
 	}
 	go m.watchEventStream(ctx)
 	go m.poll(ctx)
@@ -196,7 +198,7 @@ func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftlpubs
 	routes := s.routeTable.Current()
 	route, ok := routes.GetDeployment(module).Get()
 	if ok {
-		timeline.ClientFromContext(ctx).Publish(ctx, timeline.PubSubPublish{
+		s.timelineClient.Publish(ctx, timeline.PubSubPublish{
 			DeploymentKey: route,
 			RequestKey:    requestKey,
 			Time:          now,
@@ -266,7 +268,7 @@ func (s *Service) ExecuteAsyncCalls(ctx context.Context) (interval time.Duration
 			if e, ok := err.Get(); ok {
 				errStr = optional.Some(e.Error())
 			}
-			timeline.ClientFromContext(ctx).Publish(ctx, timeline.AsyncExecute{
+			s.timelineClient.Publish(ctx, timeline.AsyncExecute{
 				DeploymentKey: deployment,
 				RequestKey:    call.ParentRequestKey,
 				EventType:     eventType,

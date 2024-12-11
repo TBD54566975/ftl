@@ -66,7 +66,8 @@ func TestCron(t *testing.T) {
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{Level: log.Trace}))
 	timelineEndpoint, err := url.Parse("http://localhost:8080")
 	assert.NoError(t, err)
-	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, timelineEndpoint))
+
+	timelineClient := timeline.NewClient(ctx, timelineEndpoint)
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	t.Cleanup(cancel)
 
@@ -77,7 +78,7 @@ func TestCron(t *testing.T) {
 		requests: requestsch,
 	}
 
-	wg.Go(func() error { return Start(ctx, eventSource, client) })
+	wg.Go(func() error { return Start(ctx, eventSource, client, timelineClient) })
 
 	requests := make([]*ftlv1.CallRequest, 0, 2)
 

@@ -241,7 +241,6 @@ func makeBindContext(logger *log.Logger, cancel context.CancelFunc) terminal.Kon
 		kctx.BindTo(pubsubClient, (*ftlv1pubsubconnect.LegacyPubsubServiceClient)(nil))
 
 		timelineClient := timeline.NewClient(ctx, cli.TimelineEndpoint)
-		ctx = timeline.ContextWithClient(ctx, timelineClient)
 		kctx.Bind(timelineClient)
 
 		leaseClient := rpc.Dial(leasev1connext.NewLeaseServiceClient, cli.LeaseEndpoint.String(), log.Error)

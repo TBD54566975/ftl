@@ -23,10 +23,11 @@ import (
 
 type DAL struct {
 	*libdal.Handle[DAL]
-	db dalsql.Querier
+	db             dalsql.Querier
+	timelineClient *timeline.Client
 }
 
-func New(conn libdal.Connection) *DAL {
+func New(conn libdal.Connection, timelineClient *timeline.Client) *DAL {
 	return &DAL{
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{
@@ -34,7 +35,8 @@ func New(conn libdal.Connection) *DAL {
 				db:     dalsql.New(h.Connection),
 			}
 		}),
-		db: dalsql.New(conn),
+		db:             dalsql.New(conn),
+		timelineClient: timelineClient,
 	}
 }
 
@@ -108,7 +110,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 	for _, subscription := range subs {
 		now := time.Now().UTC()
 		enqueueTimelineEvent := func(destVerb optional.Option[schema.RefKey], err optional.Option[string]) {
-			timeline.ClientFromContext(ctx).Publish(ctx, &timeline.PubSubConsume{
+			d.timelineClient.Publish(ctx, &timeline.PubSubConsume{
 				DeploymentKey: subscription.DeploymentKey,
 				RequestKey:    subscription.RequestKey,
 				Time:          now,

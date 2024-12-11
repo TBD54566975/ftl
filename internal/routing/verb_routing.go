@@ -30,13 +30,13 @@ type CallClient interface {
 
 // VerbCallRouter managed clients for the routing service, so calls to a given module can be routed to the correct instance.
 type VerbCallRouter struct {
-	routingTable  *RouteTable
-	moduleClients *xsync.MapOf[string, optional.Option[ftlv1connect.VerbServiceClient]]
+	routingTable   *RouteTable
+	moduleClients  *xsync.MapOf[string, optional.Option[ftlv1connect.VerbServiceClient]]
+	timelineClient *timeline.Client
 }
 
 func (s *VerbCallRouter) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
-	timelineClient := timeline.ClientFromContext(ctx)
 
 	client, deployment, ok := s.LookupClient(req.Msg.Verb.Module)
 	if !ok {
@@ -71,21 +71,22 @@ func (s *VerbCallRouter) Call(ctx context.Context, req *connect.Request[ftlv1.Ca
 	originalResp, err := client.Call(ctx, req)
 	if err != nil {
 		callEvent.Response = result.Err[*ftlv1.CallResponse](err)
-		timelineClient.Publish(ctx, callEvent)
+		s.timelineClient.Publish(ctx, callEvent)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
 		return nil, fmt.Errorf("failed to call %s: %w", callEvent.DestVerb, err)
 	}
 	resp := connect.NewResponse(originalResp.Msg)
 	callEvent.Response = result.Ok(resp.Msg)
-	timelineClient.Publish(ctx, callEvent)
+	s.timelineClient.Publish(ctx, callEvent)
 	observability.Calls.Request(ctx, req.Msg.Verb, start, optional.None[string]())
 	return resp, nil
 }
 
-func NewVerbRouterFromTable(ctx context.Context, routeTable *RouteTable) *VerbCallRouter {
+func NewVerbRouterFromTable(ctx context.Context, routeTable *RouteTable, timelineClient *timeline.Client) *VerbCallRouter {
 	svc := &VerbCallRouter{
-		routingTable:  routeTable,
-		moduleClients: xsync.NewMapOf[string, optional.Option[ftlv1connect.VerbServiceClient]](),
+		routingTable:   routeTable,
+		moduleClients:  xsync.NewMapOf[string, optional.Option[ftlv1connect.VerbServiceClient]](),
+		timelineClient: timelineClient,
 	}
 	routeUpdates := svc.routingTable.Subscribe()
 	go func() {
@@ -100,8 +101,8 @@ func NewVerbRouterFromTable(ctx context.Context, routeTable *RouteTable) *VerbCa
 	}()
 	return svc
 }
-func NewVerbRouter(ctx context.Context, changes schemaeventsource.EventSource) *VerbCallRouter {
-	return NewVerbRouterFromTable(ctx, New(ctx, changes))
+func NewVerbRouter(ctx context.Context, changes schemaeventsource.EventSource, timelineClient *timeline.Client) *VerbCallRouter {
+	return NewVerbRouterFromTable(ctx, New(ctx, changes), timelineClient)
 }
 
 func (s *VerbCallRouter) LookupClient(module string) (client ftlv1connect.VerbServiceClient, deployment model.DeploymentKey, ok bool) {

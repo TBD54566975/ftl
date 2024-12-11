@@ -48,7 +48,7 @@ func main() {
 	adminClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, cli.AdminEndpoint.String(), log.Error)
 	eventSource := schemaeventsource.New(ctx, schemaClient)
 
-	routeManager := routing.NewVerbRouter(ctx, schemaeventsource.New(ctx, schemaClient))
+	routeManager := routing.NewVerbRouter(ctx, schemaeventsource.New(ctx, schemaClient), timelineClient)
 
 	err = console.Start(ctx, cli.ConsoleConfig, eventSource, controllerClient, timelineClient, adminClient, routeManager)
 	kctx.FatalIfErrorf(err, "failed to start console service")
