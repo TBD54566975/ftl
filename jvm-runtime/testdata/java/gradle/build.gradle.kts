@@ -13,8 +13,8 @@ val quarkusPlatformArtifactId: String by project
 val quarkusPlatformVersion: String by project
 
 dependencies {
-    implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
-    implementation("xyz.block.ftl:ftl-java-runtime:1.0-SNAPSHOT")
+    implementation(enforcedPlatform("xyz.block.ftl:ftl-jvm-parent:1.0-SNAPSHOT"))
+    implementation("xyz.block.ftl:ftl-java-runtime")
     testImplementation("io.quarkus:quarkus-junit5")
     testImplementation("io.rest-assured:rest-assured")
 }

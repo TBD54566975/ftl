@@ -16,3 +16,7 @@ plugins:
     out: ../../python-runtime/ftl/src/ftl/protos
     opt:
       - pyi_out=../../python-runtime/ftl/src/ftl/protos
+  - plugin: buf.build/grpc/java:v1.68.2
+    out: ../../jvm-runtime/ftl-runtime/common/runtime/src/main/java/
+  - plugin: buf.build/protocolbuffers/java:v29.0
+    out: ../../jvm-runtime/ftl-runtime/common/runtime/src/main/java/

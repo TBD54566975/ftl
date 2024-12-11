@@ -136,37 +136,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.xolstice.maven.plugins</groupId>
-                <artifactId>protobuf-maven-plugin</artifactId>
-                <version>0.6.1</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>compile</goal>
-                            <goal>compile-custom</goal>
-                            <goal>test-compile</goal>
-                            <goal>test-compile-custom</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <protocArtifact>com.google.protobuf:protoc:3.25.4:exe:${os.detected.classifier}</protocArtifact>
-                    <protoSourceRoot>${rootDir}/backend/protos</protoSourceRoot>
-                    <pluginId>grpc-java</pluginId>
-                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.65.1:exe:${os.detected.classifier}</pluginArtifact>
-                    <includes>
-                        <include>**/schema.proto</include>
-                        <include>**/verb.proto</include>
-                        <include>**/deployment.proto</include>
-                        <include>**/lease.proto</include>
-                        <include>**/ftl.proto</include>
-                        <include>**/language.proto</include>
-                        <include>**/publish.proto</include>
-                        <include>**/pubsub.proto</include>
-                    </includes>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
 </project>
