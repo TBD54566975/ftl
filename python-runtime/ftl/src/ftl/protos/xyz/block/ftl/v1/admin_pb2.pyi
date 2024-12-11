@@ -12,7 +12,6 @@ class ConfigProvider(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     CONFIG_PROVIDER_UNSPECIFIED: _ClassVar[ConfigProvider]
     CONFIG_PROVIDER_INLINE: _ClassVar[ConfigProvider]
     CONFIG_PROVIDER_ENVAR: _ClassVar[ConfigProvider]
-    CONFIG_PROVIDER_DB: _ClassVar[ConfigProvider]
 
 class SecretProvider(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -25,7 +24,6 @@ class SecretProvider(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
 CONFIG_PROVIDER_UNSPECIFIED: ConfigProvider
 CONFIG_PROVIDER_INLINE: ConfigProvider
 CONFIG_PROVIDER_ENVAR: ConfigProvider
-CONFIG_PROVIDER_DB: ConfigProvider
 SECRET_PROVIDER_UNSPECIFIED: SecretProvider
 SECRET_PROVIDER_INLINE: SecretProvider
 SECRET_PROVIDER_ENVAR: SecretProvider

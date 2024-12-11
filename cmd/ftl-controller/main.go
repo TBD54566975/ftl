@@ -17,7 +17,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/timeline"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	cf "github.com/TBD54566975/ftl/internal/configuration"
-	cfdal "github.com/TBD54566975/ftl/internal/configuration/dal"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/configuration/routers"
@@ -60,13 +59,9 @@ func main() {
 	// The FTL controller currently only supports DB as a cf provider/resolver.
 	conn, err := cli.ControllerConfig.OpenDBAndInstrument()
 	kctx.FatalIfErrorf(err)
-
-	kctx.FatalIfErrorf(err)
-
-	configDal := cfdal.New(conn)
-	kctx.FatalIfErrorf(err)
-	configResolver := routers.NewDatabaseConfig(configDal)
-	cm, err := manager.New(ctx, configResolver, providers.NewDatabaseConfig(configDal))
+	configResolver := routers.NoopRouter[cf.Configuration]{}
+	inline := providers.NewInline[cf.Configuration]()
+	cm, err := manager.New[cf.Configuration](ctx, &configResolver, inline)
 	kctx.FatalIfErrorf(err)
 
 	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, cli.TimelineEndpoint))
@@ -79,8 +74,8 @@ func main() {
 	awsConfig, err := config.LoadDefaultConfig(ctx)
 	kctx.FatalIfErrorf(err)
 	asmSecretProvider := providers.NewASM(secretsmanager.NewFromConfig(awsConfig))
-	dbSecretResolver := routers.NewDatabaseSecrets(configDal)
-	sm, err := manager.New[cf.Secrets](ctx, dbSecretResolver, asmSecretProvider)
+	router := routers.NoopRouter[cf.Secrets]{}
+	sm, err := manager.New[cf.Secrets](ctx, &router, asmSecretProvider)
 	kctx.FatalIfErrorf(err)
 
 	err = controller.Start(ctx, cli.ControllerConfig, storage, cm, sm, conn, false)

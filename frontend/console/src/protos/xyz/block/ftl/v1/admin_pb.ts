@@ -28,20 +28,12 @@ export enum ConfigProvider {
    * @generated from enum value: CONFIG_PROVIDER_ENVAR = 2;
    */
   ENVAR = 2,
-
-  /**
-   * Use the database as a configuration store.
-   *
-   * @generated from enum value: CONFIG_PROVIDER_DB = 3;
-   */
-  DB = 3,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ConfigProvider)
 proto3.util.setEnumType(ConfigProvider, "xyz.block.ftl.v1.ConfigProvider", [
   { no: 0, name: "CONFIG_PROVIDER_UNSPECIFIED" },
   { no: 1, name: "CONFIG_PROVIDER_INLINE" },
   { no: 2, name: "CONFIG_PROVIDER_ENVAR" },
-  { no: 3, name: "CONFIG_PROVIDER_DB" },
 ]);
 
 /**
