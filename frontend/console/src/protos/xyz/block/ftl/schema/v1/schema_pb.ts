@@ -2607,6 +2607,84 @@ export class Ref extends Message<Ref> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.schema.v1.RuntimeEvent
+ */
+export class RuntimeEvent extends Message<RuntimeEvent> {
+  /**
+   * @generated from oneof xyz.block.ftl.schema.v1.RuntimeEvent.value
+   */
+  value: {
+    /**
+     * @generated from field: xyz.block.ftl.schema.v1.DatabaseRuntimeEvent database_runtime_event = 5;
+     */
+    value: DatabaseRuntimeEvent;
+    case: "databaseRuntimeEvent";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.schema.v1.ModuleRuntimeBase module_runtime_base = 1;
+     */
+    value: ModuleRuntimeBase;
+    case: "moduleRuntimeBase";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.schema.v1.ModuleRuntimeDeployment module_runtime_deployment = 3;
+     */
+    value: ModuleRuntimeDeployment;
+    case: "moduleRuntimeDeployment";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.schema.v1.ModuleRuntimeScaling module_runtime_scaling = 2;
+     */
+    value: ModuleRuntimeScaling;
+    case: "moduleRuntimeScaling";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.schema.v1.TopicRuntimeEvent topic_runtime_event = 6;
+     */
+    value: TopicRuntimeEvent;
+    case: "topicRuntimeEvent";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.schema.v1.VerbRuntimeEvent verb_runtime_event = 4;
+     */
+    value: VerbRuntimeEvent;
+    case: "verbRuntimeEvent";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<RuntimeEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.schema.v1.RuntimeEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 5, name: "database_runtime_event", kind: "message", T: DatabaseRuntimeEvent, oneof: "value" },
+    { no: 1, name: "module_runtime_base", kind: "message", T: ModuleRuntimeBase, oneof: "value" },
+    { no: 3, name: "module_runtime_deployment", kind: "message", T: ModuleRuntimeDeployment, oneof: "value" },
+    { no: 2, name: "module_runtime_scaling", kind: "message", T: ModuleRuntimeScaling, oneof: "value" },
+    { no: 6, name: "topic_runtime_event", kind: "message", T: TopicRuntimeEvent, oneof: "value" },
+    { no: 4, name: "verb_runtime_event", kind: "message", T: VerbRuntimeEvent, oneof: "value" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RuntimeEvent {
+    return new RuntimeEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RuntimeEvent {
+    return new RuntimeEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RuntimeEvent {
+    return new RuntimeEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RuntimeEvent | PlainMessage<RuntimeEvent> | undefined, b: RuntimeEvent | PlainMessage<RuntimeEvent> | undefined): boolean {
+    return proto3.util.equals(RuntimeEvent, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.schema.v1.Schema
  */
 export class Schema extends Message<Schema> {

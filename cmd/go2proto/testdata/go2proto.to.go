@@ -30,7 +30,6 @@ func protoSlicef[P, T any](values []T, f func(T) P) []P {
 	return out
 }
 
-
 func (x Enum) ToProto() destpb.Enum {
 	return destpb.Enum(x)
 }
@@ -40,7 +39,7 @@ func (x *Message) ToProto() *destpb.Message {
 		return nil
 	}
 	return &destpb.Message{
-		Time: timestamppb.New(x.Time),
+		Time:     timestamppb.New(x.Time),
 		Duration: durationpb.New(x.Duration),
 	}
 }
@@ -50,16 +49,52 @@ func (x *Root) ToProto() *destpb.Root {
 		return nil
 	}
 	return &destpb.Root{
-		Int: int64(x.Int),
-		String_: string(x.String),
-		MessagePtr: x.MessagePtr.ToProto(),
-		Enum: x.Enum.ToProto(),
-		SumType: SumTypeToProto(x.SumType),
-		OptionalInt: proto.Int64(int64(x.OptionalInt)),
+		Int:            int64(x.Int),
+		String_:        string(x.String),
+		MessagePtr:     x.MessagePtr.ToProto(),
+		Enum:           x.Enum.ToProto(),
+		SumType:        SumTypeToProto(x.SumType),
+		OptionalInt:    proto.Int64(int64(x.OptionalInt)),
 		OptionalIntPtr: proto.Int64(int64(*x.OptionalIntPtr)),
 		OptionalMsg: x.OptionalMsg.ToProto(),
 		RepeatedInt: protoSlicef(x.RepeatedInt, func(v int) int64 { return int64(v) }),
 		RepeatedMsg: protoSlice[*destpb.Message](x.RepeatedMsg),
+	}
+}
+
+// SubSumTypeToProto converts a SubSumType sum type to a protobuf message.
+func SubSumTypeToProto(value SubSumType) *destpb.SubSumType {
+	switch value := value.(type) {
+	case nil:
+		return nil
+	case *SubSumTypeA:
+		return &destpb.SubSumType{
+			Value: &destpb.SubSumType_A{value.ToProto()},
+		}
+	case *SubSumTypeB:
+		return &destpb.SubSumType{
+			Value: &destpb.SubSumType_B{value.ToProto()},
+		}
+	default:
+		panic(fmt.Sprintf("unknown variant: %T", value))
+	}
+}
+
+func (x *SubSumTypeA) ToProto() *destpb.SubSumTypeA {
+	if x == nil {
+		return nil
+	}
+	return &destpb.SubSumTypeA{
+		A: string(x.A),
+	}
+}
+
+func (x *SubSumTypeB) ToProto() *destpb.SubSumTypeB {
+	if x == nil {
+		return nil
+	}
+	return &destpb.SubSumTypeB{
+		A: string(x.A),
 	}
 }
 
@@ -68,6 +103,14 @@ func SumTypeToProto(value SumType) *destpb.SumType {
 	switch value := value.(type) {
 	case nil:
 		return nil
+	case *SubSumTypeA:
+		return &destpb.SumType{
+			Value: &destpb.SumType_SubSumTypeA{value.ToProto()},
+		}
+	case *SubSumTypeB:
+		return &destpb.SumType{
+			Value: &destpb.SumType_SubSumTypeB{value.ToProto()},
+		}
 	case *SumTypeA:
 		return &destpb.SumType{
 			Value: &destpb.SumType_A{value.ToProto()},
@@ -111,5 +154,3 @@ func (x *SumTypeC) ToProto() *destpb.SumTypeC {
 		C: float64(x.C),
 	}
 }
-
-		
