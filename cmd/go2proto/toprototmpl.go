@@ -13,13 +13,13 @@ import (
 
 var _ fmt.Stringer
 
-var go2protoTmpl = template.Must(template.New("go2proto.mapper.go").
+var go2protoTmpl = template.Must(template.New("go2proto.to.go.tmpl").
 	Funcs(template.FuncMap{
 		"typeof": func(t any) string { return reflect.Indirect(reflect.ValueOf(t)).Type().Name() },
 		// Return true if the type is a builtin proto type.
 		"isBuiltin": func(t Field) bool {
-			switch t.Type {
-			case "int32", "int64", "uint32", "uint64", "float", "double", "bool", "string":
+			switch t.OriginType {
+			case "int", "uint", "int32", "int64", "uint32", "uint64", "float32", "float64", "bool", "string":
 				return true
 			}
 			return false
@@ -88,34 +88,34 @@ func (x *{{ .Name }}) ToProto() *destpb.{{ .Name }} {
 {{- if $field.Optional}}
 		{{ $field.EscapedName }}: proto.{{ $field.ProtoGoType | toUpperCamel }}({{ $field.ProtoGoType }}({{if $field.Pointer}}*{{end}}x.{{ $field.Name }})),
 {{- else if .Repeated}}
-		{{ $field.EscapedName }}: protoSlicef(x.{{ $field.Name }}, func(v {{ $field.Type }}) {{ $field.ProtoGoType }} { return {{ $field.ProtoGoType }}(v) }),
+		{{ $field.EscapedName }}: protoSlicef(x.{{ $field.Name }}, func(v {{ $field.OriginType }}) {{ $field.ProtoGoType }} { return {{ $field.ProtoGoType }}(v) }),
 {{- else }}
 		{{ $field.EscapedName }}: {{ $field.ProtoGoType }}(x.{{ $field.Name }}),
 {{- end}}
-{{- else if eq $field.Type "google.protobuf.Timestamp" }}
+{{- else if eq $field.ProtoType "google.protobuf.Timestamp" }}
 		{{ $field.EscapedName }}: timestamppb.New(x.{{ $field.Name }}),
-{{- else if eq $field.Type "google.protobuf.Duration" }}
+{{- else if eq $field.ProtoType "google.protobuf.Duration" }}
 		{{ $field.EscapedName }}: durationpb.New(x.{{ $field.Name }}),
-{{- else if eq (.Type | $.TypeOf) "Message" }}
+{{- else if eq (.OriginType | $.TypeOf) "Message" }}
 {{- if .Repeated }}
-		{{ $field.EscapedName }}: protoSlice[*destpb.{{ .Type }}](x.{{ $field.Name }}),
+		{{ $field.EscapedName }}: protoSlice[*destpb.{{ .ProtoGoType }}](x.{{ $field.Name }}),
 {{- else}}
 		{{ $field.EscapedName }}: x.{{ $field.Name }}.ToProto(),
 {{- end}}
-{{- else if eq (.Type | $.TypeOf) "Enum" }}
+{{- else if eq (.OriginType | $.TypeOf) "Enum" }}
 {{- if .Repeated }}
 		{{ $field.EscapedName }}: protoSlice[destpb.{{ .Type }}](x.{{ $field.Name }}),
 {{- else}}
 		{{ $field.EscapedName }}: x.{{ $field.Name }}.ToProto(),
 {{- end}}
-{{- else if eq (.Type | $.TypeOf) "SumType" }}
+{{- else if eq (.OriginType | $.TypeOf) "SumType" }}
 {{- if .Repeated }}
-		{{ $field.EscapedName }}: protoSlicef(x.{{ $field.Name }}, {{$field.Type}}ToProto),
+		{{ $field.EscapedName }}: protoSlicef(x.{{ $field.Name }}, {{$field.OriginType}}ToProto),
 {{- else}}
-		{{ $field.EscapedName }}: {{ $field.Type }}ToProto(x.{{ $field.Name }}),
+		{{ $field.EscapedName }}: {{ $field.OriginType }}ToProto(x.{{ $field.Name }}),
 {{- end}}
 {{- else }}
-		{{ $field.EscapedName }}: ??, // x.{{ $field.Name }}.ToProto() // Unknown type: {{ $field.Type }}
+		{{ $field.EscapedName }}: ??, // x.{{ $field.Name }}.ToProto() // Unknown type: {{ $field.OriginType }}
 {{- end}}
 {{- end}}
 	}

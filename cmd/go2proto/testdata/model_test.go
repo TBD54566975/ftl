@@ -21,6 +21,8 @@ func TestModel(t *testing.T) {
 		OptionalInt:    2,
 		OptionalIntPtr: &intv,
 		OptionalMsg:    &Message{Time: time.Now()},
+		RepeatedInt:    []int{1, 2, 3},
+		RepeatedMsg:    []*Message{&Message{Time: time.Now()}, &Message{Time: time.Now()}},
 	}
 	pb := model.ToProto()
 	data, err := proto.Marshal(pb)

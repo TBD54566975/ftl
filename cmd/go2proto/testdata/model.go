@@ -5,16 +5,16 @@ import (
 )
 
 type Root struct {
-	Int            int      `protobuf:"1"`
-	String         string   `protobuf:"2"`
-	MessagePtr     *Message `protobuf:"4"`
-	Enum           Enum     `protobuf:"5"`
-	SumType        SumType  `protobuf:"6"`
-	OptionalInt    int      `protobuf:"7,optional"`
-	OptionalIntPtr *int     `protobuf:"8,optional"`
-	OptionalMsg    *Message `protobuf:"9,optional"`
-	// RepeatedInt []int     `protobuf:"9"`
-	// RepeatedMsg []Message `protobuf:"10"`
+	Int            int        `protobuf:"1"`
+	String         string     `protobuf:"2"`
+	MessagePtr     *Message   `protobuf:"4"`
+	Enum           Enum       `protobuf:"5"`
+	SumType        SumType    `protobuf:"6"`
+	OptionalInt    int        `protobuf:"7,optional"`
+	OptionalIntPtr *int       `protobuf:"8,optional"`
+	OptionalMsg    *Message   `protobuf:"9,optional"`
+	RepeatedInt    []int      `protobuf:"10"`
+	RepeatedMsg    []*Message `protobuf:"11"`
 }
 
 type Message struct {

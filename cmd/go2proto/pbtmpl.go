@@ -34,7 +34,7 @@ option {{ $name }} = {{ $value }};
 {{- if eq (typeof $decl) "Message" }}
 message {{ .Name }} {
 {{- range $name, $field := .Fields }}
-  {{ if .Repeated }}repeated {{else if .Optional}}optional {{ end }}{{ .Type }} {{ .Name | toLowerSnake }} = {{ .ID }};
+  {{ if .Repeated }}repeated {{else if .Optional}}optional {{ end }}{{ .ProtoType }} {{ .Name | toLowerSnake }} = {{ .ID }};
 {{- end }}
 }
 {{- else if eq (typeof $decl) "Enum" }}
