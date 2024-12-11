@@ -99,9 +99,8 @@ func (c *consumer) subscribe(ctx context.Context, group sarama.ConsumerGroup) {
 	defer group.Close()
 	// Iterate over consumer sessions.
 	//
-	// `Consume` should be called inside an infinite loop, when a
-	// server-side rebalance happens, the consumer session will need to be
-	// recreated to get the new claims.
+	// `Consume` should be called inside an infinite loop, when a server-side rebalance happens,
+	// the consumer session will need to be recreated to get the new claims.
 	for {
 		select {
 		case <-ctx.Done():
@@ -128,23 +127,21 @@ func (c *consumer) Setup(session sarama.ConsumerGroupSession) error {
 	return nil
 }
 
-// Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
-// but before the offsets are committed for the very last time.
+// Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited but before the
+// offsets are committed for the very last time.
 func (c *consumer) Cleanup(session sarama.ConsumerGroupSession) error {
 	return nil
 }
 
-// ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
-// Once the Messages() channel is closed, the Handler must finish its processing
-// loop and exit.
+// ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages(). Once the Messages() channel
+// is closed, the Handler must finish its processing loop and exit.
 func (c *consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	ctx := session.Context()
 	logger := log.FromContext(ctx)
 	for msg := range claim.Messages() {
 		start := time.Now()
 
-		// TODO: request id, what should it look like?
-		requestKey := model.NewRequestKey(model.OriginPubsub, c.verb.Name)
+		requestKey := model.NewRequestKey(model.OriginPubsub, schema.RefKey{Module: c.moduleName, Name: c.verb.Name}.String())
 		logger.Debugf("%s: consuming message (%v:%v): %v", c.verb.Name, msg.Partition, msg.Offset, string(msg.Value))
 		destRef := &schema.Ref{
 			Module: c.moduleName,

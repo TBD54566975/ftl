@@ -10,6 +10,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
@@ -55,16 +56,27 @@ func (p *publisher) publish(ctx context.Context, data []byte, key string, caller
 		Value: sarama.ByteEncoder(data),
 		Key:   sarama.StringEncoder(key),
 	})
-	// TODO: fill in details
+	if err != nil {
+		return fmt.Errorf("failed to get request key: %w", err)
+	}
+	requestKey, err := rpc.RequestKeyFromContext(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get request key: %w", err)
+	}
+	var requestKeyStr optional.Option[string]
+	if r, ok := requestKey.Get(); ok {
+		requestKeyStr = optional.Some(r.String())
+	}
+
 	timelineEvent := timeline.PubSubPublish{
 		DeploymentKey: p.deployment,
-		// RequestKey    optional.Option[string]
-		Time:       time.Now(),
-		SourceVerb: caller,
-		Topic:      p.topic.Name, // or is this a ref?
-		Partition:  int(partition),
-		Offset:     int(offset),
-		Request:    data,
+		RequestKey:    requestKeyStr,
+		Time:          time.Now(),
+		SourceVerb:    caller,
+		Topic:         p.topic.Name,
+		Partition:     int(partition),
+		Offset:        int(offset),
+		Request:       data,
 	}
 	if err != nil {
 		timelineEvent.Error = optional.Some(err.Error())
