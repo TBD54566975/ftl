@@ -3,6 +3,8 @@ package pubsub
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -16,6 +18,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type consumer struct {
@@ -103,7 +106,6 @@ func (c *consumer) subscribe(ctx context.Context, group sarama.ConsumerGroup) {
 		default:
 		}
 
-		logger.Debugf("Starting consume session for subscription %s", c.verb.Name)
 		err := group.Consume(ctx, []string{c.kafkaTopicID()}, c)
 		if err != nil {
 			logger.Errorf(err, "consume session failed for %s", c.verb.Name)
@@ -115,6 +117,11 @@ func (c *consumer) subscribe(ctx context.Context, group sarama.ConsumerGroup) {
 
 // Setup is run at the beginning of a new session, before ConsumeClaim.
 func (c *consumer) Setup(session sarama.ConsumerGroupSession) error {
+	logger := log.FromContext(session.Context())
+
+	partitions := session.Claims()[kafkaConsumerGroupID(c.moduleName, c.verb)]
+	logger.Debugf("Starting consume session for subscription %s with partitions: [%v]", c.verb.Name, strings.Join(slices.Map(partitions, func(partition int32) string { return strconv.Itoa(int(partition)) }), ","))
+
 	return nil
 }
 

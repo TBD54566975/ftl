@@ -422,24 +422,18 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				assert.NoError(t, err)
 				defer clusterAdmin.Close()
 
-				groups, err := clusterAdmin.ListConsumerGroups()
-				assert.NoError(t, err)
-				for name := range groups {
-					if strings.HasPrefix(name, "_") {
-						continue
+				// Try to reset up to 3 times
+				// There can be a slight delay for consumer groups to be empty after a previous run of FTL ends
+				for i := range 10 {
+					err = attemptToResetPubSub(clusterAdmin)
+					if err == nil {
+						break
 					}
-					assert.Contains(t, name, ".", "this doesn't look like a subscriber...")
-					err = clusterAdmin.DeleteConsumerGroup(name)
-					assert.NoError(t, err, "could not delete consumer group %s", name)
-				}
-				topics, err := clusterAdmin.ListTopics()
-				assert.NoError(t, err)
-				for name := range topics {
-					if strings.HasPrefix(name, "_") {
-						continue
+					if i == 9 {
+						assert.Error(t, err, "Error resetting pubsub")
 					}
-					err = clusterAdmin.DeleteTopic(name)
-					assert.NoError(t, err, "could not delete topic %s", name)
+					Infof("Error resetting pubsub, retrying in 1 seconds: %v", err)
+					time.Sleep(time.Second)
 				}
 			}
 
@@ -451,6 +445,36 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 		})
 		done()
 	}
+}
+
+func attemptToResetPubSub(admin sarama.ClusterAdmin) error {
+	groups, err := admin.ListConsumerGroups()
+	if err != nil {
+		return err
+	}
+	for name := range groups {
+		if strings.HasPrefix(name, "_") {
+			continue
+		}
+		err = admin.DeleteConsumerGroup(name)
+		if err != nil {
+			return fmt.Errorf("could not delete consumer group %s: %w", name, err)
+		}
+	}
+	topics, err := admin.ListTopics()
+	if err != nil {
+		return err
+	}
+	for name := range topics {
+		if strings.HasPrefix(name, "_") {
+			continue
+		}
+		err = admin.DeleteTopic(name)
+		if err != nil {
+			return fmt.Errorf("could not delete topic %s: %w", name, err)
+		}
+	}
+	return nil
 }
 
 func initWorkDir(t testing.TB, cwd string, opts options) string {
