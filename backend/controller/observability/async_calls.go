@@ -37,7 +37,7 @@ type AsyncCallMetrics struct {
 	queueDepth   metric.Int64Gauge
 }
 
-func initAsyncCallMetrics() (*AsyncCallMetrics, error) {
+func initAsyncCallMetrics() *AsyncCallMetrics {
 	result := &AsyncCallMetrics{
 		created:      noop.Int64Counter{},
 		acquired:     noop.Int64Counter{},
@@ -53,40 +53,40 @@ func initAsyncCallMetrics() (*AsyncCallMetrics, error) {
 	signalName := fmt.Sprintf("%s.created", asyncCallMeterName)
 	if result.created, err = meter.Int64Counter(signalName, metric.WithUnit("1"),
 		metric.WithDescription("the number of times that an async call was created")); err != nil {
-		return nil, wrapErr(signalName, err)
+		observability.FatalError(signalName, err)
 	}
 
 	signalName = fmt.Sprintf("%s.acquired", asyncCallMeterName)
 	if result.acquired, err = meter.Int64Counter(signalName, metric.WithUnit("1"),
 		metric.WithDescription("the number of times that the controller tries acquiring an async call")); err != nil {
-		return nil, wrapErr(signalName, err)
+		observability.FatalError(signalName, err)
 	}
 
 	signalName = fmt.Sprintf("%s.executed", asyncCallMeterName)
 	if result.executed, err = meter.Int64Counter(signalName, metric.WithUnit("1"),
 		metric.WithDescription("the number of times that the controller tries executing an async call")); err != nil {
-		return nil, wrapErr(signalName, err)
+		observability.FatalError(signalName, err)
 	}
 
 	signalName = fmt.Sprintf("%s.completed", asyncCallMeterName)
 	if result.completed, err = meter.Int64Counter(signalName, metric.WithUnit("1"),
 		metric.WithDescription("the number of times that the controller tries completing an async call")); err != nil {
-		return nil, wrapErr(signalName, err)
+		observability.FatalError(signalName, err)
 	}
 
 	signalName = fmt.Sprintf("%s.ms_to_complete", asyncCallMeterName)
 	if result.msToComplete, err = meter.Int64Histogram(signalName, metric.WithUnit("ms"),
 		metric.WithDescription("duration in ms to complete an async call, from the earliest time it was scheduled to execute")); err != nil {
-		return nil, wrapErr(signalName, err)
+		observability.FatalError(signalName, err)
 	}
 
 	signalName = fmt.Sprintf("%s.queue_depth", asyncCallMeterName)
 	if result.queueDepth, err = meter.Int64Gauge(signalName, metric.WithUnit("1"),
 		metric.WithDescription("number of async calls queued up")); err != nil {
-		return nil, wrapErr(signalName, err)
+		observability.FatalError(signalName, err)
 	}
 
-	return result, nil
+	return result
 }
 
 func (m *AsyncCallMetrics) Created(ctx context.Context, verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, remainingAttempts int64, maybeErr error) {
@@ -125,7 +125,7 @@ func (m *AsyncCallMetrics) Executed(ctx context.Context, verb schema.RefKey, cat
 }
 
 func (m *AsyncCallMetrics) Completed(ctx context.Context, verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, scheduledAt time.Time, isCatching bool, queueDepth int64, maybeErr error) {
-	msToComplete := timeSinceMS(scheduledAt)
+	msToComplete := observability.TimeSinceMS(scheduledAt)
 
 	attrs := extractRefAttrs(verb, catchVerb, origin, isCatching)
 	attrs = append(attrs, observability.SuccessOrFailureStatusAttr(maybeErr == nil))
@@ -160,11 +160,11 @@ func RetrieveTraceContextFromContext(ctx context.Context) ([]byte, error) {
 }
 
 func extractAsyncCallAttrs(verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, scheduledAt time.Time, isCatching bool) []attribute.KeyValue {
-	return append(extractRefAttrs(verb, catchVerb, origin, isCatching), attribute.String(asyncCallTimeSinceScheduledAtBucketAttr, asyncLogBucket(timeSinceMS(scheduledAt))))
+	return append(extractRefAttrs(verb, catchVerb, origin, isCatching), attribute.String(asyncCallTimeSinceScheduledAtBucketAttr, asyncLogBucket(observability.TimeSinceMS(scheduledAt))))
 }
 
 func asyncLogBucket(msToComplete int64) string {
-	return logBucket(4, msToComplete, optional.Some(4), optional.Some(6))
+	return observability.LogBucket(4, msToComplete, optional.Some(4), optional.Some(6))
 }
 
 func extractRefAttrs(verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, isCatching bool) []attribute.KeyValue {

@@ -30,7 +30,7 @@ type CallMetrics struct {
 	callTracer   trace.Tracer
 }
 
-func initCallMetrics() (*CallMetrics, error) {
+func initCallMetrics() *CallMetrics {
 	provider := otel.GetTracerProvider()
 	result := &CallMetrics{
 		requests:     noop.Int64Counter{},
@@ -44,16 +44,16 @@ func initCallMetrics() (*CallMetrics, error) {
 	signalName := fmt.Sprintf("%s.requests", callMeterName)
 	if result.requests, err = meter.Int64Counter(signalName, metric.WithUnit("1"),
 		metric.WithDescription("the number of times that the FTL controller receives a verb call request")); err != nil {
-		return nil, wrapErr(signalName, err)
+		observability.FatalError(signalName, err)
 	}
 
 	signalName = fmt.Sprintf("%s.ms_to_complete", callMeterName)
 	if result.msToComplete, err = meter.Int64Histogram(signalName, metric.WithUnit("ms"),
 		metric.WithDescription("duration in ms to complete a verb call")); err != nil {
-		return nil, wrapErr(signalName, err)
+		observability.FatalError(signalName, err)
 	}
 
-	return result, nil
+	return result
 }
 
 func (m *CallMetrics) BeginSpan(ctx context.Context, verb *schemapb.Ref) (context.Context, trace.Span) {
@@ -74,9 +74,9 @@ func (m *CallMetrics) Request(ctx context.Context, verb *schemapb.Ref, startTime
 		attrs = append(attrs, attribute.String(callFailureModeAttr, failureMode))
 	}
 
-	msToComplete := timeSinceMS(startTime)
+	msToComplete := observability.TimeSinceMS(startTime)
 	m.msToComplete.Record(ctx, msToComplete, metric.WithAttributes(attrs...))
 
-	attrs = append(attrs, attribute.String(callRunTimeBucketAttr, logBucket(4, msToComplete, optional.Some(3), optional.Some(7))))
+	attrs = append(attrs, attribute.String(callRunTimeBucketAttr, observability.LogBucket(4, msToComplete, optional.Some(3), optional.Some(7))))
 	m.requests.Add(ctx, 1, metric.WithAttributes(attrs...))
 }

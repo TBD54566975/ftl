@@ -12,7 +12,6 @@ import (
 	"github.com/alecthomas/types/optional"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-	"github.com/TBD54566975/ftl/backend/controller/observability"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/cors"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
@@ -82,7 +81,7 @@ func (s *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	routes := state.routes[r.Method]
 	if len(routes) == 0 {
 		http.NotFound(w, r)
-		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("route not found in dal"))
+		metrics.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("route not found in dal"))
 		return
 	}
 	handleHTTP(start, state.schema, requestKey, routes, w, r, s.client)

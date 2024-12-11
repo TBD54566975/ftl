@@ -9,7 +9,6 @@ import (
 	"github.com/alecthomas/atomic"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/TBD54566975/ftl/backend/controller/observability"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -115,8 +114,8 @@ func (c *Client) flushEvents(ctx context.Context, entries []*timelinepb.CreateEv
 			logger.Errorf(err, "Failed to insert %d events", len(entries))
 			c.lastFailedError.Store(time.Now())
 		}
-		observability.Timeline.Failed(ctx, len(entries))
+		metrics.Failed(ctx, len(entries))
 		return
 	}
-	observability.Timeline.Inserted(ctx, len(entries))
+	metrics.Inserted(ctx, len(entries))
 }

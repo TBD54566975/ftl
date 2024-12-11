@@ -95,7 +95,7 @@ func TestLogBucket(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.want, logBucket(test.base, int64(test.num), test.min, test.max))
+			assert.Equal(t, test.want, LogBucket(test.base, int64(test.num), test.min, test.max))
 		})
 	}
 }
