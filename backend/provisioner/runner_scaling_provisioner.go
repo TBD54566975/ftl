@@ -84,7 +84,7 @@ func provisionRunner(scaling scaling.RunnerScaling) InMemResourceProvisionerFn {
 			}
 		}
 
-		logger.Infof("updating module runtime for %s with endpoint %s", module, endpointURI)
+		logger.Debugf("updating module runtime for %s with endpoint %s", module, endpointURI)
 		_, err = schemaClient.UpdateDeploymentRuntime(ctx, connect.NewRequest(&ftlv1.UpdateDeploymentRuntimeRequest{Deployment: deployment, Event: &schemapb.ModuleRuntimeEvent{Value: &schemapb.ModuleRuntimeEvent_ModuleRuntimeDeployment{ModuleRuntimeDeployment: &schemapb.ModuleRuntimeDeployment{DeploymentKey: deployment, Endpoint: endpointURI}}}}))
 		if err != nil {
 			return nil, fmt.Errorf("failed to update module runtime: %w", err)

@@ -210,14 +210,12 @@ func (s *serveCommonConfig) run(
 		controllerAddresses = append(controllerAddresses, controllerBind)
 	}
 
-	for _, addr := range controllerAddresses {
-		// Add controller address to allow origins for console requests.
-		// The console is run on `localhost` so we replace 127.0.0.1 with localhost.
-		if addr.Hostname() == "127.0.0.1" {
-			addr.Host = "localhost" + ":" + addr.Port()
-		}
-		s.Ingress.AllowOrigins = append(s.Ingress.AllowOrigins, addr)
+	// Add console address to allow origins for console requests.
+	consoleURL, err := url.Parse("http://127.0.0.1:8899")
+	if err != nil {
+		return fmt.Errorf("could not parse console URL: %w", err)
 	}
+	s.Ingress.AllowOrigins = append(s.Ingress.AllowOrigins, consoleURL)
 
 	provisionerAddresses := make([]*url.URL, 0, s.Provisioners)
 	for range s.Provisioners {
