@@ -10,7 +10,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
+	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/flock"
 )
@@ -25,7 +25,7 @@ func OpenForTesting(ctx context.Context, t testing.TB) *sql.DB {
 	assert.NoError(t, err)
 	t.Cleanup(func() { _ = release() }) //nolint:errcheck
 
-	conn, err := databasetesting.CreateForDevel(ctx, dsn.PostgresDSN("ftl-test"), true)
+	conn, err := dev.CreateForDevel(ctx, dsn.PostgresDSN("ftl-test"), true)
 	assert.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, conn.Close()) })
 	return conn

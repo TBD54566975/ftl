@@ -11,10 +11,10 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 
+	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/slices"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type topicState struct {

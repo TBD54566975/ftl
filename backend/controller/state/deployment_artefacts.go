@@ -1,7 +1,7 @@
 package state
 
 import (
-	"github.com/TBD54566975/ftl/internal/sha256"
+	"github.com/TBD54566975/ftl/common/sha256"
 )
 
 type DeploymentArtefact struct {

@@ -50,6 +50,7 @@ func TestNonFTLTypes(t *testing.T) {
 }
 
 func TestNonStructRequestResponse(t *testing.T) {
+	t.Skip("Skipping until there has been a release with the package change")
 	in.Run(t,
 		in.CopyModule("two"),
 		in.Deploy("two"),

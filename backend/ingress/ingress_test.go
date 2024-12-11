@@ -7,7 +7,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/common/schema"
 )
 
 type obj = map[string]any

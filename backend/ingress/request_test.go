@@ -10,9 +10,9 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/go-runtime/encoding"
+	"github.com/TBD54566975/ftl/common/encoding"
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type AliasRequest struct {

@@ -6,7 +6,7 @@ import (
 	"slices"
 
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
-	islices "github.com/TBD54566975/ftl/internal/slices"
+	islices "github.com/TBD54566975/ftl/common/slices"
 )
 
 type TimelineFilter func(event *timelinepb.Event) bool

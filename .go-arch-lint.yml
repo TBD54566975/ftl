@@ -4,18 +4,20 @@ workdir: .
 components:
   controller: { in: backend/controller/** }
   ftl-controller-cmd: { in: cmd/ftl-controller/** }
+  common-plugin: { in: common/plugin/** }
   common: { in: common/** }
+  common-tests: { in: common/internal/tests/** }
   internal: { in: internal/** }
+  ftl-version: { in: . }
 
-  protos: { in: backend/protos/** }
   libdal: { in: backend/libdal/** }
   lease-service: { in: backend/lease/** }
   cron-service: { in: backend/cron/** }
   ingress-service: { in: backend/ingress/** }
   timeline-service: { in: backend/timeline/** }
   provisioner-service: { in: backend/provisioner/** }
+  backend-protos: {in: backend/protos/**}
 
-  schema: { in: internal/schema/** }
   ftl: { in: . }
 
   go-runtime: { in: go-runtime/** }
@@ -30,7 +32,7 @@ components:
   ftl-runner-cmd: { in: cmd/ftl-runner/** }
   ftl-gen-lsp-cmd: { in: cmd/ftl-gen-lsp/** }
   ftl-initdb-cmd: { in: cmd/ftl-initdb/** }
-  ftl-ftl-provisioner-cloudformation-cmd: { in: cmd/ftl-provisioner-cloudformation/** }
+  ftl-provisioner-cloudformation-cmd: { in: cmd/ftl-provisioner-cloudformation/** }
   ftl-lease-cmd: { in: cmd/ftl-lease/** }
   ftl-http-ingress-cmd: { in: cmd/ftl-http-ingress/** }
   ftl-cron-cmd: { in: cmd/ftl-cron/** }
@@ -42,13 +44,6 @@ components:
   go2proto: { in: cmd/go2proto/** }
 
   lint-commit-or-rollback-cmd: { in: cmd/lint-commit-or-rollback/** }
-  databasetesting: { in: backend/controller/sql/databasetesting/** }
-  sql: { in: backend/controller/sql/** }
-  # TODO: Nothing outside of the go-runtime package should depend on reflection.
-  reflection: { in: go-runtime/ftl/reflection/** }
-  # TODO: Nothing outside of the go-runtime package should depend on reflection.
-  encoding: { in: go-runtime/encoding/** }
-  leases: { in: backend/controller/leases/** }
 
   smoketest: { in: smoketest/** }
 
@@ -64,32 +59,47 @@ allow:
 
 commonComponents:
   - common
-  - internal
-  - protos
-  - schema
-  - ftl
-  - libdal
+  - ftl-version
 
 deps:
+  backend-protos:
+    mayDependOn:
+      - backend-protos
+      - internal
   controller:
     mayDependOn:
       - controller
       - frontend
       - timeline-service #TODO: Timeline should have a separate client package.
+      - internal
+      - libdal
+      - backend-protos
+  frontend:
+    mayDependOn:
+      - internal
   runner:
     mayDependOn:
       - runner
+      - internal
+      - backend-protos
   go-runtime:
     mayDependOn:
       - go-runtime
+      - internal
+      - backend-protos
   python-runtime:
     mayDependOn:
       - python-runtime
+      - internal
+      - backend-protos
+  jvm-runtime:
+    mayDependOn:
+      - jvm-runtime
+      - internal
+      - backend-protos
   ftl-cmd:
     mayDependOn:
       - controller
-      - protos
-      - schema
       - ftl
       - jvm-runtime # TODO: When we decouple runtimes, this should be removed.
       - go-runtime # TODO: When we decouple runtimes, this should be removed.
@@ -97,54 +107,96 @@ deps:
       - timeline-service
       - ingress-service
       - cron-service
+      - internal
+      - backend-protos
+      - lease-service
   ftl-controller-cmd:
     mayDependOn:
       - controller
-      - protos
-      - schema
       - ftl
       - timeline-service #TODO: Timeline should have a separate client package.
+      - internal
+      - backend-protos
   ftl-runner-cmd:
     mayDependOn:
       - runner
+      - internal
+      - backend-protos
   ftl-initdb-cmd:
     mayDependOn:
-      - databasetesting
+      - internal
   ftl-cron-cmd:
     mayDependOn:
       - cron-service
       - timeline-service #TODO: Timeline should have a separate client package.
+      - internal
+      - backend-protos
   ftl-http-ingress-cmd:
     mayDependOn:
       - ingress-service
       - timeline-service #TODO: Timeline should have a separate client package.
+      - internal
+      - backend-protos
   ftl-provisioner-cmd:
     mayDependOn:
       - provisioner-service
+      - internal
+      - backend-protos
+  ftl-provisioner-cloudformation-cmd:
+    mayDependOn:
+      - provisioner-service
+      - internal
+      - backend-protos
+  ftl-proxy-pg-cmd:
+    mayDependOn:
+      - internal
   ftl-timeline-cmd:
     mayDependOn:
       - timeline-service
+      - internal
+      - backend-protos
   ftl-lease-cmd:
     mayDependOn:
       - lease-service
-  databasetesting:
-    mayDependOn:
-      - sql
-  sql:
-    mayDependOn:
-      - sql
-      - leases
+      - internal
+      - backend-protos
   cron-service:
     mayDependOn:
       - cron-service
       - timeline-service #TODO: Timeline should have a separate client package.
+      - internal
+      - backend-protos
   ingress-service:
     mayDependOn:
       - ingress-service
       - timeline-service #TODO: Timeline should have a separate client package.
+      - internal
+      - backend-protos
   provisioner-service:
     mayDependOn:
       - provisioner-service
+      - internal
+      - backend-protos
+  timeline-service:
+    mayDependOn:
+      - internal
+      - backend-protos
+  lease-service:
+    mayDependOn:
+      - internal
+      - backend-protos
   smoketest:
     mayDependOn:
+      - go-runtime
+  common-plugin:
+    mayDependOn:
+      - internal
+      - backend-protos
+  internal:
+    mayDependOn:
+      - internal
+      - backend-protos
+  common-tests:
+    mayDependOn:
+      - internal
       - go-runtime

@@ -6,7 +6,7 @@ import (
 
 	"github.com/alecthomas/kong"
 
-	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
+	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -22,7 +22,7 @@ func main() {
 		"dsn": dsn.PostgresDSN("ftl"),
 	})
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.Config))
-	conn, err := databasetesting.CreateForDevel(ctx, cli.DSN, cli.Recreate)
+	conn, err := dev.CreateForDevel(ctx, cli.DSN, cli.Recreate)
 	kctx.FatalIfErrorf(err)
 	conn.Close()
 }
