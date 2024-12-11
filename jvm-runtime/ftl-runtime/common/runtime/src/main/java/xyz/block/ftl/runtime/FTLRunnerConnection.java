@@ -38,6 +38,7 @@ class FTLRunnerConnection implements Closeable {
     final String moduleName;
     final String deploymentName;
     private final ManagedChannel channel;
+    private final String endpoint;
 
     private Throwable currentError;
     private volatile GetDeploymentContextResponse moduleContextResponse;
@@ -64,6 +65,11 @@ class FTLRunnerConnection implements Closeable {
         verbService = VerbServiceGrpc.newStub(channel);
         publishService = PublishServiceGrpc.newStub(channel);
         leaseService = LeaseServiceGrpc.newStub(channel);
+        this.endpoint = endpoint;
+    }
+
+    public String getEndpoint() {
+        return endpoint;
     }
 
     byte[] getSecret(String secretName) {

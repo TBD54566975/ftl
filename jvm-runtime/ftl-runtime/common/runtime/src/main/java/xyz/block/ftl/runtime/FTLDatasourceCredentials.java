@@ -15,7 +15,7 @@ public class FTLDatasourceCredentials implements CredentialsProvider {
 
     @Override
     public Map<String, String> getCredentials(String credentialsProviderName) {
-        FTLController.Datasource datasource = FTLController.instance().getDatasource(credentialsProviderName);
+        DatasourceDetails datasource = FTLController.instance().getDatasource(credentialsProviderName);
         if (datasource == null) {
             return null;
         }

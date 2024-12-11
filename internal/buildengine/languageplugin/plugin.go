@@ -575,12 +575,13 @@ func buildResultFromProto(result either.Either[*langpb.BuildResponse_BuildSucces
 			port = int(*buildSuccess.DebugPort)
 		}
 		return BuildResult{
-			Errors:      errs,
-			Schema:      moduleSch,
-			Deploy:      buildSuccess.Deploy,
-			StartTime:   startTime,
-			DevEndpoint: optional.Ptr(buildSuccess.DevEndpoint),
-			DebugPort:   port,
+			Errors:            errs,
+			Schema:            moduleSch,
+			Deploy:            buildSuccess.Deploy,
+			StartTime:         startTime,
+			DevEndpoint:       optional.Ptr(buildSuccess.DevEndpoint),
+			DevRunnerInfoFile: optional.Ptr(buildSuccess.DevRunnerInfoFile),
+			DebugPort:         port,
 		}, nil
 	case either.Right[*langpb.BuildResponse_BuildSuccess, *langpb.BuildResponse_BuildFailure]:
 		buildFailure := result.Get().BuildFailure

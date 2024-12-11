@@ -387,6 +387,7 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 		}
 		if file, ok := s.devRunnerInfoFile.Get(); ok {
 			fileContents := "proxy.bind.address=" + s.proxyBindAddress.String()
+			fileContents += fmt.Sprintf("\ndeployment=%s", s.config.Deployment.String())
 			dbAddresses.Range(func(key string, value string) bool {
 				fileContents += fmt.Sprintf("\ndatabase.%s.url=%s", key, value)
 				return true

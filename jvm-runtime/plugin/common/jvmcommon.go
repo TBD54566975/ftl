@@ -283,8 +283,10 @@ func (s *Service) runQuarkusDev(ctx context.Context, req *connect.Request[langpb
 	}
 	errorFile := filepath.Join(buildCtx.Config.DeployDir, ErrorFile)
 	schemaFile := filepath.Join(buildCtx.Config.DeployDir, SchemaFile)
+	runnerInfoFile := filepath.Join(buildCtx.Config.DeployDir, ".runner-info")
 	os.Remove(errorFile)
 	os.Remove(schemaFile)
+	os.Remove(runnerInfoFile)
 	errorHash := sha256.SHA256{}
 	schemaHash := sha256.SHA256{}
 
@@ -293,7 +295,7 @@ func (s *Service) runQuarkusDev(ctx context.Context, req *connect.Request[langpb
 	devModeBuild := buildCtx.Config.DevModeBuild
 	debugPort, err := plugin.AllocatePort()
 	debugPort32 := int32(debugPort.Port)
-	runnerInfoFile := filepath.Join(buildCtx.Config.DeployDir, ".runner-info")
+
 	if err == nil {
 		devModeBuild = fmt.Sprintf("%s -Ddebug=%d", devModeBuild, debugPort.Port)
 	}

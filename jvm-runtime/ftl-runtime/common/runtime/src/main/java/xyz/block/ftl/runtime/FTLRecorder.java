@@ -2,6 +2,7 @@ package xyz.block.ftl.runtime;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -175,5 +176,13 @@ public class FTLRecorder {
 
     public void registerDatabase(String dbKind, GetDeploymentContextResponse.DbType name) {
         FTLController.instance().registerDatabase(dbKind, name);
+    }
+
+    public void handleDevModeRunnerStart(String runnerInfo) {
+        FTLController.instance().waitForDevModeStart(Path.of(runnerInfo));
+    }
+
+    public void loadModuleContextOnStartup() {
+        FTLController.instance().loadDeploymentContext();
     }
 }
