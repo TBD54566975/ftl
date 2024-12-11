@@ -338,6 +338,17 @@ message Ref {
   repeated Type type_parameters = 4;
 }
 
+message RuntimeEvent {
+  oneof value {
+    DatabaseRuntimeEvent database_runtime_event = 5;
+    ModuleRuntimeBase module_runtime_base = 1;
+    ModuleRuntimeDeployment module_runtime_deployment = 3;
+    ModuleRuntimeScaling module_runtime_scaling = 2;
+    TopicRuntimeEvent topic_runtime_event = 6;
+    VerbRuntimeEvent verb_runtime_event = 4;
+  }
+}
+
 message Schema {
   optional Position pos = 1;
   repeated Module modules = 2;

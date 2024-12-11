@@ -53,3 +53,27 @@ type SumTypeC struct {
 }
 
 func (SumTypeC) sumType() {}
+
+type SubSumType interface {
+	SumType
+
+	subSumType()
+}
+
+//protobuf:1
+//protobuf:4 SumType
+type SubSumTypeA struct {
+	A string `protobuf:"1"`
+}
+
+func (SubSumTypeA) subSumType() {}
+func (SubSumTypeA) sumType()    {}
+
+//protobuf:2
+//protobuf:5 SumType
+type SubSumTypeB struct {
+	A string `protobuf:"1"`
+}
+
+func (SubSumTypeB) subSumType() {}
+func (SubSumTypeB) sumType()    {}

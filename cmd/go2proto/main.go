@@ -439,7 +439,12 @@ func (s *State) extractSumType(obj types.Object, i *types.Interface) error {
 			continue
 		}
 		if types.Implements(sym.Type(), i) || types.Implements(types.NewPointer(sym.Type()), i) {
-			var directive *pbTag
+			var pbDirectives []*pbTag
+			interfaceType := false
+			if _, ok := sym.Type().Underlying().(*types.Interface); ok {
+				interfaceType = true
+			}
+
 			if comments := findCommentsForObject(sym, s.Pkg.Syntax); comments != nil {
 				for _, line := range comments.List {
 					if strings.HasPrefix(line.Text, "//protobuf:") {
@@ -447,17 +452,31 @@ func (s *State) extractSumType(obj types.Object, i *types.Interface) error {
 						if err != nil {
 							return genErrorf(sym.Pos(), "invalid //protobuf: directive %q: %w", line.Text, err)
 						}
-						directive = &tag
+						pbDirectives = append(pbDirectives, &tag)
 					}
 				}
 			}
-			if directive == nil {
-				return genErrorf(sym.Pos(), "sum type element is missing //protobuf:<id> directive")
+			if len(pbDirectives) == 0 {
+				// skip interface types. These would result into nested oneofs. We only include leafs as a flat list.
+				if !interfaceType {
+					return genErrorf(sym.Pos(), "sum type element is missing //protobuf:<id> directive: %s", sym.Name())
+				}
 			}
 			if err := s.extractDecl(sym, sym.Type()); err != nil {
 				return genErrorf(sym.Pos(), "%s: %w", name, err)
 			}
-			decl.Variants[name] = directive.ID
+			id := -1
+			for _, directive := range pbDirectives {
+				if id < 0 && directive.SumType == "" {
+					id = directive.ID
+				} else if directive.SumType == sumTypeName {
+					id = directive.ID
+				}
+			}
+			if !interfaceType {
+				// we do not want to repeat both sumtypes and their elements
+				decl.Variants[name] = id
+			}
 		}
 	}
 	s.Dest.Decls = append(s.Dest.Decls, decl)
@@ -506,6 +525,7 @@ func (s *State) extractEnum(t *types.Named) error {
 
 type pbTag struct {
 	ID       int
+	SumType  string
 	Optional bool
 }
 
@@ -514,11 +534,18 @@ func parsePBTag(tag string) (pbTag, error) {
 	if len(parts) == 0 {
 		return pbTag{}, fmt.Errorf("missing tag")
 	}
-	id, err := strconv.Atoi(parts[0])
+
+	idParts := strings.Split(parts[0], " ")
+	sumType := ""
+	if len(idParts) > 1 {
+		sumType = idParts[1]
+	}
+
+	id, err := strconv.Atoi(idParts[0])
 	if err != nil {
 		return pbTag{}, fmt.Errorf("invalid id: %w", err)
 	}
-	out := pbTag{ID: id}
+	out := pbTag{ID: id, SumType: sumType}
 	for _, part := range parts[1:] {
 		switch part {
 		case "optional":

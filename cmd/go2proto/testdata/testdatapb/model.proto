@@ -33,8 +33,26 @@ message Root {
 }
 
 
+message SubSumType {
+  oneof value {
+    SubSumTypeA a = 1;
+    SubSumTypeB b = 2;
+  }
+}
+
+message SubSumTypeA {
+  string a = 1;
+}
+
+message SubSumTypeB {
+  string a = 1;
+}
+
+
 message SumType {
   oneof value {
+    SubSumTypeA sub_sum_type_a = 4;
+    SubSumTypeB sub_sum_type_b = 5;
     SumTypeA a = 1;
     SumTypeB b = 2;
     SumTypeC c = 3;

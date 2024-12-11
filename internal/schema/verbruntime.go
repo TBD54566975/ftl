@@ -13,10 +13,15 @@ type VerbRuntime struct {
 	Subscription *VerbRuntimeSubscription `protobuf:"2,optional"`
 }
 
+//protobuf:4 RuntimeEvent
 type VerbRuntimeEvent struct {
 	ID      string             `protobuf:"1"`
 	Payload VerbRuntimePayload `protobuf:"2"`
 }
+
+var _ RuntimeEvent = (*VerbRuntimeEvent)(nil)
+
+func (v *VerbRuntimeEvent) runtimeEvent() {}
 
 func (v *VerbRuntimeEvent) ApplyTo(m *Module) {
 	for verb := range slices.FilterVariants[*Verb](m.Decls) {
