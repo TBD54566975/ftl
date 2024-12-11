@@ -33,7 +33,6 @@ import (
 	ftldeploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
 	ftlleaseconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
 	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
-	ftlv1connect2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/runner/observability"
@@ -349,22 +348,20 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 			return fmt.Errorf("failed to download artefacts: %w", err)
 		}
 
-		pubSub, err := pubsub.New(module)
+		deploymentServiceClient := rpc.Dial(ftldeploymentconnect.NewDeploymentServiceClient, s.config.ControllerEndpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, deploymentServiceClient)
+
+		leaseServiceClient := rpc.Dial(ftlleaseconnect.NewLeaseServiceClient, s.config.LeaseEndpoint.String(), log.Error)
+
+		timelineClient := timeline.NewClient(ctx, s.config.TimelineEndpoint)
+		s.proxy = proxy.New(deploymentServiceClient, leaseServiceClient, timelineClient)
+
+		pubSub, err := pubsub.New(module, key, s)
 		if err != nil {
 			observability.Deployment.Failure(ctx, optional.Some(key.String()))
 			return fmt.Errorf("failed to create pubsub service: %w", err)
 		}
 		s.pubSub = pubSub
-
-		deploymentServiceClient := rpc.Dial(ftldeploymentconnect.NewDeploymentServiceClient, s.config.ControllerEndpoint.String(), log.Error)
-		ctx = rpc.ContextWithClient(ctx, deploymentServiceClient)
-		pubsubClient := rpc.Dial(ftlv1connect2.NewLegacyPubsubServiceClient, s.config.ControllerEndpoint.String(), log.Error)
-		ctx = rpc.ContextWithClient(ctx, pubsubClient)
-
-		leaseServiceClient := rpc.Dial(ftlleaseconnect.NewLeaseServiceClient, s.config.LeaseEndpoint.String(), log.Error)
-
-		timelineClient := timeline.NewClient(ctx, s.config.TimelineEndpoint)
-		s.proxy = proxy.New(deploymentServiceClient, leaseServiceClient, pubsubClient, timelineClient)
 
 		parse, err := url.Parse("http://127.0.0.1:0")
 		if err != nil {
@@ -375,7 +372,6 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 			rpc.GRPC(ftldeploymentconnect.NewDeploymentServiceHandler, s.proxy),
 			rpc.GRPC(ftlleaseconnect.NewLeaseServiceHandler, s.proxy),
 			rpc.GRPC(pubconnect.NewPublishServiceHandler, s.pubSub),
-			rpc.GRPC(ftlv1connect2.NewLegacyPubsubServiceHandler, s.proxy),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to create server: %w", err)
@@ -421,6 +417,15 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 	s.readyTime.Store(time.Now().Add(time.Second * 2)) // Istio is a bit flakey, add a small delay for readiness
 	s.deployment.Store(optional.Some(dep))
 	logger.Debugf("Deployed %s", key)
+
+	if s.pubSub != nil {
+		err := s.pubSub.Consume(ctx)
+		if err != nil {
+			observability.Deployment.Failure(ctx, optional.Some(key.String()))
+			return fmt.Errorf("failed to set up pubsub consumption: %w", err)
+		}
+	}
+
 	context.AfterFunc(ctx, func() {
 		err := s.Close()
 		if err != nil {

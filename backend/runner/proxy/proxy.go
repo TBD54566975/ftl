@@ -14,8 +14,6 @@ import (
 	ftldeploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
 	ftllease "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1"
 	ftlleaseconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
-	ftlpubsubv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1"
-	ftlv1connect2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/timeline"
@@ -37,16 +35,14 @@ type moduleVerbService struct {
 type Service struct {
 	controllerDeploymentService ftldeploymentconnect.DeploymentServiceClient
 	controllerLeaseService      ftlleaseconnect.LeaseServiceClient
-	controllerPubsubService     ftlv1connect2.LegacyPubsubServiceClient
 	moduleVerbService           map[string]moduleVerbService
 	timelineClient              *timeline.Client
 }
 
-func New(controllerModuleService ftldeploymentconnect.DeploymentServiceClient, leaseClient ftlleaseconnect.LeaseServiceClient, controllerPubsubService ftlv1connect2.LegacyPubsubServiceClient, timelineClient *timeline.Client) *Service {
+func New(controllerModuleService ftldeploymentconnect.DeploymentServiceClient, leaseClient ftlleaseconnect.LeaseServiceClient, timelineClient *timeline.Client) *Service {
 	proxy := &Service{
 		controllerDeploymentService: controllerModuleService,
 		controllerLeaseService:      leaseClient,
-		controllerPubsubService:     controllerPubsubService,
 		moduleVerbService:           map[string]moduleVerbService{},
 		timelineClient:              timelineClient,
 	}
@@ -118,15 +114,6 @@ func (r *Service) AcquireLease(ctx context.Context, c *connect.BidiStream[ftllea
 			return fmt.Errorf("failed to send response message: %w", err)
 		}
 	}
-
-}
-
-func (r *Service) PublishEvent(ctx context.Context, c *connect.Request[ftlpubsubv1.PublishEventRequest]) (*connect.Response[ftlpubsubv1.PublishEventResponse], error) {
-	event, err := r.controllerPubsubService.PublishEvent(ctx, connect.NewRequest(c.Msg))
-	if err != nil {
-		return nil, fmt.Errorf("failed to proxy event: %w", err)
-	}
-	return event, nil
 }
 
 func (r *Service) Ping(ctx context.Context, c *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
@@ -177,9 +164,4 @@ func (r *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	r.timelineClient.Publish(ctx, callEvent)
 	observability.Calls.Request(ctx, req.Msg.Verb, start, optional.None[string]())
 	return resp, nil
-}
-
-// ResetSubscription is legacy, it will go once the DB based pubsub is removed
-func (r *Service) ResetSubscription(ctx context.Context, req *connect.Request[ftlpubsubv1.ResetSubscriptionRequest]) (*connect.Response[ftlpubsubv1.ResetSubscriptionResponse], error) {
-	return connect.NewResponse(&ftlpubsubv1.ResetSubscriptionResponse{}), nil
 }

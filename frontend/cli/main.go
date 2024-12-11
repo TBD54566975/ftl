@@ -21,7 +21,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/admin"
 	leasev1connext "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
 	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
-	ftlv1pubsubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal"
@@ -235,10 +234,6 @@ func makeBindContext(logger *log.Logger, cancel context.CancelFunc) terminal.Kon
 		provisionerServiceClient := rpc.Dial(provisionerconnect.NewProvisionerServiceClient, cli.ProvisionerEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, provisionerServiceClient)
 		kctx.BindTo(provisionerServiceClient, (*provisionerconnect.ProvisionerServiceClient)(nil))
-
-		pubsubClient := rpc.Dial(ftlv1pubsubconnect.NewLegacyPubsubServiceClient, cli.ProvisionerEndpoint.String(), log.Error)
-		ctx = rpc.ContextWithClient(ctx, pubsubClient)
-		kctx.BindTo(pubsubClient, (*ftlv1pubsubconnect.LegacyPubsubServiceClient)(nil))
 
 		timelineClient := timeline.NewClient(ctx, cli.TimelineEndpoint)
 		kctx.Bind(timelineClient)
