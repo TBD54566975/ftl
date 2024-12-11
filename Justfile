@@ -1,7 +1,7 @@
 set positional-arguments
 set shell := ["bash", "-c"]
 
-WATCHEXEC_ARGS := "-d 1s -e proto -e go -e sql --ignore **/types.ftl.go"
+WATCHEXEC_ARGS := "-d 1s -e proto -e go --ignore **/types.ftl.go"
 RELEASE := "build/release"
 VERSION := `git describe --tags --always | sed -e 's/^v//'`
 TIMESTAMP := `date +%s`
@@ -150,8 +150,6 @@ build-go-binary dir binary="": build-zips build-protos
     mk "{{RELEASE}}/${binary}" : !(build|integration|infrastructure|node_modules|Procfile*|Dockerfile*) -- go build -o "{{RELEASE}}/${binary}" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.timestamp={{TIMESTAMP}}" "$1"
   fi
 
-export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable"
-
 # Build the ZIP files that are embedded in the FTL release binaries
 build-zips:
   @for dir in {{ZIP_DIRS}}; do (cd $dir && mk ../$(basename ${dir}).zip : . -- "rm -f $(basename ${dir}.zip) && zip -q --symlinks -r ../$(basename ${dir}).zip ."); done
@@ -227,9 +225,6 @@ test-readme *args:
 tidy:
   git ls-files | grep go.mod | grep -v '{{{{' | xargs -n1 dirname | xargs -I {} sh -c 'cd {} && echo {} && go mod tidy'
 
-# Check for changes in existing SQL migrations compared to main
-ensure-frozen-migrations:
-  @scripts/ensure-frozen-migrations
 
 # Run backend tests
 test-backend: test-go2proto
