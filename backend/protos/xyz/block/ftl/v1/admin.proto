@@ -20,9 +20,6 @@ enum ConfigProvider {
 
   // Print configuration as environment variables.
   CONFIG_PROVIDER_ENVAR = 2;
-
-  // Use the database as a configuration store.
-  CONFIG_PROVIDER_DB = 3;
 }
 
 message ConfigListRequest {
