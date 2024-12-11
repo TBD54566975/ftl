@@ -3,24 +3,27 @@ package pubsub
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"connectrpc.com/connect"
 	"github.com/IBM/sarama"
+	"github.com/alecthomas/types/optional"
 
-	ftlpubsubv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1"
-	ftlv1pubsubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/backend/timeline"
+	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type publisher struct {
-	module   string
-	topic    *schema.Topic
-	producer sarama.SyncProducer
+	module     string
+	deployment model.DeploymentKey
+	topic      *schema.Topic
+	producer   sarama.SyncProducer
+
+	timelineClient *timeline.Client
 }
 
-func newPublisher(module string, t *schema.Topic) (*publisher, error) {
+func newPublisher(module string, t *schema.Topic, deployment model.DeploymentKey, timelineClient *timeline.Client) (*publisher, error) {
 	if t.Runtime == nil {
 		return nil, fmt.Errorf("topic %s has no runtime", t.Name)
 	}
@@ -38,39 +41,47 @@ func newPublisher(module string, t *schema.Topic) (*publisher, error) {
 		return nil, fmt.Errorf("failed to create producer for topic %s: %w", t.Name, err)
 	}
 	return &publisher{
-		module:   module,
-		topic:    t,
-		producer: producer,
+		module:     module,
+		deployment: deployment,
+		topic:      t,
+		producer:   producer,
+
+		timelineClient: timelineClient,
 	}, nil
 }
 
-func (p *publisher) publish(ctx context.Context, data []byte, key string, caller schema.RefKey) error {
-	if err := p.publishToController(ctx, data, caller); err != nil {
-		return err
-	}
-	_, _, err := p.producer.SendMessage(&sarama.ProducerMessage{
+func (p *publisher) publish(ctx context.Context, data []byte, key string, caller schema.Ref) error {
+	partition, offset, err := p.producer.SendMessage(&sarama.ProducerMessage{
 		Topic: p.topic.Runtime.TopicID,
 		Value: sarama.ByteEncoder(data),
 		Key:   sarama.StringEncoder(key),
 	})
 	if err != nil {
+		return fmt.Errorf("failed to get request key: %w", err)
+	}
+	requestKey, err := rpc.RequestKeyFromContext(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get request key: %w", err)
+	}
+	var requestKeyStr optional.Option[string]
+	if r, ok := requestKey.Get(); ok {
+		requestKeyStr = optional.Some(r.String())
+	}
+
+	timelineEvent := timeline.PubSubPublish{
+		DeploymentKey: p.deployment,
+		RequestKey:    requestKeyStr,
+		Time:          time.Now(),
+		SourceVerb:    caller,
+		Topic:         p.topic.Name,
+		Partition:     int(partition),
+		Offset:        int(offset),
+		Request:       data,
+	}
+	if err != nil {
+		timelineEvent.Error = optional.Some(err.Error())
 		return fmt.Errorf("failed to publish message: %w", err)
 	}
-	return nil
-}
-
-// publishToController publishes the data to the controller (old pubsub implementation)
-//
-// This is to keep pubsub working while we transition fully to Kafka for pubsub.
-func (p *publisher) publishToController(ctx context.Context, data []byte, caller schema.RefKey) error {
-	client := rpc.ClientFromContext[ftlv1pubsubconnect.LegacyPubsubServiceClient](ctx)
-	_, err := client.PublishEvent(ctx, connect.NewRequest(&ftlpubsubv1.PublishEventRequest{
-		Topic:  &schemapb.Ref{Module: p.module, Name: p.topic.Name},
-		Caller: caller.Name,
-		Body:   data,
-	}))
-	if err != nil {
-		return fmt.Errorf("failed to publish event to controller: %w", err)
-	}
+	p.timelineClient.Publish(ctx, timelineEvent)
 	return nil
 }

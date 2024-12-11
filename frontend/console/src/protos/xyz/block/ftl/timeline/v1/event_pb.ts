@@ -724,6 +724,16 @@ export class PubSubPublishEvent extends Message<PubSubPublishEvent> {
    */
   error?: string;
 
+  /**
+   * @generated from field: int32 partition = 9;
+   */
+  partition = 0;
+
+  /**
+   * @generated from field: int64 offset = 10;
+   */
+  offset = protoInt64.zero;
+
   constructor(data?: PartialMessage<PubSubPublishEvent>) {
     super();
     proto3.util.initPartial(data, this);
@@ -740,6 +750,8 @@ export class PubSubPublishEvent extends Message<PubSubPublishEvent> {
     { no: 6, name: "topic", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "partition", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 10, name: "offset", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PubSubPublishEvent {
@@ -803,6 +815,16 @@ export class PubSubConsumeEvent extends Message<PubSubConsumeEvent> {
    */
   error?: string;
 
+  /**
+   * @generated from field: int32 partition = 9;
+   */
+  partition = 0;
+
+  /**
+   * @generated from field: int64 offset = 10;
+   */
+  offset = protoInt64.zero;
+
   constructor(data?: PartialMessage<PubSubConsumeEvent>) {
     super();
     proto3.util.initPartial(data, this);
@@ -819,6 +841,8 @@ export class PubSubConsumeEvent extends Message<PubSubConsumeEvent> {
     { no: 6, name: "duration", kind: "message", T: Duration },
     { no: 7, name: "topic", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "partition", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 10, name: "offset", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PubSubConsumeEvent {

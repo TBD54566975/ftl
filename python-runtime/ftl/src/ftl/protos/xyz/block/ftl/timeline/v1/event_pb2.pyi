@@ -198,7 +198,7 @@ class AsyncExecuteEvent(_message.Message):
     def __init__(self, deployment_key: _Optional[str] = ..., request_key: _Optional[str] = ..., verb_ref: _Optional[_Union[_schema_pb2.Ref, _Mapping]] = ..., timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., duration: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., async_event_type: _Optional[_Union[AsyncExecuteEventType, str]] = ..., error: _Optional[str] = ...) -> None: ...
 
 class PubSubPublishEvent(_message.Message):
-    __slots__ = ("deployment_key", "request_key", "verb_ref", "timestamp", "duration", "topic", "request", "error")
+    __slots__ = ("deployment_key", "request_key", "verb_ref", "timestamp", "duration", "topic", "request", "error", "partition", "offset")
     DEPLOYMENT_KEY_FIELD_NUMBER: _ClassVar[int]
     REQUEST_KEY_FIELD_NUMBER: _ClassVar[int]
     VERB_REF_FIELD_NUMBER: _ClassVar[int]
@@ -207,6 +207,8 @@ class PubSubPublishEvent(_message.Message):
     TOPIC_FIELD_NUMBER: _ClassVar[int]
     REQUEST_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    PARTITION_FIELD_NUMBER: _ClassVar[int]
+    OFFSET_FIELD_NUMBER: _ClassVar[int]
     deployment_key: str
     request_key: str
     verb_ref: _schema_pb2.Ref
@@ -215,10 +217,12 @@ class PubSubPublishEvent(_message.Message):
     topic: str
     request: str
     error: str
-    def __init__(self, deployment_key: _Optional[str] = ..., request_key: _Optional[str] = ..., verb_ref: _Optional[_Union[_schema_pb2.Ref, _Mapping]] = ..., timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., duration: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., topic: _Optional[str] = ..., request: _Optional[str] = ..., error: _Optional[str] = ...) -> None: ...
+    partition: int
+    offset: int
+    def __init__(self, deployment_key: _Optional[str] = ..., request_key: _Optional[str] = ..., verb_ref: _Optional[_Union[_schema_pb2.Ref, _Mapping]] = ..., timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., duration: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., topic: _Optional[str] = ..., request: _Optional[str] = ..., error: _Optional[str] = ..., partition: _Optional[int] = ..., offset: _Optional[int] = ...) -> None: ...
 
 class PubSubConsumeEvent(_message.Message):
-    __slots__ = ("deployment_key", "request_key", "dest_verb_module", "dest_verb_name", "timestamp", "duration", "topic", "error")
+    __slots__ = ("deployment_key", "request_key", "dest_verb_module", "dest_verb_name", "timestamp", "duration", "topic", "error", "partition", "offset")
     DEPLOYMENT_KEY_FIELD_NUMBER: _ClassVar[int]
     REQUEST_KEY_FIELD_NUMBER: _ClassVar[int]
     DEST_VERB_MODULE_FIELD_NUMBER: _ClassVar[int]
@@ -227,6 +231,8 @@ class PubSubConsumeEvent(_message.Message):
     DURATION_FIELD_NUMBER: _ClassVar[int]
     TOPIC_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    PARTITION_FIELD_NUMBER: _ClassVar[int]
+    OFFSET_FIELD_NUMBER: _ClassVar[int]
     deployment_key: str
     request_key: str
     dest_verb_module: str
@@ -235,7 +241,9 @@ class PubSubConsumeEvent(_message.Message):
     duration: _duration_pb2.Duration
     topic: str
     error: str
-    def __init__(self, deployment_key: _Optional[str] = ..., request_key: _Optional[str] = ..., dest_verb_module: _Optional[str] = ..., dest_verb_name: _Optional[str] = ..., timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., duration: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., topic: _Optional[str] = ..., error: _Optional[str] = ...) -> None: ...
+    partition: int
+    offset: int
+    def __init__(self, deployment_key: _Optional[str] = ..., request_key: _Optional[str] = ..., dest_verb_module: _Optional[str] = ..., dest_verb_name: _Optional[str] = ..., timestamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., duration: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., topic: _Optional[str] = ..., error: _Optional[str] = ..., partition: _Optional[int] = ..., offset: _Optional[int] = ...) -> None: ...
 
 class Event(_message.Message):
     __slots__ = ("timestamp", "id", "log", "call", "deployment_created", "deployment_updated", "ingress", "cron_scheduled", "async_execute", "pubsub_publish", "pubsub_consume")

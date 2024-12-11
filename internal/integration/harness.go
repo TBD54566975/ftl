@@ -12,12 +12,14 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/IBM/sarama"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 	"github.com/otiai10/copy"
@@ -35,12 +37,15 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling/k8sscaling"
 	"github.com/TBD54566975/ftl/internal"
+	"github.com/TBD54566975/ftl/internal/exec"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 const dumpPath = "/tmp/ftl-kube-report"
+
+var redPandaBrokers = []string{"127.0.0.1:19092"}
 
 func (i TestContext) integrationTestTimeout() time.Duration {
 	timeout := optional.Zero(os.Getenv("FTL_INTEGRATION_TEST_TIMEOUT")).Default("5s")
@@ -98,6 +103,13 @@ func WithLocalstack() Option {
 func WithConsole() Option {
 	return func(o *options) {
 		o.console = true
+	}
+}
+
+// WithPubSub is a Run* option that specifies tests should reset red panda before starting
+func WithPubSub() Option {
+	return func(o *options) {
+		o.resetPubSub = true
 	}
 }
 
@@ -188,6 +200,7 @@ type options struct {
 	kube              bool
 	localstack        bool
 	console           bool
+	resetPubSub       bool
 }
 
 // Run an integration test.
@@ -395,6 +408,34 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				})
 			}
 
+			if opts.resetPubSub {
+				Infof("Resetting pubsub")
+				envars := []string{"COMPOSE_IGNORE_ORPHANS=True"}
+				err = exec.CommandWithEnv(ctx, log.Debug, rootDir, envars, "docker", "compose", "-f", "internal/dev/docker-compose.redpanda.yml", "-p", "ftl", "up", "-d", "--wait").RunBuffered(ctx)
+				assert.NoError(t, err)
+
+				client, err := sarama.NewClient(redPandaBrokers, sarama.NewConfig())
+				assert.NoError(t, err)
+				defer client.Close()
+
+				clusterAdmin, err := sarama.NewClusterAdminFromClient(client)
+				assert.NoError(t, err)
+				defer clusterAdmin.Close()
+
+				// There can be a slight delay for consumer groups to be empty after a previous run of FTL ends
+				for i := range 15 {
+					err = attemptToResetPubSub(clusterAdmin)
+					if err == nil {
+						break
+					}
+					if i == 9 {
+						assert.Error(t, err, "Error resetting pubsub")
+					}
+					Infof("Error resetting pubsub, retrying in 1 seconds: %v", err)
+					time.Sleep(time.Second)
+				}
+			}
+
 			Infof("Starting test")
 
 			for _, action := range actions {
@@ -403,6 +444,36 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 		})
 		done()
 	}
+}
+
+func attemptToResetPubSub(admin sarama.ClusterAdmin) error {
+	groups, err := admin.ListConsumerGroups()
+	if err != nil {
+		return err
+	}
+	for name := range groups {
+		if strings.HasPrefix(name, "_") {
+			continue
+		}
+		err = admin.DeleteConsumerGroup(name)
+		if err != nil {
+			return fmt.Errorf("could not delete consumer group %s: %w", name, err)
+		}
+	}
+	topics, err := admin.ListTopics()
+	if err != nil {
+		return err
+	}
+	for name := range topics {
+		if strings.HasPrefix(name, "_") {
+			continue
+		}
+		err = admin.DeleteTopic(name)
+		if err != nil {
+			return fmt.Errorf("could not delete topic %s: %w", name, err)
+		}
+	}
+	return nil
 }
 
 func initWorkDir(t testing.TB, cwd string, opts options) string {
