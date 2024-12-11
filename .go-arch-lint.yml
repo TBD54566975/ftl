@@ -6,7 +6,7 @@ components:
   ftl-controller-cmd: { in: cmd/ftl-controller/** }
   common-plugin: { in: common/plugin/** }
   common: { in: common/** }
-  common-integration: { in: common/integration/** }
+  common-tests: { in: common/internal/tests/** }
   internal: { in: internal/** }
   ftl-version: { in: . }
 
@@ -148,6 +148,9 @@ deps:
       - provisioner-service
       - internal
       - backend-protos
+  ftl-proxy-pg-cmd:
+    mayDependOn:
+      - internal
   ftl-timeline-cmd:
     mayDependOn:
       - timeline-service
@@ -192,10 +195,12 @@ deps:
   common-plugin:
     mayDependOn:
       - internal
+      - backend-protos
   internal:
     mayDependOn:
       - internal
       - backend-protos
-  common-integration:
+  common-tests:
     mayDependOn:
       - internal
+      - go-runtime

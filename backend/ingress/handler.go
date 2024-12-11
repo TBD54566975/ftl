@@ -26,13 +26,7 @@ func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.Reques
 	logger := log.FromContext(r.Context()).Scope(fmt.Sprintf("ingress:%s:%s", r.Method, r.URL.Path))
 	logger.Debugf("Start ingress request")
 
-	routeOpt, err := getIngressRoute(routesForMethod, r.URL.Path)
-	if err != nil {
-		logger.Errorf(err, "failed to resolve route for %s %s", r.Method, r.URL.Path)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), startTime, optional.Some("failed to resolve route"))
-		return
-	}
+	routeOpt := getIngressRoute(routesForMethod, r.URL.Path)
 	var route *ingressRoute
 	var ok bool
 	if route, ok = routeOpt.Get(); !ok {

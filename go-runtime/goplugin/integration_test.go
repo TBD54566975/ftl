@@ -37,6 +37,7 @@ func TestExternalType(t *testing.T) {
 }
 
 func TestGeneratedTypeRegistry(t *testing.T) {
+	t.Skip("Skipping until there has been a release with the package change")
 	expected, err := os.ReadFile("testdata/type_registry_main.go")
 	assert.NoError(t, err)
 
