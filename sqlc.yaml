@@ -130,14 +130,6 @@ sql:
       - sqlc/db-prepare
       # - postgresql-query-too-costly
       # - postgresql-no-seq-scan
-  - <<: *daldir
-    queries:
-      - backend/controller/pubsub/internal/sql/queries.sql
-      - backend/controller/pubsub/internal/sql/async_queries.sql
-    gen:
-      go:
-        <<: *gengo
-        out: "backend/controller/pubsub/internal/sql"
 
 rules:
   - name: postgresql-query-too-costly
