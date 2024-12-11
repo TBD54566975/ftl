@@ -24,8 +24,6 @@ const _ = connect.IsAtLeastVersion1_7_0
 const (
 	// LanguageServiceName is the fully-qualified name of the LanguageService service.
 	LanguageServiceName = "xyz.block.ftl.language.v1.LanguageService"
-	// HotReloadServiceName is the fully-qualified name of the HotReloadService service.
-	HotReloadServiceName = "xyz.block.ftl.language.v1.HotReloadService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -61,11 +59,6 @@ const (
 	// LanguageServiceSyncStubReferencesProcedure is the fully-qualified name of the LanguageService's
 	// SyncStubReferences RPC.
 	LanguageServiceSyncStubReferencesProcedure = "/xyz.block.ftl.language.v1.LanguageService/SyncStubReferences"
-	// HotReloadServicePingProcedure is the fully-qualified name of the HotReloadService's Ping RPC.
-	HotReloadServicePingProcedure = "/xyz.block.ftl.language.v1.HotReloadService/Ping"
-	// HotReloadServiceRunnerStartedProcedure is the fully-qualified name of the HotReloadService's
-	// RunnerStarted RPC.
-	HotReloadServiceRunnerStartedProcedure = "/xyz.block.ftl.language.v1.HotReloadService/RunnerStarted"
 )
 
 // LanguageServiceClient is a client for the xyz.block.ftl.language.v1.LanguageService service.
@@ -401,105 +394,4 @@ func (UnimplementedLanguageServiceHandler) GenerateStubs(context.Context, *conne
 
 func (UnimplementedLanguageServiceHandler) SyncStubReferences(context.Context, *connect.Request[v11.SyncStubReferencesRequest]) (*connect.Response[v11.SyncStubReferencesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.language.v1.LanguageService.SyncStubReferences is not implemented"))
-}
-
-// HotReloadServiceClient is a client for the xyz.block.ftl.language.v1.HotReloadService service.
-type HotReloadServiceClient interface {
-	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
-	// RunnerStarted is called when a runner has started, to tell a live reload server the runner address
-	//
-	// As lots of functionality such as database connections rely on proxying through the runner, this
-	// allows the long running live reload process to know where to proxy to
-	RunnerStarted(context.Context, *connect.Request[v11.RunnerStartedRequest]) (*connect.Response[v11.RunnerStartedResponse], error)
-}
-
-// NewHotReloadServiceClient constructs a client for the xyz.block.ftl.language.v1.HotReloadService
-// service. By default, it uses the Connect protocol with the binary Protobuf Codec, asks for
-// gzipped responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply
-// the connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewHotReloadServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) HotReloadServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	return &hotReloadServiceClient{
-		ping: connect.NewClient[v1.PingRequest, v1.PingResponse](
-			httpClient,
-			baseURL+HotReloadServicePingProcedure,
-			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
-			connect.WithClientOptions(opts...),
-		),
-		runnerStarted: connect.NewClient[v11.RunnerStartedRequest, v11.RunnerStartedResponse](
-			httpClient,
-			baseURL+HotReloadServiceRunnerStartedProcedure,
-			opts...,
-		),
-	}
-}
-
-// hotReloadServiceClient implements HotReloadServiceClient.
-type hotReloadServiceClient struct {
-	ping          *connect.Client[v1.PingRequest, v1.PingResponse]
-	runnerStarted *connect.Client[v11.RunnerStartedRequest, v11.RunnerStartedResponse]
-}
-
-// Ping calls xyz.block.ftl.language.v1.HotReloadService.Ping.
-func (c *hotReloadServiceClient) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
-	return c.ping.CallUnary(ctx, req)
-}
-
-// RunnerStarted calls xyz.block.ftl.language.v1.HotReloadService.RunnerStarted.
-func (c *hotReloadServiceClient) RunnerStarted(ctx context.Context, req *connect.Request[v11.RunnerStartedRequest]) (*connect.Response[v11.RunnerStartedResponse], error) {
-	return c.runnerStarted.CallUnary(ctx, req)
-}
-
-// HotReloadServiceHandler is an implementation of the xyz.block.ftl.language.v1.HotReloadService
-// service.
-type HotReloadServiceHandler interface {
-	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
-	// RunnerStarted is called when a runner has started, to tell a live reload server the runner address
-	//
-	// As lots of functionality such as database connections rely on proxying through the runner, this
-	// allows the long running live reload process to know where to proxy to
-	RunnerStarted(context.Context, *connect.Request[v11.RunnerStartedRequest]) (*connect.Response[v11.RunnerStartedResponse], error)
-}
-
-// NewHotReloadServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewHotReloadServiceHandler(svc HotReloadServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	hotReloadServicePingHandler := connect.NewUnaryHandler(
-		HotReloadServicePingProcedure,
-		svc.Ping,
-		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
-		connect.WithHandlerOptions(opts...),
-	)
-	hotReloadServiceRunnerStartedHandler := connect.NewUnaryHandler(
-		HotReloadServiceRunnerStartedProcedure,
-		svc.RunnerStarted,
-		opts...,
-	)
-	return "/xyz.block.ftl.language.v1.HotReloadService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case HotReloadServicePingProcedure:
-			hotReloadServicePingHandler.ServeHTTP(w, r)
-		case HotReloadServiceRunnerStartedProcedure:
-			hotReloadServiceRunnerStartedHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
-}
-
-// UnimplementedHotReloadServiceHandler returns CodeUnimplemented from all methods.
-type UnimplementedHotReloadServiceHandler struct{}
-
-func (UnimplementedHotReloadServiceHandler) Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.language.v1.HotReloadService.Ping is not implemented"))
-}
-
-func (UnimplementedHotReloadServiceHandler) RunnerStarted(context.Context, *connect.Request[v11.RunnerStartedRequest]) (*connect.Response[v11.RunnerStartedResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.language.v1.HotReloadService.RunnerStarted is not implemented"))
 }

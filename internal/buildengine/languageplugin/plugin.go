@@ -40,6 +40,9 @@ type BuildResult struct {
 	// Endpoint of an instance started by the plugin to use in dev mode
 	DevEndpoint optional.Option[string]
 
+	// File that the runner can use to pass info into the hot reload endpoint
+	DevRunnerInfoFile optional.Option[string]
+
 	DebugPort int
 }
 

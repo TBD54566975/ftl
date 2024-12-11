@@ -1169,6 +1169,13 @@ export class BuildSuccess extends Message<BuildSuccess> {
    */
   debugPort?: number;
 
+  /**
+   * Dev mode runner info file, this file is used to allow the runner to communicate provisioner info back to the plugin
+   *
+   * @generated from field: optional string dev_runner_info_file = 9;
+   */
+  devRunnerInfoFile?: string;
+
   constructor(data?: PartialMessage<BuildSuccess>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1185,6 +1192,7 @@ export class BuildSuccess extends Message<BuildSuccess> {
     { no: 6, name: "errors", kind: "message", T: ErrorList },
     { no: 7, name: "dev_endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "debug_port", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 9, name: "dev_runner_info_file", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildSuccess {
@@ -1509,125 +1517,6 @@ export class SyncStubReferencesResponse extends Message<SyncStubReferencesRespon
 
   static equals(a: SyncStubReferencesResponse | PlainMessage<SyncStubReferencesResponse> | undefined, b: SyncStubReferencesResponse | PlainMessage<SyncStubReferencesResponse> | undefined): boolean {
     return proto3.util.equals(SyncStubReferencesResponse, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.language.v1.RunnerStartedRequest
- */
-export class RunnerStartedRequest extends Message<RunnerStartedRequest> {
-  /**
-   * The address of the runner
-   *
-   * @generated from field: string address = 1;
-   */
-  address = "";
-
-  /**
-   * @generated from field: repeated xyz.block.ftl.language.v1.RunnerStartedRequest.Database databases = 2;
-   */
-  databases: RunnerStartedRequest_Database[] = [];
-
-  constructor(data?: PartialMessage<RunnerStartedRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.language.v1.RunnerStartedRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "address", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "databases", kind: "message", T: RunnerStartedRequest_Database, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RunnerStartedRequest {
-    return new RunnerStartedRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RunnerStartedRequest {
-    return new RunnerStartedRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RunnerStartedRequest {
-    return new RunnerStartedRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: RunnerStartedRequest | PlainMessage<RunnerStartedRequest> | undefined, b: RunnerStartedRequest | PlainMessage<RunnerStartedRequest> | undefined): boolean {
-    return proto3.util.equals(RunnerStartedRequest, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.language.v1.RunnerStartedRequest.Database
- */
-export class RunnerStartedRequest_Database extends Message<RunnerStartedRequest_Database> {
-  /**
-   * @generated from field: string name = 1;
-   */
-  name = "";
-
-  /**
-   * @generated from field: string url = 2;
-   */
-  url = "";
-
-  constructor(data?: PartialMessage<RunnerStartedRequest_Database>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.language.v1.RunnerStartedRequest.Database";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RunnerStartedRequest_Database {
-    return new RunnerStartedRequest_Database().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RunnerStartedRequest_Database {
-    return new RunnerStartedRequest_Database().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RunnerStartedRequest_Database {
-    return new RunnerStartedRequest_Database().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: RunnerStartedRequest_Database | PlainMessage<RunnerStartedRequest_Database> | undefined, b: RunnerStartedRequest_Database | PlainMessage<RunnerStartedRequest_Database> | undefined): boolean {
-    return proto3.util.equals(RunnerStartedRequest_Database, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.language.v1.RunnerStartedResponse
- */
-export class RunnerStartedResponse extends Message<RunnerStartedResponse> {
-  constructor(data?: PartialMessage<RunnerStartedResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.language.v1.RunnerStartedResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RunnerStartedResponse {
-    return new RunnerStartedResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RunnerStartedResponse {
-    return new RunnerStartedResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RunnerStartedResponse {
-    return new RunnerStartedResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: RunnerStartedResponse | PlainMessage<RunnerStartedResponse> | undefined, b: RunnerStartedResponse | PlainMessage<RunnerStartedResponse> | undefined): boolean {
-    return proto3.util.equals(RunnerStartedResponse, a, b);
   }
 }
 
