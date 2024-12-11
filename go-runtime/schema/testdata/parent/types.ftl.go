@@ -4,7 +4,7 @@ package parent
 import (
 	"context"
 	ftlchild "ftl/parent/child"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/common/reflection"
 )
 
 type ChildVerbClient func(context.Context) (ftlchild.Resp, error)

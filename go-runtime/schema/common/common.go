@@ -15,8 +15,8 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/puzpuzpuz/xsync/v3"
 
-	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/schema/strcase"
+	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/strcase"
 )
 
 var (

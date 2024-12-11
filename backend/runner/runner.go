@@ -41,6 +41,8 @@ import (
 	"github.com/TBD54566975/ftl/backend/runner/pubsub"
 	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/common/plugin"
+	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/slices"
 	"github.com/TBD54566975/ftl/internal/download"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -49,8 +51,6 @@ import (
 	ftlobservability "github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/pgproxy"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/unstoppable"
 )
 

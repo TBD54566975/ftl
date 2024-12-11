@@ -3,7 +3,7 @@ package providers
 import (
 	"strings"
 
-	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/common/slices"
 )
 
 const defaultSecretModificationWarning = `This secret is managed by "ftl secret set", DO NOT MODIFY`

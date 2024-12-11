@@ -10,13 +10,13 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/admin"
 	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/timeline"
+	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/buildengine"
-	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 

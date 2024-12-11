@@ -30,6 +30,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/provisioner"
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/timeline"
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
@@ -41,7 +42,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 

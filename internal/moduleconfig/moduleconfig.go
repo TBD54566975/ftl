@@ -9,7 +9,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/go-viper/mapstructure/v2"
 
-	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/common/slices"
 )
 
 // ModuleConfig is the configuration for an FTL module.

@@ -16,9 +16,9 @@ import (
 	glspServer "github.com/tliron/glsp/server"
 	"github.com/tliron/kutil/version"
 
+	"github.com/TBD54566975/ftl/common/builderrors"
+	ftlErrors "github.com/TBD54566975/ftl/common/errors"
 	"github.com/TBD54566975/ftl/internal/buildengine"
-	"github.com/TBD54566975/ftl/internal/builderrors"
-	ftlErrors "github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 

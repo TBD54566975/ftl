@@ -11,8 +11,8 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/slices"
 )
 
 // buildRequestBody extracts the HttpRequest body from an HTTP request.

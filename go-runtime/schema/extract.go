@@ -13,6 +13,9 @@ import (
 	sets "github.com/deckarep/golang-set/v2"
 	"golang.org/x/exp/maps"
 
+	"github.com/TBD54566975/ftl/common/builderrors"
+	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/call"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/ftl/go-runtime/schema/config"
@@ -31,9 +34,6 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/typeenumvariant"
 	"github.com/TBD54566975/ftl/go-runtime/schema/valueenumvariant"
 	"github.com/TBD54566975/ftl/go-runtime/schema/verb"
-	"github.com/TBD54566975/ftl/internal/builderrors"
-	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
 
 // extractors contains all schema extractors that will run.

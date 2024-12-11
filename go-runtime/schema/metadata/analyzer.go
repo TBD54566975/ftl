@@ -11,8 +11,8 @@ import (
 	"github.com/alecthomas/types/optional"
 	sets "github.com/deckarep/golang-set/v2"
 
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
-	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // Extractor extracts metadata to the module schema.

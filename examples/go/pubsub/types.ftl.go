@@ -3,8 +3,8 @@ package pubsub
 
 import (
 	"context"
+	"github.com/TBD54566975/ftl/common/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 )
 

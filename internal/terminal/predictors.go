@@ -3,7 +3,7 @@ package terminal
 import (
 	"github.com/posener/complete"
 
-	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 

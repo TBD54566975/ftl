@@ -11,9 +11,9 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/observability"
-	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 const (

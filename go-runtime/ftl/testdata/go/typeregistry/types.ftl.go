@@ -6,7 +6,7 @@ import (
 	ftlbuiltin "ftl/builtin"
 	ftlsubpackage "ftl/typeregistry/subpackage"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/common/reflection"
 )
 
 type EchoClient func(context.Context, ftlbuiltin.HttpRequest[EchoRequest, ftl.Unit, ftl.Unit]) (ftlbuiltin.HttpResponse[EchoResponse, string], error)

@@ -30,7 +30,7 @@ sql:
             go_type:
               type: "optional.Option[sqltypes.Duration]"
           - db_type: "module_schema_pb"
-            go_type: "*github.com/TBD54566975/ftl/internal/schema.Module"
+            go_type: "*github.com/TBD54566975/ftl/common/schema.Module"
           - db_type: "timestamptz"
             nullable: true
             go_type: "github.com/TBD54566975/ftl/backend/controller/sql/sqltypes.OptionalTime"
@@ -44,7 +44,7 @@ sql:
             go_type:
               type: "optional.Option[model.RunnerKey]"
           - db_type: "schema_ref"
-            go_type: "github.com/TBD54566975/ftl/internal/schema.RefKey"
+            go_type: "github.com/TBD54566975/ftl/common/schema.RefKey"
           - db_type: "schema_ref"
             nullable: true
             go_type:

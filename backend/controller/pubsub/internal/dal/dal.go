@@ -14,11 +14,11 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/timeline"
+	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/slices"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type DAL struct {

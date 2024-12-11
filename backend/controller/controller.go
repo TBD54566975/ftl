@@ -41,11 +41,14 @@ import (
 	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
 	deploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
 	ftlv1connect2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/timeline"
+	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/sha256"
+	"github.com/TBD54566975/ftl/common/slices"
 	frontend "github.com/TBD54566975/ftl/frontend/console"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
@@ -58,10 +61,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
-	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
-	"github.com/TBD54566975/ftl/internal/sha256"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // CommonConfig between the production controller and development server.

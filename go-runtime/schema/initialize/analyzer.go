@@ -10,7 +10,7 @@ import (
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/packages"
 
-	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/common/slices"
 )
 
 // Analyzer prepares data prior to the schema extractor runs, e.g. loads FTL types for reference by other

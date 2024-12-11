@@ -28,9 +28,9 @@ import (
 
 	"github.com/block/scaffolder"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"

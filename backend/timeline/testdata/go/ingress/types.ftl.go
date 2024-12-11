@@ -5,7 +5,7 @@ import (
 	"context"
 	ftlbuiltin "ftl/builtin"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/common/reflection"
 )
 
 type GetClient func(context.Context, ftlbuiltin.HttpRequest[ftl.Unit, GetRequest, ftl.Unit]) (ftlbuiltin.HttpResponse[GetResponse, string], error)
