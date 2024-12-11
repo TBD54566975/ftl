@@ -24,7 +24,9 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/common/reflect"
 	"github.com/TBD54566975/ftl/common/schema"
+	islices "github.com/TBD54566975/ftl/common/slices"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/ftl/go-runtime/schema/finalize"
@@ -34,8 +36,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
-	"github.com/TBD54566975/ftl/internal/reflect"
-	islices "github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/watch"
 )
 
@@ -68,7 +68,7 @@ func (c *mainDeploymentContext) withImports(mainModuleImport string) {
 func (c *mainDeploymentContext) generateMainImports() []string {
 	imports := sets.NewSet[string]()
 	imports.Add(`"context"`)
-	imports.Add(`"github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/v1/ftlv1connect"`)
+	imports.Add(`"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"`)
 	imports.Add(`"github.com/TBD54566975/ftl/common/plugin"`)
 	imports.Add(`"github.com/TBD54566975/ftl/go-runtime/server"`)
 	if len(c.MainCtx.SumTypes) > 0 || len(c.MainCtx.ExternalTypes) > 0 {

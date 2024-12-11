@@ -8,8 +8,8 @@ import (
 
 	"connectrpc.com/connect"
 
-	langpb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/language/v1"
-	"github.com/TBD54566975/ftl/internal/slices"
+	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
+	"github.com/TBD54566975/ftl/common/slices"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"

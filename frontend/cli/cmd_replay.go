@@ -9,10 +9,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/jpillora/backoff"
 
+	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/timeline"
-	timelinepb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/timeline/v1"
-	ftlv1 "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/common/reflection"
 	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/log"

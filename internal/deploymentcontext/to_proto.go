@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	ftlv1 "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/deployment/v1"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
 )
 
 // ToProto converts a DeploymentContext to a proto response.

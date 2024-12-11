@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+package xyz.block.ftl.console.v1;
+
+import "xyz/block/ftl/schema/v1/schema.proto";
+import "xyz/block/ftl/v1/ftl.proto";
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1;pbconsole";
+option java_multiple_files = true;
+
+message Config {
+  ftl.schema.v1.Config config = 1;
+  repeated ftl.schema.v1.Ref references = 2;
+}
+
+message Data {
+  ftl.schema.v1.Data data = 1;
+  string schema = 2;
+  repeated ftl.schema.v1.Ref references = 3;
+}
+
+message Database {
+  ftl.schema.v1.Database database = 1;
+  repeated ftl.schema.v1.Ref references = 2;
+}
+
+message Enum {
+  ftl.schema.v1.Enum enum = 1;
+  repeated ftl.schema.v1.Ref references = 2;
+}
+
+message Topic {
+  ftl.schema.v1.Topic topic = 1;
+  repeated ftl.schema.v1.Ref references = 2;
+}
+
+message TypeAlias {
+  ftl.schema.v1.TypeAlias typealias = 1;
+  repeated ftl.schema.v1.Ref references = 2;
+}
+
+message Secret {
+  ftl.schema.v1.Secret secret = 1;
+  repeated ftl.schema.v1.Ref references = 2;
+}
+
+message Verb {
+  ftl.schema.v1.Verb verb = 1;
+  string schema = 2;
+  string json_request_schema = 3;
+  repeated ftl.schema.v1.Ref references = 4;
+}
+
+message Module {
+  string name = 1;
+  string deployment_key = 2;
+  string language = 3;
+  string schema = 4;
+  repeated Verb verbs = 5;
+  repeated Data data = 6;
+  repeated Secret secrets = 7;
+  repeated Config configs = 8;
+  repeated Database databases = 9;
+  repeated Enum enums = 10;
+  repeated Topic topics = 11;
+  repeated TypeAlias typealiases = 12;
+}
+
+message TopologyGroup {
+  repeated string modules = 1;
+}
+
+message Topology {
+  repeated TopologyGroup levels = 1;
+}
+
+message GetModulesRequest {}
+message GetModulesResponse {
+  repeated Module modules = 1;
+  Topology topology = 2;
+}
+
+message StreamModulesRequest {}
+message StreamModulesResponse {
+  repeated Module modules = 1;
+  Topology topology = 2;
+}
+
+message GetConfigRequest {
+  string name = 1;
+  optional string module = 2;
+}
+
+message GetConfigResponse {
+  bytes value = 1;
+}
+
+message SetConfigRequest {
+  string name = 1;
+  optional string module = 2;
+  bytes value = 3;
+}
+
+message SetConfigResponse {
+  bytes value = 1;
+}
+
+message GetSecretRequest {
+  string name = 1;
+  optional string module = 2;
+}
+
+message GetSecretResponse {
+  bytes value = 1;
+}
+
+message SetSecretRequest {
+  string name = 1;
+  optional string module = 2;
+  bytes value = 3;
+}
+
+message SetSecretResponse {
+  bytes value = 1;
+}
+
+service ConsoleService {
+  // Ping service for readiness.
+  rpc Ping(ftl.v1.PingRequest) returns (ftl.v1.PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetModules(GetModulesRequest) returns (GetModulesResponse);
+  rpc StreamModules(StreamModulesRequest) returns (stream StreamModulesResponse);
+
+  rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
+  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+
+  rpc GetSecret(GetSecretRequest) returns (GetSecretResponse);
+  rpc SetSecret(SetSecretRequest) returns (SetSecretResponse);
+}

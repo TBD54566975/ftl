@@ -19,11 +19,11 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/admin"
+	leasev1connext "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
+	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
+	ftlv1pubsubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/timeline"
-	leasev1connext "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/lease/v1/ftlv1connect"
-	provisionerconnect "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
-	ftlv1pubsubconnect "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/configuration"

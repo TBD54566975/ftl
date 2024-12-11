@@ -8,10 +8,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/result"
 
+	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
+	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/plugin"
-	langpb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/language/v1"
-	langconnect "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/language/v1/languagepbconnect"
-	ftlv1 "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 )

@@ -5,23 +5,24 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/TBD54566975/ftl/backend/libdal"
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/common/slices"
 )
 
-func getIngressRoute(routes []ingressRoute, path string) (*ingressRoute, error) {
+func getIngressRoute(routes []ingressRoute, path string) (optional.Option[*ingressRoute], error) {
 	var matchedRoutes = slices.Filter(routes, func(route ingressRoute) bool {
 		return matchSegments(route.path, path, func(segment, value string) {})
 	})
 
 	if len(matchedRoutes) == 0 {
-		return nil, libdal.ErrNotFound
+		return optional.None[*ingressRoute](), nil
 	}
 
 	// TODO: add load balancing at some point
 	route := matchedRoutes[rand.Intn(len(matchedRoutes))] //nolint:gosec
-	return &route, nil
+	return optional.Some(&route), nil
 }
 
 func matchSegments(pattern, urlPath string, onMatch func(segment, value string)) bool {

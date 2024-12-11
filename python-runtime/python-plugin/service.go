@@ -9,9 +9,9 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/block/scaffolder"
 
-	langpb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/language/v1"
-	langconnect "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/language/v1/languagepbconnect"
-	ftlv1 "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/v1"
+	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
+	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"

@@ -12,11 +12,11 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/slices"
 	"github.com/TBD54566975/ftl/common/strcase"
 	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 var redPandaBrokers = []string{"127.0.0.1:19092"}

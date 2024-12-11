@@ -1,7 +1,7 @@
 package schema
 
 import (
-	"github.com/TBD54566975/ftl/internal/reflect"
+	"github.com/TBD54566975/ftl/common/reflect"
 )
 
 // Normalise clones and normalises (zeroes) positional information in schema Nodes.

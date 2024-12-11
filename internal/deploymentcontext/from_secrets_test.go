@@ -6,7 +6,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	ftlv2 "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/deployment/v1"
+	ftlv2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 

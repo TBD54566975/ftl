@@ -13,8 +13,8 @@ import (
 	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	ftlv1 "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/lease/v1"
-	"github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/lease/v1/ftlv1connect"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/common/reflection"
 	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 	"github.com/TBD54566975/ftl/internal/log"

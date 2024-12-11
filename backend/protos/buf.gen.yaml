@@ -1,0 +1,18 @@
+version: v1
+plugins:
+  - plugin: go
+    out: .
+    opt: paths=source_relative
+  - plugin: connect-go
+    out: .
+    opt: paths=source_relative
+  - plugin: es
+    out: ../../frontend/console/src/protos
+    opt: target=ts
+  - plugin: connect-es
+    out: ../../frontend/console/src/protos
+    opt: target=ts
+  - plugin: python
+    out: ../../python-runtime/ftl/src/ftl/protos
+    opt:
+      - pyi_out=../../python-runtime/ftl/src/ftl/protos

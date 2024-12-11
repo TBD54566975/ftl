@@ -7,8 +7,8 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/internal/errors"
-	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/common/errors"
+	"github.com/TBD54566975/ftl/common/slices"
 )
 
 //nolint:maintidx

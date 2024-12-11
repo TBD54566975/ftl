@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
-	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/common/slices"
 )
 
 const PostgresDatabaseType = "postgres"

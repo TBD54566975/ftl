@@ -1,0 +1,12 @@
+version: v1
+breaking:
+  ignore_unstable_packages: true
+  ignore:
+    - xyz/block/ftl/v1beta1
+  use:
+    - FILE
+lint:
+  use:
+    - STANDARD
+  except:
+    - RPC_REQUEST_RESPONSE_UNIQUE

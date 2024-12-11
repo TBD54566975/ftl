@@ -1,6 +1,6 @@
 package schema
 
-import "github.com/TBD54566975/ftl/internal/reflect"
+import "github.com/TBD54566975/ftl/common/reflect"
 
 type Redactable interface {
 	Redact()

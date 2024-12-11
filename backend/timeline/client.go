@@ -10,8 +10,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl/backend/controller/observability"
-	timelinepb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/timeline/v1"
-	"github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
+	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )

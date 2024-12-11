@@ -15,7 +15,7 @@ import (
 	"github.com/alecthomas/types/result"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	langpb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/language/v1"
+	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
 	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/log"

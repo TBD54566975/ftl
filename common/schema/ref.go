@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
-	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/common/slices"
 )
 
 // RefKey is a map key for a reference.

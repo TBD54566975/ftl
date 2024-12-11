@@ -5,7 +5,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	timelinepb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/timeline/v1"
+	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 

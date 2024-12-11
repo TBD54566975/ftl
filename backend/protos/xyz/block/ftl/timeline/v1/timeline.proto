@@ -1,0 +1,146 @@
+syntax = "proto3";
+
+package xyz.block.ftl.timeline.v1;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "xyz/block/ftl/timeline/v1/event.proto";
+import "xyz/block/ftl/v1/ftl.proto";
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1;timelinev1";
+option java_multiple_files = true;
+
+message GetTimelineRequest {
+  // Filters events by log level.
+  message LogLevelFilter {
+    timeline.v1.LogLevel log_level = 1;
+  }
+  // Filters events by deployment key.
+  message DeploymentFilter {
+    repeated string deployments = 1;
+  }
+  // Filters events by request key.
+  message RequestFilter {
+    repeated string requests = 1;
+  }
+  // Filters events by event type.
+  message EventTypeFilter {
+    repeated timeline.v1.EventType event_types = 1;
+  }
+  // Filters events by time.
+  //
+  // Either end of the time range can be omitted to indicate no bound.
+  message TimeFilter {
+    optional google.protobuf.Timestamp older_than = 1;
+    optional google.protobuf.Timestamp newer_than = 2;
+  }
+  // Filters events by ID.
+  //
+  // Either end of the ID range can be omitted to indicate no bound.
+  message IDFilter {
+    optional int64 lower_than = 1;
+    optional int64 higher_than = 2;
+  }
+  // Filters events by call.
+  message CallFilter {
+    string dest_module = 1;
+    optional string dest_verb = 2;
+    optional string source_module = 3;
+  }
+  message ModuleFilter {
+    string module = 1;
+    optional string verb = 2;
+  }
+
+  enum Order {
+    ORDER_UNSPECIFIED = 0;
+    ORDER_ASC = 1;
+    ORDER_DESC = 2;
+  }
+
+  message Filter {
+    // These map 1:1 with filters in backend/timeline/filters.go
+    oneof filter {
+      LogLevelFilter log_level = 1;
+      DeploymentFilter deployments = 2;
+      RequestFilter requests = 3;
+      EventTypeFilter event_types = 4;
+      TimeFilter time = 5;
+      IDFilter id = 6;
+      CallFilter call = 7;
+      ModuleFilter module = 8;
+    }
+  }
+
+  repeated Filter filters = 1;
+  int32 limit = 2;
+  // Ordering is done by id which matches publication order.
+  // This roughly corresponds to the time of the event, but not strictly.
+  Order order = 3;
+}
+
+message GetTimelineResponse {
+  repeated timeline.v1.Event events = 1;
+  // For pagination, this cursor is where we should start our next query
+  optional int64 cursor = 2;
+}
+
+message StreamTimelineRequest {
+  optional google.protobuf.Duration update_interval = 1;
+  GetTimelineRequest query = 2;
+}
+
+message StreamTimelineResponse {
+  repeated timeline.v1.Event events = 1;
+}
+
+message CreateEventsRequest {
+  message EventEntry {
+    google.protobuf.Timestamp timestamp = 1;
+
+    oneof entry {
+      LogEvent log = 2;
+      CallEvent call = 3;
+      DeploymentCreatedEvent deployment_created = 4;
+      DeploymentUpdatedEvent deployment_updated = 5;
+      IngressEvent ingress = 6;
+      CronScheduledEvent cron_scheduled = 7;
+      AsyncExecuteEvent async_execute = 8;
+      PubSubPublishEvent pubsub_publish = 9;
+      PubSubConsumeEvent pubsub_consume = 10;
+    }
+  }
+
+  repeated EventEntry entries = 1;
+}
+
+message CreateEventsResponse {}
+
+message DeleteOldEventsRequest {
+  timeline.v1.EventType event_type = 1;
+  int64 age_seconds = 2;
+}
+
+message DeleteOldEventsResponse {
+  int64 deleted_count = 1;
+}
+
+service TimelineService {
+  // Ping service for readiness
+  rpc Ping(ftl.v1.PingRequest) returns (ftl.v1.PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Get timeline events with filters
+  rpc GetTimeline(GetTimelineRequest) returns (GetTimelineResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Stream timeline events with filters
+  rpc StreamTimeline(StreamTimelineRequest) returns (stream StreamTimelineResponse);
+
+  rpc CreateEvents(CreateEventsRequest) returns (CreateEventsResponse) {}
+
+  // Delete old events of a specific type
+  rpc DeleteOldEvents(DeleteOldEventsRequest) returns (DeleteOldEventsResponse) {}
+}

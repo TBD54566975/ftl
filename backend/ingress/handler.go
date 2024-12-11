@@ -12,10 +12,9 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/observability"
-	"github.com/TBD54566975/ftl/backend/libdal"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/timeline"
 	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
-	ftlv1 "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -27,16 +26,18 @@ func handleHTTP(startTime time.Time, sch *schema.Schema, requestKey model.Reques
 	logger := log.FromContext(r.Context()).Scope(fmt.Sprintf("ingress:%s:%s", r.Method, r.URL.Path))
 	logger.Debugf("Start ingress request")
 
-	route, err := getIngressRoute(routesForMethod, r.URL.Path)
+	routeOpt, err := getIngressRoute(routesForMethod, r.URL.Path)
 	if err != nil {
-		if errors.Is(err, libdal.ErrNotFound) {
-			http.NotFound(w, r)
-			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), startTime, optional.Some("route not found"))
-			return
-		}
 		logger.Errorf(err, "failed to resolve route for %s %s", r.Method, r.URL.Path)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), startTime, optional.Some("failed to resolve route"))
+		return
+	}
+	var route *ingressRoute
+	var ok bool
+	if route, ok = routeOpt.Get(); !ok {
+		http.NotFound(w, r)
+		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), startTime, optional.Some("route not found"))
 		return
 	}
 	logger = logger.Module(route.module)
