@@ -422,7 +422,6 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				assert.NoError(t, err)
 				defer clusterAdmin.Close()
 
-				// Try to reset up to 3 times
 				// There can be a slight delay for consumer groups to be empty after a previous run of FTL ends
 				for i := range 15 {
 					err = attemptToResetPubSub(clusterAdmin)
