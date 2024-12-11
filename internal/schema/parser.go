@@ -7,7 +7,6 @@ import (
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/internal/builderrors"
 )
@@ -77,8 +76,6 @@ func (p Position) String() string {
 	return fmt.Sprintf("%s:%d:%d", p.Filename, p.Line, p.Column)
 }
 
-func (p Position) ToProto() proto.Message { return posToProto(p) }
-
 func (p Position) ToErrorPos() builderrors.Position {
 	return p.ToErrorPosWithEnd(p.Column)
 }
@@ -98,7 +95,6 @@ func (p Position) ToErrorPosWithEnd(endColumn int) builderrors.Position {
 //sumtype:decl
 type Node interface {
 	String() string
-	ToProto() proto.Message
 	Position() Position
 	// schemaChildren returns the children of this node.
 	schemaChildren() []Node

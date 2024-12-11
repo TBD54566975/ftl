@@ -3,10 +3,6 @@ package schema
 import (
 	"fmt"
 	"strings"
-
-	"google.golang.org/protobuf/proto"
-
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 // MetadataSecrets represents a metadata block with a list of config items that are used.
@@ -50,10 +46,3 @@ func (m *MetadataSecrets) schemaChildren() []Node {
 	return out
 }
 func (*MetadataSecrets) schemaMetadata() {}
-
-func (m *MetadataSecrets) ToProto() proto.Message {
-	return &schemapb.MetadataSecrets{
-		Pos:     posToProto(m.Pos),
-		Secrets: nodeListToProto[*schemapb.Ref](m.Secrets),
-	}
-}

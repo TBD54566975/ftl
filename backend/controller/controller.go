@@ -351,7 +351,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 			Name:        d.Module,
 			MinReplicas: int32(d.MinReplicas),
 			Replicas:    replicas[d.Key.String()],
-			Schema:      d.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
+			Schema:      d.Schema.ToProto(),
 		}, nil
 	})
 	if err != nil {
@@ -405,12 +405,10 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 func (s *Service) GetSchema(ctx context.Context, c *connect.Request[ftlv1.GetSchemaRequest]) (*connect.Response[ftlv1.GetSchemaResponse], error) {
 	view := s.controllerState.View()
 	schemas := view.GetActiveDeploymentSchemas()
-	modules := []*schemapb.Module{ //nolint:forcetypeassert
-		schema.Builtins().ToProto().(*schemapb.Module),
+	modules := []*schemapb.Module{
+		schema.Builtins().ToProto(),
 	}
-	modules = append(modules, slices.Map(schemas, func(d *schema.Module) *schemapb.Module {
-		return d.ToProto().(*schemapb.Module) //nolint:forcetypeassert
-	})...)
+	modules = append(modules, slices.Map(schemas, func(d *schema.Module) *schemapb.Module { return d.ToProto() })...)
 	return connect.NewResponse(&ftlv1.GetSchemaResponse{Schema: &schemapb.Schema{Modules: modules}}), nil
 }
 
@@ -628,7 +626,7 @@ func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.
 	logger.Debugf("Get deployment for: %s", deployment.Key.String())
 
 	return connect.NewResponse(&ftlv1.GetDeploymentResponse{
-		Schema:    deployment.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
+		Schema:    deployment.Schema.ToProto(),
 		Artefacts: slices.Map(maps.Values(deployment.Artefacts), ftlv1.ArtefactToProto),
 	}), nil
 }
@@ -1148,7 +1146,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	seedDeployments := view.GetActiveDeployments()
 	initialCount := len(seedDeployments)
 
-	builtins := schema.Builtins().ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	builtins := schema.Builtins().ToProto()
 	builtinsResponse := &ftlv1.PullSchemaResponse{
 		ModuleName: builtins.Name,
 		Schema:     builtins,
@@ -1162,7 +1160,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	}
 	for _, initial := range seedDeployments {
 		initialCount--
-		module := initial.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+		module := initial.Schema.ToProto()
 		err := sendChange(&ftlv1.PullSchemaResponse{
 			ModuleName:    module.Name,
 			DeploymentKey: proto.String(initial.Key.String()),
@@ -1187,7 +1185,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				err := sendChange(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
 					ModuleName:    event.Module,
 					DeploymentKey: proto.String(event.Key.String()),
-					Schema:        event.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
+					Schema:        event.Schema.ToProto(),
 					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 				})
 				if err != nil {
@@ -1203,7 +1201,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				err = sendChange(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
 					ModuleName:    dep.Module,
 					DeploymentKey: proto.String(event.Key.String()),
-					Schema:        dep.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
+					Schema:        dep.Schema.ToProto(),
 					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED,
 					ModuleRemoved: event.ModuleRemoved,
 				})
@@ -1220,7 +1218,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				err = sendChange(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
 					ModuleName:    dep.Module,
 					DeploymentKey: proto.String(event.Key.String()),
-					Schema:        event.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
+					Schema:        event.Schema.ToProto(),
 					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_CHANGED,
 				})
 				if err != nil {

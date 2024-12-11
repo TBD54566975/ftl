@@ -121,10 +121,10 @@ func (f File) OrderedDecls() []Decl {
 func (f File) TypeOf(name string) string {
 	for _, decl := range f.Decls {
 		if decl.DeclName() == name {
-			return decl.DeclName()
+			return reflect.Indirect(reflect.ValueOf(decl)).Type().Name()
 		}
 	}
-	return ""
+	panic("unknown type " + name)
 }
 
 //sumtype:decl
@@ -155,11 +155,18 @@ var reservedWords = map[string]string{
 	"String": "String_",
 }
 
+func protoName(s string) string {
+	if name, ok := reservedWords[s]; ok {
+		return name
+	}
+	return strcase.ToUpperCamel(s)
+}
+
 func (f Field) EscapedName() string {
 	if name, ok := reservedWords[f.Name]; ok {
 		return name
 	}
-	return f.Name
+	return strcase.ToUpperCamel(f.Name)
 }
 
 type Enum struct {
@@ -401,6 +408,9 @@ func (s *State) extractStruct(n *types.Named, t *types.Struct) error {
 		field.ID = tag.ID
 		field.Optional = tag.Optional
 		decl.Fields = append(decl.Fields, field)
+		if field.Optional && field.Repeated {
+			return genErrorf(n.Obj().Pos(), "%s: repeated optional fields are not supported", rf.Name())
+		}
 		if nt, ok := rf.Type().(*types.Named); ok {
 			if err := s.extractDecl(rf, nt); err != nil {
 				return fmt.Errorf("%s: %w", rf.Name(), err)

@@ -14,7 +14,6 @@ import (
 	"github.com/alecthomas/types/must"
 	"github.com/alecthomas/types/optional"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -100,7 +99,7 @@ func TestSchemaEventSource(t *testing.T) {
 	t.Run("InitialSend", func(t *testing.T) {
 		send(t, &ftlv1.PullSchemaResponse{
 			More:       true,
-			Schema:     (time1).ToProto().(*schemapb.Module), //nolint:forcetypeassert
+			Schema:     (time1).ToProto(),
 			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 		})
 
@@ -110,7 +109,7 @@ func TestSchemaEventSource(t *testing.T) {
 
 		send(t, &ftlv1.PullSchemaResponse{
 			More:       false,
-			Schema:     (echo1).ToProto().(*schemapb.Module), //nolint:forcetypeassert
+			Schema:     (echo1).ToProto(),
 			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 		})
 
@@ -131,7 +130,7 @@ func TestSchemaEventSource(t *testing.T) {
 	t.Run("Mutation", func(t *testing.T) {
 		send(t, &ftlv1.PullSchemaResponse{
 			More:       false,
-			Schema:     (time2).ToProto().(*schemapb.Module), //nolint:forcetypeassert
+			Schema:     (time2).ToProto(),
 			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 		})
 
@@ -146,12 +145,12 @@ func TestSchemaEventSource(t *testing.T) {
 	t.Run("SimulatedReconnect", func(t *testing.T) {
 		send(t, &ftlv1.PullSchemaResponse{
 			More:       true,
-			Schema:     (time2).ToProto().(*schemapb.Module), //nolint:forcetypeassert
+			Schema:     (time2).ToProto(),
 			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 		})
 		send(t, &ftlv1.PullSchemaResponse{
 			More:       false,
-			Schema:     (echo1).ToProto().(*schemapb.Module), //nolint:forcetypeassert
+			Schema:     (echo1).ToProto(),
 			ChangeType: ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
 		})
 
@@ -166,7 +165,7 @@ func TestSchemaEventSource(t *testing.T) {
 
 	t.Run("Delete", func(t *testing.T) {
 		send(t, &ftlv1.PullSchemaResponse{
-			Schema:        (echo1).ToProto().(*schemapb.Module), //nolint:forcetypeassert
+			Schema:        (echo1).ToProto(),
 			ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED,
 			ModuleRemoved: true,
 		})

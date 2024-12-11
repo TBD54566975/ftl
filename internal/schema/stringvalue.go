@@ -2,10 +2,6 @@ package schema
 
 import (
 	"fmt"
-
-	"google.golang.org/protobuf/proto"
-
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 //protobuf:1
@@ -16,13 +12,6 @@ type StringValue struct {
 }
 
 var _ Value = (*StringValue)(nil)
-
-func (s *StringValue) ToProto() proto.Message {
-	return &schemapb.StringValue{
-		Pos:   posToProto(s.Pos),
-		Value: s.Value,
-	}
-}
 
 func (s *StringValue) Position() Position { return s.Pos }
 

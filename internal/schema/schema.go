@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/types/optional"
-	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
@@ -191,13 +190,6 @@ func (s *Schema) Upsert(module *Module) {
 		}
 	}
 	s.Modules = append(s.Modules, module)
-}
-
-func (s *Schema) ToProto() proto.Message {
-	return &schemapb.Schema{
-		Pos:     posToProto(s.Pos),
-		Modules: nodeListToProto[*schemapb.Module](s.Modules),
-	}
 }
 
 // TypeName returns the name of a type as a string, stripping any package prefix and correctly handling Ref aliases.

@@ -17,7 +17,6 @@ import (
 
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
 	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/go-runtime/compile"
@@ -430,7 +429,7 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 		return buildFailure(buildCtx, isAutomaticRebuild, buildErrs...), nil
 	}
 
-	moduleProto := module.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	moduleProto := module.ToProto()
 	deploy := []string{"main", "launch"}
 	return &langpb.BuildResponse{
 		Event: &langpb.BuildResponse_BuildSuccess{

@@ -3,8 +3,6 @@ package schema
 import (
 	"fmt"
 
-	"google.golang.org/protobuf/proto"
-
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
@@ -31,13 +29,6 @@ func (m *Map) schemaChildren() []Node { return []Node{m.Key, m.Value} }
 func (*Map) schemaType()              {}
 func (*Map) schemaSymbol()            {}
 func (m *Map) String() string         { return fmt.Sprintf("{%s: %s}", m.Key.String(), m.Value.String()) }
-
-func (m *Map) ToProto() proto.Message {
-	return &schemapb.Map{
-		Key:   TypeToProto(m.Key),
-		Value: TypeToProto(m.Value),
-	}
-}
 
 func mapToSchema(s *schemapb.Map) *Map {
 	return &Map{

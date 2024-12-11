@@ -1,8 +1,6 @@
 package schema
 
 import (
-	"google.golang.org/protobuf/proto"
-
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
@@ -28,10 +26,6 @@ func (a *Array) schemaChildren() []Node { return []Node{a.Element} }
 func (a *Array) schemaType()            {}
 func (a *Array) schemaSymbol()          {}
 func (a *Array) String() string         { return "[" + a.Element.String() + "]" }
-
-func (a *Array) ToProto() proto.Message {
-	return &schemapb.Array{Element: TypeToProto(a.Element)}
-}
 
 func arrayToSchema(s *schemapb.Array) *Array {
 	return &Array{

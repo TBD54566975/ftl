@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/types/optional"
-	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
@@ -55,20 +54,6 @@ func (e *Enum) schemaChildren() []Node {
 	}
 	return children
 }
-func (e *Enum) ToProto() proto.Message {
-	se := &schemapb.Enum{
-		Pos:      posToProto(e.Pos),
-		Comments: e.Comments,
-		Name:     e.Name,
-		Export:   e.Export,
-		Variants: nodeListToProto[*schemapb.EnumVariant](e.Variants),
-	}
-	if e.Type != nil {
-		se.Type = TypeToProto(e.Type)
-	}
-	return se
-}
-
 func (e *Enum) GetName() string  { return e.Name }
 func (e *Enum) IsExported() bool { return e.Export }
 
@@ -108,14 +93,6 @@ type EnumVariant struct {
 	Comments []string `parser:"@Comment*" protobuf:"2"`
 	Name     string   `parser:"@Ident" protobuf:"3"`
 	Value    Value    `parser:"(('=' @@) | @@)!" protobuf:"4"`
-}
-
-func (e *EnumVariant) ToProto() proto.Message {
-	return &schemapb.EnumVariant{
-		Pos:   posToProto(e.Pos),
-		Name:  e.Name,
-		Value: valueToProto(e.Value),
-	}
 }
 
 func (e *EnumVariant) Position() Position { return e.Pos }

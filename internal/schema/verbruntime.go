@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/known/timestamppb"
-
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -40,23 +37,6 @@ func (v *VerbRuntimeEvent) ApplyTo(m *Module) {
 	}
 }
 
-func (v *VerbRuntimeEvent) ToProto() protoreflect.ProtoMessage {
-	var payload *schemapb.VerbRuntimePayload
-	if v.Payload != nil {
-		switch p := v.Payload.(type) {
-		case *VerbRuntimeBase:
-			payload = &schemapb.VerbRuntimePayload{Value: &schemapb.VerbRuntimePayload_VerbRuntimeBase{VerbRuntimeBase: p.ToProto().(*schemapb.VerbRuntimeBase)}} //nolint:forcetypeassert
-		case *VerbRuntimeSubscription:
-			payload = &schemapb.VerbRuntimePayload{Value: &schemapb.VerbRuntimePayload_VerbRuntimeSubscription{VerbRuntimeSubscription: p.ToProto().(*schemapb.VerbRuntimeSubscription)}} //nolint:forcetypeassert
-		}
-	}
-
-	return &schemapb.VerbRuntimeEvent{
-		Id:      v.ID,
-		Payload: payload,
-	}
-}
-
 func VerbRuntimeEventFromProto(p *schemapb.VerbRuntimeEvent) *VerbRuntimeEvent {
 	return &VerbRuntimeEvent{
 		ID:      p.Id,
@@ -67,7 +47,6 @@ func VerbRuntimeEventFromProto(p *schemapb.VerbRuntimeEvent) *VerbRuntimeEvent {
 //sumtype:decl
 type VerbRuntimePayload interface {
 	verbRuntime()
-	ToProto() protoreflect.ProtoMessage
 }
 
 func VerbRuntimePayloadFromProto(p *schemapb.VerbRuntimePayload) VerbRuntimePayload {
@@ -83,44 +62,28 @@ func VerbRuntimePayloadFromProto(p *schemapb.VerbRuntimePayload) VerbRuntimePayl
 
 //protobuf:1
 type VerbRuntimeBase struct {
-	CreateTime *time.Time `protobuf:"1,optional"`
-	StartTime  *time.Time `protobuf:"2,optional"`
+	CreateTime time.Time `protobuf:"1,optional"`
+	StartTime  time.Time `protobuf:"2,optional"`
 }
 
 func (*VerbRuntimeBase) verbRuntime() {}
 
-func (v *VerbRuntimeBase) ToProto() protoreflect.ProtoMessage {
-	return &schemapb.VerbRuntimeBase{
-		CreateTime: timestampToProto(v.CreateTime),
-		StartTime:  timestampToProto(v.StartTime),
-	}
-}
-
 func VerbRuntimeBaseFromProto(s *schemapb.VerbRuntimeBase) *VerbRuntimeBase {
 	if s == nil {
-		return nil
+		return &VerbRuntimeBase{}
 	}
 	return &VerbRuntimeBase{
-		CreateTime: timestampFromProto(s.CreateTime),
-		StartTime:  timestampFromProto(s.StartTime),
+		CreateTime: s.CreateTime.AsTime(),
+		StartTime:  s.StartTime.AsTime(),
 	}
 }
 
 //protobuf:2
 type VerbRuntimeSubscription struct {
-	KafkaBrokers []string `protobuf:"1,optional"`
+	KafkaBrokers []string `protobuf:"1"`
 }
 
 func (*VerbRuntimeSubscription) verbRuntime() {}
-
-func (v *VerbRuntimeSubscription) ToProto() protoreflect.ProtoMessage {
-	if v == nil {
-		return nil
-	}
-	return &schemapb.VerbRuntimeSubscription{
-		KafkaBrokers: v.KafkaBrokers,
-	}
-}
 
 func VerbRuntimeSubscriptionFromProto(s *schemapb.VerbRuntimeSubscription) *VerbRuntimeSubscription {
 	if s == nil {
@@ -129,19 +92,4 @@ func VerbRuntimeSubscriptionFromProto(s *schemapb.VerbRuntimeSubscription) *Verb
 	return &VerbRuntimeSubscription{
 		KafkaBrokers: s.KafkaBrokers,
 	}
-}
-
-func timestampToProto(t *time.Time) *timestamppb.Timestamp {
-	if t == nil {
-		return nil
-	}
-	return timestamppb.New(*t)
-}
-
-func timestampFromProto(t *timestamppb.Timestamp) *time.Time {
-	if t == nil {
-		return nil
-	}
-	time := t.AsTime()
-	return &time
 }

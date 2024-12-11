@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"google.golang.org/protobuf/reflect/protoreflect"
-
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
@@ -31,15 +29,6 @@ func (s *Secret) String() string {
 	fmt.Fprintf(w, "secret %s %s", s.Name, s.Type)
 
 	return w.String()
-}
-
-func (s *Secret) ToProto() protoreflect.ProtoMessage {
-	return &schemapb.Secret{
-		Pos:      posToProto(s.Pos),
-		Name:     s.Name,
-		Comments: s.Comments,
-		Type:     TypeToProto(s.Type),
-	}
 }
 
 func (s *Secret) schemaChildren() []Node { return []Node{s.Type} }

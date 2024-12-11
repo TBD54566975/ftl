@@ -6,7 +6,6 @@ import (
 
 	"connectrpc.com/connect"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -38,7 +37,7 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 			}
 
 			resp, err := client.CreateDeployment(ctx, connect.NewRequest(&ftlv1.CreateDeploymentRequest{
-				Schema:    module.ToProto().(*schemapb.Module),
+				Schema:    module.ToProto(),
 				Artefacts: artefacts,
 			}))
 			if err != nil {

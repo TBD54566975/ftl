@@ -3,10 +3,6 @@ package schema
 import (
 	"fmt"
 	"strings"
-
-	"google.golang.org/protobuf/reflect/protoreflect"
-
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 //protobuf:9
@@ -32,13 +28,6 @@ func (m *MetadataEncoding) String() string {
 		fmt.Fprintf(w, " lenient")
 	}
 	return w.String()
-}
-
-func (m *MetadataEncoding) ToProto() protoreflect.ProtoMessage {
-	return &schemapb.MetadataEncoding{
-		Pos:     posToProto(m.Pos),
-		Lenient: m.Lenient,
-	}
 }
 
 func (m *MetadataEncoding) schemaChildren() []Node { return nil }

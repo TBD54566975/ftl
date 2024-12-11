@@ -2,10 +2,6 @@ package schema
 
 import (
 	"fmt"
-
-	"google.golang.org/protobuf/reflect/protoreflect"
-
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
 // AliasKind is the kind of alias.
@@ -32,14 +28,6 @@ func (m *MetadataAlias) Position() Position { return m.Pos }
 
 func (m *MetadataAlias) String() string {
 	return fmt.Sprintf("+alias %s %q", m.Kind, m.Alias)
-}
-
-func (m *MetadataAlias) ToProto() protoreflect.ProtoMessage {
-	return &schemapb.MetadataAlias{
-		Pos:   posToProto(m.Pos),
-		Kind:  schemapb.AliasKind(m.Kind),
-		Alias: m.Alias,
-	}
 }
 
 func (m *MetadataAlias) schemaChildren() []Node { return nil }

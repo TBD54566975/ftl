@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"google.golang.org/protobuf/proto"
-
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/reflect"
 )
@@ -181,19 +179,6 @@ func (d *Data) String() string {
 	fmt.Fprintf(w, "}")
 	fmt.Fprint(w, indent(encodeMetadata(d.Metadata)))
 	return w.String()
-}
-
-func (d *Data) ToProto() proto.Message {
-	return &schemapb.Data{
-		Pos: posToProto(d.Pos),
-
-		Name:           d.Name,
-		Export:         d.Export,
-		TypeParameters: nodeListToProto[*schemapb.TypeParameter](d.TypeParameters),
-		Fields:         nodeListToProto[*schemapb.Field](d.Fields),
-		Comments:       d.Comments,
-		Metadata:       metadataListToProto(d.Metadata),
-	}
 }
 
 func DataFromProto(s *schemapb.Data) *Data {

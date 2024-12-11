@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/known/timestamppb"
-
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
@@ -40,18 +37,6 @@ func ModuleRuntimeFromProto(s *schemapb.ModuleRuntime) *ModuleRuntime {
 	}
 }
 
-func (m *ModuleRuntime) ToProto() protoreflect.ProtoMessage {
-	s := &schemapb.ModuleRuntime{}
-	s.Base = m.Base.ToProto().(*schemapb.ModuleRuntimeBase) //nolint:forcetypeassert
-	if m.Deployment != nil {
-		s.Deployment = m.Deployment.ToProto().(*schemapb.ModuleRuntimeDeployment) //nolint:forcetypeassert
-	}
-	if m.Scaling != nil {
-		s.Scaling = m.Scaling.ToProto().(*schemapb.ModuleRuntimeScaling) //nolint:forcetypeassert
-	}
-	return s
-}
-
 func ModuleRuntimeEventFromProto(s *schemapb.ModuleRuntimeEvent) ModuleRuntimeEvent {
 	switch s.Value.(type) {
 	case *schemapb.ModuleRuntimeEvent_ModuleRuntimeBase:
@@ -71,7 +56,6 @@ func ModuleRuntimeEventFromProto(s *schemapb.ModuleRuntimeEvent) ModuleRuntimeEv
 //sumtype:decl
 type ModuleRuntimeEvent interface {
 	moduleRuntime()
-	ToProto() protoreflect.ProtoMessage
 }
 
 //protobuf:1
@@ -100,26 +84,6 @@ func ModuleRuntimeBaseFromProto(s *schemapb.ModuleRuntimeBase) *ModuleRuntimeBas
 	}
 }
 
-func (m *ModuleRuntimeBase) ToProto() protoreflect.ProtoMessage {
-	if m == nil {
-		return nil
-	}
-	out := &schemapb.ModuleRuntimeBase{
-		CreateTime: timestamppb.New(m.CreateTime),
-		Language:   m.Language,
-	}
-	if m.OS != "" {
-		out.Os = &m.OS
-	}
-	if m.Arch != "" {
-		out.Arch = &m.Arch
-	}
-	if m.Image != "" {
-		out.Image = &m.Image
-	}
-	return out
-}
-
 //protobuf:2
 type ModuleRuntimeScaling struct {
 	MinReplicas int32 `protobuf:"1"`
@@ -133,15 +97,6 @@ func ModuleRuntimeScalingFromProto(s *schemapb.ModuleRuntimeScaling) *ModuleRunt
 	}
 	return &ModuleRuntimeScaling{
 		MinReplicas: s.MinReplicas,
-	}
-}
-
-func (m *ModuleRuntimeScaling) ToProto() protoreflect.ProtoMessage {
-	if m == nil {
-		return nil
-	}
-	return &schemapb.ModuleRuntimeScaling{
-		MinReplicas: m.MinReplicas,
 	}
 }
 
@@ -161,15 +116,5 @@ func ModuleRuntimeDeploymentFromProto(s *schemapb.ModuleRuntimeDeployment) *Modu
 	return &ModuleRuntimeDeployment{
 		Endpoint:      s.Endpoint,
 		DeploymentKey: s.DeploymentKey,
-	}
-}
-
-func (m *ModuleRuntimeDeployment) ToProto() protoreflect.ProtoMessage {
-	if m == nil {
-		return nil
-	}
-	return &schemapb.ModuleRuntimeDeployment{
-		Endpoint:      m.Endpoint,
-		DeploymentKey: m.DeploymentKey,
 	}
 }

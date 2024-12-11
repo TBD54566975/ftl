@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/types/optional"
-	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -162,26 +161,6 @@ func (v *Verb) GetMetadataCronJob() optional.Option[*MetadataCronJob] {
 	return optional.None[*MetadataCronJob]()
 }
 
-func (v *Verb) ToProto() proto.Message {
-	var runtime *schemapb.VerbRuntime
-	if v.Runtime != nil {
-		runtime = &schemapb.VerbRuntime{ //nolint:forcetypeassert
-			Base:         v.Runtime.Base.ToProto().(*schemapb.VerbRuntimeBase),                 //nolint:forcetypeassert
-			Subscription: v.Runtime.Subscription.ToProto().(*schemapb.VerbRuntimeSubscription), //nolint:forcetypeassert
-		}
-	}
-	return &schemapb.Verb{
-		Pos:      posToProto(v.Pos),
-		Export:   v.Export,
-		Name:     v.Name,
-		Comments: v.Comments,
-		Request:  TypeToProto(v.Request),
-		Response: TypeToProto(v.Response),
-		Metadata: metadataListToProto(v.Metadata),
-		Runtime:  runtime,
-	}
-}
-
 func (v *Verb) GetProvisioned() ResourceSet {
 	var result ResourceSet
 	for sub := range slices.FilterVariants[*MetadataSubscriber](v.Metadata) {
@@ -205,8 +184,10 @@ func VerbFromProto(s *schemapb.Verb) *Verb {
 	var runtime *VerbRuntime
 	if s.Runtime != nil {
 		runtime = &VerbRuntime{
-			Base:         *VerbRuntimeBaseFromProto(s.Runtime.Base),
-			Subscription: VerbRuntimeSubscriptionFromProto(s.Runtime.Subscription),
+			Base: *VerbRuntimeBaseFromProto(s.Runtime.Base),
+		}
+		if s.Runtime.Base.StartTime != nil {
+			runtime.Subscription = VerbRuntimeSubscriptionFromProto(s.Runtime.Subscription)
 		}
 	}
 	return &Verb{

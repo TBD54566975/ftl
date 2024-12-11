@@ -16,7 +16,6 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -267,7 +266,7 @@ func (p *LanguagePlugin) GetDependencies(ctx context.Context, config moduleconfi
 
 // GenerateStubs for the given module.
 func (p *LanguagePlugin) GenerateStubs(ctx context.Context, dir string, module *schema.Module, moduleConfig moduleconfig.ModuleConfig, nativeModuleConfig optional.Option[moduleconfig.ModuleConfig]) error {
-	moduleProto := module.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	moduleProto := module.ToProto()
 	configProto, err := langpb.ModuleConfigToProto(moduleConfig.Abs())
 	if err != nil {
 		return fmt.Errorf("could not create proto for module config: %w", err)
@@ -403,7 +402,7 @@ func (p *LanguagePlugin) run(ctx context.Context) {
 				continue
 			}
 
-			schemaProto := bctx.Schema.ToProto().(*schemapb.Schema) //nolint:forcetypeassert
+			schemaProto := bctx.Schema.ToProto()
 
 			if streamChan != nil {
 				// tell plugin about new build context so that it rebuilds in existing build stream

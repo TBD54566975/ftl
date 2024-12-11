@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
-
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -49,28 +46,9 @@ func (t *Topic) String() string {
 	fmt.Fprintf(w, "topic %s %s", t.Name, t.Event)
 	return w.String()
 }
-
-func (t *Topic) ToProto() proto.Message {
-	pb := &schemapb.Topic{
-		Pos: posToProto(t.Pos),
-
-		Name:     t.Name,
-		Export:   t.Export,
-		Event:    TypeToProto(t.Event),
-		Comments: t.Comments,
-	}
-	if t.Runtime != nil {
-		pb.Runtime = t.Runtime.ToProto()
-	}
-	return pb
-}
-
 func (t *Topic) GetProvisioned() ResourceSet {
 	return ResourceSet{
-		{
-			Kind:   ResourceTypeTopic,
-			Config: &Topic{Name: t.Name},
-		},
+		{Kind: ResourceTypeTopic, Config: &Topic{Name: t.Name}},
 	}
 }
 
@@ -95,13 +73,6 @@ type TopicRuntime struct {
 	TopicID      string   `parser:"" protobuf:"2"`
 }
 
-func (t *TopicRuntime) ToProto() *schemapb.TopicRuntime {
-	return &schemapb.TopicRuntime{
-		KafkaBrokers: t.KafkaBrokers,
-		TopicId:      t.TopicID,
-	}
-}
-
 func TopicRuntimeFromProto(t *schemapb.TopicRuntime) *TopicRuntime {
 	if t == nil {
 		return nil
@@ -115,13 +86,6 @@ func TopicRuntimeFromProto(t *schemapb.TopicRuntime) *TopicRuntime {
 type TopicRuntimeEvent struct {
 	ID      string        `parser:"" protobuf:"1"`
 	Payload *TopicRuntime `parser:"" protobuf:"2"`
-}
-
-func (t *TopicRuntimeEvent) ToProto() protoreflect.ProtoMessage {
-	return &schemapb.TopicRuntimeEvent{
-		Id:      t.ID,
-		Payload: t.Payload.ToProto(),
-	}
 }
 
 func TopicRuntimeEventFromProto(t *schemapb.TopicRuntimeEvent) *TopicRuntimeEvent {

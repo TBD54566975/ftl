@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"google.golang.org/protobuf/proto"
-
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
@@ -51,14 +49,6 @@ func (m *MetadataIngress) schemaChildren() []Node {
 
 func (*MetadataIngress) schemaMetadata() {}
 
-func (m *MetadataIngress) ToProto() proto.Message {
-	return &schemapb.MetadataIngress{
-		Pos:    posToProto(m.Pos),
-		Type:   m.Type,
-		Method: m.Method,
-		Path:   ingressListToProto(m.Path),
-	}
-}
 func ingressPathComponentListToSchema(s []*schemapb.IngressPathComponent) []IngressPathComponent {
 	var out []IngressPathComponent
 	for _, n := range s {
@@ -97,9 +87,6 @@ func (l *IngressPathLiteral) Position() Position        { return l.Pos }
 func (l *IngressPathLiteral) String() string            { return l.Text }
 func (*IngressPathLiteral) schemaChildren() []Node      { return nil }
 func (*IngressPathLiteral) schemaIngressPathComponent() {}
-func (l *IngressPathLiteral) ToProto() proto.Message {
-	return &schemapb.IngressPathLiteral{Text: l.Text}
-}
 
 //protobuf:2
 type IngressPathParameter struct {
@@ -114,6 +101,3 @@ func (l *IngressPathParameter) Position() Position        { return l.Pos }
 func (l *IngressPathParameter) String() string            { return l.Name }
 func (*IngressPathParameter) schemaChildren() []Node      { return nil }
 func (*IngressPathParameter) schemaIngressPathComponent() {}
-func (l *IngressPathParameter) ToProto() proto.Message {
-	return &schemapb.IngressPathParameter{Name: l.Name}
-}

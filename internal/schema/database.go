@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"google.golang.org/protobuf/proto"
-
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -45,26 +43,6 @@ func (d *Database) String() string {
 	fmt.Fprintf(w, "database %s %s", d.Type, d.Name)
 	fmt.Fprint(w, indent(encodeMetadata(d.Metadata)))
 	return w.String()
-}
-
-func (d *Database) ToProto() proto.Message {
-	var runtime *schemapb.DatabaseRuntime
-	if d.Runtime != nil {
-		r, ok := d.Runtime.ToProto().(*schemapb.DatabaseRuntime)
-		if !ok {
-			panic(fmt.Sprintf("unknown database runtime type: %T", d.Runtime))
-		}
-		runtime = r
-	}
-
-	return &schemapb.Database{
-		Pos:      posToProto(d.Pos),
-		Comments: d.Comments,
-		Name:     d.Name,
-		Type:     d.Type,
-		Runtime:  runtime,
-		Metadata: metadataListToProto(d.Metadata),
-	}
 }
 
 func (d *Database) GetName() string  { return d.Name }

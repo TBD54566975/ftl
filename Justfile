@@ -31,7 +31,7 @@ PROTOS_OUT := "backend/protos/xyz/block/ftl/console/v1/console.pb.go " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schemaservice_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/schema/v1/schema_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/publish/v1/publish_pb.ts"
-GO_SCHEMA_ROOTS := "./internal/schema.Schema ./internal/schema.ModuleRuntimeEvent ./internal/schema.DatabaseRuntimeEvent ./internal/schema.TopicRuntimeEvent ./internal/schema.VerbRuntimeEvent"
+GO_SCHEMA_ROOTS := "./internal/schema.{Schema,ModuleRuntimeEvent,DatabaseRuntimeEvent,TopicRuntimeEvent,VerbRuntimeEvent}"
 # Configuration for building Docker images
 DOCKER_IMAGES := '''
 {
@@ -205,7 +205,7 @@ build-protos:
 
 # Generate .proto files from .go types.
 go2proto:
-  @mk "{{SCHEMA_OUT}}" : cmd/go2proto internal/schema -- go2proto -o "{{SCHEMA_OUT}}" \
+  @mk "{{SCHEMA_OUT}}" : cmd/go2proto internal/schema -- go2proto -m -o "{{SCHEMA_OUT}}" \
     -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1;schemapb"' \
     -O 'java_multiple_files=true' \
     xyz.block.ftl.schema.v1 {{GO_SCHEMA_ROOTS}} && buf format -w && buf lint

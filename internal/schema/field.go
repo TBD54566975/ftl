@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/types/optional"
-	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
@@ -38,16 +37,6 @@ func (f *Field) String() string {
 		fmt.Fprintf(w, " %s", md.String())
 	}
 	return w.String()
-}
-
-func (f *Field) ToProto() proto.Message {
-	return &schemapb.Field{
-		Pos:      posToProto(f.Pos),
-		Name:     f.Name,
-		Type:     TypeToProto(f.Type),
-		Comments: f.Comments,
-		Metadata: metadataListToProto(f.Metadata),
-	}
 }
 
 // Alias returns the alias for the given kind.

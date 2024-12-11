@@ -7,9 +7,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/types/optional"
-	"google.golang.org/protobuf/proto"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/internal/duration"
 )
 
@@ -57,24 +55,6 @@ func (m *MetadataRetry) String() string {
 		components = append(components, fmt.Sprintf("catch %v", m.Catch))
 	}
 	return strings.Join(components, " ")
-}
-
-func (m *MetadataRetry) ToProto() proto.Message {
-	var count *int64
-	if m.Count != nil {
-		count = proto.Int64(int64(*m.Count))
-	}
-	var catch *schemapb.Ref
-	if m.Catch != nil {
-		catch = m.Catch.ToProto().(*schemapb.Ref) //nolint: forcetypeassert
-	}
-	return &schemapb.MetadataRetry{
-		Pos:        posToProto(m.Pos),
-		Count:      count,
-		MinBackoff: m.MinBackoff,
-		MaxBackoff: m.MaxBackoff,
-		Catch:      catch,
-	}
 }
 
 func parseRetryDuration(str string) (time.Duration, error) {

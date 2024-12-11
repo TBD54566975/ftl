@@ -3,8 +3,6 @@ package schema
 import (
 	"fmt"
 
-	"google.golang.org/protobuf/reflect/protoreflect"
-
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 )
 
@@ -18,23 +16,6 @@ func (d *DatabaseRuntime) Position() Position { return d.Connections.Read.Positi
 func (d *DatabaseRuntime) schemaSymbol()      {}
 func (d *DatabaseRuntime) String() string {
 	return fmt.Sprintf("read: %s, write: %s", d.Connections.Read, d.Connections.Write)
-}
-func (d *DatabaseRuntime) ToProto() protoreflect.ProtoMessage {
-	rc, ok := d.Connections.Read.ToProto().(*schemapb.DatabaseConnector)
-	if !ok {
-		panic(fmt.Sprintf("unknown database connector type: %T", d.Connections.Read))
-	}
-	wc, ok := d.Connections.Write.ToProto().(*schemapb.DatabaseConnector)
-	if !ok {
-		panic(fmt.Sprintf("unknown database connector type: %T", d.Connections.Write))
-	}
-
-	return &schemapb.DatabaseRuntime{
-		Connections: &schemapb.DatabaseRuntimeConnections{
-			Read:  rc,
-			Write: wc,
-		},
-	}
 }
 func (d *DatabaseRuntime) schemaChildren() []Node {
 	return []Node{d.Connections}
@@ -60,12 +41,6 @@ func (d *DatabaseRuntimeConnections) Position() Position { return d.Read.Positio
 func (d *DatabaseRuntimeConnections) schemaSymbol()      {}
 func (d *DatabaseRuntimeConnections) String() string {
 	return fmt.Sprintf("read: %s, write: %s", d.Read, d.Write)
-}
-func (d *DatabaseRuntimeConnections) ToProto() protoreflect.ProtoMessage {
-	return &schemapb.DatabaseRuntimeConnections{
-		Read:  d.Read.ToProto().(*schemapb.DatabaseConnector),  //nolint:forcetypeassert
-		Write: d.Write.ToProto().(*schemapb.DatabaseConnector), //nolint:forcetypeassert
-	}
 }
 
 func DatabaseRuntimeConnectionsFromProto(s *schemapb.DatabaseRuntimeConnections) *DatabaseRuntimeConnections {
@@ -94,20 +69,9 @@ type DSNDatabaseConnector struct {
 
 var _ DatabaseConnector = (*DSNDatabaseConnector)(nil)
 
-func (d *DSNDatabaseConnector) Position() Position { return d.Pos }
-func (d *DSNDatabaseConnector) databaseConnector() {}
-func (d *DSNDatabaseConnector) String() string     { return d.DSN }
-func (d *DSNDatabaseConnector) ToProto() protoreflect.ProtoMessage {
-	if d == nil {
-		return nil
-	}
-	return &schemapb.DatabaseConnector{
-		Value: &schemapb.DatabaseConnector_DsnDatabaseConnector{
-			DsnDatabaseConnector: &schemapb.DSNDatabaseConnector{Dsn: d.DSN},
-		},
-	}
-}
-
+func (d *DSNDatabaseConnector) Position() Position     { return d.Pos }
+func (d *DSNDatabaseConnector) databaseConnector()     {}
+func (d *DSNDatabaseConnector) String() string         { return d.DSN }
 func (d *DSNDatabaseConnector) schemaChildren() []Node { return nil }
 
 //protobuf:2
@@ -125,20 +89,6 @@ func (d *AWSIAMAuthDatabaseConnector) Position() Position { return d.Pos }
 func (d *AWSIAMAuthDatabaseConnector) databaseConnector() {}
 func (d *AWSIAMAuthDatabaseConnector) String() string {
 	return fmt.Sprintf("%s@%s/%s", d.Username, d.Endpoint, d.Database)
-}
-func (d *AWSIAMAuthDatabaseConnector) ToProto() protoreflect.ProtoMessage {
-	if d == nil {
-		return nil
-	}
-	return &schemapb.DatabaseConnector{
-		Value: &schemapb.DatabaseConnector_AwsiamAuthDatabaseConnector{
-			AwsiamAuthDatabaseConnector: &schemapb.AWSIAMAuthDatabaseConnector{
-				Username: d.Username,
-				Endpoint: d.Endpoint,
-				Database: d.Database,
-			},
-		},
-	}
 }
 
 func (d *AWSIAMAuthDatabaseConnector) schemaChildren() []Node { return nil }
@@ -189,13 +139,6 @@ func (d *DatabaseRuntimeEvent) ApplyTo(s *Module) {
 	}
 }
 
-func (d *DatabaseRuntimeEvent) ToProto() *schemapb.DatabaseRuntimeEvent {
-	return &schemapb.DatabaseRuntimeEvent{
-		Id:      d.ID,
-		Payload: d.Payload.ToProto(),
-	}
-}
-
 func DatabaseRuntimeEventFromProto(s *schemapb.DatabaseRuntimeEvent) *DatabaseRuntimeEvent {
 	return &DatabaseRuntimeEvent{
 		ID:      s.Id,
@@ -205,8 +148,6 @@ func DatabaseRuntimeEventFromProto(s *schemapb.DatabaseRuntimeEvent) *DatabaseRu
 
 //sumtype:decl
 type DatabaseRuntimeEventPayload interface {
-	ToProto() *schemapb.DatabaseRuntimeEventPayload
-
 	databaseRuntimeEventPayload()
 }
 
@@ -234,15 +175,5 @@ func DatabaseRuntimeConnectionsEventFromProto(s *schemapb.DatabaseRuntimeConnect
 	}
 	return &DatabaseRuntimeConnectionsEvent{
 		Connections: DatabaseRuntimeConnectionsFromProto(s.Connections),
-	}
-}
-
-func (d *DatabaseRuntimeConnectionsEvent) ToProto() *schemapb.DatabaseRuntimeEventPayload {
-	return &schemapb.DatabaseRuntimeEventPayload{
-		Value: &schemapb.DatabaseRuntimeEventPayload_DatabaseRuntimeConnectionsEvent{
-			DatabaseRuntimeConnectionsEvent: &schemapb.DatabaseRuntimeConnectionsEvent{
-				Connections: d.Connections.ToProto().(*schemapb.DatabaseRuntimeConnections), //nolint:forcetypeassert
-			},
-		},
 	}
 }

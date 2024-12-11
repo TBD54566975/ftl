@@ -12,7 +12,6 @@ import (
 
 	pubpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1"
 	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/internal/deploymentcontext"
@@ -61,7 +60,7 @@ func (r *RealFTL) PublishEvent(ctx context.Context, topic *schema.Ref, event any
 		return fmt.Errorf("failed to marshal event: %w", err)
 	}
 	_, err = client.PublishEvent(ctx, connect.NewRequest(&pubpb.PublishEventRequest{
-		Topic:  topic.ToProto().(*schemapb.Ref), //nolint: forcetypeassert
+		Topic:  topic.ToProto(),
 		Caller: caller.Name,
 		Body:   body,
 		Key:    key,

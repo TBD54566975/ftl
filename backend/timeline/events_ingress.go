@@ -10,7 +10,6 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -63,7 +62,7 @@ func (i Ingress) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, error) {
 				DeploymentKey:  i.DeploymentKey.String(),
 				RequestKey:     &requestKey,
 				Timestamp:      timestamppb.New(i.StartTime),
-				VerbRef:        i.Verb.ToProto().(*schemapb.Ref), //nolint:forcetypeassert
+				VerbRef:        i.Verb.ToProto(), //nolint:forcetypeassert
 				Method:         i.RequestMethod,
 				Path:           i.RequestPath,
 				StatusCode:     int32(i.ResponseStatus),
