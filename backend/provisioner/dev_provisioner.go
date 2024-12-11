@@ -2,8 +2,6 @@ package provisioner
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -20,7 +18,6 @@ import (
 )
 
 var redPandaBrokers = []string{"127.0.0.1:19092"}
-var pubSubNameLimit = 249 // 255 (filename limit) - 6 (partition id)
 
 // NewDevProvisioner creates a new provisioner that provisions resources locally when running FTL in dev mode
 func NewDevProvisioner(postgresPort int, mysqlPort int, recreate bool) *InMemProvisioner {
@@ -195,7 +192,7 @@ func provisionTopic() InMemResourceProvisionerFn {
 			panic(fmt.Errorf("unexpected resource type: %T", res))
 		}
 
-		topicID := kafkaTopicID(moduleName, topic.Name)
+		topicID := fmt.Sprintf("%s.%s", moduleName, topic.Name)
 		logger.Infof("Provisioning topic: %s", topicID)
 
 		config := sarama.NewConfig()
@@ -261,22 +258,4 @@ func provisionSubscription() InMemResourceProvisionerFn {
 		}
 		return nil, nil
 	}
-}
-
-func kafkaTopicID(module, id string) string {
-	return shortenString(fmt.Sprintf("%s.%s", module, id), pubSubNameLimit)
-}
-
-// shortenString truncates the input string to maxLength and appends a hash of the original string for uniqueness
-func shortenString(input string, maxLength int) string {
-	if len(input) <= maxLength {
-		return input
-	}
-	hash := sha256.Sum256([]byte(input))
-	hashStr := hex.EncodeToString(hash[:])
-	truncateLength := maxLength - len(hashStr) - 1
-	if truncateLength <= 0 {
-		return hashStr[:maxLength]
-	}
-	return input[:truncateLength] + "-" + hashStr
 }
