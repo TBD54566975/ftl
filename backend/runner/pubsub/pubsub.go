@@ -9,6 +9,7 @@ import (
 	pb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1"
 	pbconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
 	sl "github.com/TBD54566975/ftl/internal/slices"
@@ -26,10 +27,10 @@ type VerbClient interface {
 
 var _ pbconnect.PublishServiceHandler = (*Service)(nil)
 
-func New(module *schema.Module, deployment model.DeploymentKey, verbClient VerbClient) (*Service, error) {
+func New(module *schema.Module, deployment model.DeploymentKey, verbClient VerbClient, timelineClient *timeline.Client) (*Service, error) {
 	publishers := map[string]*publisher{}
 	for t := range sl.FilterVariants[*schema.Topic](module.Decls) {
-		publisher, err := newPublisher(module.Name, t, deployment)
+		publisher, err := newPublisher(module.Name, t, deployment, timelineClient)
 		if err != nil {
 			return nil, err
 		}
@@ -42,7 +43,7 @@ func New(module *schema.Module, deployment model.DeploymentKey, verbClient VerbC
 		if !ok {
 			continue
 		}
-		consumer, err := newConsumer(module.Name, v, subscriber, deployment, verbClient)
+		consumer, err := newConsumer(module.Name, v, subscriber, deployment, verbClient, timelineClient)
 		if err != nil {
 			return nil, err
 		}

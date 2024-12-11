@@ -356,7 +356,7 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 		timelineClient := timeline.NewClient(ctx, s.config.TimelineEndpoint)
 		s.proxy = proxy.New(deploymentServiceClient, leaseServiceClient, timelineClient)
 
-		pubSub, err := pubsub.New(module, key, s)
+		pubSub, err := pubsub.New(module, key, s, timelineClient)
 		if err != nil {
 			observability.Deployment.Failure(ctx, optional.Some(key.String()))
 			return fmt.Errorf("failed to create pubsub service: %w", err)

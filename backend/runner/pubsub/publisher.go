@@ -18,9 +18,11 @@ type publisher struct {
 	deployment model.DeploymentKey
 	topic      *schema.Topic
 	producer   sarama.SyncProducer
+
+	timelineClient *timeline.Client
 }
 
-func newPublisher(module string, t *schema.Topic, deployment model.DeploymentKey) (*publisher, error) {
+func newPublisher(module string, t *schema.Topic, deployment model.DeploymentKey, timelineClient *timeline.Client) (*publisher, error) {
 	if t.Runtime == nil {
 		return nil, fmt.Errorf("topic %s has no runtime", t.Name)
 	}
@@ -42,6 +44,8 @@ func newPublisher(module string, t *schema.Topic, deployment model.DeploymentKey
 		deployment: deployment,
 		topic:      t,
 		producer:   producer,
+
+		timelineClient: timelineClient,
 	}, nil
 }
 
@@ -65,6 +69,6 @@ func (p *publisher) publish(ctx context.Context, data []byte, key string, caller
 		timelineEvent.Error = optional.Some(err.Error())
 		return fmt.Errorf("failed to publish message: %w", err)
 	}
-	timeline.ClientFromContext(ctx).Publish(ctx, timelineEvent)
+	p.timelineClient.Publish(ctx, timelineEvent)
 	return nil
 }

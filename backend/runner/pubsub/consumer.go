@@ -27,10 +27,11 @@ type consumer struct {
 	verb       *schema.Verb
 	subscriber *schema.MetadataSubscriber
 
-	client VerbClient
+	verbClient     VerbClient
+	timelineClient *timeline.Client
 }
 
-func newConsumer(moduleName string, verb *schema.Verb, subscriber *schema.MetadataSubscriber, deployment model.DeploymentKey, client VerbClient) (*consumer, error) {
+func newConsumer(moduleName string, verb *schema.Verb, subscriber *schema.MetadataSubscriber, deployment model.DeploymentKey, verbClient VerbClient, timelineClient *timeline.Client) (*consumer, error) {
 	if verb.Runtime == nil {
 		return nil, fmt.Errorf("subscription %s has no runtime", verb.Name)
 	}
@@ -43,7 +44,9 @@ func newConsumer(moduleName string, verb *schema.Verb, subscriber *schema.Metada
 		deployment: deployment,
 		verb:       verb,
 		subscriber: subscriber,
-		client:     client,
+
+		verbClient:     verbClient,
+		timelineClient: timelineClient,
 	}
 
 	return c, nil
@@ -167,7 +170,7 @@ func (c *consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 			Request:       req,
 		}
 
-		resp, err := c.client.Call(session.Context(), connect.NewRequest(req))
+		resp, err := c.verbClient.Call(session.Context(), connect.NewRequest(req))
 		if err != nil {
 			consumeEvent.Error = optional.Some(err.Error())
 			callEvent.Response = result.Err[*ftlv1.CallResponse](err)
@@ -177,8 +180,8 @@ func (c *consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 			observability.Calls.Request(ctx, req.Verb, start, optional.None[string]())
 		}
 		session.MarkMessage(msg, "")
-		timeline.ClientFromContext(ctx).Publish(ctx, consumeEvent)
-		timeline.ClientFromContext(ctx).Publish(ctx, callEvent)
+		c.timelineClient.Publish(ctx, consumeEvent)
+		c.timelineClient.Publish(ctx, callEvent)
 	}
 	return nil
 }
