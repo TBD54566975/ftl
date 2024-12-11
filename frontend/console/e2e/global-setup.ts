@@ -6,7 +6,7 @@ const globalSetup = async (config: FullConfig) => {
   const browser = await chromium.launch()
   const context = await browser.newContext()
   const page = await context.newPage()
-  await page.goto('http://localhost:8892/modules')
+  await page.goto('http://localhost:8899/modules')
 
   console.log('Waiting for modules to load...')
   const moduleNames = ['time', 'echo', 'cron', 'http', 'pubsub']

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { pressShortcut } from './helpers'
 
 test('shows command palette results', async ({ page }) => {
-  await page.goto('http://localhost:8892')
+  await page.goto('/')
 
   await page.click('#command-palette-search')
   await page.fill('#command-palette-search-input', 'echo')
@@ -14,7 +14,7 @@ test('shows command palette results', async ({ page }) => {
 })
 
 test('opens command palette with keyboard shortcut', async ({ page }) => {
-  await page.goto('http://localhost:8892')
+  await page.goto('/')
 
   await pressShortcut(page, 'k')
 

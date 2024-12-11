@@ -14,7 +14,7 @@ export const FilterPanelSection = ({
   return (
     <Disclosure defaultOpen={defaultOpen}>
       {({ open }) => (
-        <>
+        <div>
           <Disclosure.Button
             className={`flex w-full justify-between rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 py-1 px-2 text-left text-sm font-medium ${textColor} focus:outline-none focus-visible:ring focus-visible:ring-gray-500 focus-visible:ring-opacity-75`}
           >
@@ -27,7 +27,7 @@ export const FilterPanelSection = ({
               <div className='space-y-0.5'>{children}</div>
             </fieldset>
           </Disclosure.Panel>
-        </>
+        </div>
       )}
     </Disclosure>
   )

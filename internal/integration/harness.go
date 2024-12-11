@@ -336,7 +336,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			}
 			if opts.startController || opts.kube {
 				controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
-				console = rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, "http://localhost:8892", log.Debug)
+				console = rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, "http://localhost:8899", log.Debug)
 				schema = rpc.Dial(ftlv1connect.NewSchemaServiceClient, "http://localhost:8892", log.Debug)
 			}
 			if opts.startProvisioner {

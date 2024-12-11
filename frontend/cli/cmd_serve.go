@@ -20,7 +20,9 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
+	"github.com/TBD54566975/ftl/backend/controller/admin"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
+	"github.com/TBD54566975/ftl/backend/controller/console"
 	"github.com/TBD54566975/ftl/backend/cron"
 	"github.com/TBD54566975/ftl/backend/ingress"
 	"github.com/TBD54566975/ftl/backend/lease"
@@ -64,8 +66,10 @@ type serveCommonConfig struct {
 	RegistryImage       string               `help:"The container image to start for the image registry" default:"registry:2" env:"FTL_REGISTRY_IMAGE" hidden:""`
 	GrafanaImage        string               `help:"The container image to start for the automatic Grafana instance" default:"grafana/otel-lgtm" env:"FTL_GRAFANA_IMAGE" hidden:""`
 	DisableGrafana      bool                 `help:"Disable the automatic Grafana that is started if no telemetry collector is specified." default:"false"`
+	NoConsole           bool                 `help:"Disable the console."`
 	Ingress             ingress.Config       `embed:"" prefix:"ingress-"`
 	Timeline            timeline.Config      `embed:"" prefix:"timeline-"`
+	Console             console.Config       `embed:"" prefix:"console-"`
 	Lease               lease.Config         `embed:"" prefix:"lease-"`
 	Recreate            bool                 `help:"Recreate any stateful resources if they already exist." default:"false"`
 	controller.CommonConfig
@@ -81,6 +85,8 @@ func (s *serveCmd) Run(
 	projConfig projectconfig.Config,
 	controllerClient ftlv1connect.ControllerServiceClient,
 	provisionerClient provisionerconnect.ProvisionerServiceClient,
+	timelineClient *timeline.Client,
+	adminClient admin.Client,
 	schemaClient ftlv1connect.SchemaServiceClient,
 	schemaEventSourceFactory func() schemaeventsource.EventSource,
 	verbClient ftlv1connect.VerbServiceClient,
@@ -89,7 +95,7 @@ func (s *serveCmd) Run(
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
-	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, controllerClient, provisionerClient, schemaEventSourceFactory, verbClient, s.Recreate, nil)
+	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, controllerClient, provisionerClient, timelineClient, adminClient, schemaEventSourceFactory, verbClient, s.Recreate, nil)
 }
 
 //nolint:maintidx
@@ -103,6 +109,8 @@ func (s *serveCommonConfig) run(
 	bindAllocator *bind.BindAllocator,
 	controllerClient ftlv1connect.ControllerServiceClient,
 	provisionerClient provisionerconnect.ProvisionerServiceClient,
+	timelineClient *timeline.Client,
+	adminClient admin.Client,
 	schemaEventSourceFactory func() schemaeventsource.EventSource,
 	verbClient ftlv1connect.VerbServiceClient,
 	recreate bool,
@@ -328,6 +336,16 @@ func (s *serveCommonConfig) run(
 		})
 	}
 
+	if !s.NoConsole {
+		// Start Console
+		wg.Go(func() error {
+			err := console.Start(ctx, s.Console, schemaEventSourceFactory(), controllerClient, timelineClient, adminClient, routing.NewVerbRouter(ctx, schemaEventSourceFactory()))
+			if err != nil {
+				return fmt.Errorf("console failed: %w", err)
+			}
+			return nil
+		})
+	}
 	// Start Timeline
 	wg.Go(func() error {
 		err := timeline.Start(ctx, s.Timeline)

@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
-import { PlaywrightTestConfig } from '@playwright/test';
+import type { PlaywrightTestConfig } from '@playwright/test'
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -18,7 +18,7 @@ const config: PlaywrightTestConfig = {
   timeout: 90 * 1000,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:8892',
+    baseURL: 'http://localhost:8899',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -41,7 +41,7 @@ const config: PlaywrightTestConfig = {
   ],
   webServer: {
     command: process.env.CI ? 'ftl dev -j1' : 'ftl dev',
-    url: 'http://localhost:8892',
+    url: 'http://localhost:8899',
     reuseExistingServer: !process.env.CI,
     /* If the test ends up needing to pull the postgres docker image, this can take a while. Give it a few minutes. */
     timeout: 180000,

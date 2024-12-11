@@ -3,7 +3,10 @@ syntax = "proto3";
 package xyz.block.ftl.console.v1;
 
 import "xyz/block/ftl/schema/v1/schema.proto";
+import "xyz/block/ftl/timeline/v1/timeline.proto";
+import "xyz/block/ftl/v1/controller.proto";
 import "xyz/block/ftl/v1/ftl.proto";
+import "xyz/block/ftl/v1/verb.proto";
 
 option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1;pbconsole";
 option java_multiple_files = true;
@@ -133,9 +136,16 @@ service ConsoleService {
   rpc GetModules(GetModulesRequest) returns (GetModulesResponse);
   rpc StreamModules(StreamModulesRequest) returns (stream StreamModulesResponse);
 
+  rpc GetTimeline(ftl.timeline.v1.GetTimelineRequest) returns (ftl.timeline.v1.GetTimelineResponse);
+  rpc StreamTimeline(ftl.timeline.v1.StreamTimelineRequest) returns (stream ftl.timeline.v1.StreamTimelineResponse);
+
   rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
 
   rpc GetSecret(GetSecretRequest) returns (GetSecretResponse);
   rpc SetSecret(SetSecretRequest) returns (SetSecretResponse);
+
+  rpc Status(ftl.v1.StatusRequest) returns (ftl.v1.StatusResponse);
+
+  rpc Call(ftl.v1.CallRequest) returns (ftl.v1.CallResponse);
 }

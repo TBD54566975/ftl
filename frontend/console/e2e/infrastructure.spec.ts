@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 test('shows infrastructure', async ({ page }) => {
-  await page.goto('http://localhost:8892')
+  await page.goto('/')
   const infrastructureNavItem = page.getByRole('link', { name: 'Infrastructure' })
   await infrastructureNavItem.click()
   await expect(page).toHaveURL(/\/infrastructure\/controllers$/)

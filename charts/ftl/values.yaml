@@ -358,6 +358,65 @@ timeline:
   topologySpreadConstraints: null
   tolerations: null
 
+console:
+  enabled: true
+  env:
+    - name: MY_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    - name: FTL_ENDPOINT
+      value: "http://ftl-controller:8892"
+    - name: FTL_BIND
+      value: "http://$(MY_POD_IP):8892"
+    - name: HOST_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.hostIP
+
+  ports:
+    - name: http
+      containerPort: 8892
+      protocol: TCP
+      port: 8892
+
+  replicas: 1
+  revisionHistoryLimit: 0
+
+  image:
+    repository: "ftl0/ftl-console"
+    pullPolicy: IfNotPresent
+
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 10m
+    limits:
+      memory: 512Mi
+      cpu: 2
+
+  envFrom: null
+  serviceAccountName: ftl-console
+
+  readinessProbe: null
+
+  service:
+    type: ClusterIP
+    annotations: null
+    ports:
+      - name: "http-8892"
+        port: 8892
+        protocol: TCP
+        targetPort: 8892
+
+  podAnnotations:
+    proxy.istio.io/config: |
+      holdApplicationUntilProxyStarts: true
+  nodeSelector: null
+  affinity: null
+  topologySpreadConstraints: null
+  tolerations: null
+
 lease:
   env:
     - name: MY_POD_IP

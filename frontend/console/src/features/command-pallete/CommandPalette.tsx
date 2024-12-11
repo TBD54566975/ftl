@@ -3,7 +3,7 @@ import Fuse from 'fuse.js'
 import { ArrowRight01Icon, CellsIcon } from 'hugeicons-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useSchema } from '../../api/schema/use-schema'
+import { useStreamModules } from '../../api/modules/use-stream-modules'
 import { type PaletteItem, paletteItems } from './command-palette.utils'
 
 type CommandPaletteProps = {
@@ -13,7 +13,7 @@ type CommandPaletteProps = {
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate()
-  const { data: schemaData } = useSchema()
+  const { data: schemaData } = useStreamModules()
   const [query, setQuery] = useState('')
   const [items, setItems] = useState<PaletteItem[]>([])
   const [filteredItems, setFilteredItems] = useState<PaletteItem[]>([])

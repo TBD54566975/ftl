@@ -1,0 +1,85 @@
+{{- if .Values.console.enabled }}
+{{ $version := printf "v%s" .Chart.Version -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ftl.fullname" . }}-console
+  labels:
+    {{- include "ftl.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.console.replicas }}
+  revisionHistoryLimit: {{ .Values.console.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "ftl-console.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ftl-console.selectorLabels" . | nindent 8 }}
+      {{- if .Values.console.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.console.podAnnotations | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.console.serviceAccountName }}
+      containers:
+        - name: app
+          image: "{{ .Values.console.image.repository }}:{{ .Values.console.image.tag | default $version }}"
+          imagePullPolicy: {{ .Values.console.image.pullPolicy }}
+          resources:
+            limits:
+              cpu: "{{ .Values.console.resources.limits.cpu }}"
+              memory: "{{ .Values.console.resources.limits.memory }}"
+            requests:
+              cpu: "{{ .Values.console.resources.requests.cpu }}"
+              memory: "{{ .Values.console.resources.requests.memory }}"
+          {{- if .Values.console.envFrom }}
+          envFrom:
+            {{- if .Values.console.envFrom }}
+            {{- toYaml .Values.console.envFrom | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          env:
+            {{- if .Values.console.env }}
+            {{- toYaml .Values.console.env | nindent 12 }}
+            {{- end }}
+            - name: FTL_TIMELINE_ENDPOINT
+              value: "http://{{ .Values.timeline.service.name }}:{{ .Values.timeline.service.port }}"
+            - name: FTL_ENDPOINT
+              value: "http://ftl-controller:8892"
+          ports:
+            {{- range .Values.console.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .containerPort }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+          readinessProbe:
+            {{- if .Values.console.readinessProbe }}
+            {{- toYaml .Values.console.readinessProbe | nindent 12 }}
+            {{- else }}
+            httpGet:
+              path: /healthz
+              port: 8892
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 15
+            {{- end }}
+      {{- if .Values.console.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.console.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.console.affinity }}
+      affinity:
+        {{- toYaml .Values.console.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.console.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.console.topologySpreadConstraints | nindent 8 }}
+      {{- end }}
+      {{- if .Values.console.tolerations }}
+      tolerations:
+        {{- toYaml .Values.console.tolerations | nindent 8 }}
+      {{- end }}
+{{- end }}

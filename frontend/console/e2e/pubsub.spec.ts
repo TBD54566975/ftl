@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { navigateToDecl } from './helpers'
+import { navigateToDecl, setVerbRequestBody } from './helpers'
 
 test('shows pubsub verb form', async ({ page }) => {
   await navigateToDecl(page, 'pubsub', 'cookPizza')
@@ -14,14 +14,12 @@ test('shows pubsub verb form', async ({ page }) => {
 test('send pubsub request', async ({ page }) => {
   await navigateToDecl(page, 'pubsub', 'cookPizza')
 
-  const bodyEditor = page.locator('#body-editor .cm-content[contenteditable="true"]')
-  await expect(bodyEditor).toBeVisible()
-  await bodyEditor.fill('{\n  "customer": "wicket",\n"id":123,\n  "type":"cheese"\n}')
+  await setVerbRequestBody(page, '{\n  "customer": "wicket",\n  "id": 123,\n  "type": "cheese"\n}')
 
   await page.getByRole('button', { name: 'Send' }).click()
 
   const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
-  await expect(responseEditor).toBeVisible()
+  await expect(responseEditor).toBeVisible({ timeout: 10000 })
 
   const responseText = await responseEditor.textContent()
   const responseJson = JSON.parse(responseText?.trim() || '{}')

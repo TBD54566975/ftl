@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 test('shows active modules', async ({ page }) => {
-  await page.goto('http://localhost:8892')
+  await page.goto('/')
   const modulesNavItem = page.getByRole('link', { name: 'Modules' })
   await modulesNavItem.click()
   await expect(page).toHaveURL(/\/modules$/)
@@ -14,7 +14,7 @@ test('shows active modules', async ({ page }) => {
 })
 
 test('tapping on a module navigates to the module page', async ({ page }) => {
-  await page.goto('http://localhost:8892/modules')
+  await page.goto('/modules')
   await page.locator(`[data-module-row="echo"]`).click()
   await expect(page).toHaveURL(/\/modules\/echo$/)
 })

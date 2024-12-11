@@ -3,9 +3,9 @@ import { Button } from '../../../../components/Button'
 import { CodeEditor } from '../../../../components/CodeEditor'
 import { ResizableVerticalPanels } from '../../../../components/ResizableVerticalPanels'
 import { useClient } from '../../../../hooks/use-client'
+import { ConsoleService } from '../../../../protos/xyz/block/ftl/console/v1/console_connect'
 import type { Module, Verb } from '../../../../protos/xyz/block/ftl/console/v1/console_pb'
 import type { Ref } from '../../../../protos/xyz/block/ftl/schema/v1/schema_pb'
-import { VerbService } from '../../../../protos/xyz/block/ftl/v1/verb_connect'
 import { NotificationType, NotificationsContext } from '../../../../providers/notifications-provider'
 import { classNames } from '../../../../utils'
 import { KeyValuePairForm } from '../KeyValuePairForm'
@@ -23,7 +23,7 @@ import {
 } from './verb.utils'
 
 export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb }) => {
-  const client = useClient(VerbService)
+  const client = useClient(ConsoleService)
   const { showNotification } = useContext(NotificationsContext)
   const [activeTabId, setActiveTabId] = useState('body')
   const [bodyText, setBodyText] = useState('')
