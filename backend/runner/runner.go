@@ -418,11 +418,15 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 	s.readyTime.Store(time.Now().Add(time.Second * 2)) // Istio is a bit flakey, add a small delay for readiness
 	s.deployment.Store(optional.Some(dep))
 	logger.Debugf("Deployed %s", key)
-	err := s.pubSub.Consume(ctx)
-	if err != nil {
-		observability.Deployment.Failure(ctx, optional.Some(key.String()))
-		return fmt.Errorf("failed to set up pubsub consumption: %w", err)
+
+	if s.pubSub != nil {
+		err := s.pubSub.Consume(ctx)
+		if err != nil {
+			observability.Deployment.Failure(ctx, optional.Some(key.String()))
+			return fmt.Errorf("failed to set up pubsub consumption: %w", err)
+		}
 	}
+
 	context.AfterFunc(ctx, func() {
 		err := s.Close()
 		if err != nil {
