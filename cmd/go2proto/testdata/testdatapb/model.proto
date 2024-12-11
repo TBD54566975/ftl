@@ -30,6 +30,8 @@ message Root {
   optional Message optional_msg = 9;
   repeated int64 repeated_int = 10;
   repeated Message repeated_msg = 11;
+  bytes url = 12;
+  string key = 13;
 }
 
 

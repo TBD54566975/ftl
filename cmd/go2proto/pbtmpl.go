@@ -12,7 +12,7 @@ import (
 
 var tmpl = template.Must(template.New("proto").
 	Funcs(template.FuncMap{
-		"typeof":       func(t any) string { return reflect.Indirect(reflect.ValueOf(t)).Type().Name() },
+		"typeof":       func(t any) Kind { return Kind(reflect.Indirect(reflect.ValueOf(t)).Type().Name()) },
 		"toLowerCamel": strcase.ToLowerCamel,
 		"toUpperCamel": strcase.ToUpperCamel,
 		"toLowerSnake": strcase.ToLowerSnake,
