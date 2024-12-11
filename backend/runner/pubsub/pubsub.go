@@ -11,7 +11,6 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/slices"
 	sl "github.com/TBD54566975/ftl/internal/slices"
 )
 
@@ -39,7 +38,7 @@ func New(module *schema.Module, deployment model.DeploymentKey, verbClient VerbC
 
 	consumers := map[string]*consumer{}
 	for v := range sl.FilterVariants[*schema.Verb](module.Decls) {
-		subscriber, ok := slices.FindVariant[*schema.MetadataSubscriber](v.Metadata)
+		subscriber, ok := sl.FindVariant[*schema.MetadataSubscriber](v.Metadata)
 		if !ok {
 			continue
 		}
@@ -50,14 +49,11 @@ func New(module *schema.Module, deployment model.DeploymentKey, verbClient VerbC
 		consumers[v.Name] = consumer
 	}
 
-	// TODO: topic producers needs to be closed eventually
-
-	svc := &Service{
+	return &Service{
 		moduleName: module.Name,
 		publishers: publishers,
 		consumers:  consumers,
-	}
-	return svc, nil
+	}, nil
 }
 
 func (s *Service) Consume(ctx context.Context) error {

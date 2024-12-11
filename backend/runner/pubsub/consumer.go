@@ -114,13 +114,13 @@ func (c *consumer) subscribe(ctx context.Context, group sarama.ConsumerGroup) {
 }
 
 // Setup is run at the beginning of a new session, before ConsumeClaim.
-func (s *consumer) Setup(session sarama.ConsumerGroupSession) error {
+func (c *consumer) Setup(session sarama.ConsumerGroupSession) error {
 	return nil
 }
 
 // Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
 // but before the offsets are committed for the very last time.
-func (s *consumer) Cleanup(session sarama.ConsumerGroupSession) error {
+func (c *consumer) Cleanup(session sarama.ConsumerGroupSession) error {
 	return nil
 }
 
