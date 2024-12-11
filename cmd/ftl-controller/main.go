@@ -14,6 +14,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/timeline"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
+
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
@@ -56,12 +57,14 @@ func main() {
 	kctx.FatalIfErrorf(err)
 
 	leaseClient := rpc.Dial(leasepbconnect.NewLeaseServiceClient, cli.LeaseEndpoint.String(), log.Error)
+
 	ctx = rpc.ContextWithClient(ctx, leaseClient)
 	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.ControllerConfig.Bind.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, schemaClient)
 
 	adminClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, cli.AdminEndpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, adminClient)
+
 	kctx.FatalIfErrorf(err)
 
 	timelineClient := timeline.NewClient(ctx, cli.TimelineEndpoint)

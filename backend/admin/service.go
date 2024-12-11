@@ -2,7 +2,6 @@ package admin
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -20,32 +19,18 @@ import (
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
-	internalobservability "github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
 type Config struct {
-	Bind                 *url.URL `help:"Socket to bind to." default:"http://127.0.0.1:8896" env:"FTL_BIND"`
-	DSN                  string   `help:"DAL DSN." default:"${dsn}" env:"FTL_DSN"`
-	MaxOpenDBConnections int      `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
-	MaxIdleDBConnections int      `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
+	Bind *url.URL `help:"Socket to bind to." default:"http://127.0.0.1:8896" env:"FTL_BIND"`
 }
 
 func (c *Config) SetDefaults() {
 	if err := kong.ApplyDefaults(c, kong.Vars{"dsn": dsn.PostgresDSN("ftl")}); err != nil {
 		panic(err)
 	}
-}
-
-func (c *Config) OpenDBAndInstrument() (*sql.DB, error) {
-	conn, err := internalobservability.OpenDBAndInstrument(c.DSN)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open DB connection: %w", err)
-	}
-	conn.SetMaxIdleConns(c.MaxIdleDBConnections)
-	conn.SetMaxOpenConns(c.MaxOpenDBConnections)
-	return conn, nil
 }
 
 type AdminService struct {
@@ -175,8 +160,6 @@ func configProviderKey(p *ftlv1.ConfigProvider) configuration.ProviderKey {
 		return providers.InlineProviderKey
 	case ftlv1.ConfigProvider_CONFIG_PROVIDER_ENVAR:
 		return providers.EnvarProviderKey
-	case ftlv1.ConfigProvider_CONFIG_PROVIDER_DB:
-		return providers.DatabaseConfigProviderKey
 	}
 	return ""
 }
