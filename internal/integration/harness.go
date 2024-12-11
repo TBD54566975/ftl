@@ -12,12 +12,14 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/IBM/sarama"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 	"github.com/otiai10/copy"
@@ -35,12 +37,15 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling/k8sscaling"
 	"github.com/TBD54566975/ftl/internal"
+	"github.com/TBD54566975/ftl/internal/dev"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 const dumpPath = "/tmp/ftl-kube-report"
+
+var redPandaBrokers = []string{"127.0.0.1:19092"}
 
 func (i TestContext) integrationTestTimeout() time.Duration {
 	timeout := optional.Zero(os.Getenv("FTL_INTEGRATION_TEST_TIMEOUT")).Default("5s")
@@ -98,6 +103,13 @@ func WithLocalstack() Option {
 func WithConsole() Option {
 	return func(o *options) {
 		o.console = true
+	}
+}
+
+// WithPubSub is a Run* option that specifies tests should reset red panda before starting
+func WithPubSub() Option {
+	return func(o *options) {
+		o.resetPubSub = true
 	}
 }
 
@@ -188,6 +200,7 @@ type options struct {
 	kube              bool
 	localstack        bool
 	console           bool
+	resetPubSub       bool
 }
 
 // Run an integration test.
@@ -393,6 +406,39 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 					_, err := ic.Provisioner.Ping(ic, connect.NewRequest(&ftlv1.PingRequest{}))
 					assert.NoError(t, err)
 				})
+			}
+
+			if opts.resetPubSub {
+				Infof("Resetting pubsub")
+				assert.NoError(t, dev.SetUpRedPanda(ic.Context))
+
+				client, err := sarama.NewClient(redPandaBrokers, sarama.NewConfig())
+				assert.NoError(t, err)
+				defer client.Close()
+
+				clusterAdmin, err := sarama.NewClusterAdminFromClient(client)
+				assert.NoError(t, err)
+				defer clusterAdmin.Close()
+
+				groups, err := clusterAdmin.ListConsumerGroups()
+				assert.NoError(t, err)
+				for name := range groups {
+					if strings.HasPrefix(name, "_") {
+						continue
+					}
+					assert.Contains(t, name, ".", "this doesn't look like a subscriber...")
+					err = clusterAdmin.DeleteConsumerGroup(name)
+					assert.NoError(t, err, "could not delete consumer group %s", name)
+				}
+				topics, err := clusterAdmin.ListTopics()
+				assert.NoError(t, err)
+				for name := range topics {
+					if strings.HasPrefix(name, "_") {
+						continue
+					}
+					err = clusterAdmin.DeleteTopic(name)
+					assert.NoError(t, err, "could not delete topic %s", name)
+				}
 			}
 
 			Infof("Starting test")

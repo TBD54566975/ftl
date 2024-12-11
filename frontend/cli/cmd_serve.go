@@ -83,13 +83,12 @@ func (s *serveCmd) Run(
 	provisionerClient provisionerconnect.ProvisionerServiceClient,
 	schemaClient ftlv1connect.SchemaServiceClient,
 	schemaEventSourceFactory func() schemaeventsource.EventSource,
-	verbClient ftlv1connect.VerbServiceClient,
 ) error {
 	bindAllocator, err := bind.NewBindAllocator(s.Bind, 2)
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
-	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, controllerClient, provisionerClient, schemaEventSourceFactory, verbClient, s.Recreate, nil)
+	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, controllerClient, provisionerClient, schemaEventSourceFactory, s.Recreate, nil)
 }
 
 //nolint:maintidx
@@ -104,7 +103,6 @@ func (s *serveCommonConfig) run(
 	controllerClient ftlv1connect.ControllerServiceClient,
 	provisionerClient provisionerconnect.ProvisionerServiceClient,
 	schemaEventSourceFactory func() schemaeventsource.EventSource,
-	verbClient ftlv1connect.VerbServiceClient,
 	recreate bool,
 	devModeEndpoints <-chan dev.LocalEndpoint,
 ) error {

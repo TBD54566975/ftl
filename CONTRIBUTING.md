@@ -176,7 +176,6 @@ controller/
 - <<: *daldir
   queries:
     - backend/controller/pubsub/internal/sql/queries.sql
-    - backend/controller/dal/internal/sql/async_queries.sql
   gen:
     go:
       <<: *gengo
