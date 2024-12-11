@@ -6,8 +6,8 @@ import (
 
 	"connectrpc.com/connect"
 
-	ftlpubsubv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1"
-	ftlv1pubsubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
+	ftlpubsubv1 "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/pubsub/v1"
+	ftlv1pubsubconnect "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/common/reflection"
 )
 

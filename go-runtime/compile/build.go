@@ -68,7 +68,7 @@ func (c *mainDeploymentContext) withImports(mainModuleImport string) {
 func (c *mainDeploymentContext) generateMainImports() []string {
 	imports := sets.NewSet[string]()
 	imports.Add(`"context"`)
-	imports.Add(`"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"`)
+	imports.Add(`"github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/v1/ftlv1connect"`)
 	imports.Add(`"github.com/TBD54566975/ftl/common/plugin"`)
 	imports.Add(`"github.com/TBD54566975/ftl/go-runtime/server"`)
 	if len(c.MainCtx.SumTypes) > 0 || len(c.MainCtx.ExternalTypes) > 0 {

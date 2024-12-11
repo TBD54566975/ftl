@@ -8,10 +8,10 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/google/uuid"
 
-	proto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
-	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/provisioner"
+	proto "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/provisioner/v1beta1"
+	provisionerconnect "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
+	ftlv1 "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 )

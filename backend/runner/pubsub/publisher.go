@@ -7,9 +7,9 @@ import (
 	"connectrpc.com/connect"
 	"github.com/IBM/sarama"
 
-	ftlpubsubv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1"
-	ftlv1pubsubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	ftlpubsubv1 "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/pubsub/v1"
+	ftlv1pubsubconnect "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/pubsub/v1/ftlv1connect"
+	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )

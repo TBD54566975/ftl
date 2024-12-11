@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
 	"github.com/TBD54566975/ftl/common/plugin"
+	provisionerconnect "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
+	"github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 )

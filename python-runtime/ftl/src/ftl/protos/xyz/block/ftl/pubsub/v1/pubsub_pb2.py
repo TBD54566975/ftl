@@ -26,14 +26,14 @@ from xyz.block.ftl.schema.v1 import schema_pb2 as xyz_dot_block_dot_ftl_dot_sche
 from xyz.block.ftl.v1 import ftl_pb2 as xyz_dot_block_dot_ftl_dot_v1_dot_ftl__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n$xyz/block/ftl/pubsub/v1/pubsub.proto\x12\x17xyz.block.ftl.pubsub.v1\x1a$xyz/block/ftl/schema/v1/schema.proto\x1a\x1axyz/block/ftl/v1/ftl.proto\"u\n\x13PublishEventRequest\x12\x32\n\x05topic\x18\x01 \x01(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\x05topic\x12\x12\n\x04\x62ody\x18\x02 \x01(\x0cR\x04\x62ody\x12\x16\n\x06\x63\x61ller\x18\x03 \x01(\tR\x06\x63\x61ller\"\x16\n\x14PublishEventResponse\"\\\n\x18ResetSubscriptionRequest\x12@\n\x0csubscription\x18\x01 \x01(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\x0csubscription\"\x1b\n\x19ResetSubscriptionResponse2\xca\x02\n\x13LegacyPubsubService\x12J\n\x04Ping\x12\x1d.xyz.block.ftl.v1.PingRequest\x1a\x1e.xyz.block.ftl.v1.PingResponse\"\x03\x90\x02\x01\x12k\n\x0cPublishEvent\x12,.xyz.block.ftl.pubsub.v1.PublishEventRequest\x1a-.xyz.block.ftl.pubsub.v1.PublishEventResponse\x12z\n\x11ResetSubscription\x12\x31.xyz.block.ftl.pubsub.v1.ResetSubscriptionRequest\x1a\x32.xyz.block.ftl.pubsub.v1.ResetSubscriptionResponseBKP\x01ZGgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1;ftlv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n$xyz/block/ftl/pubsub/v1/pubsub.proto\x12\x17xyz.block.ftl.pubsub.v1\x1a$xyz/block/ftl/schema/v1/schema.proto\x1a\x1axyz/block/ftl/v1/ftl.proto\"u\n\x13PublishEventRequest\x12\x32\n\x05topic\x18\x01 \x01(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\x05topic\x12\x12\n\x04\x62ody\x18\x02 \x01(\x0cR\x04\x62ody\x12\x16\n\x06\x63\x61ller\x18\x03 \x01(\tR\x06\x63\x61ller\"\x16\n\x14PublishEventResponse\"\\\n\x18ResetSubscriptionRequest\x12@\n\x0csubscription\x18\x01 \x01(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\x0csubscription\"\x1b\n\x19ResetSubscriptionResponse2\xca\x02\n\x13LegacyPubsubService\x12J\n\x04Ping\x12\x1d.xyz.block.ftl.v1.PingRequest\x1a\x1e.xyz.block.ftl.v1.PingResponse\"\x03\x90\x02\x01\x12k\n\x0cPublishEvent\x12,.xyz.block.ftl.pubsub.v1.PublishEventRequest\x1a-.xyz.block.ftl.pubsub.v1.PublishEventResponse\x12z\n\x11ResetSubscription\x12\x31.xyz.block.ftl.pubsub.v1.ResetSubscriptionRequest\x1a\x32.xyz.block.ftl.pubsub.v1.ResetSubscriptionResponseBKP\x01ZGgithub.com/TBD54566975/ftl/common/protos/xyz/block/ftl/pubsub/v1;ftlv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'xyz.block.ftl.pubsub.v1.pubsub_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'P\001ZGgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/pubsub/v1;ftlv1'
+  _globals['DESCRIPTOR']._serialized_options = b'P\001ZGgithub.com/TBD54566975/ftl/common/protos/xyz/block/ftl/pubsub/v1;ftlv1'
   _globals['_LEGACYPUBSUBSERVICE'].methods_by_name['Ping']._loaded_options = None
   _globals['_LEGACYPUBSUBSERVICE'].methods_by_name['Ping']._serialized_options = b'\220\002\001'
   _globals['_PUBLISHEVENTREQUEST']._serialized_start=131

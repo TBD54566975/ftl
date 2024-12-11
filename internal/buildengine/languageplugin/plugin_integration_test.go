@@ -20,8 +20,8 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	"golang.org/x/sync/errgroup"
 
-	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	langpb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/language/v1"
+	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/flock"

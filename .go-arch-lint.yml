@@ -4,6 +4,7 @@ workdir: .
 components:
   controller: { in: backend/controller/** }
   ftl-controller-cmd: { in: cmd/ftl-controller/** }
+  common-plugin: { in: common/plugin/** }
   common: { in: common/** }
   internal: { in: internal/** }
 
@@ -44,10 +45,6 @@ components:
   lint-commit-or-rollback-cmd: { in: cmd/lint-commit-or-rollback/** }
   databasetesting: { in: backend/controller/sql/databasetesting/** }
   sql: { in: backend/controller/sql/** }
-  # TODO: Nothing outside of the go-runtime package should depend on reflection.
-  reflection: { in: go-runtime/ftl/reflection/** }
-  # TODO: Nothing outside of the go-runtime package should depend on reflection.
-  encoding: { in: go-runtime/encoding/** }
   leases: { in: backend/controller/leases/** }
 
   smoketest: { in: smoketest/** }
@@ -64,11 +61,6 @@ allow:
 
 commonComponents:
   - common
-  - internal
-  - protos
-  - schema
-  - ftl
-  - libdal
 
 deps:
   controller:
@@ -76,9 +68,11 @@ deps:
       - controller
       - frontend
       - timeline-service #TODO: Timeline should have a separate client package.
+      - internal
   runner:
     mayDependOn:
       - runner
+      - internal
   go-runtime:
     mayDependOn:
       - go-runtime
@@ -97,6 +91,7 @@ deps:
       - timeline-service
       - ingress-service
       - cron-service
+      - internal
   ftl-controller-cmd:
     mayDependOn:
       - controller

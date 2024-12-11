@@ -15,7 +15,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
+	timelinepb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/timeline/v1"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/log"
 )

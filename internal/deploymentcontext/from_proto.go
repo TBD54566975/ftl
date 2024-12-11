@@ -3,7 +3,7 @@ package deploymentcontext
 import (
 	"fmt"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
+	ftlv1 "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/deployment/v1"
 )
 
 func DBTypeFromProto(x ftlv1.GetDeploymentContextResponse_DbType) DBType {

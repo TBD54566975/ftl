@@ -10,9 +10,9 @@ import (
 	"connectrpc.com/connect"
 	"github.com/puzpuzpuz/xsync/v3"
 
-	pubpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1"
-	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
 	"github.com/TBD54566975/ftl/common/encoding"
+	pubpb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/publish/v1"
+	pubconnect "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/publish/v1/publishpbconnect"
 	"github.com/TBD54566975/ftl/common/reflection"
 	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/deploymentcontext"

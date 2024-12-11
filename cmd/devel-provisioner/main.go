@@ -10,8 +10,8 @@ package main
 // 	"github.com/alecthomas/kong"
 // 	"github.com/jpillora/backoff"
 
-// 	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
-// 	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
+// 	provisioner "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/provisioner/v1beta1"
+// 	provisionerconnect "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
 // 	"github.com/TBD54566975/ftl/common/plugin"
 // 	"github.com/TBD54566975/ftl/internal/log"
 // )

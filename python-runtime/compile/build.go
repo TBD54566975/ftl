@@ -13,7 +13,7 @@ import (
 	"github.com/block/scaffolder"
 	"google.golang.org/protobuf/proto"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/common/strcase"
 	"github.com/TBD54566975/ftl/internal"

@@ -11,7 +11,7 @@ import (
 	goformation "github.com/awslabs/goformation/v7/cloudformation"
 	"github.com/awslabs/goformation/v7/cloudformation/rds"
 
-	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
+	provisioner "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/provisioner/v1beta1"
 	"github.com/TBD54566975/ftl/common/schema"
 )
 

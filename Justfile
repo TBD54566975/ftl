@@ -5,7 +5,7 @@ WATCHEXEC_ARGS := "-d 1s -e proto -e go -e sql -f sqlc.yaml --ignore **/types.ft
 RELEASE := "build/release"
 VERSION := `git describe --tags --always | sed -e 's/^v//'`
 TIMESTAMP := `date +%s`
-SCHEMA_OUT := "backend/protos/xyz/block/ftl/schema/v1/schema.proto"
+SCHEMA_OUT := "common/protos/xyz/block/ftl/schema/v1/schema.proto"
 ZIP_DIRS := "go-runtime/compile/build-template " + \
             "go-runtime/compile/external-module-template " + \
             "go-runtime/compile/main-work-template " + \
@@ -19,12 +19,12 @@ ZIP_DIRS := "go-runtime/compile/build-template " + \
 CONSOLE_ROOT := "frontend/console"
 FRONTEND_OUT := CONSOLE_ROOT + "/dist/index.html"
 EXTENSION_OUT := "frontend/vscode/dist/extension.js"
-PROTOS_IN := "backend/protos"
-PROTOS_OUT := "backend/protos/xyz/block/ftl/console/v1/console.pb.go " + \
-              "backend/protos/xyz/block/ftl//v1/ftl.pb.go " + \
-              "backend/protos/xyz/block/ftl/timeline/v1/timeline.pb.go " + \
-              "backend/protos/xyz/block/ftl//v1/schemaservice.pb.go " + \
-              "backend/protos/xyz/block/ftl/schema/v1/schema.pb.go " + \
+PROTOS_IN := "common/protos"
+PROTOS_OUT := "common/protos/xyz/block/ftl/console/v1/console.pb.go " + \
+              "common/protos/xyz/block/ftl//v1/ftl.pb.go " + \
+              "common/protos/xyz/block/ftl/timeline/v1/timeline.pb.go " + \
+              "common/protos/xyz/block/ftl//v1/schemaservice.pb.go " + \
+              "common/protos/xyz/block/ftl/schema/v1/schema.pb.go " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/console/v1/console_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/timeline/v1/timeline_pb.ts " + \
@@ -206,13 +206,13 @@ build-protos:
 # Generate .proto files from .go types.
 go2proto:
   @mk "{{SCHEMA_OUT}}" : cmd/go2proto common/schema -- go2proto -m -o "{{SCHEMA_OUT}}" \
-    -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1;schemapb"' \
+    -O 'go_package="github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1;schemapb"' \
     -O 'java_multiple_files=true' \
     xyz.block.ftl.schema.v1 {{GO_SCHEMA_ROOTS}} && buf format -w && buf lint
 
 # Unconditionally rebuild protos
 build-protos-unconditionally: go2proto lint-protos pnpm-install
-  cd backend/protos && buf generate
+  cd common/protos && buf generate
 
 # Run integration test(s)
 integration-tests *test:

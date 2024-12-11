@@ -14,10 +14,10 @@ import (
 	"github.com/puzpuzpuz/xsync/v3"
 	"golang.org/x/sync/errgroup"
 
-	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	ftlv1connect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
+	provisionerconnect "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
+	ftlv1 "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/v1"
+	ftlv1connect "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/reflect"
