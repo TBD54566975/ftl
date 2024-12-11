@@ -37,7 +37,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling/k8sscaling"
 	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/ftl/internal/dev"
+	"github.com/TBD54566975/ftl/internal/exec"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -410,7 +410,9 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 
 			if opts.resetPubSub {
 				Infof("Resetting pubsub")
-				assert.NoError(t, dev.SetUpRedPanda(ic.Context))
+				envars := []string{"COMPOSE_IGNORE_ORPHANS=True"}
+				err = exec.CommandWithEnv(ctx, log.Debug, rootDir, envars, "docker", "compose", "-f", "internal/dev/docker-compose.redpanda.yml", "-p", "ftl", "up", "-d", "--wait").RunBuffered(ctx)
+				assert.NoError(t, err)
 
 				client, err := sarama.NewClient(redPandaBrokers, sarama.NewConfig())
 				assert.NoError(t, err)
