@@ -29,6 +29,7 @@ func (c *replayCmd) Run(
 	ctx context.Context,
 	verbClient ftlv1connect.VerbServiceClient,
 	schemaClient ftlv1connect.SchemaServiceClient,
+	timelineClient *timeline.Client,
 ) error {
 	// Wait timeout is for both pings to complete, not each ping individually
 	startTime := time.Now()
@@ -37,7 +38,6 @@ func (c *replayCmd) Run(
 		return fmt.Errorf("failed to wait for client: %w", err)
 	}
 
-	timelineClient := timeline.ClientFromContext(ctx)
 	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, c.Wait-time.Since(startTime), timelineClient); err != nil {
 		return fmt.Errorf("failed to wait for console service client: %w", err)
 	}

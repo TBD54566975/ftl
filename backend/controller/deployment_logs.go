@@ -14,13 +14,13 @@ import (
 
 var _ log.Sink = (*deploymentLogsSink)(nil)
 
-func newDeploymentLogsSink(ctx context.Context) *deploymentLogsSink {
+func newDeploymentLogsSink(ctx context.Context, timelineClient *timeline.Client) *deploymentLogsSink {
 	sink := &deploymentLogsSink{
 		logQueue: make(chan log.Entry, 10000),
 	}
 
 	// Process logs in background
-	go sink.processLogs(ctx)
+	go sink.processLogs(ctx, timelineClient)
 
 	return sink
 }
@@ -40,7 +40,7 @@ func (d *deploymentLogsSink) Log(entry log.Entry) error {
 	return nil
 }
 
-func (d *deploymentLogsSink) processLogs(ctx context.Context) {
+func (d *deploymentLogsSink) processLogs(ctx context.Context, timelineClient *timeline.Client) {
 	for {
 		select {
 		case entry := <-d.logQueue:
@@ -69,7 +69,7 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 				errorStr = optional.Some(entry.Error.Error())
 			}
 
-			timeline.ClientFromContext(ctx).Publish(ctx, &timeline.Log{
+			timelineClient.Publish(ctx, &timeline.Log{
 				RequestKey:    request,
 				DeploymentKey: deployment,
 				Time:          entry.Time,

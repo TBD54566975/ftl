@@ -39,14 +39,16 @@ type Service struct {
 	controllerLeaseService      ftlleaseconnect.LeaseServiceClient
 	controllerPubsubService     ftlv1connect2.LegacyPubsubServiceClient
 	moduleVerbService           map[string]moduleVerbService
+	timelineClient              *timeline.Client
 }
 
-func New(controllerModuleService ftldeploymentconnect.DeploymentServiceClient, leaseClient ftlleaseconnect.LeaseServiceClient, controllerPubsubService ftlv1connect2.LegacyPubsubServiceClient) *Service {
+func New(controllerModuleService ftldeploymentconnect.DeploymentServiceClient, leaseClient ftlleaseconnect.LeaseServiceClient, controllerPubsubService ftlv1connect2.LegacyPubsubServiceClient, timelineClient *timeline.Client) *Service {
 	proxy := &Service{
 		controllerDeploymentService: controllerModuleService,
 		controllerLeaseService:      leaseClient,
 		controllerPubsubService:     controllerPubsubService,
 		moduleVerbService:           map[string]moduleVerbService{},
+		timelineClient:              timelineClient,
 	}
 	return proxy
 }
@@ -138,7 +140,6 @@ func (r *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("failed to find deployment for module"))
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("deployment not found"))
 	}
-	timelineClient := timeline.ClientFromContext(ctx)
 
 	callers, err := headers.GetCallers(req.Header())
 	if err != nil {
@@ -167,13 +168,13 @@ func (r *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	originalResp, err := verbService.client.Call(ctx, headers.CopyRequestForForwarding(req))
 	if err != nil {
 		callEvent.Response = result.Err[*ftlv1.CallResponse](err)
-		timelineClient.Publish(ctx, callEvent)
+		r.timelineClient.Publish(ctx, callEvent)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
 		return nil, fmt.Errorf("failed to proxy verb: %w", err)
 	}
 	resp := connect.NewResponse(originalResp.Msg)
 	callEvent.Response = result.Ok(resp.Msg)
-	timelineClient.Publish(ctx, callEvent)
+	r.timelineClient.Publish(ctx, callEvent)
 	observability.Calls.Request(ctx, req.Msg.Verb, start, optional.None[string]())
 	return resp, nil
 }

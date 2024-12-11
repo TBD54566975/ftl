@@ -2,6 +2,7 @@ package dal
 
 import (
 	"context"
+	"net/url"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -9,6 +10,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/async"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -18,9 +20,14 @@ func TestNoCallToAcquire(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
 
-	dal := New(conn)
+	timelineEndpoint, err := url.Parse("http://localhost:8080")
+	assert.NoError(t, err)
 
-	_, _, err := dal.AcquireAsyncCall(ctx)
+	timelineClient := timeline.NewClient(ctx, timelineEndpoint)
+
+	dal := New(conn, timelineClient)
+
+	_, _, err = dal.AcquireAsyncCall(ctx)
 	assert.IsError(t, err, libdal.ErrNotFound)
 	assert.EqualError(t, err, "no pending async calls: not found")
 }

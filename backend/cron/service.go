@@ -44,7 +44,7 @@ func (c cronJob) String() string {
 }
 
 // Start the cron service. Blocks until the context is cancelled.
-func Start(ctx context.Context, eventSource schemaeventsource.EventSource, client routing.CallClient) error {
+func Start(ctx context.Context, eventSource schemaeventsource.EventSource, client routing.CallClient, timelineClient *timeline.Client) error {
 	logger := log.FromContext(ctx).Scope("cron")
 	ctx = log.ContextWithLogger(ctx, logger)
 	// Map of cron jobs for each module.
@@ -55,7 +55,7 @@ func Start(ctx context.Context, eventSource schemaeventsource.EventSource, clien
 	logger.Debugf("Starting cron service")
 
 	for {
-		next, ok := scheduleNext(ctx, cronQueue)
+		next, ok := scheduleNext(ctx, cronQueue, timelineClient)
 		var nextCh <-chan time.Time
 		if ok {
 			logger.Debugf("Next cron job scheduled in %s", next)
@@ -128,11 +128,11 @@ func callCronJob(ctx context.Context, verbClient routing.CallClient, cronJob cro
 	}
 }
 
-func scheduleNext(ctx context.Context, cronQueue []cronJob) (time.Duration, bool) {
+func scheduleNext(ctx context.Context, cronQueue []cronJob, timelineClient *timeline.Client) (time.Duration, bool) {
 	if len(cronQueue) == 0 {
 		return 0, false
 	}
-	timeline.ClientFromContext(ctx).Publish(ctx, timeline.CronScheduled{
+	timelineClient.Publish(ctx, timeline.CronScheduled{
 		DeploymentKey: model.NewDeploymentKey(cronQueue[0].module),
 		Verb:          schema.Ref{Module: cronQueue[0].module, Name: cronQueue[0].verb.Name},
 		ScheduledAt:   cronQueue[0].next,

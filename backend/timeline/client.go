@@ -20,8 +20,6 @@ const (
 	maxBatchDelay = 100 * time.Millisecond
 )
 
-type timelineContextKey struct{}
-
 type Client struct {
 	timelinev1connect.TimelineServiceClient
 
@@ -38,18 +36,6 @@ func NewClient(ctx context.Context, endpoint *url.URL) *Client {
 	}
 	go client.processEvents(ctx)
 	return client
-}
-
-func ContextWithClient(ctx context.Context, client *Client) context.Context {
-	return context.WithValue(ctx, timelineContextKey{}, client)
-}
-
-func ClientFromContext(ctx context.Context) *Client {
-	c, ok := ctx.Value(timelineContextKey{}).(*Client)
-	if !ok {
-		panic("Timeline client not found in context")
-	}
-	return c
 }
 
 //go:sumtype

@@ -19,6 +19,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
 func TestIngress(t *testing.T) {
@@ -69,8 +70,6 @@ func TestIngress(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	timelineEndpoint, err := url.Parse("http://localhost:8080")
 	assert.NoError(t, err)
-	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, timelineEndpoint))
-	assert.NoError(t, err)
 
 	for _, test := range []struct {
 		name       string
@@ -105,7 +104,13 @@ func TestIngress(t *testing.T) {
 			reqKey := model.NewRequestKey(model.OriginIngress, "test")
 			assert.NoError(t, err)
 			fv := &fakeVerbClient{response: response, t: t}
-			handleHTTP(time.Now(), sch, reqKey, routes, rec, req, fv)
+
+			svc := &service{
+				view:           syncView(ctx, schemaeventsource.NewUnattached()),
+				client:         fv,
+				timelineClient: timeline.NewClient(ctx, timelineEndpoint),
+			}
+			svc.handleHTTP(time.Now(), sch, reqKey, routes, rec, req, fv)
 			result := rec.Result()
 			defer result.Body.Close()
 			assert.Equal(t, test.statusCode, rec.Code, "%s: %s", result.Status, rec.Body.Bytes())

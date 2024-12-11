@@ -87,8 +87,6 @@ func Start(ctx context.Context, config Config, storage *artefacts.OCIArtefactSer
 	logger := log.FromContext(ctx).Attrs(map[string]string{"runner": config.Key.String()})
 	logger.Debugf("Starting FTL Runner")
 
-	ctx = timeline.ContextWithClient(ctx, timeline.NewClient(ctx, config.TimelineEndpoint))
-
 	err = manageDeploymentDirectory(logger, config)
 	if err != nil {
 		observability.Runner.StartupFailed(ctx)
@@ -365,7 +363,8 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 
 		leaseServiceClient := rpc.Dial(ftlleaseconnect.NewLeaseServiceClient, s.config.LeaseEndpoint.String(), log.Error)
 
-		s.proxy = proxy.New(deploymentServiceClient, leaseServiceClient, pubsubClient)
+		timelineClient := timeline.NewClient(ctx, s.config.TimelineEndpoint)
+		s.proxy = proxy.New(deploymentServiceClient, leaseServiceClient, pubsubClient, timelineClient)
 
 		parse, err := url.Parse("http://127.0.0.1:0")
 		if err != nil {

@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/backend/timeline"
 	"github.com/TBD54566975/ftl/internal/cors"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -37,17 +38,19 @@ func (c *Config) Validate() error {
 
 type service struct {
 	// Complete schema synchronised from the database.
-	view   *atomic.Value[materialisedView]
-	client routing.CallClient
+	view           *atomic.Value[materialisedView]
+	client         routing.CallClient
+	timelineClient *timeline.Client
 }
 
 // Start the HTTP ingress service. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, schemaEventSource schemaeventsource.EventSource, client routing.CallClient) error {
+func Start(ctx context.Context, config Config, schemaEventSource schemaeventsource.EventSource, client routing.CallClient, timelineClient *timeline.Client) error {
 	logger := log.FromContext(ctx).Scope("http-ingress")
 	ctx = log.ContextWithLogger(ctx, logger)
 	svc := &service{
-		view:   syncView(ctx, schemaEventSource),
-		client: client,
+		view:           syncView(ctx, schemaEventSource),
+		client:         client,
+		timelineClient: timelineClient,
 	}
 
 	ingressHandler := otelhttp.NewHandler(http.Handler(svc), "ftl.ingress")
@@ -84,5 +87,5 @@ func (s *service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		metrics.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("route not found in dal"))
 		return
 	}
-	handleHTTP(start, state.schema, requestKey, routes, w, r, s.client)
+	s.handleHTTP(start, state.schema, requestKey, routes, w, r, s.client)
 }

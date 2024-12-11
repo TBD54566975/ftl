@@ -107,6 +107,7 @@ func Start(
 	storage *artefacts.OCIArtefactService,
 	cm *cf.Manager[configuration.Configuration],
 	sm *cf.Manager[configuration.Secrets],
+	timelineClient *timeline.Client,
 	conn *sql.DB,
 	devel bool,
 ) error {
@@ -115,7 +116,7 @@ func Start(
 	logger := log.FromContext(ctx)
 	logger.Debugf("Starting FTL controller")
 
-	svc, err := New(ctx, conn, cm, sm, storage, config, devel)
+	svc, err := New(ctx, conn, cm, sm, timelineClient, storage, config, devel)
 	if err != nil {
 		return err
 	}
@@ -156,9 +157,10 @@ type Service struct {
 	cm *cf.Manager[configuration.Configuration]
 	sm *cf.Manager[configuration.Secrets]
 
-	tasks   *scheduledtask.Scheduler
-	pubSub  *pubsub.Service
-	storage *artefacts.OCIArtefactService
+	tasks          *scheduledtask.Scheduler
+	pubSub         *pubsub.Service
+	timelineClient *timeline.Client
+	storage        *artefacts.OCIArtefactService
 
 	// Map from runnerKey.String() to client.
 	clients    *ttlcache.Cache[string, clients]
@@ -175,6 +177,7 @@ func New(
 	conn *sql.DB,
 	cm *cf.Manager[configuration.Configuration],
 	sm *cf.Manager[configuration.Secrets],
+	timelineClient *timeline.Client,
 	storage *artefacts.OCIArtefactService,
 	config Config,
 	devel bool,
@@ -200,6 +203,7 @@ func New(
 		cm:              cm,
 		sm:              sm,
 		tasks:           scheduler,
+		timelineClient:  timelineClient,
 		leaser:          ldb,
 		key:             key,
 		clients:         ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
@@ -209,10 +213,10 @@ func New(
 		controllerState: state.NewInMemoryState(),
 	}
 
-	pubSub := pubsub.New(ctx, conn, routingTable, svc.controllerState)
+	pubSub := pubsub.New(ctx, conn, routingTable, svc.controllerState, timelineClient)
 	svc.pubSub = pubSub
 
-	svc.deploymentLogsSink = newDeploymentLogsSink(ctx)
+	svc.deploymentLogsSink = newDeploymentLogsSink(ctx, timelineClient)
 
 	// Use min, max backoff if we are running in production, otherwise use
 	// (1s, 1s) (or develBackoff). Will also wrap the job such that it its next
@@ -359,7 +363,7 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 			requestKey = optional.Some(rkey)
 		}
 
-		timeline.ClientFromContext(ctx).Publish(ctx, timeline.Log{
+		s.timelineClient.Publish(ctx, timeline.Log{
 			DeploymentKey: deploymentKey,
 			RequestKey:    requestKey,
 			Time:          msg.TimeStamp.AsTime(),
@@ -459,7 +463,7 @@ func (s *Service) setDeploymentReplicas(ctx context.Context, key model.Deploymen
 			return fmt.Errorf("could not activate deployment: %w", err)
 		}
 	}
-	timeline.ClientFromContext(ctx).Publish(ctx, timeline.DeploymentUpdated{
+	s.timelineClient.Publish(ctx, timeline.DeploymentUpdated{
 		DeploymentKey:   key,
 		MinReplicas:     minReplicas,
 		PrevMinReplicas: deployment.MinReplicas,
@@ -519,7 +523,7 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 		}
 	}
 
-	timeline.ClientFromContext(ctx).Publish(ctx, timeline.DeploymentCreated{
+	s.timelineClient.Publish(ctx, timeline.DeploymentCreated{
 		DeploymentKey:      newDeploymentKey,
 		Language:           newDeployment.Language,
 		ModuleName:         newDeployment.Module,
@@ -901,7 +905,7 @@ func (s *Service) callWithRequest(
 		err = fmt.Errorf("no routes for module %q", module)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("no routes for module"))
 		callEvent.Response = result.Err[*ftlv1.CallResponse](err)
-		timeline.ClientFromContext(ctx).Publish(ctx, callEvent)
+		s.timelineClient.Publish(ctx, callEvent)
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
@@ -909,7 +913,7 @@ func (s *Service) callWithRequest(
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: verb not exported"))
 		err = connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
 		callEvent.Response = result.Err[*ftlv1.CallResponse](err)
-		timeline.ClientFromContext(ctx).Publish(ctx, callEvent)
+		s.timelineClient.Publish(ctx, callEvent)
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
 	}
 
@@ -917,7 +921,7 @@ func (s *Service) callWithRequest(
 	if err != nil {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: invalid call body"))
 		callEvent.Response = result.Err[*ftlv1.CallResponse](err)
-		timeline.ClientFromContext(ctx).Publish(ctx, callEvent)
+		s.timelineClient.Publish(ctx, callEvent)
 		return nil, err
 	}
 
@@ -942,7 +946,7 @@ func (s *Service) callWithRequest(
 		logger.Errorf(err, "Call failed to verb %s for module %s", verbRef.String(), module)
 	}
 
-	timeline.ClientFromContext(ctx).Publish(ctx, callEvent)
+	s.timelineClient.Publish(ctx, callEvent)
 	return resp, err
 }
 
