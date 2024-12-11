@@ -334,7 +334,7 @@ func parseQueryParams(values map[string][]string, data *schema.Data) (map[string
 		}
 		var field *schema.Field
 		for _, f := range data.Fields {
-			if jsonAlias, ok := f.Alias(schema.AliasKindJson).Get(); (ok && jsonAlias == key) || f.Name == key {
+			if jsonAlias, ok := f.Alias(schema.AliasKindJSON).Get(); (ok && jsonAlias == key) || f.Name == key {
 				field = f
 			}
 			for _, typeParam := range data.TypeParameters {
@@ -369,7 +369,7 @@ func parsePathParams(values map[string]string, data *schema.Data) (map[string]an
 	for key, value := range values {
 		var field *schema.Field
 		for _, f := range data.Fields {
-			if jsonAlias, ok := f.Alias(schema.AliasKindJson).Get(); (ok && jsonAlias == key) || f.Name == key {
+			if jsonAlias, ok := f.Alias(schema.AliasKindJSON).Get(); (ok && jsonAlias == key) || f.Name == key {
 				field = f
 			}
 		}

@@ -26,16 +26,16 @@ func (i AliasKind) String() string {
 func _AliasKindNoOp() {
 	var x [1]struct{}
 	_ = x[AliasKindUnspecified-(0)]
-	_ = x[AliasKindJson-(1)]
+	_ = x[AliasKindJSON-(1)]
 }
 
-var _AliasKindValues = []AliasKind{AliasKindUnspecified, AliasKindJson}
+var _AliasKindValues = []AliasKind{AliasKindUnspecified, AliasKindJSON}
 
 var _AliasKindNameToValueMap = map[string]AliasKind{
 	_AliasKindName[0:11]:       AliasKindUnspecified,
 	_AliasKindLowerName[0:11]:  AliasKindUnspecified,
-	_AliasKindName[11:15]:      AliasKindJson,
-	_AliasKindLowerName[11:15]: AliasKindJson,
+	_AliasKindName[11:15]:      AliasKindJSON,
+	_AliasKindLowerName[11:15]: AliasKindJSON,
 }
 
 var _AliasKindNames = []string{

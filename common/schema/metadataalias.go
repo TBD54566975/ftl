@@ -11,7 +11,7 @@ type AliasKind int
 
 const (
 	AliasKindUnspecified AliasKind = iota
-	AliasKindJson                  //nolint
+	AliasKindJSON
 )
 
 //protobuf:5
