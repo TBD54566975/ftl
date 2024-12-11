@@ -1,4 +1,4 @@
-{{- if .Values.ingress.enabled }}
+{{- if .Values.console.enabled }}
 {{ $version := printf "v%s" .Chart.Version -}}
 apiVersion: apps/v1
 kind: Deployment

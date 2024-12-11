@@ -26,6 +26,7 @@ func GetModules(onResponse func(t testing.TB, resp *connect.Response[pbconsole.G
 
 func TestConsoleGetModules(t *testing.T) {
 	in.Run(t,
+		in.WithConsole(),
 		in.CopyModule("console"),
 		in.Deploy("console"),
 		GetModules(func(t testing.TB, resp *connect.Response[pbconsole.GetModulesResponse]) {
@@ -49,6 +50,7 @@ func StreamModules(onResponse func(t testing.TB, resp *connect.ServerStreamForCl
 
 func TestConsoleStreamModules(t *testing.T) {
 	in.Run(t,
+		in.WithConsole(),
 		in.CopyModule("console"),
 		in.Deploy("console"),
 		StreamModules(func(t testing.TB, stream *connect.ServerStreamForClient[pbconsole.StreamModulesResponse]) {
