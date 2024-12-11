@@ -23,6 +23,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
 var dockerClient = once.Once(func(ctx context.Context) (*client.Client, error) {
@@ -352,14 +353,17 @@ func PollContainerHealth(ctx context.Context, containerName string, timeout time
 //
 // Make sure you obtain the compose yaml from a string literal or an embedded file, rather than
 // reading from disk. The project file will not be included in the release build.
-//
-// A flock in {root}/.ftl is used to prevent Docker compose getting confused, which happens when we call `docker compose up`
-// multiple times simultaneously for the same services.
-func ComposeUp(ctx context.Context, root, name, composeYAML string, envars ...string) error {
+func ComposeUp(ctx context.Context, name, composeYAML string, envars ...string) error {
 	logger := log.FromContext(ctx).Scope(name)
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	dir := filepath.Join(root, ".ftl")
+	// A flock is used to provent Docker compose getting confused, which happens when we call `docker compose up`
+	// multiple times simultaneously for the same services.
+	projCfg, ok := projectconfig.DefaultConfigPath().Get()
+	if !ok {
+		return fmt.Errorf("failed to get project config path")
+	}
+	dir := filepath.Join(filepath.Dir(projCfg), ".ftl")
 	err := os.MkdirAll(dir, 0700)
 	if err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)

@@ -5,23 +5,17 @@ import (
 	_ "embed"
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/TBD54566975/ftl/internal/container"
-	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
 //go:embed docker-compose.registry.yml
 var registryDockerCompose string
 
 func SetupRegistry(ctx context.Context, image string, port int) error {
-	projCfg, ok := projectconfig.DefaultConfigPath().Get()
-	if !ok {
-		return fmt.Errorf("failed to get project config path")
-	}
-	err := container.ComposeUp(ctx, filepath.Dir(projCfg), "registry", registryDockerCompose,
+	err := container.ComposeUp(ctx, "registry", registryDockerCompose,
 		"FTL_REGISTRY_IMAGE="+image,
 		"FTL_REGISTRY_PORT="+strconv.Itoa(port))
 	if err != nil {

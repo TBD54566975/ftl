@@ -4,7 +4,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"path/filepath"
 	"strconv"
 
 	"github.com/alecthomas/types/optional"
@@ -13,7 +12,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/container"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
 //go:embed docker-compose.mysql.yml
@@ -37,11 +35,7 @@ func SetupPostgres(ctx context.Context, image optional.Option[string], port int,
 	if imaneName, ok := image.Get(); ok {
 		envars = append(envars, "FTL_DATABASE_IMAGE="+imaneName)
 	}
-	projCfg, ok := projectconfig.DefaultConfigPath().Get()
-	if !ok {
-		return fmt.Errorf("failed to get project config path")
-	}
-	err := container.ComposeUp(ctx, filepath.Dir(projCfg), "postgres", postgresDockerCompose, envars...)
+	err := container.ComposeUp(ctx, "postgres", postgresDockerCompose, envars...)
 	if err != nil {
 		return fmt.Errorf("could not start postgres: %w", err)
 	}
@@ -58,11 +52,7 @@ func SetupMySQL(ctx context.Context, port int) (string, error) {
 	if port != 0 {
 		envars = append(envars, "MYSQL_PORT="+strconv.Itoa(port))
 	}
-	projCfg, ok := projectconfig.DefaultConfigPath().Get()
-	if !ok {
-		return "", fmt.Errorf("failed to get project config path")
-	}
-	err := container.ComposeUp(ctx, filepath.Dir(projCfg), "mysql", mysqlDockerCompose, envars...)
+	err := container.ComposeUp(ctx, "mysql", mysqlDockerCompose, envars...)
 	if err != nil {
 		return "", fmt.Errorf("could not start mysql: %w", err)
 	}
