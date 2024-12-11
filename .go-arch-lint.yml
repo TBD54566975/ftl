@@ -7,6 +7,7 @@ components:
   common-plugin: { in: common/plugin/** }
   common: { in: common/** }
   internal: { in: internal/** }
+  ftl-version: { in: . }
 
   libdal: { in: backend/libdal/** }
   lease-service: { in: backend/lease/** }
@@ -58,6 +59,7 @@ allow:
 
 commonComponents:
   - common
+  - ftl-version
 
 deps:
   backend-protos:
@@ -72,6 +74,9 @@ deps:
       - internal
       - libdal
       - backend-protos
+  frontend:
+    mayDependOn:
+      - internal
   runner:
     mayDependOn:
       - runner

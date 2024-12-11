@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/internal/sha256"
+	"github.com/TBD54566975/ftl/common/sha256"
 )
 
 type Deployment struct {

@@ -19,10 +19,10 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/sha256"
 	"github.com/TBD54566975/ftl/common/slices"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
 const tenMB = 1024 * 1024 * 10

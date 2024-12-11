@@ -32,6 +32,7 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/sha256"
 	islices "github.com/TBD54566975/ftl/common/slices"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
@@ -39,7 +40,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
-	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/watch"
 )
 

@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/sha256"
 	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
 // ExtractSQLMigrations extracts all migrations from the given directory and returns the updated schema and a list of migration files to deploy.
