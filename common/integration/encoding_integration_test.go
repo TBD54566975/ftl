@@ -1,6 +1,6 @@
 //go:build integration
 
-package encoding_test
+package integration_test
 
 import (
 	"net/http"

@@ -15,10 +15,10 @@ import (
 
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 
+	"github.com/TBD54566975/ftl/common/builderrors"
 	"github.com/TBD54566975/ftl/common/errors"
 	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 )

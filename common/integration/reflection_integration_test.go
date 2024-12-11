@@ -1,6 +1,6 @@
 //go:build integration
 
-package reflection_test
+package integration_test
 
 import (
 	"testing"

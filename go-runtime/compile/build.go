@@ -24,6 +24,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/common/builderrors"
 	"github.com/TBD54566975/ftl/common/reflect"
 	"github.com/TBD54566975/ftl/common/schema"
 	islices "github.com/TBD54566975/ftl/common/slices"
@@ -31,7 +32,6 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/ftl/go-runtime/schema/finalize"
 	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"

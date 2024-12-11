@@ -8,7 +8,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/internal/duration"
+	"github.com/TBD54566975/ftl/common/duration"
 )
 
 const (

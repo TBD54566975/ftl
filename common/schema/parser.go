@@ -8,7 +8,7 @@ import (
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 
-	"github.com/TBD54566975/ftl/internal/builderrors"
+	"github.com/TBD54566975/ftl/common/builderrors"
 )
 
 var (

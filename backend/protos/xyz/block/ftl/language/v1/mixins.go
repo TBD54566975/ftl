@@ -6,8 +6,8 @@ import (
 	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"github.com/TBD54566975/ftl/common/builderrors"
 	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 )

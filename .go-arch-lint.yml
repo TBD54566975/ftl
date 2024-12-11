@@ -6,6 +6,7 @@ components:
   ftl-controller-cmd: { in: cmd/ftl-controller/** }
   common-plugin: { in: common/plugin/** }
   common: { in: common/** }
+  common-integration: { in: common/integration/** }
   internal: { in: internal/** }
   ftl-version: { in: . }
 
@@ -195,3 +196,6 @@ deps:
     mayDependOn:
       - internal
       - backend-protos
+  common-integration:
+    mayDependOn:
+      - internal
