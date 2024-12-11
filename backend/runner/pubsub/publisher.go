@@ -50,6 +50,11 @@ func newPublisher(module string, t *schema.Topic, deployment model.DeploymentKey
 }
 
 func (p *publisher) publish(ctx context.Context, data []byte, key string, caller schema.Ref) error {
+	partition, offset, err := p.producer.SendMessage(&sarama.ProducerMessage{
+		Topic: p.topic.Runtime.TopicID,
+		Value: sarama.ByteEncoder(data),
+		Key:   sarama.StringEncoder(key),
+	})
 	// TODO: fill in details
 	timelineEvent := timeline.PubSubPublish{
 		DeploymentKey: p.deployment,
@@ -57,14 +62,10 @@ func (p *publisher) publish(ctx context.Context, data []byte, key string, caller
 		Time:       time.Now(),
 		SourceVerb: caller,
 		Topic:      p.topic.Name, // or is this a ref?
+		Partition:  int(partition),
+		Offset:     int(offset),
 		Request:    data,
 	}
-	// TODO: write offset and partition to timeline event
-	_, _, err := p.producer.SendMessage(&sarama.ProducerMessage{
-		Topic: p.topic.Runtime.TopicID,
-		Value: sarama.ByteEncoder(data),
-		Key:   sarama.StringEncoder(key),
-	})
 	if err != nil {
 		timelineEvent.Error = optional.Some(err.Error())
 		return fmt.Errorf("failed to publish message: %w", err)

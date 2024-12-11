@@ -160,6 +160,8 @@ func (c *consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 			Time:          time.Now(),
 			DestVerb:      optional.Some(destRef.ToRefKey()),
 			Topic:         c.subscriber.Topic.String(),
+			Partition:     int(msg.Partition),
+			Offset:        int(msg.Offset),
 		}
 		callEvent := &timeline.Call{
 			DeploymentKey: c.deployment,

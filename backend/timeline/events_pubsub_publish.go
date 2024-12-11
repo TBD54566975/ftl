@@ -18,6 +18,8 @@ type PubSubPublish struct {
 	Time          time.Time
 	SourceVerb    schema.Ref
 	Topic         string
+	Partition     int
+	Offset        int
 	Request       []byte
 	Error         optional.Option[string]
 }
@@ -35,6 +37,8 @@ func (p PubSubPublish) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, er
 				Timestamp:     timestamppb.New(p.Time),
 				Duration:      durationpb.New(time.Since(p.Time)),
 				Topic:         p.Topic,
+				Partition:     int32(p.Partition),
+				Offset:        int64(p.Offset),
 				Request:       string(p.Request),
 				Error:         p.Error.Ptr(),
 			},

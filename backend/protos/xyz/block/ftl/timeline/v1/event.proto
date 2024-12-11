@@ -122,6 +122,8 @@ message PubSubPublishEvent {
   string topic = 6;
   string request = 7;
   optional string error = 8;
+  int32 partition = 9;
+  int64 offset = 10;
 }
 
 message PubSubConsumeEvent {
@@ -133,6 +135,8 @@ message PubSubConsumeEvent {
   google.protobuf.Duration duration = 6;
   string topic = 7;
   optional string error = 8;
+  int32 partition = 9;
+  int64 offset = 10;
 }
 
 message Event {

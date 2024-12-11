@@ -18,6 +18,8 @@ type PubSubConsume struct {
 	Time          time.Time
 	DestVerb      optional.Option[schema.RefKey]
 	Topic         string
+	Partition     int
+	Offset        int
 	Error         optional.Option[string]
 }
 
@@ -37,6 +39,8 @@ func (p PubSubConsume) ToEntry() (*timelinepb.CreateEventsRequest_EventEntry, er
 				RequestKey:     p.RequestKey.Ptr(),
 				Timestamp:      timestamppb.New(p.Time),
 				Topic:          p.Topic,
+				Partition:      int32(p.Partition),
+				Offset:         int64(p.Offset),
 				Error:          p.Error.Ptr(),
 				DestVerbModule: destModule,
 				DestVerbName:   destVerb,
