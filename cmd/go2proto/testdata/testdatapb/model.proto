@@ -28,6 +28,8 @@ message Root {
   optional int64 optional_int = 7;
   optional int64 optional_int_ptr = 8;
   optional Message optional_msg = 9;
+  repeated int64 repeated_int = 10;
+  repeated Message repeated_msg = 11;
 }
 
 

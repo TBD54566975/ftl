@@ -58,6 +58,8 @@ func (x *Root) ToProto() *destpb.Root {
 		OptionalInt: proto.Int64(int64(x.OptionalInt)),
 		OptionalIntPtr: proto.Int64(int64(*x.OptionalIntPtr)),
 		OptionalMsg: x.OptionalMsg.ToProto(),
+		RepeatedInt: protoSlicef(x.RepeatedInt, func(v int) int64 { return int64(v) }),
+		RepeatedMsg: protoSlice[*destpb.Message](x.RepeatedMsg),
 	}
 }
 

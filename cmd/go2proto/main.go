@@ -144,10 +144,11 @@ func (m Message) DeclName() string { return m.Name }
 type Field struct {
 	ID          int
 	Name        string
-	Type        string
+	OriginType  string // The original type of the field, eg. int, string, float32, etc.
+	ProtoType   string // The type of the field in the generated .proto file.
+	ProtoGoType string // The type of the field in the generated Go protobuf code. eg. int -> int64.
 	Optional    bool
 	Repeated    bool
-	ProtoGoType string
 	Pointer     bool
 }
 
@@ -531,6 +532,7 @@ func parsePBTag(tag string) (pbTag, error) {
 }
 
 func (s *State) applyFieldType(t types.Type, field *Field) error {
+	field.OriginType = t.String()
 	switch t := t.(type) {
 	case *types.Named:
 		if err := s.extractDecl(t.Obj(), t); err != nil {
@@ -538,14 +540,18 @@ func (s *State) applyFieldType(t types.Type, field *Field) error {
 		}
 		ref := t.Obj().Pkg().Path() + "." + t.Obj().Name()
 		if bt, ok := stdTypes[ref]; ok {
-			field.Type = bt.ref
+			field.ProtoType = bt.ref
+			field.ProtoGoType = protoName(bt.ref)
+			field.OriginType = t.Obj().Name()
 		} else {
-			field.Type = t.Obj().Name()
+			field.ProtoType = t.Obj().Name()
+			field.ProtoGoType = protoName(t.Obj().Name())
+			field.OriginType = t.Obj().Name()
 		}
 
 	case *types.Slice:
 		if t.Elem().String() == "byte" {
-			field.Type = "bytes"
+			field.ProtoType = "bytes"
 		} else {
 			field.Repeated = true
 			return s.applyFieldType(t.Elem(), field)
@@ -554,31 +560,30 @@ func (s *State) applyFieldType(t types.Type, field *Field) error {
 	case *types.Pointer:
 		field.Pointer = true
 		if _, ok := t.Elem().(*types.Slice); ok {
-			return fmt.Errorf("pointer to named type is not supported")
+			return fmt.Errorf("pointer to slice is not supported")
 		}
 		return s.applyFieldType(t.Elem(), field)
 
 	default:
+		field.OriginType = t.String()
+		field.ProtoType = t.String()
 		field.ProtoGoType = t.String()
 		switch t.String() {
 		case "int":
-			field.Type = "int64"
+			field.ProtoType = "int64"
 			field.ProtoGoType = "int64"
 
 		case "uint":
-			field.Type = "uint64"
+			field.ProtoType = "uint64"
 			field.ProtoGoType = "uint64"
 
 		case "float64":
-			field.Type = "double"
-			field.ProtoGoType = "float64"
+			field.ProtoType = "double"
 
 		case "float32":
-			field.Type = "float"
-			field.ProtoGoType = "float32"
+			field.ProtoType = "float"
 
 		case "string", "bool", "uint64", "int64", "uint32", "int32":
-			field.Type = t.String()
 
 		default:
 			return fmt.Errorf("unsupported type %s", t.String())
