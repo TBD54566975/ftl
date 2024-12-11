@@ -30,6 +30,13 @@ func protoSlicef[P, T any](values []T, f func(T) P) []P {
 	return out
 }
 
+func protoMust[T any](v T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
 
 func (x Enum) ToProto() destpb.Enum {
 	return destpb.Enum(x)
@@ -60,6 +67,8 @@ func (x *Root) ToProto() *destpb.Root {
 		OptionalMsg: x.OptionalMsg.ToProto(),
 		RepeatedInt: protoSlicef(x.RepeatedInt, func(v int) int64 { return int64(v) }),
 		RepeatedMsg: protoSlice[*destpb.Message](x.RepeatedMsg),
+		Url: protoMust(x.URL.MarshalBinary()),
+		Key: string(protoMust(x.Key.MarshalText())),
 	}
 }
 

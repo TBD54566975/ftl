@@ -15,7 +15,7 @@ var _ fmt.Stringer
 
 var go2protoTmpl = template.Must(template.New("go2proto.to.go.tmpl").
 	Funcs(template.FuncMap{
-		"typeof": func(t any) string { return reflect.Indirect(reflect.ValueOf(t)).Type().Name() },
+		"typeof": func(t any) Kind { return Kind(reflect.Indirect(reflect.ValueOf(t)).Type().Name()) },
 		// Return true if the type is a builtin proto type.
 		"isBuiltin": func(t Field) bool {
 			switch t.OriginType {
@@ -76,6 +76,13 @@ func protoSlicef[P, T any](values []T, f func(T) P) []P {
 	return out
 }
 
+func protoMust[T any](v T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
 {{range $decl := .OrderedDecls }}
 {{- if eq (typeof $decl) "Message" }}
 func (x *{{ .Name }}) ToProto() *destpb.{{ .Name }} {
@@ -96,26 +103,30 @@ func (x *{{ .Name }}) ToProto() *destpb.{{ .Name }} {
 		{{ $field.EscapedName }}: timestamppb.New(x.{{ $field.Name }}),
 {{- else if eq $field.ProtoType "google.protobuf.Duration" }}
 		{{ $field.EscapedName }}: durationpb.New(x.{{ $field.Name }}),
-{{- else if eq (.OriginType | $.TypeOf) "Message" }}
+{{- else if eq .Kind "Message" }}
 {{- if .Repeated }}
 		{{ $field.EscapedName }}: protoSlice[*destpb.{{ .ProtoGoType }}](x.{{ $field.Name }}),
 {{- else}}
 		{{ $field.EscapedName }}: x.{{ $field.Name }}.ToProto(),
 {{- end}}
-{{- else if eq (.OriginType | $.TypeOf) "Enum" }}
+{{- else if eq .Kind "Enum" }}
 {{- if .Repeated }}
 		{{ $field.EscapedName }}: protoSlice[destpb.{{ .Type }}](x.{{ $field.Name }}),
 {{- else}}
 		{{ $field.EscapedName }}: x.{{ $field.Name }}.ToProto(),
 {{- end}}
-{{- else if eq (.OriginType | $.TypeOf) "SumType" }}
+{{- else if eq .Kind "SumType" }}
 {{- if .Repeated }}
 		{{ $field.EscapedName }}: protoSlicef(x.{{ $field.Name }}, {{$field.OriginType}}ToProto),
 {{- else}}
 		{{ $field.EscapedName }}: {{ $field.OriginType }}ToProto(x.{{ $field.Name }}),
 {{- end}}
+{{- else if eq $field.Kind "BinaryMarshaler" }}
+		{{ $field.EscapedName }}: protoMust(x.{{ $field.Name }}.MarshalBinary()),
+{{- else if eq $field.Kind "TextMarshaler" }}
+		{{ $field.EscapedName }}: string(protoMust(x.{{ $field.Name }}.MarshalText())),
 {{- else }}
-		{{ $field.EscapedName }}: ??, // x.{{ $field.Name }}.ToProto() // Unknown type: {{ $field.OriginType }}
+		{{ $field.EscapedName }}: ??, // x.{{ $field.Name }}.ToProto() // Unknown type {{ $field.OriginType }} of kind {{ $field.Kind }}
 {{- end}}
 {{- end}}
 	}
