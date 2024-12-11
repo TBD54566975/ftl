@@ -1,4 +1,4 @@
-package observability
+package ingress
 
 import (
 	"context"
@@ -25,13 +25,15 @@ const (
 	ingressRunTimeBucketAttr = "ftl.ingress.run_time_ms.bucket"
 )
 
-type IngressMetrics struct {
+var metrics *Metrics
+
+type Metrics struct {
 	requests     metric.Int64Counter
 	msToComplete metric.Int64Histogram
 }
 
-func initIngressMetrics() (*IngressMetrics, error) {
-	result := &IngressMetrics{
+func init() {
+	metrics = &Metrics{
 		requests:     noop.Int64Counter{},
 		msToComplete: noop.Int64Histogram{},
 	}
@@ -40,21 +42,20 @@ func initIngressMetrics() (*IngressMetrics, error) {
 	meter := otel.Meter(ingressMeterName)
 
 	signalName := fmt.Sprintf("%s.requests", ingressMeterName)
-	if result.requests, err = meter.Int64Counter(signalName, metric.WithUnit("1"),
+	if metrics.requests, err = meter.Int64Counter(signalName, metric.WithUnit("1"),
 		metric.WithDescription("the number of ingress requests that the FTL controller receives")); err != nil {
-		return nil, wrapErr(signalName, err)
+		panic(wrapErr(signalName, err))
 	}
 
 	signalName = fmt.Sprintf("%s.ms_to_complete", ingressMeterName)
-	if result.msToComplete, err = meter.Int64Histogram(signalName, metric.WithUnit("ms"),
+	if metrics.msToComplete, err = meter.Int64Histogram(signalName, metric.WithUnit("ms"),
 		metric.WithDescription("duration in ms to complete an ingress request")); err != nil {
-		return nil, wrapErr(signalName, err)
+		panic(wrapErr(signalName, err))
 	}
 
-	return result, nil
 }
 
-func (m *IngressMetrics) Request(ctx context.Context, method string, path string, verb optional.Option[*schemapb.Ref], startTime time.Time, failureMode optional.Option[string]) {
+func (m *Metrics) Request(ctx context.Context, method string, path string, verb optional.Option[*schemapb.Ref], startTime time.Time, failureMode optional.Option[string]) {
 	attrs := []attribute.KeyValue{
 		attribute.String(ingressMethodAttr, method),
 		attribute.String(ingressPathAttr, path),
@@ -68,9 +69,13 @@ func (m *IngressMetrics) Request(ctx context.Context, method string, path string
 		attrs = append(attrs, attribute.String(ingressFailureModeAttr, f))
 	}
 
-	msToComplete := timeSinceMS(startTime)
+	msToComplete := observability.TimeSinceMS(startTime)
 	m.msToComplete.Record(ctx, msToComplete, metric.WithAttributes(attrs...))
 
-	attrs = append(attrs, attribute.String(ingressRunTimeBucketAttr, logBucket(4, msToComplete, optional.Some(3), optional.Some(7))))
+	attrs = append(attrs, attribute.String(ingressRunTimeBucketAttr, observability.LogBucket(4, msToComplete, optional.Some(3), optional.Some(7))))
 	m.requests.Add(ctx, 1, metric.WithAttributes(attrs...))
+}
+
+func wrapErr(signalName string, err error) error {
+	return fmt.Errorf("failed to create %q signal: %w", signalName, err)
 }
