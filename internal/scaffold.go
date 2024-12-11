@@ -7,8 +7,8 @@ import (
 
 	"github.com/block/scaffolder"
 
-	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/schema/strcase"
+	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/strcase"
 )
 
 // ScaffoldZip is a convenience function for scaffolding a zip archive with scaffolder.

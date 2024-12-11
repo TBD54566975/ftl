@@ -13,8 +13,9 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
 	"github.com/TBD54566975/ftl/backend/provisioner"
+	"github.com/TBD54566975/ftl/common/reflection"
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
@@ -22,7 +23,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 	"github.com/TBD54566975/ftl/internal/log"
 	pc "github.com/TBD54566975/ftl/internal/projectconfig"
-	"github.com/TBD54566975/ftl/internal/schema"
 	mcu "github.com/TBD54566975/ftl/internal/testutils/modulecontext"
 )
 

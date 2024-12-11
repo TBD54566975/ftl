@@ -15,11 +15,11 @@ import (
 	"golang.org/x/mod/semver"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
-	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type ExternalDeploymentContext struct {

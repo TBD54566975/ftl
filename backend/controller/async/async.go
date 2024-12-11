@@ -6,8 +6,8 @@ import (
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type asyncOriginParseRoot struct {

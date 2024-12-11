@@ -10,10 +10,10 @@ import (
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/ftl/go-runtime/schema/initialize"
-	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
 
 type resource struct {

@@ -11,11 +11,11 @@ import (
 	"github.com/XSAM/otelsql"
 	_ "github.com/go-sql-driver/mysql"
 
+	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/strcase"
 	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/schema/strcase"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 

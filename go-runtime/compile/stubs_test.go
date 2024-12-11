@@ -10,9 +10,9 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
-	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 func setUp(t *testing.T) (ctx context.Context, projectRoot, fakeGoModDir string) {
@@ -117,7 +117,7 @@ package other
 import (
   "context"
 
-  "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+  "github.com/TBD54566975/ftl/common/reflection"
 )
 
 var _ = context.Background

@@ -3,7 +3,7 @@ package compile
 import (
 	"testing"
 
-	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/alecthomas/assert/v2"
 )
 

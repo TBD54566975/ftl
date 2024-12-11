@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/async"
+	"github.com/TBD54566975/ftl/common/schema"
 	in "github.com/TBD54566975/ftl/internal/integration"
-	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 func TestPubSub(t *testing.T) {

@@ -4,7 +4,7 @@ package relay
 import (
 	"context"
 	ftlorigin "ftl/origin"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/common/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 )
 

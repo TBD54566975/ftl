@@ -10,7 +10,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 )

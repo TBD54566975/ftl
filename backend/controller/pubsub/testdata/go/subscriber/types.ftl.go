@@ -5,7 +5,7 @@ import (
 	"context"
 	ftlbuiltin "ftl/builtin"
 	ftlpublisher "ftl/publisher"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/common/reflection"
 )
 
 type CatchClient func(context.Context, ftlbuiltin.CatchRequest[ftlpublisher.PubSubEvent]) error
