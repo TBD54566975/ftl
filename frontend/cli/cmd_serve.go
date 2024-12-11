@@ -66,6 +66,7 @@ type serveCommonConfig struct {
 	RegistryImage       string               `help:"The container image to start for the image registry" default:"registry:2" env:"FTL_REGISTRY_IMAGE" hidden:""`
 	GrafanaImage        string               `help:"The container image to start for the automatic Grafana instance" default:"grafana/otel-lgtm" env:"FTL_GRAFANA_IMAGE" hidden:""`
 	DisableGrafana      bool                 `help:"Disable the automatic Grafana that is started if no telemetry collector is specified." default:"false"`
+	NoConsole           bool                 `help:"Disable the console."`
 	Ingress             ingress.Config       `embed:"" prefix:"ingress-"`
 	Timeline            timeline.Config      `embed:"" prefix:"timeline-"`
 	Console             console.Config       `embed:"" prefix:"console-"`
@@ -335,14 +336,16 @@ func (s *serveCommonConfig) run(
 		})
 	}
 
-	// Start Console
-	wg.Go(func() error {
-		err := console.Start(ctx, s.Console, schemaEventSourceFactory(), controllerClient, timelineClient, adminClient)
-		if err != nil {
-			return fmt.Errorf("console failed: %w", err)
-		}
-		return nil
-	})
+	if !s.NoConsole {
+		// Start Console
+		wg.Go(func() error {
+			err := console.Start(ctx, s.Console, schemaEventSourceFactory(), controllerClient, timelineClient, adminClient, routing.NewVerbRouter(ctx, schemaEventSourceFactory()))
+			if err != nil {
+				return fmt.Errorf("console failed: %w", err)
+			}
+			return nil
+		})
+	}
 	// Start Timeline
 	wg.Go(func() error {
 		err := timeline.Start(ctx, s.Timeline)

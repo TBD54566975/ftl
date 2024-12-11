@@ -63,6 +63,8 @@ const (
 	ConsoleServiceSetSecretProcedure = "/xyz.block.ftl.console.v1.ConsoleService/SetSecret"
 	// ConsoleServiceStatusProcedure is the fully-qualified name of the ConsoleService's Status RPC.
 	ConsoleServiceStatusProcedure = "/xyz.block.ftl.console.v1.ConsoleService/Status"
+	// ConsoleServiceCallProcedure is the fully-qualified name of the ConsoleService's Call RPC.
+	ConsoleServiceCallProcedure = "/xyz.block.ftl.console.v1.ConsoleService/Call"
 )
 
 // ConsoleServiceClient is a client for the xyz.block.ftl.console.v1.ConsoleService service.
@@ -78,6 +80,7 @@ type ConsoleServiceClient interface {
 	GetSecret(context.Context, *connect.Request[v11.GetSecretRequest]) (*connect.Response[v11.GetSecretResponse], error)
 	SetSecret(context.Context, *connect.Request[v11.SetSecretRequest]) (*connect.Response[v11.SetSecretResponse], error)
 	Status(context.Context, *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error)
+	Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error)
 }
 
 // NewConsoleServiceClient constructs a client for the xyz.block.ftl.console.v1.ConsoleService
@@ -141,6 +144,11 @@ func NewConsoleServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			baseURL+ConsoleServiceStatusProcedure,
 			opts...,
 		),
+		call: connect.NewClient[v1.CallRequest, v1.CallResponse](
+			httpClient,
+			baseURL+ConsoleServiceCallProcedure,
+			opts...,
+		),
 	}
 }
 
@@ -156,6 +164,7 @@ type consoleServiceClient struct {
 	getSecret      *connect.Client[v11.GetSecretRequest, v11.GetSecretResponse]
 	setSecret      *connect.Client[v11.SetSecretRequest, v11.SetSecretResponse]
 	status         *connect.Client[v1.StatusRequest, v1.StatusResponse]
+	call           *connect.Client[v1.CallRequest, v1.CallResponse]
 }
 
 // Ping calls xyz.block.ftl.console.v1.ConsoleService.Ping.
@@ -208,6 +217,11 @@ func (c *consoleServiceClient) Status(ctx context.Context, req *connect.Request[
 	return c.status.CallUnary(ctx, req)
 }
 
+// Call calls xyz.block.ftl.console.v1.ConsoleService.Call.
+func (c *consoleServiceClient) Call(ctx context.Context, req *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error) {
+	return c.call.CallUnary(ctx, req)
+}
+
 // ConsoleServiceHandler is an implementation of the xyz.block.ftl.console.v1.ConsoleService
 // service.
 type ConsoleServiceHandler interface {
@@ -222,6 +236,7 @@ type ConsoleServiceHandler interface {
 	GetSecret(context.Context, *connect.Request[v11.GetSecretRequest]) (*connect.Response[v11.GetSecretResponse], error)
 	SetSecret(context.Context, *connect.Request[v11.SetSecretRequest]) (*connect.Response[v11.SetSecretResponse], error)
 	Status(context.Context, *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error)
+	Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error)
 }
 
 // NewConsoleServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -281,6 +296,11 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 		svc.Status,
 		opts...,
 	)
+	consoleServiceCallHandler := connect.NewUnaryHandler(
+		ConsoleServiceCallProcedure,
+		svc.Call,
+		opts...,
+	)
 	return "/xyz.block.ftl.console.v1.ConsoleService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ConsoleServicePingProcedure:
@@ -303,6 +323,8 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 			consoleServiceSetSecretHandler.ServeHTTP(w, r)
 		case ConsoleServiceStatusProcedure:
 			consoleServiceStatusHandler.ServeHTTP(w, r)
+		case ConsoleServiceCallProcedure:
+			consoleServiceCallHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -350,4 +372,8 @@ func (UnimplementedConsoleServiceHandler) SetSecret(context.Context, *connect.Re
 
 func (UnimplementedConsoleServiceHandler) Status(context.Context, *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.console.v1.ConsoleService.Status is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.console.v1.ConsoleService.Call is not implemented"))
 }

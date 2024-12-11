@@ -26,9 +26,10 @@ from xyz.block.ftl.schema.v1 import schema_pb2 as xyz_dot_block_dot_ftl_dot_sche
 from xyz.block.ftl.timeline.v1 import timeline_pb2 as xyz_dot_block_dot_ftl_dot_timeline_dot_v1_dot_timeline__pb2
 from xyz.block.ftl.v1 import controller_pb2 as xyz_dot_block_dot_ftl_dot_v1_dot_controller__pb2
 from xyz.block.ftl.v1 import ftl_pb2 as xyz_dot_block_dot_ftl_dot_v1_dot_ftl__pb2
+from xyz.block.ftl.v1 import verb_pb2 as xyz_dot_block_dot_ftl_dot_v1_dot_verb__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n&xyz/block/ftl/console/v1/console.proto\x12\x18xyz.block.ftl.console.v1\x1a$xyz/block/ftl/schema/v1/schema.proto\x1a(xyz/block/ftl/timeline/v1/timeline.proto\x1a!xyz/block/ftl/v1/controller.proto\x1a\x1axyz/block/ftl/v1/ftl.proto\"\x7f\n\x06\x43onfig\x12\x37\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x1f.xyz.block.ftl.schema.v1.ConfigR\x06\x63onfig\x12<\n\nreferences\x18\x02 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"\x8f\x01\n\x04\x44\x61ta\x12\x31\n\x04\x64\x61ta\x18\x01 \x01(\x0b\x32\x1d.xyz.block.ftl.schema.v1.DataR\x04\x64\x61ta\x12\x16\n\x06schema\x18\x02 \x01(\tR\x06schema\x12<\n\nreferences\x18\x03 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"\x87\x01\n\x08\x44\x61tabase\x12=\n\x08\x64\x61tabase\x18\x01 \x01(\x0b\x32!.xyz.block.ftl.schema.v1.DatabaseR\x08\x64\x61tabase\x12<\n\nreferences\x18\x02 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"w\n\x04\x45num\x12\x31\n\x04\x65num\x18\x01 \x01(\x0b\x32\x1d.xyz.block.ftl.schema.v1.EnumR\x04\x65num\x12<\n\nreferences\x18\x02 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"{\n\x05Topic\x12\x34\n\x05topic\x18\x01 \x01(\x0b\x32\x1e.xyz.block.ftl.schema.v1.TopicR\x05topic\x12<\n\nreferences\x18\x02 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"\x8b\x01\n\tTypeAlias\x12@\n\ttypealias\x18\x01 \x01(\x0b\x32\".xyz.block.ftl.schema.v1.TypeAliasR\ttypealias\x12<\n\nreferences\x18\x02 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"\x7f\n\x06Secret\x12\x37\n\x06secret\x18\x01 \x01(\x0b\x32\x1f.xyz.block.ftl.schema.v1.SecretR\x06secret\x12<\n\nreferences\x18\x02 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"\xbf\x01\n\x04Verb\x12\x31\n\x04verb\x18\x01 \x01(\x0b\x32\x1d.xyz.block.ftl.schema.v1.VerbR\x04verb\x12\x16\n\x06schema\x18\x02 \x01(\tR\x06schema\x12.\n\x13json_request_schema\x18\x03 \x01(\tR\x11jsonRequestSchema\x12<\n\nreferences\x18\x04 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"\xd1\x04\n\x06Module\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12%\n\x0e\x64\x65ployment_key\x18\x02 \x01(\tR\rdeploymentKey\x12\x1a\n\x08language\x18\x03 \x01(\tR\x08language\x12\x16\n\x06schema\x18\x04 \x01(\tR\x06schema\x12\x34\n\x05verbs\x18\x05 \x03(\x0b\x32\x1e.xyz.block.ftl.console.v1.VerbR\x05verbs\x12\x32\n\x04\x64\x61ta\x18\x06 \x03(\x0b\x32\x1e.xyz.block.ftl.console.v1.DataR\x04\x64\x61ta\x12:\n\x07secrets\x18\x07 \x03(\x0b\x32 .xyz.block.ftl.console.v1.SecretR\x07secrets\x12:\n\x07\x63onfigs\x18\x08 \x03(\x0b\x32 .xyz.block.ftl.console.v1.ConfigR\x07\x63onfigs\x12@\n\tdatabases\x18\t \x03(\x0b\x32\".xyz.block.ftl.console.v1.DatabaseR\tdatabases\x12\x34\n\x05\x65nums\x18\n \x03(\x0b\x32\x1e.xyz.block.ftl.console.v1.EnumR\x05\x65nums\x12\x37\n\x06topics\x18\x0b \x03(\x0b\x32\x1f.xyz.block.ftl.console.v1.TopicR\x06topics\x12\x45\n\x0btypealiases\x18\x0c \x03(\x0b\x32#.xyz.block.ftl.console.v1.TypeAliasR\x0btypealiases\")\n\rTopologyGroup\x12\x18\n\x07modules\x18\x01 \x03(\tR\x07modules\"K\n\x08Topology\x12?\n\x06levels\x18\x01 \x03(\x0b\x32\'.xyz.block.ftl.console.v1.TopologyGroupR\x06levels\"\x13\n\x11GetModulesRequest\"\x90\x01\n\x12GetModulesResponse\x12:\n\x07modules\x18\x01 \x03(\x0b\x32 .xyz.block.ftl.console.v1.ModuleR\x07modules\x12>\n\x08topology\x18\x02 \x01(\x0b\x32\".xyz.block.ftl.console.v1.TopologyR\x08topology\"\x16\n\x14StreamModulesRequest\"\x93\x01\n\x15StreamModulesResponse\x12:\n\x07modules\x18\x01 \x03(\x0b\x32 .xyz.block.ftl.console.v1.ModuleR\x07modules\x12>\n\x08topology\x18\x02 \x01(\x0b\x32\".xyz.block.ftl.console.v1.TopologyR\x08topology\"N\n\x10GetConfigRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n\x06module\x18\x02 \x01(\tH\x00R\x06module\x88\x01\x01\x42\t\n\x07_module\")\n\x11GetConfigResponse\x12\x14\n\x05value\x18\x01 \x01(\x0cR\x05value\"d\n\x10SetConfigRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n\x06module\x18\x02 \x01(\tH\x00R\x06module\x88\x01\x01\x12\x14\n\x05value\x18\x03 \x01(\x0cR\x05valueB\t\n\x07_module\")\n\x11SetConfigResponse\x12\x14\n\x05value\x18\x01 \x01(\x0cR\x05value\"N\n\x10GetSecretRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n\x06module\x18\x02 \x01(\tH\x00R\x06module\x88\x01\x01\x42\t\n\x07_module\")\n\x11GetSecretResponse\x12\x14\n\x05value\x18\x01 \x01(\x0cR\x05value\"d\n\x10SetSecretRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n\x06module\x18\x02 \x01(\tH\x00R\x06module\x88\x01\x01\x12\x14\n\x05value\x18\x03 \x01(\x0cR\x05valueB\t\n\x07_module\")\n\x11SetSecretResponse\x12\x14\n\x05value\x18\x01 \x01(\x0cR\x05value2\x85\x08\n\x0e\x43onsoleService\x12J\n\x04Ping\x12\x1d.xyz.block.ftl.v1.PingRequest\x1a\x1e.xyz.block.ftl.v1.PingResponse\"\x03\x90\x02\x01\x12g\n\nGetModules\x12+.xyz.block.ftl.console.v1.GetModulesRequest\x1a,.xyz.block.ftl.console.v1.GetModulesResponse\x12r\n\rStreamModules\x12..xyz.block.ftl.console.v1.StreamModulesRequest\x1a/.xyz.block.ftl.console.v1.StreamModulesResponse0\x01\x12l\n\x0bGetTimeline\x12-.xyz.block.ftl.timeline.v1.GetTimelineRequest\x1a..xyz.block.ftl.timeline.v1.GetTimelineResponse\x12w\n\x0eStreamTimeline\x12\x30.xyz.block.ftl.timeline.v1.StreamTimelineRequest\x1a\x31.xyz.block.ftl.timeline.v1.StreamTimelineResponse0\x01\x12\x64\n\tGetConfig\x12*.xyz.block.ftl.console.v1.GetConfigRequest\x1a+.xyz.block.ftl.console.v1.GetConfigResponse\x12\x64\n\tSetConfig\x12*.xyz.block.ftl.console.v1.SetConfigRequest\x1a+.xyz.block.ftl.console.v1.SetConfigResponse\x12\x64\n\tGetSecret\x12*.xyz.block.ftl.console.v1.GetSecretRequest\x1a+.xyz.block.ftl.console.v1.GetSecretResponse\x12\x64\n\tSetSecret\x12*.xyz.block.ftl.console.v1.SetSecretRequest\x1a+.xyz.block.ftl.console.v1.SetSecretResponse\x12K\n\x06Status\x12\x1f.xyz.block.ftl.v1.StatusRequest\x1a .xyz.block.ftl.v1.StatusResponseBPP\x01ZLgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1;pbconsoleb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n&xyz/block/ftl/console/v1/console.proto\x12\x18xyz.block.ftl.console.v1\x1a$xyz/block/ftl/schema/v1/schema.proto\x1a(xyz/block/ftl/timeline/v1/timeline.proto\x1a!xyz/block/ftl/v1/controller.proto\x1a\x1axyz/block/ftl/v1/ftl.proto\x1a\x1bxyz/block/ftl/v1/verb.proto\"\x7f\n\x06\x43onfig\x12\x37\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\x1f.xyz.block.ftl.schema.v1.ConfigR\x06\x63onfig\x12<\n\nreferences\x18\x02 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"\x8f\x01\n\x04\x44\x61ta\x12\x31\n\x04\x64\x61ta\x18\x01 \x01(\x0b\x32\x1d.xyz.block.ftl.schema.v1.DataR\x04\x64\x61ta\x12\x16\n\x06schema\x18\x02 \x01(\tR\x06schema\x12<\n\nreferences\x18\x03 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"\x87\x01\n\x08\x44\x61tabase\x12=\n\x08\x64\x61tabase\x18\x01 \x01(\x0b\x32!.xyz.block.ftl.schema.v1.DatabaseR\x08\x64\x61tabase\x12<\n\nreferences\x18\x02 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"w\n\x04\x45num\x12\x31\n\x04\x65num\x18\x01 \x01(\x0b\x32\x1d.xyz.block.ftl.schema.v1.EnumR\x04\x65num\x12<\n\nreferences\x18\x02 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"{\n\x05Topic\x12\x34\n\x05topic\x18\x01 \x01(\x0b\x32\x1e.xyz.block.ftl.schema.v1.TopicR\x05topic\x12<\n\nreferences\x18\x02 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"\x8b\x01\n\tTypeAlias\x12@\n\ttypealias\x18\x01 \x01(\x0b\x32\".xyz.block.ftl.schema.v1.TypeAliasR\ttypealias\x12<\n\nreferences\x18\x02 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"\x7f\n\x06Secret\x12\x37\n\x06secret\x18\x01 \x01(\x0b\x32\x1f.xyz.block.ftl.schema.v1.SecretR\x06secret\x12<\n\nreferences\x18\x02 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"\xbf\x01\n\x04Verb\x12\x31\n\x04verb\x18\x01 \x01(\x0b\x32\x1d.xyz.block.ftl.schema.v1.VerbR\x04verb\x12\x16\n\x06schema\x18\x02 \x01(\tR\x06schema\x12.\n\x13json_request_schema\x18\x03 \x01(\tR\x11jsonRequestSchema\x12<\n\nreferences\x18\x04 \x03(\x0b\x32\x1c.xyz.block.ftl.schema.v1.RefR\nreferences\"\xd1\x04\n\x06Module\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12%\n\x0e\x64\x65ployment_key\x18\x02 \x01(\tR\rdeploymentKey\x12\x1a\n\x08language\x18\x03 \x01(\tR\x08language\x12\x16\n\x06schema\x18\x04 \x01(\tR\x06schema\x12\x34\n\x05verbs\x18\x05 \x03(\x0b\x32\x1e.xyz.block.ftl.console.v1.VerbR\x05verbs\x12\x32\n\x04\x64\x61ta\x18\x06 \x03(\x0b\x32\x1e.xyz.block.ftl.console.v1.DataR\x04\x64\x61ta\x12:\n\x07secrets\x18\x07 \x03(\x0b\x32 .xyz.block.ftl.console.v1.SecretR\x07secrets\x12:\n\x07\x63onfigs\x18\x08 \x03(\x0b\x32 .xyz.block.ftl.console.v1.ConfigR\x07\x63onfigs\x12@\n\tdatabases\x18\t \x03(\x0b\x32\".xyz.block.ftl.console.v1.DatabaseR\tdatabases\x12\x34\n\x05\x65nums\x18\n \x03(\x0b\x32\x1e.xyz.block.ftl.console.v1.EnumR\x05\x65nums\x12\x37\n\x06topics\x18\x0b \x03(\x0b\x32\x1f.xyz.block.ftl.console.v1.TopicR\x06topics\x12\x45\n\x0btypealiases\x18\x0c \x03(\x0b\x32#.xyz.block.ftl.console.v1.TypeAliasR\x0btypealiases\")\n\rTopologyGroup\x12\x18\n\x07modules\x18\x01 \x03(\tR\x07modules\"K\n\x08Topology\x12?\n\x06levels\x18\x01 \x03(\x0b\x32\'.xyz.block.ftl.console.v1.TopologyGroupR\x06levels\"\x13\n\x11GetModulesRequest\"\x90\x01\n\x12GetModulesResponse\x12:\n\x07modules\x18\x01 \x03(\x0b\x32 .xyz.block.ftl.console.v1.ModuleR\x07modules\x12>\n\x08topology\x18\x02 \x01(\x0b\x32\".xyz.block.ftl.console.v1.TopologyR\x08topology\"\x16\n\x14StreamModulesRequest\"\x93\x01\n\x15StreamModulesResponse\x12:\n\x07modules\x18\x01 \x03(\x0b\x32 .xyz.block.ftl.console.v1.ModuleR\x07modules\x12>\n\x08topology\x18\x02 \x01(\x0b\x32\".xyz.block.ftl.console.v1.TopologyR\x08topology\"N\n\x10GetConfigRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n\x06module\x18\x02 \x01(\tH\x00R\x06module\x88\x01\x01\x42\t\n\x07_module\")\n\x11GetConfigResponse\x12\x14\n\x05value\x18\x01 \x01(\x0cR\x05value\"d\n\x10SetConfigRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n\x06module\x18\x02 \x01(\tH\x00R\x06module\x88\x01\x01\x12\x14\n\x05value\x18\x03 \x01(\x0cR\x05valueB\t\n\x07_module\")\n\x11SetConfigResponse\x12\x14\n\x05value\x18\x01 \x01(\x0cR\x05value\"N\n\x10GetSecretRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n\x06module\x18\x02 \x01(\tH\x00R\x06module\x88\x01\x01\x42\t\n\x07_module\")\n\x11GetSecretResponse\x12\x14\n\x05value\x18\x01 \x01(\x0cR\x05value\"d\n\x10SetSecretRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1b\n\x06module\x18\x02 \x01(\tH\x00R\x06module\x88\x01\x01\x12\x14\n\x05value\x18\x03 \x01(\x0cR\x05valueB\t\n\x07_module\")\n\x11SetSecretResponse\x12\x14\n\x05value\x18\x01 \x01(\x0cR\x05value2\xcc\x08\n\x0e\x43onsoleService\x12J\n\x04Ping\x12\x1d.xyz.block.ftl.v1.PingRequest\x1a\x1e.xyz.block.ftl.v1.PingResponse\"\x03\x90\x02\x01\x12g\n\nGetModules\x12+.xyz.block.ftl.console.v1.GetModulesRequest\x1a,.xyz.block.ftl.console.v1.GetModulesResponse\x12r\n\rStreamModules\x12..xyz.block.ftl.console.v1.StreamModulesRequest\x1a/.xyz.block.ftl.console.v1.StreamModulesResponse0\x01\x12l\n\x0bGetTimeline\x12-.xyz.block.ftl.timeline.v1.GetTimelineRequest\x1a..xyz.block.ftl.timeline.v1.GetTimelineResponse\x12w\n\x0eStreamTimeline\x12\x30.xyz.block.ftl.timeline.v1.StreamTimelineRequest\x1a\x31.xyz.block.ftl.timeline.v1.StreamTimelineResponse0\x01\x12\x64\n\tGetConfig\x12*.xyz.block.ftl.console.v1.GetConfigRequest\x1a+.xyz.block.ftl.console.v1.GetConfigResponse\x12\x64\n\tSetConfig\x12*.xyz.block.ftl.console.v1.SetConfigRequest\x1a+.xyz.block.ftl.console.v1.SetConfigResponse\x12\x64\n\tGetSecret\x12*.xyz.block.ftl.console.v1.GetSecretRequest\x1a+.xyz.block.ftl.console.v1.GetSecretResponse\x12\x64\n\tSetSecret\x12*.xyz.block.ftl.console.v1.SetSecretRequest\x1a+.xyz.block.ftl.console.v1.SetSecretResponse\x12K\n\x06Status\x12\x1f.xyz.block.ftl.v1.StatusRequest\x1a .xyz.block.ftl.v1.StatusResponse\x12\x45\n\x04\x43\x61ll\x12\x1d.xyz.block.ftl.v1.CallRequest\x1a\x1e.xyz.block.ftl.v1.CallResponseBPP\x01ZLgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1;pbconsoleb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -38,52 +39,52 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'P\001ZLgithub.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1;pbconsole'
   _globals['_CONSOLESERVICE'].methods_by_name['Ping']._loaded_options = None
   _globals['_CONSOLESERVICE'].methods_by_name['Ping']._serialized_options = b'\220\002\001'
-  _globals['_CONFIG']._serialized_start=211
-  _globals['_CONFIG']._serialized_end=338
-  _globals['_DATA']._serialized_start=341
-  _globals['_DATA']._serialized_end=484
-  _globals['_DATABASE']._serialized_start=487
-  _globals['_DATABASE']._serialized_end=622
-  _globals['_ENUM']._serialized_start=624
-  _globals['_ENUM']._serialized_end=743
-  _globals['_TOPIC']._serialized_start=745
-  _globals['_TOPIC']._serialized_end=868
-  _globals['_TYPEALIAS']._serialized_start=871
-  _globals['_TYPEALIAS']._serialized_end=1010
-  _globals['_SECRET']._serialized_start=1012
-  _globals['_SECRET']._serialized_end=1139
-  _globals['_VERB']._serialized_start=1142
-  _globals['_VERB']._serialized_end=1333
-  _globals['_MODULE']._serialized_start=1336
-  _globals['_MODULE']._serialized_end=1929
-  _globals['_TOPOLOGYGROUP']._serialized_start=1931
-  _globals['_TOPOLOGYGROUP']._serialized_end=1972
-  _globals['_TOPOLOGY']._serialized_start=1974
-  _globals['_TOPOLOGY']._serialized_end=2049
-  _globals['_GETMODULESREQUEST']._serialized_start=2051
-  _globals['_GETMODULESREQUEST']._serialized_end=2070
-  _globals['_GETMODULESRESPONSE']._serialized_start=2073
-  _globals['_GETMODULESRESPONSE']._serialized_end=2217
-  _globals['_STREAMMODULESREQUEST']._serialized_start=2219
-  _globals['_STREAMMODULESREQUEST']._serialized_end=2241
-  _globals['_STREAMMODULESRESPONSE']._serialized_start=2244
-  _globals['_STREAMMODULESRESPONSE']._serialized_end=2391
-  _globals['_GETCONFIGREQUEST']._serialized_start=2393
-  _globals['_GETCONFIGREQUEST']._serialized_end=2471
-  _globals['_GETCONFIGRESPONSE']._serialized_start=2473
-  _globals['_GETCONFIGRESPONSE']._serialized_end=2514
-  _globals['_SETCONFIGREQUEST']._serialized_start=2516
-  _globals['_SETCONFIGREQUEST']._serialized_end=2616
-  _globals['_SETCONFIGRESPONSE']._serialized_start=2618
-  _globals['_SETCONFIGRESPONSE']._serialized_end=2659
-  _globals['_GETSECRETREQUEST']._serialized_start=2661
-  _globals['_GETSECRETREQUEST']._serialized_end=2739
-  _globals['_GETSECRETRESPONSE']._serialized_start=2741
-  _globals['_GETSECRETRESPONSE']._serialized_end=2782
-  _globals['_SETSECRETREQUEST']._serialized_start=2784
-  _globals['_SETSECRETREQUEST']._serialized_end=2884
-  _globals['_SETSECRETRESPONSE']._serialized_start=2886
-  _globals['_SETSECRETRESPONSE']._serialized_end=2927
-  _globals['_CONSOLESERVICE']._serialized_start=2930
-  _globals['_CONSOLESERVICE']._serialized_end=3959
+  _globals['_CONFIG']._serialized_start=240
+  _globals['_CONFIG']._serialized_end=367
+  _globals['_DATA']._serialized_start=370
+  _globals['_DATA']._serialized_end=513
+  _globals['_DATABASE']._serialized_start=516
+  _globals['_DATABASE']._serialized_end=651
+  _globals['_ENUM']._serialized_start=653
+  _globals['_ENUM']._serialized_end=772
+  _globals['_TOPIC']._serialized_start=774
+  _globals['_TOPIC']._serialized_end=897
+  _globals['_TYPEALIAS']._serialized_start=900
+  _globals['_TYPEALIAS']._serialized_end=1039
+  _globals['_SECRET']._serialized_start=1041
+  _globals['_SECRET']._serialized_end=1168
+  _globals['_VERB']._serialized_start=1171
+  _globals['_VERB']._serialized_end=1362
+  _globals['_MODULE']._serialized_start=1365
+  _globals['_MODULE']._serialized_end=1958
+  _globals['_TOPOLOGYGROUP']._serialized_start=1960
+  _globals['_TOPOLOGYGROUP']._serialized_end=2001
+  _globals['_TOPOLOGY']._serialized_start=2003
+  _globals['_TOPOLOGY']._serialized_end=2078
+  _globals['_GETMODULESREQUEST']._serialized_start=2080
+  _globals['_GETMODULESREQUEST']._serialized_end=2099
+  _globals['_GETMODULESRESPONSE']._serialized_start=2102
+  _globals['_GETMODULESRESPONSE']._serialized_end=2246
+  _globals['_STREAMMODULESREQUEST']._serialized_start=2248
+  _globals['_STREAMMODULESREQUEST']._serialized_end=2270
+  _globals['_STREAMMODULESRESPONSE']._serialized_start=2273
+  _globals['_STREAMMODULESRESPONSE']._serialized_end=2420
+  _globals['_GETCONFIGREQUEST']._serialized_start=2422
+  _globals['_GETCONFIGREQUEST']._serialized_end=2500
+  _globals['_GETCONFIGRESPONSE']._serialized_start=2502
+  _globals['_GETCONFIGRESPONSE']._serialized_end=2543
+  _globals['_SETCONFIGREQUEST']._serialized_start=2545
+  _globals['_SETCONFIGREQUEST']._serialized_end=2645
+  _globals['_SETCONFIGRESPONSE']._serialized_start=2647
+  _globals['_SETCONFIGRESPONSE']._serialized_end=2688
+  _globals['_GETSECRETREQUEST']._serialized_start=2690
+  _globals['_GETSECRETREQUEST']._serialized_end=2768
+  _globals['_GETSECRETRESPONSE']._serialized_start=2770
+  _globals['_GETSECRETRESPONSE']._serialized_end=2811
+  _globals['_SETSECRETREQUEST']._serialized_start=2813
+  _globals['_SETSECRETREQUEST']._serialized_end=2913
+  _globals['_SETSECRETRESPONSE']._serialized_start=2915
+  _globals['_SETSECRETRESPONSE']._serialized_end=2956
+  _globals['_CONSOLESERVICE']._serialized_start=2959
+  _globals['_CONSOLESERVICE']._serialized_end=4059
 # @@protoc_insertion_point(module_scope)

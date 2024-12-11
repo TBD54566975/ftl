@@ -40,11 +40,11 @@ However if you changed FTL and want to deploy, use `just build deploy` which wil
 
 ## FTL
 
-The web console should be available at `http://localhost:8892`.
+The web console should be available at `http://localhost:8899`.
 
 You can connect to the FTL controller using the `ftl` CLI that you have on your machine.
 
-By default the endpoint should be pointing to `http://localhost:8892`, so the `--endpoint` doesn't need to be specified.
+By default the endpoint should be pointing to `http://localhost:8899`, so the `--endpoint` doesn't need to be specified.
 
 ```
 ftl status

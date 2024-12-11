@@ -79,6 +79,7 @@ export interface DeclInfo {
   declType: string
   value: DeclSumType
   decl: Decl
+  path: string
 }
 
 export interface ModuleTreeItem {
@@ -96,14 +97,24 @@ export const moduleTreeFromStream = (modules: Module[]) => {
         deploymentKey: module.deploymentKey,
         isBuiltin: module.name === 'builtin',
         decls: [
-          ...module.configs.map((d) => ({ declType: 'config', value: d.config, decl: d })),
-          ...module.secrets.map((d) => ({ declType: 'secret', value: d.secret })),
-          ...module.databases.map((d) => ({ declType: 'database', value: d.database })),
-          ...module.topics.map((d) => ({ declType: 'topic', value: d.topic })),
-          ...module.typealiases.map((d) => ({ declType: 'typealias', value: d.typealias })),
-          ...module.enums.map((d) => ({ declType: 'enum', value: d.enum })),
-          ...module.data.map((d) => ({ declType: 'data', value: d.data })),
-          ...module.verbs.map((d) => ({ declType: 'verb', value: d.verb })),
+          ...module.configs.map((d) => ({ declType: 'config', value: d.config, decl: d, path: `/modules/${module.name}/config/${d.config?.name}` })),
+          ...module.secrets.map((d) => ({ declType: 'secret', value: d.secret, decl: d, path: `/modules/${module.name}/secret/${d.secret?.name}` })),
+          ...module.databases.map((d) => ({ declType: 'database', value: d.database, decl: d, path: `/modules/${module.name}/database/${d.database?.name}` })),
+          ...module.topics.map((d) => ({ declType: 'topic', value: d.topic, decl: d, path: `/modules/${module.name}/topic/${d.topic?.name}` })),
+          ...module.typealiases.map((d) => ({
+            declType: 'typealias',
+            value: d.typealias,
+            decl: d,
+            path: `/modules/${module.name}/typealias/${d.typealias?.name}`,
+          })),
+          ...module.enums.map((d) => ({ declType: 'enum', value: d.enum, decl: d, path: `/modules/${module.name}/enum/${d.enum?.name}` })),
+          ...module.data.map((d) => ({ declType: 'data', value: d.data, decl: d, path: `/modules/${module.name}/data/${d.data?.name}` })),
+          ...module.verbs.map((d) => ({
+            declType: 'verb',
+            value: d.verb,
+            decl: { value: { case: 'verb', value: d.verb } },
+            path: `/modules/${module.name}/verb/${d.verb?.name}`,
+          })),
         ],
       }) as ModuleTreeItem,
   )
@@ -238,7 +249,12 @@ export const verbTypeFromMetadata = (verb: Verb) => {
   return found?.value.case?.toLowerCase()
 }
 
-export const declUrl = (moduleName: string, decl: Decl) => `/modules/${moduleName}/${decl.value.case?.toLowerCase()}/${decl.value.value?.name}`
+export const declUrl = (moduleName: string, decl: Decl) => {
+  if (!decl?.value?.case) {
+    return ''
+  }
+  return `/modules/${moduleName}/${decl.value.case.toLowerCase()}/${decl.value.value?.name}`
+}
 
 export const declUrlFromInfo = (moduleName: string, decl: DeclInfo) => `/modules/${moduleName}/${decl.declType}/${decl.value.name}`
 

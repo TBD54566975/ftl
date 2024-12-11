@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { navigateToDecl } from './helpers'
+import { navigateToDecl, setVerbRequestBody } from './helpers'
 
 test('shows echo verb form', async ({ page }) => {
   await navigateToDecl(page, 'echo', 'echo')
@@ -14,9 +14,7 @@ test('shows echo verb form', async ({ page }) => {
 test('send echo request', async ({ page }) => {
   await navigateToDecl(page, 'echo', 'echo')
 
-  const bodyEditor = page.locator('#body-editor .cm-content[contenteditable="true"]')
-  await expect(bodyEditor).toBeVisible()
-  await bodyEditor.fill('{\n  "name": "wicket"\n}')
+  await setVerbRequestBody(page, '{\n  "name": "wicket"\n}')
 
   await page.getByRole('button', { name: 'Send' }).click()
 

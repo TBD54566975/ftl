@@ -8,6 +8,7 @@ import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 import { GetConfigRequest, GetConfigResponse, GetModulesRequest, GetModulesResponse, GetSecretRequest, GetSecretResponse, SetConfigRequest, SetConfigResponse, SetSecretRequest, SetSecretResponse, StreamModulesRequest, StreamModulesResponse } from "./console_pb.js";
 import { GetTimelineRequest, GetTimelineResponse, StreamTimelineRequest, StreamTimelineResponse } from "../../timeline/v1/timeline_pb.js";
 import { StatusRequest, StatusResponse } from "../../v1/controller_pb.js";
+import { CallRequest, CallResponse } from "../../v1/verb_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.console.v1.ConsoleService
@@ -106,6 +107,15 @@ export const ConsoleService = {
       name: "Status",
       I: StatusRequest,
       O: StatusResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.console.v1.ConsoleService.Call
+     */
+    call: {
+      name: "Call",
+      I: CallRequest,
+      O: CallResponse,
       kind: MethodKind.Unary,
     },
   }

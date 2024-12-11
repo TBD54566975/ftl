@@ -2,6 +2,7 @@ from xyz.block.ftl.schema.v1 import schema_pb2 as _schema_pb2
 from xyz.block.ftl.timeline.v1 import timeline_pb2 as _timeline_pb2
 from xyz.block.ftl.v1 import controller_pb2 as _controller_pb2
 from xyz.block.ftl.v1 import ftl_pb2 as _ftl_pb2
+from xyz.block.ftl.v1 import verb_pb2 as _verb_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message

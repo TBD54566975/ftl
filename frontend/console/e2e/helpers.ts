@@ -1,7 +1,7 @@
 import { type Page, expect } from '@playwright/test'
 
 export async function navigateToModule(page: Page, moduleName: string) {
-  await page.goto('http://localhost:8892/modules')
+  await page.goto('/modules')
   await page.getByRole('link', { name: 'Modules' }).click()
 
   // Navigate to the module page
@@ -32,4 +32,14 @@ export async function pressShortcut(page: Page, key: string) {
   await page.keyboard.down(modifier)
   await page.keyboard.press(key)
   await page.keyboard.up(modifier)
+}
+
+export async function setVerbRequestBody(page: Page, content: string) {
+  const editor = page.locator('#body-editor .cm-content[contenteditable="true"]')
+  await expect(editor).toBeVisible()
+
+  await editor.click()
+  await editor.page().keyboard.press('Control+A')
+  await editor.page().keyboard.press('Delete')
+  await editor.fill(content)
 }

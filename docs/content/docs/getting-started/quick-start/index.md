@@ -164,7 +164,7 @@ dev` to rebuild and redeploy the module.
 ### Open the console
 
 FTL has a console that allows interaction with the cluster topology, logs, traces,
-and more. Open a browser window at [https://localhost:8892](https://localhost:8892) to view it:
+and more. Open a browser window at [https://localhost:8899](https://localhost:8899) to view it:
 
 [![FTL Console](console.png)](console.png)
 

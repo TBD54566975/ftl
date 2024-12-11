@@ -20,6 +20,7 @@ import (
 	frontend "github.com/TBD54566975/ftl/frontend/console"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
@@ -28,7 +29,7 @@ import (
 type Config struct {
 	ConsoleURL  *url.URL  `help:"The public URL of the console (for CORS)." env:"FTL_CONTROLLER_CONSOLE_URL"`
 	ContentTime time.Time `help:"Time to use for console resource timestamps." default:"${timestamp=1970-01-01T00:00:00Z}"`
-	Bind        *url.URL  `help:"Socket to bind to." default:"http://127.0.0.1:8897" env:"FTL_BIND"`
+	Bind        *url.URL  `help:"Socket to bind to." default:"http://127.0.0.1:8899" env:"FTL_BIND"`
 }
 
 type service struct {
@@ -36,11 +37,12 @@ type service struct {
 	controllerClient  ftlv1connect.ControllerServiceClient
 	timelineClient    *timeline.Client
 	adminClient       admin.Client
+	callClient        routing.CallClient
 }
 
 var _ pbconsoleconnect.ConsoleServiceHandler = (*service)(nil)
 
-func Start(ctx context.Context, config Config, eventSource schemaeventsource.EventSource, controllerClient ftlv1connect.ControllerServiceClient, timelineClient *timeline.Client, adminClient admin.Client) error {
+func Start(ctx context.Context, config Config, eventSource schemaeventsource.EventSource, controllerClient ftlv1connect.ControllerServiceClient, timelineClient *timeline.Client, adminClient admin.Client, client routing.CallClient) error {
 	logger := log.FromContext(ctx).Scope("console")
 	ctx = log.ContextWithLogger(ctx, logger)
 
@@ -49,6 +51,7 @@ func Start(ctx context.Context, config Config, eventSource schemaeventsource.Eve
 		controllerClient:  controllerClient,
 		timelineClient:    timelineClient,
 		adminClient:       adminClient,
+		callClient:        client,
 	}
 
 	consoleHandler, err := frontend.Server(ctx, config.ContentTime, config.Bind)
@@ -593,6 +596,14 @@ func (s *service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	resp, err := s.controllerClient.Status(ctx, connect.NewRequest(req.Msg))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get status from controller: %w", err)
+	}
+	return connect.NewResponse(resp.Msg), nil
+}
+
+func (s *service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
+	resp, err := s.callClient.Call(ctx, connect.NewRequest(req.Msg))
+	if err != nil {
+		return nil, fmt.Errorf("failed to call verb: %w", err)
 	}
 	return connect.NewResponse(resp.Msg), nil
 }

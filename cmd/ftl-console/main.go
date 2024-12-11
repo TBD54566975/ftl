@@ -14,6 +14,7 @@ import (
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
+	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
@@ -26,6 +27,7 @@ var cli struct {
 	TimelineEndpoint      *url.URL             `help:"Timeline endpoint." env:"FTL_TIMELINE_ENDPOINT" default:"http://127.0.0.1:8894"`
 	SchemaServiceEndpoint *url.URL             `help:"Schema service endpoint." env:"FTL_SCHEMA_SERVICE_ENDPOINT" default:"http://127.0.0.1:8893"`
 	ControllerEndpoint    *url.URL             `help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
+	VerbServiceEndpoint   *url.URL             `help:"Verb service endpoint." env:"FTL_VERB_SERVICE_ENDPOINT" default:"http://127.0.0.1:8895"`
 	AdminEndpoint         *url.URL             `help:"Admin endpoint." env:"FTL_ADMIN_ENDPOINT" default:"http://127.0.0.1:8896"`
 }
 
@@ -46,6 +48,8 @@ func main() {
 	adminClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, cli.AdminEndpoint.String(), log.Error)
 	eventSource := schemaeventsource.New(ctx, schemaClient)
 
-	err = console.Start(ctx, cli.ConsoleConfig, eventSource, controllerClient, timelineClient, adminClient)
+	routeManager := routing.NewVerbRouter(ctx, schemaeventsource.New(ctx, schemaClient))
+
+	err = console.Start(ctx, cli.ConsoleConfig, eventSource, controllerClient, timelineClient, adminClient, routeManager)
 	kctx.FatalIfErrorf(err, "failed to start console service")
 }

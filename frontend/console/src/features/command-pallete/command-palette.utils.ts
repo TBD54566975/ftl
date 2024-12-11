@@ -1,7 +1,6 @@
 import { type HugeiconsProps, PackageIcon } from 'hugeicons-react'
 import type { StreamModulesResult } from '../../api/modules/use-stream-modules'
-import { Data } from '../../protos/xyz/block/ftl/schema/v1/schema_pb'
-import { declIcon, declTypeName, declUrl, moduleTreeFromStream } from '../modules/module.utils'
+import { declIcon, declTypeName, moduleTreeFromStream } from '../modules/module.utils'
 
 export interface PaletteItem {
   id: string
@@ -38,18 +37,18 @@ export const paletteItems = (result: StreamModulesResult): PaletteItem[] => {
         iconType: declTypeName(decl.declType, decl.value),
         title: decl.value.name,
         subtitle: `${module.name}.${decl.value.name}`,
-        url: declUrl(module.name, decl.decl),
+        url: decl.path,
       })
 
-      if (decl.decl instanceof Data) {
-        for (const field of decl.decl.fields) {
+      if (decl.value && 'fields' in decl.value) {
+        for (const field of decl.value.fields ?? []) {
           items.push({
             id: `${module.name}-${decl.value.name}-${field.name}`,
             icon: declIcon(decl.declType, decl.value),
             iconType: declTypeName(decl.declType, decl.value),
             title: field.name,
             subtitle: `${module.name}.${decl.value.name}.${field.name}`,
-            url: declUrl(module.name, decl.decl),
+            url: decl.path,
           })
         }
       }
