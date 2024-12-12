@@ -13,8 +13,8 @@ import (
 type interactiveCmd struct {
 }
 
-func (i *interactiveCmd) Run(ctx context.Context, k *kong.Kong, binder terminal.KongContextBinder, eventSource schemaeventsource.EventSource) error {
-	err := terminal.RunInteractiveConsole(ctx, k, binder, eventSource)
+func (i *interactiveCmd) Run(ctx context.Context, k *kong.Kong, binder terminal.KongContextBinder, eventSource func() schemaeventsource.EventSource) error {
+	err := terminal.RunInteractiveConsole(ctx, k, binder, eventSource())
 	if err != nil {
 		return fmt.Errorf("interactive console: %w", err)
 	}
