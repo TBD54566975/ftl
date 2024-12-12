@@ -269,6 +269,7 @@ func (r *terminalStatusManager) clearStatusMessages() {
 	if r.console {
 		count--
 	}
+	r.underlyingWrite(ansiClearLine)
 	for range count {
 		r.underlyingWrite(ansiUpOneLine + ansiClearLine)
 	}
@@ -281,11 +282,9 @@ func (r *terminalStatusManager) consoleNewline(line string) {
 	for range count {
 		r.underlyingWrite(ansiUpOneLine + ansiClearLine)
 	}
+	r.underlyingWrite("\r" + line + "\n")
 	if line == "" {
-		r.underlyingWrite("\r" + interactivePrompt + line)
 		r.redrawStatus()
-	} else {
-		r.underlyingWrite("\r" + interactivePrompt + line + strings.Repeat("\n", r.totalStatusLines))
 	}
 }
 
@@ -377,6 +376,9 @@ func (r *terminalStatusManager) writeLine(s string, last bool) {
 
 }
 func (r *terminalStatusManager) redrawStatus() {
+	if r.statusLock.TryLock() {
+		panic("redrawStatus called without holding the lock")
+	}
 	if r.totalStatusLines == 0 || r.closed.Load() {
 		return
 	}
@@ -392,7 +394,7 @@ func (r *terminalStatusManager) redrawStatus() {
 }
 
 func (r *terminalStatusManager) recalculateLines() {
-
+	r.clearStatusMessages()
 	total := 0
 	if len(r.moduleStates) > 0 && r.moduleLine != nil {
 		total++
@@ -438,7 +440,6 @@ func (r *terminalStatusManager) recalculateLines() {
 	if r.console {
 		total++
 	}
-	r.clearStatusMessages()
 	r.totalStatusLines = total
 	r.redrawStatus()
 }
