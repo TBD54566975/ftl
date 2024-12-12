@@ -20,9 +20,9 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/admin"
+	"github.com/TBD54566975/ftl/backend/console"
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	"github.com/TBD54566975/ftl/backend/controller/console"
 	"github.com/TBD54566975/ftl/backend/cron"
 	"github.com/TBD54566975/ftl/backend/ingress"
 	"github.com/TBD54566975/ftl/backend/lease"
