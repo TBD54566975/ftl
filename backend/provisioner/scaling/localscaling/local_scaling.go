@@ -16,7 +16,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
 	"github.com/TBD54566975/ftl/backend/runner"
-	"github.com/TBD54566975/ftl/internal/bind"
+	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/localdebug"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -35,9 +35,7 @@ type localScaling struct {
 	// Module -> Deployments -> info
 	runners map[string]map[string]*deploymentInfo
 	// Module -> Port
-	debugPorts map[string]*localdebug.DebugInfo
-	// Module -> Port, most recent runner is present in the map
-	portAllocator       *bind.BindAllocator
+	debugPorts          map[string]*localdebug.DebugInfo
 	controllerAddresses []*url.URL
 	leaseAddress        *url.URL
 
@@ -162,7 +160,7 @@ func (l *localScaling) GetEndpointForDeployment(ctx context.Context, module stri
 	if r, ok := dep.runner.Get(); ok {
 		return optional.Some(url.URL{
 			Scheme: "http",
-			Host:   fmt.Sprintf("%s:%s", r.host, r.port),
+			Host:   fmt.Sprintf("%s:%d", r.host, r.port),
 		}), nil
 	}
 	return optional.None[url.URL](), nil
@@ -178,13 +176,12 @@ type deploymentInfo struct {
 }
 type runnerInfo struct {
 	cancelFunc context.CancelFunc
-	port       string
+	port       int
 	host       string
 }
 
 func NewLocalScaling(
 	ctx context.Context,
-	portAllocator *bind.BindAllocator,
 	controllerAddresses []*url.URL,
 	leaseAddress *url.URL,
 	configPath string,
@@ -202,7 +199,6 @@ func NewLocalScaling(
 		lock:                    sync.Mutex{},
 		cacheDir:                cacheDir,
 		runners:                 map[string]map[string]*deploymentInfo{},
-		portAllocator:           portAllocator,
 		controllerAddresses:     controllerAddresses,
 		leaseAddress:            leaseAddress,
 		prevRunnerSuffix:        -1,
@@ -277,13 +273,13 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey model.Depl
 		debugPort = devEndpoint.debugPort
 	} else if ide, ok := l.ideSupport.Get(); ok {
 		var debug *localdebug.DebugInfo
-		debugBind, err := l.portAllocator.NextPort()
+		debugBind, err := plugin.AllocatePort()
 		if err != nil {
 			return fmt.Errorf("failed to start runner: %w", err)
 		}
 		debug = &localdebug.DebugInfo{
 			Language: info.language,
-			Port:     debugBind,
+			Port:     debugBind.Port,
 		}
 		l.debugPorts[info.module] = debug
 		ide.SyncIDEDebugIntegrations(ctx, l.debugPorts)
@@ -292,7 +288,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey model.Depl
 	controllerEndpoint := l.controllerAddresses[len(l.runners)%len(l.controllerAddresses)]
 	logger := log.FromContext(ctx)
 
-	bind, err := l.portAllocator.Next()
+	bind, err := plugin.AllocatePort()
 	if err != nil {
 		return fmt.Errorf("failed to start runner: %w", err)
 	}
@@ -300,8 +296,12 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey model.Depl
 	keySuffix := l.prevRunnerSuffix + 1
 	l.prevRunnerSuffix = keySuffix
 
+	bindURL, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", bind.Port))
+	if err != nil {
+		return fmt.Errorf("failed to start runner: %w", err)
+	}
 	config := runner.Config{
-		Bind:               bind,
+		Bind:               bindURL,
 		ControllerEndpoint: controllerEndpoint,
 		LeaseEndpoint:      l.leaseAddress,
 		Key:                model.NewLocalRunnerKey(keySuffix),
@@ -325,7 +325,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey model.Depl
 	runnerCtx := log.ContextWithLogger(ctx, logger.Scope(simpleName).Module(info.module))
 
 	runnerCtx, cancel := context.WithCancel(runnerCtx)
-	info.runner = optional.Some(runnerInfo{cancelFunc: cancel, port: bind.Port(), host: bind.Hostname()})
+	info.runner = optional.Some(runnerInfo{cancelFunc: cancel, port: bind.Port, host: "127.0.0.1"})
 
 	go func() {
 		err := runner.Start(runnerCtx, config, l.storage)

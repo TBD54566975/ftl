@@ -228,7 +228,6 @@ func (s *serveCommonConfig) run(
 
 	runnerScaling, err := localscaling.NewLocalScaling(
 		ctx,
-		bindAllocator,
 		controllerAddresses,
 		s.Lease.Bind,
 		projConfig.Path,
