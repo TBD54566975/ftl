@@ -55,10 +55,13 @@ func ModuleRuntimeEventFromProto(s *schemapb.ModuleRuntimeEvent) ModuleRuntimeEv
 
 //sumtype:decl
 type ModuleRuntimeEvent interface {
+	RuntimeEvent
+
 	moduleRuntime()
 }
 
 //protobuf:1
+//protobuf:1 RuntimeEvent
 type ModuleRuntimeBase struct {
 	CreateTime time.Time `protobuf:"1"`
 	Language   string    `protobuf:"2"`
@@ -71,6 +74,7 @@ type ModuleRuntimeBase struct {
 
 func (ModuleRuntimeBase) moduleRuntime() {}
 
+func (m *ModuleRuntimeBase) runtimeEvent() {}
 func ModuleRuntimeBaseFromProto(s *schemapb.ModuleRuntimeBase) *ModuleRuntimeBase {
 	if s == nil {
 		return &ModuleRuntimeBase{}
@@ -85,12 +89,14 @@ func ModuleRuntimeBaseFromProto(s *schemapb.ModuleRuntimeBase) *ModuleRuntimeBas
 }
 
 //protobuf:2
+//protobuf:2 RuntimeEvent
 type ModuleRuntimeScaling struct {
 	MinReplicas int32 `protobuf:"1"`
 }
 
 func (*ModuleRuntimeScaling) moduleRuntime() {}
 
+func (m *ModuleRuntimeScaling) runtimeEvent() {}
 func ModuleRuntimeScalingFromProto(s *schemapb.ModuleRuntimeScaling) *ModuleRuntimeScaling {
 	if s == nil {
 		return nil
@@ -101,6 +107,7 @@ func ModuleRuntimeScalingFromProto(s *schemapb.ModuleRuntimeScaling) *ModuleRunt
 }
 
 //protobuf:3
+//protobuf:3 RuntimeEvent
 type ModuleRuntimeDeployment struct {
 	// Endpoint is the endpoint of the deployed module.
 	Endpoint      string `protobuf:"1"`
@@ -108,6 +115,8 @@ type ModuleRuntimeDeployment struct {
 }
 
 func (m *ModuleRuntimeDeployment) moduleRuntime() {}
+
+func (m *ModuleRuntimeDeployment) runtimeEvent() {}
 
 func ModuleRuntimeDeploymentFromProto(s *schemapb.ModuleRuntimeDeployment) *ModuleRuntimeDeployment {
 	if s == nil {

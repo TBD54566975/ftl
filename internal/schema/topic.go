@@ -83,10 +83,15 @@ func TopicRuntimeFromProto(t *schemapb.TopicRuntime) *TopicRuntime {
 	}
 }
 
+//protobuf:6 RuntimeEvent
 type TopicRuntimeEvent struct {
 	ID      string        `parser:"" protobuf:"1"`
 	Payload *TopicRuntime `parser:"" protobuf:"2"`
 }
+
+var _ RuntimeEvent = (*TopicRuntimeEvent)(nil)
+
+func (t *TopicRuntimeEvent) runtimeEvent() {}
 
 func TopicRuntimeEventFromProto(t *schemapb.TopicRuntimeEvent) *TopicRuntimeEvent {
 	return &TopicRuntimeEvent{

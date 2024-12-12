@@ -31,7 +31,7 @@ PROTOS_OUT := "backend/protos/xyz/block/ftl/console/v1/console.pb.go " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schemaservice_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/schema/v1/schema_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/publish/v1/publish_pb.ts"
-GO_SCHEMA_ROOTS := "./internal/schema.{Schema,ModuleRuntimeEvent,DatabaseRuntimeEvent,TopicRuntimeEvent,VerbRuntimeEvent}"
+GO_SCHEMA_ROOTS := "./internal/schema.{Schema,ModuleRuntimeEvent,DatabaseRuntimeEvent,TopicRuntimeEvent,VerbRuntimeEvent,RuntimeEvent}"
 # Configuration for building Docker images
 DOCKER_IMAGES := '''
 {
@@ -91,7 +91,7 @@ build-generate:
 
 # Generate testdata for go2proto. This should be run after any changes to go2proto.
 build-go2proto-testdata:
-  @mk cmd/go2proto/testdata/go2proto.to.go cmd/go2proto/testdata/testdatapb/model.proto : cmd/go2proto/*.go cmd/go2proto/testdata/model.go -- go2proto -m -o ./cmd/go2proto/testdata/testdatapb/model.proto -O 'go_package="github.com/TBD54566975/ftl/cmd/go2proto/testdata/testdatapb"' xyz.block.ftl.go2proto.test ./cmd/go2proto/testdata.Root
+  @mk cmd/go2proto/testdata/go2proto.to.go cmd/go2proto/testdata/testdatapb/model.proto : cmd/go2proto/*.go cmd/go2proto/testdata/model.go -- go2proto -m -o ./cmd/go2proto/testdata/testdatapb/model.proto -O 'go_package="github.com/TBD54566975/ftl/cmd/go2proto/testdata/testdatapb"' xyz.block.ftl.go2proto.test ./cmd/go2proto/testdata.Root && bin/gofmt -w cmd/go2proto/testdata/go2proto.to.go
   @mk cmd/go2proto/testdata/testdatapb/model.pb.go : cmd/go2proto/testdata/testdatapb/model.proto -- '(cd ./cmd/go2proto/testdata/testdatapb && protoc --go_out=paths=source_relative:. model.proto) && go build ./cmd/go2proto/testdata'
 
 # Build command-line tools
@@ -209,7 +209,7 @@ go2proto:
   @mk "{{SCHEMA_OUT}}" : cmd/go2proto internal/schema -- go2proto -m -o "{{SCHEMA_OUT}}" \
     -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1;schemapb"' \
     -O 'java_multiple_files=true' \
-    xyz.block.ftl.schema.v1 {{GO_SCHEMA_ROOTS}} && buf format -w && buf lint
+    xyz.block.ftl.schema.v1 {{GO_SCHEMA_ROOTS}} && buf format -w && buf lint && bin/gofmt -w internal/schema/go2proto.to.go  
 
 # Unconditionally rebuild protos
 build-protos-unconditionally: go2proto lint-protos pnpm-install
@@ -278,7 +278,7 @@ lint-backend:
   @golangci-lint run --new-from-rev=$(git merge-base origin/main HEAD) ./...
   @lint-commit-or-rollback ./backend/...
   # TODO: Remove this once I fix the panic in go-check-sumtype triggered by something in go-runtime
-  @go-check-sumtype ./backend/... ./cmd/... ./internal/...
+  @go-check-sumtype --include-shared-interfaces=true ./backend/... ./cmd/... ./internal/...
 
 # Lint shell scripts.
 lint-scripts:
