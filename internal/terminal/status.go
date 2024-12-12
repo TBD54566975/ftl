@@ -22,6 +22,10 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
+const ansiUpOneLine = "\u001B[1A"
+const ansiClearLine = "\u001B[2K"
+const ansiResetTextColor = "\u001B[39m"
+
 type BuildState string
 
 const BuildStateWaiting BuildState = "Waiting"
@@ -266,7 +270,7 @@ func (r *terminalStatusManager) clearStatusMessages() {
 		count--
 	}
 	for range count {
-		r.underlyingWrite("\u001B[1A\u001B[2K")
+		r.underlyingWrite(ansiUpOneLine + ansiClearLine)
 	}
 }
 
@@ -275,7 +279,7 @@ func (r *terminalStatusManager) consoleNewline(line string) {
 	defer r.statusLock.Unlock()
 	count := r.totalStatusLines
 	for range count {
-		r.underlyingWrite("\u001B[1A\033[2K")
+		r.underlyingWrite(ansiUpOneLine + ansiClearLine)
 	}
 	if line == "" {
 		r.underlyingWrite("\r" + interactivePrompt + line)
@@ -416,7 +420,7 @@ func (r *terminalStatusManager) recalculateLines() {
 			}
 			pad := strings.Repeat(" ", entryLength-len(k)-moduleStatusPadding)
 			state := r.moduleStates[k]
-			msg += buildColors[state] + buildStateIcon[state](r.spinnerCount) + "[" + log.ScopeColor(k) + k + buildColors[state] + "]  \u001B[39m" + pad
+			msg += buildColors[state] + buildStateIcon[state](r.spinnerCount) + "[" + log.ScopeColor(k) + k + buildColors[state] + "]  " + ansiResetTextColor + pad
 		}
 		if !multiLine {
 			// For multi-line messages we don't want to trim the message as we want to line up the columns
