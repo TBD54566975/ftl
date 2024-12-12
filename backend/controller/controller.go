@@ -263,9 +263,15 @@ func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.Pr
 			Key:      p.Key.String(),
 			Endpoint: p.Endpoint,
 		}
+		minReplicas := int32(0)
+		deployment, err := currentState.GetDeployment(p.Deployment)
+		if err == nil {
+			minReplicas = int32(deployment.MinReplicas)
+		}
 		return &ftlv1.ProcessListResponse_Process{
-			Deployment: p.Deployment.String(),
-			Runner:     runner,
+			Deployment:  p.Deployment.String(),
+			Runner:      runner,
+			MinReplicas: minReplicas,
 		}, nil
 	})
 	if err != nil {
