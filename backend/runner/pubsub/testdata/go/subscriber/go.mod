@@ -2,10 +2,7 @@ module ftl/subscriber
 
 go 1.23.0
 
-require (
-	github.com/TBD54566975/ftl v0.238.0
-	github.com/alecthomas/atomic v0.1.0-alpha2
-)
+require github.com/TBD54566975/ftl v0.238.0
 
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect
@@ -13,6 +10,7 @@ require (
 	connectrpc.com/grpcreflect v1.2.0 // indirect
 	connectrpc.com/otelconnect v0.7.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/alecthomas/atomic v0.1.0-alpha2 // indirect
 	github.com/alecthomas/concurrency v0.0.2 // indirect
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
 	github.com/alecthomas/types v0.17.0 // indirect

@@ -3,6 +3,7 @@
 package pubsub
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 )
 
 func TestPubSub(t *testing.T) {
@@ -31,11 +33,48 @@ func TestPubSub(t *testing.T) {
 		in.Sleep(time.Second*4),
 
 		// check that there are the right amount of successful async calls
-		checkSuccessfullyConsumed("subscriber", "consume", events),
+		checkConsumed("subscriber", "consume", true, events, optional.None[string]()),
 	)
 }
 
-func checkSuccessfullyConsumed(module, verb string, count int) in.Action {
+func TestRetry(t *testing.T) {
+	retriesPerCall := 2
+	in.Run(t,
+		in.WithLanguages("java", "go"),
+		in.CopyModule("publisher"),
+		in.CopyModule("subscriber"),
+		in.Deploy("publisher"),
+		in.Deploy("subscriber"),
+
+		// publish events
+		in.Call("publisher", "publishOneToTopic2", map[string]any{"haystack": "firstCall"}, func(t testing.TB, resp in.Obj) {}),
+		in.Call("publisher", "publishOneToTopic2", map[string]any{"haystack": "secondCall"}, func(t testing.TB, resp in.Obj) {}),
+		in.Call("publisher", "publishOneToTopic2", map[string]any{"haystack": "thirdCall"}, func(t testing.TB, resp in.Obj) {}),
+
+		in.Sleep(time.Second*6),
+
+		checkConsumed("subscriber", "consumeButFailAndRetry", false, retriesPerCall+1, optional.Some("firstCall")),
+		checkConsumed("subscriber", "consumeButFailAndRetry", false, retriesPerCall+1, optional.Some("secondCall")),
+		checkConsumed("subscriber", "consumeButFailAndRetry", false, retriesPerCall+1, optional.Some("thirdCall")),
+	)
+}
+
+func TestExternalPublishRuntimeCheck(t *testing.T) {
+	// No java as there is no API for this
+	in.Run(t,
+		in.CopyModule("publisher"),
+		in.CopyModule("subscriber"),
+		in.Deploy("publisher"),
+		in.Deploy("subscriber"),
+
+		in.ExpectError(
+			in.Call("subscriber", "publishToExternalModule", in.Obj{}, func(t testing.TB, resp in.Obj) {}),
+			"can not publish to another module's topic",
+		),
+	)
+}
+
+func checkConsumed(module, verb string, success bool, count int, needle optional.Option[string]) in.Action {
 	return func(t testing.TB, ic in.TestContext) {
 		resp, err := ic.Timeline.GetTimeline(ic.Context, connect.NewRequest(&timelinepb.GetTimelineRequest{
 			Limit: 100000,
@@ -70,6 +109,9 @@ func checkSuccessfullyConsumed(module, verb string, count int) in.Action {
 			requestKey, err := model.ParseRequestKey(*c.RequestKey)
 			assert.NoError(t, err)
 			assert.Equal(t, requestKey.Payload.Origin, model.OriginPubsub, "expected pubsub origin")
+			if needle, ok := needle.Get(); ok && !strings.Contains(c.Request, needle) {
+				return false
+			}
 			return true
 		})
 		successfulCalls := slices.Filter(calls, func(call *timelinepb.CallEvent) bool {
@@ -78,97 +120,10 @@ func checkSuccessfullyConsumed(module, verb string, count int) in.Action {
 		unsuccessfulCalls := slices.Filter(calls, func(call *timelinepb.CallEvent) bool {
 			return call.Error != nil
 		})
-		assert.Equal(t, count, len(successfulCalls), "expected %v successful calls, the following calls failed:\n%v", count, unsuccessfulCalls)
-		assert.NoError(t, err)
+		if success {
+			assert.Equal(t, count, len(successfulCalls), "expected %v successful calls (failed calls: %v)", count, len(unsuccessfulCalls))
+		} else {
+			assert.Equal(t, count, len(unsuccessfulCalls), "expected %v unsuccessful calls (successful calls: %v)", count, len(successfulCalls))
+		}
 	}
-}
-
-func TestRetry(t *testing.T) {
-	t.Skip("Not implemented for new pubsub yet")
-	// 	retriesPerCall := 2
-	// 	in.Run(t,
-	// 		in.WithLanguages("java", "go"),
-	// 		in.CopyModule("publisher"),
-	// 		in.CopyModule("subscriber"),
-	// 		in.Deploy("publisher"),
-	// 		in.Deploy("subscriber"),
-
-	// 		// publish events
-	// 		in.Call("publisher", "publishOneToTopic2", in.Obj{}, func(t testing.TB, resp in.Obj) {}),
-
-	// 		in.Sleep(time.Second*6),
-
-	// 		// check that there are the right amount of failed async calls to the verb
-	// 		in.QueryRow("ftl",
-	// 			fmt.Sprintf(`
-	// 				SELECT COUNT(*)
-	// 				FROM async_calls
-	// 				WHERE
-	// 					state = 'error'
-	// 					AND verb = 'subscriber.consumeButFailAndRetry'
-	// 					AND catching = false
-	// 					AND origin = '%s'
-	// 		`, async.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "consumeButFailAndRetry"}}.String()),
-	// 			1+retriesPerCall),
-
-	// 		// check that there is one failed attempt to catch (we purposely fail the first one)
-	// 		in.QueryRow("ftl",
-	// 			fmt.Sprintf(`
-	// 			SELECT COUNT(*)
-	// 			FROM async_calls
-	// 			WHERE
-	// 				state = 'error'
-	// 				AND verb = 'subscriber.consumeButFailAndRetry'
-	// 				AND error LIKE '%%subscriber.catch %%'
-	// 				AND error LIKE '%%catching error%%'
-	// 				AND catching = true
-	// 				AND origin = '%s'
-	// 	`, async.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "consumeButFailAndRetry"}}.String()),
-	// 			1),
-
-	// 		// check that there is one successful attempt to catch (we succeed the second one as long as we receive the correct error in the request)
-	// 		in.QueryRow("ftl",
-	// 			fmt.Sprintf(`
-	// 		SELECT COUNT(*)
-	// 		FROM async_calls
-	// 		WHERE
-	// 			state = 'success'
-	// 			AND verb = 'subscriber.consumeButFailAndRetry'
-	// 			AND error IS NULL
-	// 			AND catching = true
-	// 			AND origin = '%s'
-	// `, async.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "consumeButFailAndRetry"}}.String()),
-	// 			1),
-
-	//	// check that there was one successful attempt to catchAny
-	//	in.QueryRow("ftl",
-	//		fmt.Sprintf(`
-	//	SELECT COUNT(*)
-	//	FROM async_calls
-	//	WHERE
-	//		state = 'success'
-	//		AND verb = 'subscriber.consumeButFailAndCatchAny'
-	//		AND error IS NULL
-	//		AND catching = true
-	//		AND origin = '%s'
-	//
-	// `, async.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "consumeButFailAndCatchAny"}}.String()),
-	//
-	//			1),
-	//	)
-}
-
-func TestExternalPublishRuntimeCheck(t *testing.T) {
-	// No java as there is no API for this
-	in.Run(t,
-		in.CopyModule("publisher"),
-		in.CopyModule("subscriber"),
-		in.Deploy("publisher"),
-		in.Deploy("subscriber"),
-
-		in.ExpectError(
-			in.Call("subscriber", "publishToExternalModule", in.Obj{}, func(t testing.TB, resp in.Obj) {}),
-			"can not publish to another module's topic",
-		),
-	)
 }

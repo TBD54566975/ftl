@@ -3,18 +3,11 @@ package subscriber
 
 import (
 	"context"
-	ftlbuiltin "ftl/builtin"
 	ftlpublisher "ftl/publisher"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 )
 
-type CatchClient func(context.Context, ftlbuiltin.CatchRequest[ftlpublisher.PubSubEvent]) error
-
-type CatchAnyClient func(context.Context, ftlbuiltin.CatchRequest[any]) error
-
 type ConsumeClient func(context.Context, ftlpublisher.PubSubEvent) error
-
-type ConsumeButFailAndCatchAnyClient func(context.Context, ftlpublisher.PubSubEvent) error
 
 type ConsumeButFailAndRetryClient func(context.Context, ftlpublisher.PubSubEvent) error
 
@@ -23,16 +16,7 @@ type PublishToExternalModuleClient func(context.Context) error
 func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
-			Catch,
-		),
-		reflection.ProvideResourcesForVerb(
-			CatchAny,
-		),
-		reflection.ProvideResourcesForVerb(
 			Consume,
-		),
-		reflection.ProvideResourcesForVerb(
-			ConsumeButFailAndCatchAny,
 		),
 		reflection.ProvideResourcesForVerb(
 			ConsumeButFailAndRetry,

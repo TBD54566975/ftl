@@ -24,51 +24,8 @@ public class Subscriber {
     }
 
     @Subscription(topic = Topic2Topic.class, from = FromOffset.BEGINNING)
-    @Retry(count = 2, minBackoff = "1s", maxBackoff = "1s", catchVerb = "catch")
+    @Retry(count = 2, minBackoff = "1s", maxBackoff = "1s")
     public void consumeButFailAndRetry(PubSubEvent event) {
         throw new RuntimeException("always error: event " + event.getTime());
     }
-
-    @Subscription(topic = Topic2Topic.class, from = FromOffset.BEGINNING)
-    @Retry(count = 1, minBackoff = "1s", maxBackoff = "1s", catchVerb = "catchAny")
-    public void consumeButFailAndCatchAny(PubSubEvent event) {
-        throw new RuntimeException("always error: event " + event.getTime());
-    }
-
-    @Verb
-    @VerbName("catch")
-    public void catchVerb(CatchRequest<PubSubEvent> req) {
-        if (!req.getError().contains("always error: event")) {
-            throw new RuntimeException("unexpected error: " + req.getError());
-        }
-        if (catchCount.incrementAndGet() == 1) {
-            throw new RuntimeException("catching error");
-        }
-    }
-
-    @Verb
-    public void catchAny(CatchRequest<Object> req) {
-        if (!"subscriber".equals(req.getVerb().getModule())) {
-            throw new IllegalArgumentException(String.format("unexpected verb module: %s", req.getVerb().getModule()));
-        }
-        if (!"consumeButFailAndCatchAny".equals(req.getVerb().getName())) {
-            throw new IllegalArgumentException(String.format("unexpected verb name: %s", req.getVerb().getName()));
-        }
-        if (!"publisher.PubSubEvent".equals(req.getRequestType())) {
-            throw new IllegalArgumentException(String.format("unexpected request type: %s", req.getRequestType()));
-        }
-        if (!(req.getRequest() instanceof Map<?, ?>)) {
-            throw new IllegalArgumentException(
-                    String.format("expected request to be a Map: %s", req.getRequest().getClass().getName()));
-        }
-        var request = (Map<?, ?>) req.getRequest();
-        var time = request.get("time");
-        if (time == null) {
-            throw new IllegalArgumentException("expected request to have a time key");
-        }
-        if (!(time instanceof String)) {
-            throw new IllegalArgumentException("expected request to have a time value of type string");
-        }
-    }
-
 }

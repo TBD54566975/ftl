@@ -12,7 +12,8 @@ import (
 type TestTopic = ftl.TopicHandle[PubSubEvent, ftl.SinglePartitionMap[PubSubEvent]]
 
 type PubSubEvent struct {
-	Time time.Time
+	Time     time.Time
+	Haystack string
 }
 
 //ftl:verb
@@ -40,10 +41,18 @@ func PublishOne(ctx context.Context, topic TestTopic) error {
 //ftl:export
 type Topic2 = ftl.TopicHandle[PubSubEvent, ftl.SinglePartitionMap[PubSubEvent]]
 
+//ftl:data
+type PublishOneToTopic2Request struct {
+	Haystack string
+}
+
 //ftl:verb
-func PublishOneToTopic2(ctx context.Context, topic Topic2) error {
+func PublishOneToTopic2(ctx context.Context, req PublishOneToTopic2Request, topic Topic2) error {
 	logger := ftl.LoggerFromContext(ctx)
 	t := time.Now()
 	logger.Infof("Publishing to topic_2 %v", t)
-	return topic.Publish(ctx, PubSubEvent{Time: t})
+	return topic.Publish(ctx, PubSubEvent{
+		Time:     t,
+		Haystack: req.Haystack,
+	})
 }
