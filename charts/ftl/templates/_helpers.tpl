@@ -72,3 +72,8 @@ app.kubernetes.io/name: {{ include "ftl.fullname" . }}
 app.kubernetes.io/component: console
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
+{{- define "ftl-admin.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "ftl.fullname" . }}
+app.kubernetes.io/component: admin
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end -}}

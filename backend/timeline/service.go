@@ -40,6 +40,8 @@ type service struct {
 	events []*timelinepb.Event
 }
 
+var _ timelineconnect.TimelineServiceHandler = (*service)(nil)
+
 func Start(ctx context.Context, config Config) error {
 	config.SetDefaults()
 

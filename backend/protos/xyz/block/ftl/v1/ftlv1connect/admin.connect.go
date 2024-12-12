@@ -54,6 +54,12 @@ const (
 	// AdminServiceSecretUnsetProcedure is the fully-qualified name of the AdminService's SecretUnset
 	// RPC.
 	AdminServiceSecretUnsetProcedure = "/xyz.block.ftl.v1.AdminService/SecretUnset"
+	// AdminServiceMapConfigsForModuleProcedure is the fully-qualified name of the AdminService's
+	// MapConfigsForModule RPC.
+	AdminServiceMapConfigsForModuleProcedure = "/xyz.block.ftl.v1.AdminService/MapConfigsForModule"
+	// AdminServiceMapSecretsForModuleProcedure is the fully-qualified name of the AdminService's
+	// MapSecretsForModule RPC.
+	AdminServiceMapSecretsForModuleProcedure = "/xyz.block.ftl.v1.AdminService/MapSecretsForModule"
 )
 
 // AdminServiceClient is a client for the xyz.block.ftl.v1.AdminService service.
@@ -75,6 +81,12 @@ type AdminServiceClient interface {
 	SecretSet(context.Context, *connect.Request[v1.SecretSetRequest]) (*connect.Response[v1.SecretSetResponse], error)
 	// Unset a secret.
 	SecretUnset(context.Context, *connect.Request[v1.SecretUnsetRequest]) (*connect.Response[v1.SecretUnsetResponse], error)
+	// MapForModule combines all configuration values visible to the module.
+	// Local values take precedence.
+	MapConfigsForModule(context.Context, *connect.Request[v1.MapConfigsForModuleRequest]) (*connect.Response[v1.MapConfigsForModuleResponse], error)
+	// MapSecretsForModule combines all secrets visible to the module.
+	// Local values take precedence.
+	MapSecretsForModule(context.Context, *connect.Request[v1.MapSecretsForModuleRequest]) (*connect.Response[v1.MapSecretsForModuleResponse], error)
 }
 
 // NewAdminServiceClient constructs a client for the xyz.block.ftl.v1.AdminService service. By
@@ -133,20 +145,32 @@ func NewAdminServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			baseURL+AdminServiceSecretUnsetProcedure,
 			opts...,
 		),
+		mapConfigsForModule: connect.NewClient[v1.MapConfigsForModuleRequest, v1.MapConfigsForModuleResponse](
+			httpClient,
+			baseURL+AdminServiceMapConfigsForModuleProcedure,
+			opts...,
+		),
+		mapSecretsForModule: connect.NewClient[v1.MapSecretsForModuleRequest, v1.MapSecretsForModuleResponse](
+			httpClient,
+			baseURL+AdminServiceMapSecretsForModuleProcedure,
+			opts...,
+		),
 	}
 }
 
 // adminServiceClient implements AdminServiceClient.
 type adminServiceClient struct {
-	ping        *connect.Client[v1.PingRequest, v1.PingResponse]
-	configList  *connect.Client[v1.ConfigListRequest, v1.ConfigListResponse]
-	configGet   *connect.Client[v1.ConfigGetRequest, v1.ConfigGetResponse]
-	configSet   *connect.Client[v1.ConfigSetRequest, v1.ConfigSetResponse]
-	configUnset *connect.Client[v1.ConfigUnsetRequest, v1.ConfigUnsetResponse]
-	secretsList *connect.Client[v1.SecretsListRequest, v1.SecretsListResponse]
-	secretGet   *connect.Client[v1.SecretGetRequest, v1.SecretGetResponse]
-	secretSet   *connect.Client[v1.SecretSetRequest, v1.SecretSetResponse]
-	secretUnset *connect.Client[v1.SecretUnsetRequest, v1.SecretUnsetResponse]
+	ping                *connect.Client[v1.PingRequest, v1.PingResponse]
+	configList          *connect.Client[v1.ConfigListRequest, v1.ConfigListResponse]
+	configGet           *connect.Client[v1.ConfigGetRequest, v1.ConfigGetResponse]
+	configSet           *connect.Client[v1.ConfigSetRequest, v1.ConfigSetResponse]
+	configUnset         *connect.Client[v1.ConfigUnsetRequest, v1.ConfigUnsetResponse]
+	secretsList         *connect.Client[v1.SecretsListRequest, v1.SecretsListResponse]
+	secretGet           *connect.Client[v1.SecretGetRequest, v1.SecretGetResponse]
+	secretSet           *connect.Client[v1.SecretSetRequest, v1.SecretSetResponse]
+	secretUnset         *connect.Client[v1.SecretUnsetRequest, v1.SecretUnsetResponse]
+	mapConfigsForModule *connect.Client[v1.MapConfigsForModuleRequest, v1.MapConfigsForModuleResponse]
+	mapSecretsForModule *connect.Client[v1.MapSecretsForModuleRequest, v1.MapSecretsForModuleResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.AdminService.Ping.
@@ -194,6 +218,16 @@ func (c *adminServiceClient) SecretUnset(ctx context.Context, req *connect.Reque
 	return c.secretUnset.CallUnary(ctx, req)
 }
 
+// MapConfigsForModule calls xyz.block.ftl.v1.AdminService.MapConfigsForModule.
+func (c *adminServiceClient) MapConfigsForModule(ctx context.Context, req *connect.Request[v1.MapConfigsForModuleRequest]) (*connect.Response[v1.MapConfigsForModuleResponse], error) {
+	return c.mapConfigsForModule.CallUnary(ctx, req)
+}
+
+// MapSecretsForModule calls xyz.block.ftl.v1.AdminService.MapSecretsForModule.
+func (c *adminServiceClient) MapSecretsForModule(ctx context.Context, req *connect.Request[v1.MapSecretsForModuleRequest]) (*connect.Response[v1.MapSecretsForModuleResponse], error) {
+	return c.mapSecretsForModule.CallUnary(ctx, req)
+}
+
 // AdminServiceHandler is an implementation of the xyz.block.ftl.v1.AdminService service.
 type AdminServiceHandler interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
@@ -213,6 +247,12 @@ type AdminServiceHandler interface {
 	SecretSet(context.Context, *connect.Request[v1.SecretSetRequest]) (*connect.Response[v1.SecretSetResponse], error)
 	// Unset a secret.
 	SecretUnset(context.Context, *connect.Request[v1.SecretUnsetRequest]) (*connect.Response[v1.SecretUnsetResponse], error)
+	// MapForModule combines all configuration values visible to the module.
+	// Local values take precedence.
+	MapConfigsForModule(context.Context, *connect.Request[v1.MapConfigsForModuleRequest]) (*connect.Response[v1.MapConfigsForModuleResponse], error)
+	// MapSecretsForModule combines all secrets visible to the module.
+	// Local values take precedence.
+	MapSecretsForModule(context.Context, *connect.Request[v1.MapSecretsForModuleRequest]) (*connect.Response[v1.MapSecretsForModuleResponse], error)
 }
 
 // NewAdminServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -267,6 +307,16 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 		svc.SecretUnset,
 		opts...,
 	)
+	adminServiceMapConfigsForModuleHandler := connect.NewUnaryHandler(
+		AdminServiceMapConfigsForModuleProcedure,
+		svc.MapConfigsForModule,
+		opts...,
+	)
+	adminServiceMapSecretsForModuleHandler := connect.NewUnaryHandler(
+		AdminServiceMapSecretsForModuleProcedure,
+		svc.MapSecretsForModule,
+		opts...,
+	)
 	return "/xyz.block.ftl.v1.AdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AdminServicePingProcedure:
@@ -287,6 +337,10 @@ func NewAdminServiceHandler(svc AdminServiceHandler, opts ...connect.HandlerOpti
 			adminServiceSecretSetHandler.ServeHTTP(w, r)
 		case AdminServiceSecretUnsetProcedure:
 			adminServiceSecretUnsetHandler.ServeHTTP(w, r)
+		case AdminServiceMapConfigsForModuleProcedure:
+			adminServiceMapConfigsForModuleHandler.ServeHTTP(w, r)
+		case AdminServiceMapSecretsForModuleProcedure:
+			adminServiceMapSecretsForModuleHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -330,4 +384,12 @@ func (UnimplementedAdminServiceHandler) SecretSet(context.Context, *connect.Requ
 
 func (UnimplementedAdminServiceHandler) SecretUnset(context.Context, *connect.Request[v1.SecretUnsetRequest]) (*connect.Response[v1.SecretUnsetResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.SecretUnset is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) MapConfigsForModule(context.Context, *connect.Request[v1.MapConfigsForModuleRequest]) (*connect.Response[v1.MapConfigsForModuleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.MapConfigsForModule is not implemented"))
+}
+
+func (UnimplementedAdminServiceHandler) MapSecretsForModule(context.Context, *connect.Request[v1.MapSecretsForModuleRequest]) (*connect.Response[v1.MapSecretsForModuleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.AdminService.MapSecretsForModule is not implemented"))
 }

@@ -110,6 +110,22 @@ message SecretUnsetRequest {
 }
 message SecretUnsetResponse {}
 
+message MapConfigsForModuleRequest {
+  string module = 1;
+}
+
+message MapConfigsForModuleResponse {
+  map<string, bytes> values = 1;
+}
+
+message MapSecretsForModuleRequest {
+  string module = 1;
+}
+
+message MapSecretsForModuleResponse {
+  map<string, bytes> values = 1;
+}
+
 // AdminService is the service that provides and updates admin data. For example,
 // it is used to encapsulate configuration and secrets.
 service AdminService {
@@ -140,4 +156,12 @@ service AdminService {
 
   // Unset a secret.
   rpc SecretUnset(SecretUnsetRequest) returns (SecretUnsetResponse);
+
+  // MapForModule combines all configuration values visible to the module.
+  // Local values take precedence.
+  rpc MapConfigsForModule(MapConfigsForModuleRequest) returns (MapConfigsForModuleResponse);
+
+  // MapSecretsForModule combines all secrets visible to the module.
+  // Local values take precedence.
+  rpc MapSecretsForModule(MapSecretsForModuleRequest) returns (MapSecretsForModuleResponse);
 }

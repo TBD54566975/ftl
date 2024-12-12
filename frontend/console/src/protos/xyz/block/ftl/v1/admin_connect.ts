@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { ConfigGetRequest, ConfigGetResponse, ConfigListRequest, ConfigListResponse, ConfigSetRequest, ConfigSetResponse, ConfigUnsetRequest, ConfigUnsetResponse, SecretGetRequest, SecretGetResponse, SecretSetRequest, SecretSetResponse, SecretsListRequest, SecretsListResponse, SecretUnsetRequest, SecretUnsetResponse } from "./admin_pb.js";
+import { ConfigGetRequest, ConfigGetResponse, ConfigListRequest, ConfigListResponse, ConfigSetRequest, ConfigSetResponse, ConfigUnsetRequest, ConfigUnsetResponse, MapConfigsForModuleRequest, MapConfigsForModuleResponse, MapSecretsForModuleRequest, MapSecretsForModuleResponse, SecretGetRequest, SecretGetResponse, SecretSetRequest, SecretSetResponse, SecretsListRequest, SecretsListResponse, SecretUnsetRequest, SecretUnsetResponse } from "./admin_pb.js";
 
 /**
  * AdminService is the service that provides and updates admin data. For example,
@@ -112,6 +112,30 @@ export const AdminService = {
       name: "SecretUnset",
       I: SecretUnsetRequest,
       O: SecretUnsetResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * MapForModule combines all configuration values visible to the module.
+     * Local values take precedence.
+     *
+     * @generated from rpc xyz.block.ftl.v1.AdminService.MapConfigsForModule
+     */
+    mapConfigsForModule: {
+      name: "MapConfigsForModule",
+      I: MapConfigsForModuleRequest,
+      O: MapConfigsForModuleResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * MapSecretsForModule combines all secrets visible to the module.
+     * Local values take precedence.
+     *
+     * @generated from rpc xyz.block.ftl.v1.AdminService.MapSecretsForModule
+     */
+    mapSecretsForModule: {
+      name: "MapSecretsForModule",
+      I: MapSecretsForModuleRequest,
+      O: MapSecretsForModuleResponse,
       kind: MethodKind.Unary,
     },
   }

@@ -28,7 +28,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/backend/controller/admin"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
@@ -41,8 +40,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/runner/pubsub"
 	"github.com/TBD54566975/ftl/backend/timeline"
-	"github.com/TBD54566975/ftl/internal/configuration"
-	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -68,7 +65,7 @@ type CommonConfig struct {
 type Config struct {
 	Bind                         *url.URL            `help:"Socket to bind to." default:"http://127.0.0.1:8892" env:"FTL_BIND"`
 	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"KEY"`
-	DSN                          string              `help:"DAL DSN." default:"${dsn}" env:"FTL_CONTROLLER_DSN"`
+	DSN                          string              `help:"DAL DSN." default:"${dsn}" env:"FTL_DSN"`
 	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_ADVERTISE"`
 	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
 	ControllerTimeout            time.Duration       `help:"Controller heartbeat timeout." default:"10s"`
@@ -104,8 +101,7 @@ func Start(
 	ctx context.Context,
 	config Config,
 	storage *artefacts.OCIArtefactService,
-	cm *cf.Manager[configuration.Configuration],
-	sm *cf.Manager[configuration.Secrets],
+	adminClient ftlv1connect.AdminServiceClient,
 	timelineClient *timeline.Client,
 	conn *sql.DB,
 	devel bool,
@@ -115,14 +111,12 @@ func Start(
 	logger := log.FromContext(ctx)
 	logger.Debugf("Starting FTL controller")
 
-	svc, err := New(ctx, conn, cm, sm, timelineClient, storage, config, devel)
+	svc, err := New(ctx, conn, adminClient, timelineClient, storage, config, devel)
 	if err != nil {
 		return err
 	}
 	logger.Debugf("Listening on %s", config.Bind)
 	logger.Debugf("Advertising as %s", config.Advertise)
-
-	admin := admin.NewAdminService(cm, sm, admin.NewSchemaRetreiver(schemaeventsource.New(ctx, rpc.ClientFromContext[ftlv1connect.SchemaServiceClient](ctx))))
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -132,7 +126,6 @@ func Start(
 			rpc.GRPC(deploymentconnect.NewDeploymentServiceHandler, svc),
 			rpc.GRPC(ftlv1connect.NewControllerServiceHandler, svc),
 			rpc.GRPC(ftlv1connect.NewSchemaServiceHandler, svc),
-			rpc.GRPC(ftlv1connect.NewAdminServiceHandler, admin),
 			rpc.PProf(),
 		)
 	})
@@ -151,9 +144,7 @@ type Service struct {
 	leaser             leases.Leaser
 	key                model.ControllerKey
 	deploymentLogsSink *deploymentLogsSink
-
-	cm *cf.Manager[configuration.Configuration]
-	sm *cf.Manager[configuration.Secrets]
+	adminClient        ftlv1connect.AdminServiceClient
 
 	tasks          *scheduledtask.Scheduler
 	pubSub         *pubsub.Service
@@ -173,8 +164,7 @@ type Service struct {
 func New(
 	ctx context.Context,
 	conn *sql.DB,
-	cm *cf.Manager[configuration.Configuration],
-	sm *cf.Manager[configuration.Secrets],
+	adminClient ftlv1connect.AdminServiceClient,
 	timelineClient *timeline.Client,
 	storage *artefacts.OCIArtefactService,
 	config Config,
@@ -198,8 +188,6 @@ func New(
 	routingTable := routing.New(ctx, schemaeventsource.New(ctx, rpc.ClientFromContext[ftlv1connect.SchemaServiceClient](ctx)))
 
 	svc := &Service{
-		cm:              cm,
-		sm:              sm,
 		tasks:           scheduler,
 		timelineClient:  timelineClient,
 		leaser:          ldb,
@@ -209,6 +197,7 @@ func New(
 		routeTable:      routingTable,
 		storage:         storage,
 		controllerState: state.NewInMemoryState(),
+		adminClient:     adminClient,
 	}
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx, timelineClient)
@@ -706,7 +695,11 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 		h := sha.New()
 
 		routeView := s.routeTable.Current()
-		configs, err := s.cm.MapForModule(ctx, module)
+		configsResp, err := s.adminClient.MapConfigsForModule(ctx, &connect.Request[ftlv1.MapConfigsForModuleRequest]{Msg: &ftlv1.MapConfigsForModuleRequest{Module: module}})
+		if err != nil {
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
+		}
+		configs := configsResp.Msg.Values
 		routeTable := map[string]string{}
 		for _, module := range callableModuleNames {
 			deployment, ok := routeView.GetDeployment(module).Get()
@@ -721,13 +714,11 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 			routeTable[deployment.Key.String()] = deployment.Schema.Runtime.Deployment.Endpoint
 		}
 
-		if err != nil {
-			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
-		}
-		secrets, err := s.sm.MapForModule(ctx, module)
+		secretsResp, err := s.adminClient.MapSecretsForModule(ctx, &connect.Request[ftlv1.MapSecretsForModuleRequest]{Msg: &ftlv1.MapSecretsForModuleRequest{Module: module}})
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get secrets: %w", err))
 		}
+		secrets := secretsResp.Msg.Values
 
 		if err := hashConfigurationMap(h, configs); err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not detect change on configs: %w", err))

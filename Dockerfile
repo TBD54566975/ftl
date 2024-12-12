@@ -36,10 +36,10 @@ EXPOSE 8893
 ENV FTL_ENDPOINT="http://host.docker.internal:8892"
 ENV FTL_BIND=http://0.0.0.0:8892
 ENV FTL_ADVERTISE=http://127.0.0.1:8892
+ENV FTL_DSN="postgres://host.docker.internal/ftl?sslmode=disable&user=postgres&password=secret"
 
 # Controller-specific configurations
 ENV FTL_CONTROLLER_CONSOLE_URL="*"
-ENV FTL_CONTROLLER_DSN="postgres://host.docker.internal/ftl?sslmode=disable&user=postgres&password=secret"
 
 # Provisioner-specific configurations
 ENV FTL_PROVISIONER_PLUGIN_CONFIG_FILE="/root/ftl-provisioner-config.toml"
