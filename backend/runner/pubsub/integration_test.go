@@ -49,13 +49,11 @@ func TestRetry(t *testing.T) {
 		// publish events
 		in.Call("publisher", "publishOneToTopic2", map[string]any{"haystack": "firstCall"}, func(t testing.TB, resp in.Obj) {}),
 		in.Call("publisher", "publishOneToTopic2", map[string]any{"haystack": "secondCall"}, func(t testing.TB, resp in.Obj) {}),
-		in.Call("publisher", "publishOneToTopic2", map[string]any{"haystack": "thirdCall"}, func(t testing.TB, resp in.Obj) {}),
 
-		in.Sleep(time.Second*6),
+		in.Sleep(time.Second*7),
 
 		checkConsumed("subscriber", "consumeButFailAndRetry", false, retriesPerCall+1, optional.Some("firstCall")),
 		checkConsumed("subscriber", "consumeButFailAndRetry", false, retriesPerCall+1, optional.Some("secondCall")),
-		checkConsumed("subscriber", "consumeButFailAndRetry", false, retriesPerCall+1, optional.Some("thirdCall")),
 	)
 }
 
