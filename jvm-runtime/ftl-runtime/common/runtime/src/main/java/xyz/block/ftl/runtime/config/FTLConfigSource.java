@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 
 import org.eclipse.microprofile.config.spi.ConfigSource;
 
+import xyz.block.ftl.runtime.DatasourceDetails;
 import xyz.block.ftl.runtime.FTLController;
 
 public class FTLConfigSource implements ConfigSource {
@@ -107,33 +108,33 @@ public class FTLConfigSource implements ConfigSource {
         if (s.startsWith("quarkus.datasource")) {
             switch (s) {
                 case DEFAULT_USER -> {
-                    return Optional.ofNullable(controller.getDatasource("default")).map(FTLController.Datasource::username)
+                    return Optional.ofNullable(controller.getDatasource("default")).map(DatasourceDetails::username)
                             .orElse(null);
                 }
                 case DEFAULT_PASSWORD -> {
-                    return Optional.ofNullable(controller.getDatasource("default")).map(FTLController.Datasource::password)
+                    return Optional.ofNullable(controller.getDatasource("default")).map(DatasourceDetails::password)
                             .orElse(null);
                 }
                 case DEFAULT_URL -> {
                     return Optional.ofNullable(controller.getDatasource("default"))
-                            .map(FTLController.Datasource::connectionString)
+                            .map(DatasourceDetails::connectionString)
                             .orElse(null);
                 }
                 //TODO: just support the default datasource for now
             }
             Matcher m = USER_PATTERN.matcher(s);
             if (m.matches()) {
-                return Optional.ofNullable(controller.getDatasource(m.group(1))).map(FTLController.Datasource::username)
+                return Optional.ofNullable(controller.getDatasource(m.group(1))).map(DatasourceDetails::username)
                         .orElse(null);
             }
             m = PASSWORD_PATTERN.matcher(s);
             if (m.matches()) {
-                return Optional.ofNullable(controller.getDatasource(m.group(1))).map(FTLController.Datasource::password)
+                return Optional.ofNullable(controller.getDatasource(m.group(1))).map(DatasourceDetails::password)
                         .orElse(null);
             }
             m = URL_PATTERN.matcher(s);
             if (m.matches()) {
-                return Optional.ofNullable(controller.getDatasource(m.group(1))).map(FTLController.Datasource::connectionString)
+                return Optional.ofNullable(controller.getDatasource(m.group(1))).map(DatasourceDetails::connectionString)
                         .orElse(null);
             }
         }

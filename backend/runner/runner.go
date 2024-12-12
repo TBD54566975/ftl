@@ -25,6 +25,7 @@ import (
 	mysql "github.com/block/ftl-mysql-auth-proxy"
 	"github.com/jpillora/backoff"
 	"github.com/otiai10/copy"
+	"github.com/puzpuzpuz/xsync/v3"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -67,7 +68,8 @@ type Config struct {
 	HeartbeatJitter       time.Duration            `help:"Jitter to add to heartbeat period." default:"2s"`
 	Deployment            model.DeploymentKey      `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
 	DebugPort             int                      `help:"The port to use for debugging." env:"FTL_DEBUG_PORT"`
-	DevEndpoint           optional.Option[url.URL] `help:"An existing endpoint to connect to in development mode" env:"FTL_DEV_ENDPOINT"`
+	DevEndpoint           optional.Option[url.URL] `help:"An existing endpoint to connect to in development mode" hidden:""`
+	DevRunnerInfoFile     optional.Option[string]  `help:"The path to a file that we write dev endpoint information to." hidden:""`
 }
 
 func Start(ctx context.Context, config Config, storage *artefacts.OCIArtefactService) error {
@@ -121,6 +123,7 @@ func Start(ctx context.Context, config Config, storage *artefacts.OCIArtefactSer
 		deploymentLogQueue: make(chan log.Entry, 10000),
 		cancelFunc:         doneFunc,
 		devEndpoint:        config.DevEndpoint,
+		devRunnerInfoFile:  config.DevRunnerInfoFile,
 	}
 
 	module, err := svc.getModule(ctx, config.Deployment)
@@ -131,11 +134,12 @@ func Start(ctx context.Context, config Config, storage *artefacts.OCIArtefactSer
 	startedLatch := &sync.WaitGroup{}
 	startedLatch.Add(2)
 	g, ctx := errgroup.WithContext(ctx)
+	dbAddresses := xsync.NewMapOf[string, string]()
 	g.Go(func() error {
-		return svc.startPgProxy(ctx, module, startedLatch)
+		return svc.startPgProxy(ctx, module, startedLatch, dbAddresses)
 	})
 	g.Go(func() error {
-		return svc.startMySQLProxy(ctx, module, startedLatch)
+		return svc.startMySQLProxy(ctx, module, startedLatch, dbAddresses)
 	})
 	g.Go(func() error {
 		startedLatch.Wait()
@@ -143,15 +147,15 @@ func Start(ctx context.Context, config Config, storage *artefacts.OCIArtefactSer
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			return svc.startDeployment(ctx, config.Deployment, module)
+			return svc.startDeployment(ctx, config.Deployment, module, dbAddresses)
 		}
 	})
 
 	return fmt.Errorf("failure in runner: %w", g.Wait())
 }
 
-func (s *Service) startDeployment(ctx context.Context, key model.DeploymentKey, module *schema.Module) error {
-	err := s.deploy(ctx, key, module)
+func (s *Service) startDeployment(ctx context.Context, key model.DeploymentKey, module *schema.Module, dbAddresses *xsync.MapOf[string, string]) error {
+	err := s.deploy(ctx, key, module, dbAddresses)
 	if err != nil {
 		// If we fail to deploy we just exit
 		// Kube or local scaling will start a new instance to continue
@@ -252,6 +256,7 @@ type Service struct {
 	deploymentLogQueue  chan log.Entry
 	cancelFunc          func()
 	devEndpoint         optional.Option[url.URL]
+	devRunnerInfoFile   optional.Option[string]
 	proxy               *proxy.Service
 	pubSub              *pubsub.Service
 	proxyBindAddress    *url.URL
@@ -296,7 +301,7 @@ func (s *Service) getModule(ctx context.Context, key model.DeploymentKey) (*sche
 	return module, nil
 }
 
-func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *schema.Module) error {
+func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *schema.Module, dbAddresses *xsync.MapOf[string, string]) error {
 	logger := log.FromContext(ctx)
 
 	if err, ok := s.registrationFailure.Load().Get(); ok {
@@ -331,6 +336,45 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 			return fmt.Errorf("failed to create deployment directory: %w", err)
 		}
 	}
+
+	deploymentServiceClient := rpc.Dial(ftldeploymentconnect.NewDeploymentServiceClient, s.config.ControllerEndpoint.String(), log.Error)
+	ctx = rpc.ContextWithClient(ctx, deploymentServiceClient)
+
+	leaseServiceClient := rpc.Dial(ftlleaseconnect.NewLeaseServiceClient, s.config.LeaseEndpoint.String(), log.Error)
+
+	timelineClient := timeline.NewClient(ctx, s.config.TimelineEndpoint)
+	s.proxy = proxy.New(deploymentServiceClient, leaseServiceClient, timelineClient)
+
+	pubSub, err := pubsub.New(module, key, s, timelineClient)
+	if err != nil {
+		observability.Deployment.Failure(ctx, optional.Some(key.String()))
+		return fmt.Errorf("failed to create pubsub service: %w", err)
+	}
+	s.pubSub = pubSub
+
+	parse, err := url.Parse("http://127.0.0.1:0")
+	if err != nil {
+		return fmt.Errorf("failed to parse url: %w", err)
+	}
+	proxyServer, err := rpc.NewServer(ctx, parse,
+		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, s.proxy),
+		rpc.GRPC(ftldeploymentconnect.NewDeploymentServiceHandler, s.proxy),
+		rpc.GRPC(ftlleaseconnect.NewLeaseServiceHandler, s.proxy),
+		rpc.GRPC(pubconnect.NewPublishServiceHandler, s.pubSub),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create server: %w", err)
+	}
+	urls := proxyServer.Bind.Subscribe(nil)
+	go func() {
+		err := proxyServer.Serve(ctx)
+		if err != nil {
+			logger.Errorf(err, "failed to serve")
+			return
+		}
+	}()
+	s.proxyBindAddress = <-urls
+
 	var dep *deployment
 	if ep, ok := s.devEndpoint.Get(); ok {
 		client := rpc.Dial(ftlv1connect.NewVerbServiceClient, ep.String(), log.Error)
@@ -341,50 +385,24 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 			endpoint: &ep,
 			client:   client,
 		}
+		if file, ok := s.devRunnerInfoFile.Get(); ok {
+			fileContents := "proxy.bind.address=" + s.proxyBindAddress.String()
+			fileContents += fmt.Sprintf("\ndeployment=%s", s.config.Deployment.String())
+			dbAddresses.Range(func(key string, value string) bool {
+				fileContents += fmt.Sprintf("\ndatabase.%s.url=%s", key, value)
+				return true
+			})
+			err = os.WriteFile(file, []byte(fileContents), 0660) // #nosec
+			if err != nil {
+				logger.Errorf(err, "could not create FTL dev Config")
+			}
+		}
 	} else {
 		err := download.ArtefactsFromOCI(ctx, s.controllerClient, key, deploymentDir, s.storage)
 		if err != nil {
 			observability.Deployment.Failure(ctx, optional.Some(key.String()))
 			return fmt.Errorf("failed to download artefacts: %w", err)
 		}
-
-		deploymentServiceClient := rpc.Dial(ftldeploymentconnect.NewDeploymentServiceClient, s.config.ControllerEndpoint.String(), log.Error)
-		ctx = rpc.ContextWithClient(ctx, deploymentServiceClient)
-
-		leaseServiceClient := rpc.Dial(ftlleaseconnect.NewLeaseServiceClient, s.config.LeaseEndpoint.String(), log.Error)
-
-		timelineClient := timeline.NewClient(ctx, s.config.TimelineEndpoint)
-		s.proxy = proxy.New(deploymentServiceClient, leaseServiceClient, timelineClient)
-
-		pubSub, err := pubsub.New(module, key, s, timelineClient)
-		if err != nil {
-			observability.Deployment.Failure(ctx, optional.Some(key.String()))
-			return fmt.Errorf("failed to create pubsub service: %w", err)
-		}
-		s.pubSub = pubSub
-
-		parse, err := url.Parse("http://127.0.0.1:0")
-		if err != nil {
-			return fmt.Errorf("failed to parse url: %w", err)
-		}
-		proxyServer, err := rpc.NewServer(ctx, parse,
-			rpc.GRPC(ftlv1connect.NewVerbServiceHandler, s.proxy),
-			rpc.GRPC(ftldeploymentconnect.NewDeploymentServiceHandler, s.proxy),
-			rpc.GRPC(ftlleaseconnect.NewLeaseServiceHandler, s.proxy),
-			rpc.GRPC(pubconnect.NewPublishServiceHandler, s.pubSub),
-		)
-		if err != nil {
-			return fmt.Errorf("failed to create server: %w", err)
-		}
-		urls := proxyServer.Bind.Subscribe(nil)
-		go func() {
-			err := proxyServer.Serve(ctx)
-			if err != nil {
-				logger.Errorf(err, "failed to serve")
-				return
-			}
-		}()
-		s.proxyBindAddress = <-urls
 
 		logger.Debugf("Setting FTL_ENDPOINT to %s", s.proxyBindAddress.String())
 		envVars := []string{"FTL_ENDPOINT=" + s.proxyBindAddress.String(),
@@ -600,7 +618,7 @@ func (s *Service) healthCheck(writer http.ResponseWriter, request *http.Request)
 	writer.WriteHeader(http.StatusServiceUnavailable)
 }
 
-func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, started *sync.WaitGroup) error {
+func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, started *sync.WaitGroup, addresses *xsync.MapOf[string, string]) error {
 	logger := log.FromContext(ctx)
 
 	databases := map[string]*schema.Database{}
@@ -620,7 +638,11 @@ func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, start
 	go func() {
 		select {
 		case pgProxy := <-channel:
-			os.Setenv("FTL_PROXY_POSTGRES_ADDRESS", fmt.Sprintf("127.0.0.1:%d", pgProxy.Address.Port))
+			address := fmt.Sprintf("127.0.0.1:%d", pgProxy.Address.Port)
+			for db := range databases {
+				addresses.Store(db, address)
+			}
+			os.Setenv("FTL_PROXY_POSTGRES_ADDRESS", address)
 			started.Done()
 		case <-ctx.Done():
 			started.Done()
@@ -649,7 +671,7 @@ func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, start
 	return nil
 }
 
-func (s *Service) startMySQLProxy(ctx context.Context, module *schema.Module, latch *sync.WaitGroup) error {
+func (s *Service) startMySQLProxy(ctx context.Context, module *schema.Module, latch *sync.WaitGroup, addresses *xsync.MapOf[string, string]) error {
 	defer latch.Done()
 	logger := log.FromContext(ctx)
 
@@ -689,7 +711,9 @@ func (s *Service) startMySQLProxy(ctx context.Context, module *schema.Module, la
 		case port = <-portC:
 		}
 
-		os.Setenv(strings.ToUpper("FTL_PROXY_MYSQL_ADDRESS_"+decl.Name), fmt.Sprintf("127.0.0.1:%d", port))
+		address := fmt.Sprintf("127.0.0.1:%d", port)
+		addresses.Store(decl.Name, address)
+		os.Setenv(strings.ToUpper("FTL_PROXY_MYSQL_ADDRESS_"+decl.Name), address)
 	}
 	return nil
 }

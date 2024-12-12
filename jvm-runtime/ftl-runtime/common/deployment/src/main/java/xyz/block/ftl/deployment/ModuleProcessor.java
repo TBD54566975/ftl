@@ -1,5 +1,6 @@
 package xyz.block.ftl.deployment;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -33,12 +34,15 @@ import io.quarkus.deployment.builditem.ApplicationArchivesBuildItem;
 import io.quarkus.deployment.builditem.ApplicationInfoBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
+import io.quarkus.deployment.builditem.LaunchModeBuildItem;
 import io.quarkus.deployment.builditem.RunTimeConfigBuilderBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
 import io.quarkus.deployment.builditem.SystemPropertyBuildItem;
 import io.quarkus.deployment.dev.RuntimeUpdatesProcessor;
 import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
 import io.quarkus.grpc.deployment.BindableServiceBuildItem;
+import io.quarkus.runtime.LaunchMode;
+import io.quarkus.runtime.util.HashUtil;
 import io.quarkus.vertx.http.deployment.RequireSocketHttpBuildItem;
 import io.quarkus.vertx.http.deployment.RequireVirtualHttpBuildItem;
 import xyz.block.ftl.language.v1.Error;
@@ -61,6 +65,12 @@ public class ModuleProcessor {
 
     private static final String SCHEMA_OUT = "schema.pb";
     private static final String ERRORS_OUT = "errors.pb";
+    public static final String DEV_MODE_RUNNER_INFO_FILE = "FTL_RUNNER_INFO";
+
+    /**
+     * Persistent schema hash, used to detect runner restarts in dev mode.
+     */
+    static String schemaHash;
 
     @BuildStep
     BindableServiceBuildItem verbService() {
@@ -191,6 +201,7 @@ public class ModuleProcessor {
             VerbClientBuildItem verbClientBuildItem,
             DefaultOptionalBuildItem defaultOptionalBuildItem,
             List<SchemaContributorBuildItem> schemaContributorBuildItems,
+            LaunchModeBuildItem launchModeBuildItem,
             CommentsBuildItem comments) throws Exception {
         String moduleName = moduleNameBuildItem.getModuleName();
 
@@ -205,11 +216,34 @@ public class ModuleProcessor {
         log.infof("Generating module '%s' schema from %d decls", moduleName, moduleBuilder.getDeclsCount());
         Path output = outputTargetBuildItem.getOutputDirectory().resolve(SCHEMA_OUT);
         Path errorOutput = outputTargetBuildItem.getOutputDirectory().resolve(ERRORS_OUT);
-        try (var out = Files.newOutputStream(output)) {
-            try (var errorOut = Files.newOutputStream(errorOutput)) {
-                moduleBuilder.writeTo(out, errorOut);
+        ByteArrayOutputStream sch = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        moduleBuilder.writeTo(sch, err);
+
+        var schBytes = sch.toByteArray();
+        var errBytes = err.toByteArray();
+
+        if (launchModeBuildItem.getLaunchMode() == LaunchMode.DEVELOPMENT) {
+            // Handle runner restarts in development mode. If this is the first launch, or the schema has changed, we need to
+            // get updated runner information, although we don't actually get this until the runner has started.
+            var hash = HashUtil.sha256(schBytes);
+            if (Objects.equals(hash, schemaHash)) {
+                return;
+            }
+            schemaHash = hash;
+            String runnerInfo = System.getenv(DEV_MODE_RUNNER_INFO_FILE);
+            if (runnerInfo != null) {
+                Path path = Path.of(runnerInfo);
+                // Delete the runner info file if it already exists
+                Files.deleteIfExists(path);
+                // This method tells the runtime not to actually start until we have updated runner details
+                recorder.handleDevModeRunnerStart(runnerInfo);
             }
         }
+        recorder.loadModuleContextOnStartup();
+
+        Files.write(output, schBytes);
+        Files.write(errorOutput, errBytes);
 
         output = outputTargetBuildItem.getOutputDirectory().resolve("launch");
         try (var out = Files.newOutputStream(output)) {

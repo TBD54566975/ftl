@@ -40,6 +40,9 @@ type BuildResult struct {
 	// Endpoint of an instance started by the plugin to use in dev mode
 	DevEndpoint optional.Option[string]
 
+	// File that the runner can use to pass info into the hot reload endpoint
+	DevRunnerInfoFile optional.Option[string]
+
 	DebugPort int
 }
 
@@ -572,12 +575,13 @@ func buildResultFromProto(result either.Either[*langpb.BuildResponse_BuildSucces
 			port = int(*buildSuccess.DebugPort)
 		}
 		return BuildResult{
-			Errors:      errs,
-			Schema:      moduleSch,
-			Deploy:      buildSuccess.Deploy,
-			StartTime:   startTime,
-			DevEndpoint: optional.Ptr(buildSuccess.DevEndpoint),
-			DebugPort:   port,
+			Errors:            errs,
+			Schema:            moduleSch,
+			Deploy:            buildSuccess.Deploy,
+			StartTime:         startTime,
+			DevEndpoint:       optional.Ptr(buildSuccess.DevEndpoint),
+			DevRunnerInfoFile: optional.Ptr(buildSuccess.DevRunnerInfoFile),
+			DebugPort:         port,
 		}, nil
 	case either.Right[*langpb.BuildResponse_BuildSuccess, *langpb.BuildResponse_BuildFailure]:
 		buildFailure := result.Get().BuildFailure

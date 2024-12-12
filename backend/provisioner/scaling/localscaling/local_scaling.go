@@ -103,8 +103,9 @@ func (l *localScaling) TerminatePreviousDeployments(ctx context.Context, module 
 type devModeRunner struct {
 	uri url.URL
 	// The deployment key of the deployment that is currently running
-	deploymentKey optional.Option[model.DeploymentKey]
-	debugPort     int
+	deploymentKey  optional.Option[model.DeploymentKey]
+	debugPort      int
+	runnerInfoFile optional.Option[string]
 }
 
 func (l *localScaling) Start(ctx context.Context) error {
@@ -127,8 +128,9 @@ func (l *localScaling) Start(ctx context.Context) error {
 // Must be called under lock
 func (l *localScaling) updateDevModeEndpoint(ctx context.Context, devEndpoints dev.LocalEndpoint) {
 	l.devModeEndpoints[devEndpoints.Module] = &devModeRunner{
-		uri:       devEndpoints.Endpoint,
-		debugPort: devEndpoints.DebugPort,
+		uri:            devEndpoints.Endpoint,
+		debugPort:      devEndpoints.DebugPort,
+		runnerInfoFile: devEndpoints.RunnerInfoFile,
 	}
 	if ide, ok := l.ideSupport.Get(); ok {
 		if devEndpoints.DebugPort != 0 {
@@ -262,9 +264,11 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey model.Depl
 
 	devEndpoint := l.devModeEndpoints[info.module]
 	devURI := optional.None[url.URL]()
+	devRunnerInfoFile := optional.None[string]()
 	debugPort := 0
 	if devEndpoint != nil {
 		devURI = optional.Some(devEndpoint.uri)
+		devRunnerInfoFile = devEndpoint.runnerInfoFile
 		if devKey, ok := devEndpoint.deploymentKey.Get(); ok && devKey.Equal(deploymentKey) {
 			// Already running, don't start another
 			return nil
@@ -304,6 +308,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey model.Depl
 		Deployment:         deploymentKey,
 		DebugPort:          debugPort,
 		DevEndpoint:        devURI,
+		DevRunnerInfoFile:  devRunnerInfoFile,
 	}
 
 	simpleName := fmt.Sprintf("runner%d", keySuffix)

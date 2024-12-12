@@ -16,10 +16,10 @@ public class HotReloadSetup implements HotReplacementSetup {
         context = hrc;
     }
 
-    static void doScan() {
+    static void doScan(boolean force) {
         if (context != null) {
             try {
-                context.doScan(false);
+                context.doScan(force);
             } catch (Exception e) {
                 Logger.getLogger(HotReloadSetup.class).error("Failed to scan for changes", e);
             }

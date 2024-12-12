@@ -663,18 +663,7 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 	logger := log.FromContext(ctx)
 	updates := s.routeTable.Subscribe()
 	defer s.routeTable.Unsubscribe(updates)
-	view := s.controllerState.View()
 	depName := req.Msg.Deployment
-	if !strings.HasPrefix(depName, "dpl-") {
-		// For hot reload endponts we might not have a deployment key
-		deps := view.GetActiveDeployments()
-		for _, dep := range deps {
-			if dep.Module == depName {
-				depName = dep.Key.String()
-				break
-			}
-		}
-	}
 	key, err := model.ParseDeploymentKey(depName)
 	if err != nil {
 		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deployment key: %w", err))
@@ -723,7 +712,7 @@ func (s *Service) GetDeploymentContext(ctx context.Context, req *connect.Request
 			}
 		}
 		if deployment.Schema.Runtime != nil && deployment.Schema.Runtime.Deployment != nil {
-			routeTable[module] = deployment.Schema.Runtime.Deployment.Endpoint
+			routeTable[deployment.Key.String()] = deployment.Schema.Runtime.Deployment.Endpoint
 		}
 
 		if err != nil {

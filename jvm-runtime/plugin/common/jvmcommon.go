@@ -283,8 +283,10 @@ func (s *Service) runQuarkusDev(ctx context.Context, req *connect.Request[langpb
 	}
 	errorFile := filepath.Join(buildCtx.Config.DeployDir, ErrorFile)
 	schemaFile := filepath.Join(buildCtx.Config.DeployDir, SchemaFile)
+	runnerInfoFile := filepath.Join(buildCtx.Config.DeployDir, ".runner-info")
 	os.Remove(errorFile)
 	os.Remove(schemaFile)
+	os.Remove(runnerInfoFile)
 	errorHash := sha256.SHA256{}
 	schemaHash := sha256.SHA256{}
 
@@ -293,6 +295,7 @@ func (s *Service) runQuarkusDev(ctx context.Context, req *connect.Request[langpb
 	devModeBuild := buildCtx.Config.DevModeBuild
 	debugPort, err := plugin.AllocatePort()
 	debugPort32 := int32(debugPort.Port)
+
 	if err == nil {
 		devModeBuild = fmt.Sprintf("%s -Ddebug=%d", devModeBuild, debugPort.Port)
 	}
@@ -300,6 +303,7 @@ func (s *Service) runQuarkusDev(ctx context.Context, req *connect.Request[langpb
 		logger.Infof("Using dev mode build command '%s'", devModeBuild)
 		command := exec.Command(ctx, log.Debug, buildCtx.Config.Dir, "bash", "-c", devModeBuild)
 		command.Env = append(command.Env, fmt.Sprintf("FTL_BIND=%s", bind))
+		command.Env = append(command.Env, fmt.Sprintf("FTL_RUNNER_INFO=%s", runnerInfoFile))
 		command.Stdout = os.Stdout
 		command.Stderr = os.Stderr
 		err = command.RunBuffered(ctx)
@@ -388,6 +392,7 @@ func (s *Service) runQuarkusDev(ctx context.Context, req *connect.Request[langpb
 							IsAutomaticRebuild: !firstAttempt,
 							Module:             moduleProto,
 							DevEndpoint:        ptr(fmt.Sprintf("http://localhost:%d", address.Port)),
+							DevRunnerInfoFile:  &runnerInfoFile,
 							DebugPort:          &debugPort32,
 							Deploy:             []string{SchemaFile},
 						},
