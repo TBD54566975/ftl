@@ -117,15 +117,9 @@ func (d *Data) Monomorphise(ref *Ref) (*Data, error) {
 			}
 			n.Type = t
 
-		case *Any, *Bool, *Bytes, *Data, *Ref, *Database, Decl, *Float,
-			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter,
-			*Int, Metadata, *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataRetry,
-			*MetadataIngress, *MetadataCronJob, *MetadataAlias, *MetadataSecrets, *Module,
-			*Schema, *String, *Time, Type, *TypeParameter, *Unit, *Verb, *Enum,
-			*EnumVariant, Value, *IntValue, *StringValue, *TypeValue, Symbol,
-			Named, *TypeAlias, *Topic, *MetadataSubscriber, *MetadataTypeMap,
-			*MetadataEncoding, *MetadataPublisher, *MetadataSQLMigration, *DSNDatabaseConnector, *DatabaseRuntime,
-			DatabaseConnector, *AWSIAMAuthDatabaseConnector, *DatabaseRuntimeConnections, *MetadataArtefact, Provisioned:
+		case Type, Metadata, Value, IngressPathComponent, DatabaseConnector,
+			*Module, *Schema, *TypeParameter, *Verb, *Enum, *TypeAlias, *Topic, *Database,
+			*DatabaseRuntimeConnections, *Data, *EnumVariant, *DatabaseRuntime:
 		}
 		return next()
 	})

@@ -189,13 +189,9 @@ func nodeToJSSchema(node Node, refs map[RefKey]*Ref) *jsonschema.Schema {
 	case *TypeAlias:
 		return nodeToJSSchema(node.Type, refs)
 
-	case Decl, *Field, Metadata, *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataIngress,
-		*MetadataAlias, *MetadataSecrets, IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Module,
-		*Schema, Type, *Database, *Verb, *EnumVariant, *MetadataCronJob, Value,
-		*StringValue, *IntValue, *TypeValue, *Config, *Secret, Symbol, Named,
-		*MetadataRetry, *Topic, *MetadataSubscriber, *MetadataTypeMap,
-		*MetadataEncoding, *MetadataPublisher, *MetadataSQLMigration, *DSNDatabaseConnector, *DatabaseRuntime,
-		*AWSIAMAuthDatabaseConnector, DatabaseConnector, *DatabaseRuntimeConnections, *MetadataArtefact, Provisioned:
+	case Metadata, IngressPathComponent, DatabaseConnector, Type, Value,
+		*Module, *Field, *Schema, *Database, *Verb, *EnumVariant,
+		*Config, *Secret, *Topic, *DatabaseRuntime, *DatabaseRuntimeConnections:
 		panic(fmt.Sprintf("unsupported node type %T", node))
 
 	default:

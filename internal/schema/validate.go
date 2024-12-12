@@ -216,15 +216,11 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				}
 				return next()
 
-			case *Array, *Bool, *Bytes, *Data, Decl, *Field, *Float,
-				IngressPathComponent, *IngressPathLiteral, *IngressPathParameter,
-				*Int, *Map, Metadata, *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataCronJob,
-				*MetadataIngress, *MetadataAlias, *MetadataSecrets, *Module, *Optional, *Schema, *TypeAlias,
-				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant, *MetadataRetry,
-				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named,
-				*MetadataSubscriber, *Topic, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher,
-				*MetadataSQLMigration, *DSNDatabaseConnector, *DatabaseRuntime, DatabaseConnector,
-				*AWSIAMAuthDatabaseConnector, *DatabaseRuntimeConnections, *MetadataArtefact, Provisioned:
+			case
+				IngressPathComponent, Metadata, Value, Type, DatabaseConnector,
+				*Module, *Optional, *Schema, *TypeAlias, *String, *Time, *Unit, *Any, *TypeParameter,
+				*EnumVariant, *Config, *Secret, *Topic, *DatabaseRuntime, *DatabaseRuntimeConnections,
+				*Data, *Field:
 			}
 			return next()
 		})
@@ -360,16 +356,10 @@ func ValidateModule(module *Module) error {
 				n.Catch.Module = module.Name
 			}
 
-		case *Array, *Bool, *Database, *Float, *Int,
-			*Time, *Map, *Module, *Schema, *String, *Bytes,
-			*MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
-			*MetadataSecrets, IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
-			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
-			*Config, *Secret, *MetadataSubscriber, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher,
-			*MetadataSQLMigration, *DSNDatabaseConnector, *DatabaseRuntime, *AWSIAMAuthDatabaseConnector,
-			*MetadataArtefact, DatabaseConnector, *DatabaseRuntimeConnections, Provisioned:
-
-		case Named, Symbol, Type, Metadata, Value, Decl: // Union types.
+		case Type, Metadata, Value, IngressPathComponent, DatabaseConnector,
+			*Module, *Schema, *Optional, *TypeParameter, *EnumVariant,
+			*Config, *Secret, *DatabaseRuntime, *DatabaseRuntimeConnections,
+			*Database, *Enum:
 		}
 		return next()
 	})
