@@ -238,9 +238,6 @@ func provisionTopic() InMemResourceProvisionerFn {
 func provisionSubscription() InMemResourceProvisionerFn {
 	return func(ctx context.Context, moduleName string, res schema.Provisioned) (*RuntimeEvent, error) {
 		logger := log.FromContext(ctx)
-		if err := dev.SetUpRedPanda(ctx); err != nil {
-			return nil, fmt.Errorf("could not set up redpanda: %w", err)
-		}
 		verb, ok := res.(*schema.Verb)
 		if !ok {
 			panic(fmt.Errorf("unexpected resource type: %T", res))
