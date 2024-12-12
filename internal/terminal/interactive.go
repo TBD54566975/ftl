@@ -116,7 +116,6 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 				return
 			}
 		}()
-		tsm.redrawStatus()
 	}
 	_ = l.Close()
 	return nil

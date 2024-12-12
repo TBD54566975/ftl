@@ -22,6 +22,10 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 
+const ansiUpOneLine = "\u001B[1A"
+const ansiClearLine = "\u001B[2K"
+const ansiResetTextColor = "\u001B[39m"
+
 type BuildState string
 
 const BuildStateWaiting BuildState = "Waiting"
@@ -265,8 +269,9 @@ func (r *terminalStatusManager) clearStatusMessages() {
 	if r.console {
 		count--
 	}
+	r.underlyingWrite(ansiClearLine)
 	for range count {
-		r.underlyingWrite("\u001B[1A\u001B[2K")
+		r.underlyingWrite(ansiUpOneLine + ansiClearLine)
 	}
 }
 
@@ -275,13 +280,11 @@ func (r *terminalStatusManager) consoleNewline(line string) {
 	defer r.statusLock.Unlock()
 	count := r.totalStatusLines
 	for range count {
-		r.underlyingWrite("\u001B[1A\033[2K")
+		r.underlyingWrite(ansiUpOneLine + ansiClearLine)
 	}
+	r.underlyingWrite("\r" + line + "\n")
 	if line == "" {
-		r.underlyingWrite("\r" + interactivePrompt + line)
 		r.redrawStatus()
-	} else {
-		r.underlyingWrite("\r" + interactivePrompt + line + strings.Repeat("\n", r.totalStatusLines))
 	}
 }
 
@@ -373,6 +376,9 @@ func (r *terminalStatusManager) writeLine(s string, last bool) {
 
 }
 func (r *terminalStatusManager) redrawStatus() {
+	if r.statusLock.TryLock() {
+		panic("redrawStatus called without holding the lock")
+	}
 	if r.totalStatusLines == 0 || r.closed.Load() {
 		return
 	}
@@ -388,7 +394,7 @@ func (r *terminalStatusManager) redrawStatus() {
 }
 
 func (r *terminalStatusManager) recalculateLines() {
-
+	r.clearStatusMessages()
 	total := 0
 	if len(r.moduleStates) > 0 && r.moduleLine != nil {
 		total++
@@ -416,7 +422,7 @@ func (r *terminalStatusManager) recalculateLines() {
 			}
 			pad := strings.Repeat(" ", entryLength-len(k)-moduleStatusPadding)
 			state := r.moduleStates[k]
-			msg += buildColors[state] + buildStateIcon[state](r.spinnerCount) + "[" + log.ScopeColor(k) + k + buildColors[state] + "]  \u001B[39m" + pad
+			msg += buildColors[state] + buildStateIcon[state](r.spinnerCount) + "[" + log.ScopeColor(k) + k + buildColors[state] + "]  " + ansiResetTextColor + pad
 		}
 		if !multiLine {
 			// For multi-line messages we don't want to trim the message as we want to line up the columns
@@ -434,7 +440,6 @@ func (r *terminalStatusManager) recalculateLines() {
 	if r.console {
 		total++
 	}
-	r.clearStatusMessages()
 	r.totalStatusLines = total
 	r.redrawStatus()
 }
