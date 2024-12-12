@@ -4,12 +4,13 @@ import type { ExpandablePanelProps } from '../features/graph/ExpandablePanel'
 import useLocalStorage from '../hooks/use-local-storage'
 import RightPanel from './RightPanel'
 
+const TOP_BAR_HEIGHT = 64
+
 interface ResizablePanelsProps {
   initialRightPanelWidth?: number
   initialBottomPanelHeight?: number
   minRightPanelWidth?: number
   minBottomPanelHeight?: number
-  topBarHeight?: number
   rightPanelHeader: React.ReactNode
   rightPanelPanels: ExpandablePanelProps[]
   bottomPanelContent?: React.ReactNode
@@ -76,7 +77,7 @@ export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
       <div className='flex flex-1'>
         <div
           style={{
-            maxHeight: bottomPanelContent ? `calc(100vh - ${bottomPanelHeight + 46}px)` : '100vh',
+            maxHeight: bottomPanelContent ? `calc(100vh - ${bottomPanelHeight + TOP_BAR_HEIGHT}px)` : '100vh',
           }}
           className='flex-1 flex-col min-h-64'
         >
@@ -90,7 +91,7 @@ export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
         <div
           style={{
             width: `${rightPanelWidth}px`,
-            maxHeight: bottomPanelContent ? `calc(100vh - ${bottomPanelHeight + 46}px)` : '100vh',
+            maxHeight: bottomPanelContent ? `calc(100vh - ${bottomPanelHeight + TOP_BAR_HEIGHT}px)` : '100vh',
           }}
           className='flex flex-col h-full overflow-y-scroll'
         >

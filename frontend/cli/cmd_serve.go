@@ -210,12 +210,18 @@ func (s *serveCommonConfig) run(
 		controllerAddresses = append(controllerAddresses, controllerBind)
 	}
 
-	// Add console address to allow origins for console requests.
-	consoleURL, err := url.Parse("http://127.0.0.1:8899")
-	if err != nil {
-		return fmt.Errorf("could not parse console URL: %w", err)
+	// Add console addresses to allow origins for console requests
+	consoleURLs := []string{
+		"http://localhost:8899",
+		"http://127.0.0.1:8899",
 	}
-	s.Ingress.AllowOrigins = append(s.Ingress.AllowOrigins, consoleURL)
+	for _, urlStr := range consoleURLs {
+		consoleURL, err := url.Parse(urlStr)
+		if err != nil {
+			return fmt.Errorf("could not parse console URL %q: %w", urlStr, err)
+		}
+		s.Ingress.AllowOrigins = append(s.Ingress.AllowOrigins, consoleURL)
+	}
 
 	provisionerAddresses := make([]*url.URL, 0, s.Provisioners)
 	for range s.Provisioners {
