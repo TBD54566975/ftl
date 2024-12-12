@@ -46,6 +46,7 @@ var _ ControllerEvent = (*RunnerRegisteredEvent)(nil)
 var _ eventstream.VerboseMessage = (*RunnerRegisteredEvent)(nil)
 var _ ControllerEvent = (*RunnerDeletedEvent)(nil)
 
+//protobuf:7
 type RunnerRegisteredEvent struct {
 	Key        model.RunnerKey
 	Time       time.Time
@@ -76,6 +77,7 @@ func (r *RunnerRegisteredEvent) Handle(t State) (State, error) {
 	return t, nil
 }
 
+//protobuf:8
 type RunnerDeletedEvent struct {
 	Key model.RunnerKey
 }

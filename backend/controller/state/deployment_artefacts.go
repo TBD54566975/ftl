@@ -12,8 +12,9 @@ type DeploymentArtefact struct {
 
 var _ ControllerEvent = (*DeploymentArtefactCreatedEvent)(nil)
 
+//protobuf:6
 type DeploymentArtefactCreatedEvent struct {
-	Digest sha256.SHA256
+	Digest sha256.SHA256 `protobuf:"1"`
 }
 
 func (d *DeploymentArtefactCreatedEvent) Handle(view State) (State, error) {

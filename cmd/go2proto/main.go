@@ -280,7 +280,7 @@ func run(cli Config) error {
 		var err error
 		out, err = os.Create(cli.Output + "~")
 		if err != nil {
-			return fmt.Errorf("")
+			return fmt.Errorf("unable to create output file %s", cli.Output)
 		}
 		defer out.Close()
 		defer os.Remove(cli.Output + "~")

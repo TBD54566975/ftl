@@ -6,6 +6,7 @@ RELEASE := "build/release"
 VERSION := `git describe --tags --always | sed -e 's/^v//'`
 TIMESTAMP := `date +%s`
 SCHEMA_OUT := "common/protos/xyz/block/ftl/schema/v1/schema.proto"
+CONTROLLER_EVENTS_OUT := "backend/protos/xyz/block/ftl/controller/events/v1/events.proto"
 ZIP_DIRS := "go-runtime/compile/build-template " + \
             "go-runtime/compile/external-module-template " + \
             "go-runtime/compile/main-work-template " + \
@@ -33,6 +34,7 @@ PROTOS_OUT := "backend/protos/xyz/block/ftl/console/v1/console.pb.go " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/schema/v1/schema_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/publish/v1/publish_pb.ts"
 GO_SCHEMA_ROOTS := "./common/schema.{Schema,ModuleRuntimeEvent,DatabaseRuntimeEvent,TopicRuntimeEvent,VerbRuntimeEvent,RuntimeEvent}"
+EVENT_SCHEMA_ROOTS := "./backend/controller/state.ControllerEvent"
 # Configuration for building Docker images
 DOCKER_IMAGES := '''
 {
@@ -205,7 +207,7 @@ update-sqlc-plugin-codegen-proto:
 	@bash scripts/sqlc-codegen-proto
 
 # Regenerate protos
-build-protos: go2proto
+build-protos: go2proto go2proto-events
   @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "@just build-protos-unconditionally"
 
 # Generate .proto files from .go types.
@@ -215,8 +217,14 @@ go2proto:
     -O 'java_multiple_files=true' \
     xyz.block.ftl.schema.v1 {{GO_SCHEMA_ROOTS}} && buf format -w && buf lint && bin/gofmt -w common/schema/go2proto.to.go
 
+go2proto-events:
+  @mk "{{CONTROLLER_EVENTS_OUT}}" : cmd/go2proto backend/controller/state -- go2proto -m -o "{{CONTROLLER_EVENTS_OUT}}" \
+    -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/controller/events/v1;eventspb"' \
+    -O 'java_multiple_files=true' \
+    xyz.block.ftl.controller.events.v1 {{EVENT_SCHEMA_ROOTS}} && buf format -w && buf lint
+
 # Unconditionally rebuild protos
-build-protos-unconditionally: go2proto lint-protos pnpm-install
+build-protos-unconditionally: go2proto go2proto-events lint-protos pnpm-install
   cd common/protos && buf generate
 
 # Run integration test(s)
