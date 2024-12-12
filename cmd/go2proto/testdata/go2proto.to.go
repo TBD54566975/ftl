@@ -56,9 +56,9 @@ func (x *Root) ToProto() *destpb.Root {
 		SumType:        SumTypeToProto(x.SumType),
 		OptionalInt:    proto.Int64(int64(x.OptionalInt)),
 		OptionalIntPtr: proto.Int64(int64(*x.OptionalIntPtr)),
-		OptionalMsg: x.OptionalMsg.ToProto(),
-		RepeatedInt: protoSlicef(x.RepeatedInt, func(v int) int64 { return int64(v) }),
-		RepeatedMsg: protoSlice[*destpb.Message](x.RepeatedMsg),
+		OptionalMsg:    x.OptionalMsg.ToProto(),
+		RepeatedInt:    protoSlicef(x.RepeatedInt, func(v int) int64 { return int64(v) }),
+		RepeatedMsg:    protoSlice[*destpb.Message](x.RepeatedMsg),
 	}
 }
 

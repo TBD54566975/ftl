@@ -90,7 +90,7 @@ build-generate:
 
 # Generate testdata for go2proto. This should be run after any changes to go2proto.
 build-go2proto-testdata:
-  @mk cmd/go2proto/testdata/go2proto.to.go cmd/go2proto/testdata/testdatapb/model.proto : cmd/go2proto/*.go cmd/go2proto/testdata/model.go -- go2proto -m -o ./cmd/go2proto/testdata/testdatapb/model.proto -O 'go_package="github.com/TBD54566975/ftl/cmd/go2proto/testdata/testdatapb"' xyz.block.ftl.go2proto.test ./cmd/go2proto/testdata.Root
+  @mk cmd/go2proto/testdata/go2proto.to.go cmd/go2proto/testdata/testdatapb/model.proto : cmd/go2proto/*.go cmd/go2proto/testdata/model.go -- go2proto -m -o ./cmd/go2proto/testdata/testdatapb/model.proto -O 'go_package="github.com/TBD54566975/ftl/cmd/go2proto/testdata/testdatapb"' xyz.block.ftl.go2proto.test ./cmd/go2proto/testdata.Root && bin/gofmt -w cmd/go2proto/testdata/go2proto.to.go
   @mk cmd/go2proto/testdata/testdatapb/model.pb.go : cmd/go2proto/testdata/testdatapb/model.proto -- '(cd ./cmd/go2proto/testdata/testdatapb && protoc --go_out=paths=source_relative:. model.proto) && go build ./cmd/go2proto/testdata'
 
 # Build command-line tools
@@ -208,7 +208,7 @@ go2proto:
   @mk "{{SCHEMA_OUT}}" : cmd/go2proto internal/schema -- go2proto -m -o "{{SCHEMA_OUT}}" \
     -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1;schemapb"' \
     -O 'java_multiple_files=true' \
-    xyz.block.ftl.schema.v1 {{GO_SCHEMA_ROOTS}} && buf format -w && buf lint
+    xyz.block.ftl.schema.v1 {{GO_SCHEMA_ROOTS}} && buf format -w && buf lint && bin/gofmt -w internal/schema/go2proto.to.go  
 
 # Unconditionally rebuild protos
 build-protos-unconditionally: go2proto lint-protos pnpm-install
