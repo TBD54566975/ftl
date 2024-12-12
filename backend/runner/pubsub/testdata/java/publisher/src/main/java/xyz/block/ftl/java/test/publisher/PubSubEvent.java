@@ -15,12 +15,12 @@ public class PubSubEvent {
         this.time = time;
         return this;
     }
-    
+
     public String getHaystack() {
-        return time;
+        return haystack;
     }
 
-    public HaystackRequest setHaystack(String haystack) {
+    public PubSubEvent setHaystack(String haystack) {
         this.haystack = haystack;
         return this;
     }

@@ -5,7 +5,7 @@ public class HaystackRequest {
     private String haystack;
 
     public String getHaystack() {
-        return time;
+        return haystack;
     }
 
     public HaystackRequest setHaystack(String haystack) {

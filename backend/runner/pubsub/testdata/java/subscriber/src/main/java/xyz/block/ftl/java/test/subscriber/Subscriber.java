@@ -1,9 +1,7 @@
 package xyz.block.ftl.java.test.subscriber;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import ftl.builtin.CatchRequest;
 import ftl.publisher.PubSubEvent;
 import ftl.publisher.TestTopicTopic;
 import ftl.publisher.Topic2Topic;
@@ -11,8 +9,6 @@ import io.quarkus.logging.Log;
 import xyz.block.ftl.FromOffset;
 import xyz.block.ftl.Retry;
 import xyz.block.ftl.Subscription;
-import xyz.block.ftl.Verb;
-import xyz.block.ftl.VerbName;
 
 public class Subscriber {
 
