@@ -76,6 +76,11 @@ func TestExternalPublishRuntimeCheck(t *testing.T) {
 
 func checkConsumed(module, verb string, success bool, count int, needle optional.Option[string]) in.Action {
 	return func(t testing.TB, ic in.TestContext) {
+		if needle, ok := needle.Get(); ok {
+			in.Infof("Checking for %v call(s) with needle %v", needle)
+		} else {
+			in.Infof("Checking for %v call(s)", count)
+		}
 		resp, err := ic.Timeline.GetTimeline(ic.Context, connect.NewRequest(&timelinepb.GetTimelineRequest{
 			Limit: 100000,
 			Filters: []*timelinepb.GetTimelineRequest_Filter{
