@@ -3,7 +3,7 @@ import type { JsonValue } from 'type-fest/source/basic'
 import type { Module, Verb } from '../../../../protos/xyz/block/ftl/console/v1/console_pb'
 import type { MetadataCalls, MetadataCronJob, MetadataIngress, MetadataSubscriber, Ref } from '../../../../protos/xyz/block/ftl/schema/v1/schema_pb'
 
-const basePath = 'http://localhost:8891/'
+const basePath = `${window.location.protocol}//${window.location.hostname}:8891/`
 
 export const refString = (ref?: Ref): string => {
   if (!ref) {

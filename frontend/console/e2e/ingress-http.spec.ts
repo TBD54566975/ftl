@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { navigateToDecl, setVerbRequestBody } from './helpers'
 
-test.skip('shows http ingress form', async ({ page }) => {
+test('shows http ingress form', async ({ page }) => {
   await navigateToDecl(page, 'http', 'get')
 
   await expect(page.locator('#call-type')).toHaveText('GET')
@@ -10,7 +10,7 @@ test.skip('shows http ingress form', async ({ page }) => {
   await expect(page.getByText('Schema', { exact: true })).toBeVisible()
 })
 
-test.skip('send get request with path and query params', async ({ page }) => {
+test('send get request with path and query params', async ({ page }) => {
   await navigateToDecl(page, 'http', 'get')
 
   // Wait for the input to be stable with the initial value
@@ -55,7 +55,7 @@ test.skip('send get request with path and query params', async ({ page }) => {
   })
 })
 
-test.skip('send post request with body', async ({ page }) => {
+test('send post request with body', async ({ page }) => {
   await navigateToDecl(page, 'http', 'post')
 
   await expect(page.locator('input#request-path')).toHaveValue('http://localhost:8891/post')
