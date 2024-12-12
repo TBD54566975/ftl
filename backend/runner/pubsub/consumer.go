@@ -22,10 +22,11 @@ import (
 )
 
 type consumer struct {
-	moduleName string
-	deployment model.DeploymentKey
-	verb       *schema.Verb
-	subscriber *schema.MetadataSubscriber
+	moduleName  string
+	deployment  model.DeploymentKey
+	verb        *schema.Verb
+	subscriber  *schema.MetadataSubscriber
+	retryParams schema.RetryParams
 
 	verbClient     VerbClient
 	timelineClient *timeline.Client
@@ -47,6 +48,16 @@ func newConsumer(moduleName string, verb *schema.Verb, subscriber *schema.Metada
 
 		verbClient:     verbClient,
 		timelineClient: timelineClient,
+	}
+	retryMetada, ok := slices.FindVariant[*schema.MetadataRetry](verb.Metadata)
+	if ok {
+		retryParams, err := retryMetada.RetryParams()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse retry params for subscription %s: %w", verb.Name, err)
+		}
+		c.retryParams = retryParams
+	} else {
+		c.retryParams = schema.RetryParams{}
 	}
 
 	return c, nil
@@ -139,48 +150,77 @@ func (c *consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 	ctx := session.Context()
 	logger := log.FromContext(ctx)
 	for msg := range claim.Messages() {
-		start := time.Now()
-
-		requestKey := model.NewRequestKey(model.OriginPubsub, schema.RefKey{Module: c.moduleName, Name: c.verb.Name}.String())
-		logger.Debugf("%s: consuming message (%v:%v): %v", c.verb.Name, msg.Partition, msg.Offset, string(msg.Value))
-		destRef := &schema.Ref{
-			Module: c.moduleName,
-			Name:   c.verb.Name,
-		}
-		req := &ftlv1.CallRequest{
-			Verb: schema.RefKey{Module: c.moduleName, Name: c.verb.Name}.ToProto(),
-			Body: msg.Value,
-		}
-		consumeEvent := timeline.PubSubConsume{
-			DeploymentKey: c.deployment,
-			RequestKey:    optional.Some(requestKey.String()),
-			Time:          time.Now(),
-			DestVerb:      optional.Some(destRef.ToRefKey()),
-			Topic:         c.subscriber.Topic.String(),
-			Partition:     int(msg.Partition),
-			Offset:        int(msg.Offset),
-		}
-		callEvent := &timeline.Call{
-			DeploymentKey: c.deployment,
-			RequestKey:    requestKey,
-			StartTime:     start,
-			DestVerb:      destRef,
-			Callers:       []*schema.Ref{},
-			Request:       req,
-		}
-
-		resp, err := c.verbClient.Call(session.Context(), connect.NewRequest(req))
-		if err != nil {
-			consumeEvent.Error = optional.Some(err.Error())
-			callEvent.Response = result.Err[*ftlv1.CallResponse](err)
-			observability.Calls.Request(ctx, req.Verb, start, optional.Some("verb call failed"))
-		} else {
-			callEvent.Response = result.Ok(resp.Msg)
-			observability.Calls.Request(ctx, req.Verb, start, optional.None[string]())
+		logger.Debugf("%s: consuming message %v:%v", c.verb.Name, msg.Partition, msg.Offset)
+		remainingRetries := c.retryParams.Count
+		backoff := c.retryParams.MinBackoff
+		for {
+			err := c.call(ctx, msg.Value, int(msg.Partition), int(msg.Offset))
+			if err == nil {
+				break
+			}
+			if remainingRetries == 0 {
+				logger.Errorf(err, "%s: failed to consume message %v:%v", c.verb.Name, msg.Partition, msg.Offset)
+				break
+			}
+			logger.Errorf(err, "%s: failed to consume message %v:%v: retrying in %vs", c.verb.Name, msg.Partition, msg.Offset, int(backoff.Seconds()))
+			time.Sleep(backoff)
+			remainingRetries--
+			backoff *= 2
+			if backoff > c.retryParams.MaxBackoff {
+				backoff = c.retryParams.MaxBackoff
+			}
 		}
 		session.MarkMessage(msg, "")
-		c.timelineClient.Publish(ctx, consumeEvent)
-		c.timelineClient.Publish(ctx, callEvent)
 	}
+	return nil
+}
+
+func (c *consumer) call(ctx context.Context, body []byte, partition, offset int) error {
+	start := time.Now()
+
+	requestKey := model.NewRequestKey(model.OriginPubsub, schema.RefKey{Module: c.moduleName, Name: c.verb.Name}.String())
+	destRef := &schema.Ref{
+		Module: c.moduleName,
+		Name:   c.verb.Name,
+	}
+	req := &ftlv1.CallRequest{
+		Verb: schema.RefKey{Module: c.moduleName, Name: c.verb.Name}.ToProto(),
+		Body: body,
+	}
+	consumeEvent := timeline.PubSubConsume{
+		DeploymentKey: c.deployment,
+		RequestKey:    optional.Some(requestKey.String()),
+		Time:          time.Now(),
+		DestVerb:      optional.Some(destRef.ToRefKey()),
+		Topic:         c.subscriber.Topic.String(),
+		Partition:     partition,
+		Offset:        offset,
+	}
+	defer c.timelineClient.Publish(ctx, consumeEvent)
+
+	callEvent := &timeline.Call{
+		DeploymentKey: c.deployment,
+		RequestKey:    requestKey,
+		StartTime:     start,
+		DestVerb:      destRef,
+		Callers:       []*schema.Ref{},
+		Request:       req,
+	}
+	defer c.timelineClient.Publish(ctx, callEvent)
+
+	resp, callErr := c.verbClient.Call(ctx, connect.NewRequest(req))
+	if callErr == nil {
+		if errResp, ok := resp.Msg.Response.(*ftlv1.CallResponse_Error_); ok {
+			callErr = fmt.Errorf("verb call failed: %s", errResp.Error.Message)
+		}
+	}
+	if callErr != nil {
+		consumeEvent.Error = optional.Some(callErr.Error())
+		callEvent.Response = result.Err[*ftlv1.CallResponse](callErr)
+		observability.Calls.Request(ctx, req.Verb, start, optional.Some("verb call failed"))
+		return callErr
+	}
+	callEvent.Response = result.Ok(resp.Msg)
+	observability.Calls.Request(ctx, req.Verb, start, optional.None[string]())
 	return nil
 }

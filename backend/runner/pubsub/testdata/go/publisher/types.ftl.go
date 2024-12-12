@@ -10,7 +10,7 @@ import (
 
 type PublishOneClient func(context.Context) error
 
-type PublishOneToTopic2Client func(context.Context) error
+type PublishOneToTopic2Client func(context.Context, PublishOneToTopic2Request) error
 
 type PublishTenClient func(context.Context) error
 

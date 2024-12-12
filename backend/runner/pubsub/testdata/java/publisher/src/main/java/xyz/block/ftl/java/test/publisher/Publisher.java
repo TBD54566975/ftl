@@ -51,10 +51,10 @@ public class Publisher {
     }
 
     @Verb
-    void publishOneToTopic2(Topic2 topic2) throws Exception {
+    void publishOneToTopic2(HaystackRequest req, Topic2 topic2) throws Exception {
         var t = java.time.ZonedDateTime.now();
         Log.infof("Publishing %s", t);
-        topic2.publish(new PubSubEvent().setTime(t));
+        topic2.publish(new PubSubEvent().setTime(t).setHaystack(req.getHaystack()));
     }
 
     @Subscription(topic = LocalTopic.class, from = FromOffset.LATEST)
