@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/result"
+	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
@@ -35,7 +36,7 @@ type moduleVerbService struct {
 type Service struct {
 	controllerDeploymentService ftldeploymentconnect.DeploymentServiceClient
 	controllerLeaseService      ftlleaseconnect.LeaseServiceClient
-	moduleVerbService           map[string]moduleVerbService
+	moduleVerbService           *xsync.MapOf[string, moduleVerbService]
 	timelineClient              *timeline.Client
 }
 
@@ -43,7 +44,7 @@ func New(controllerModuleService ftldeploymentconnect.DeploymentServiceClient, l
 	proxy := &Service{
 		controllerDeploymentService: controllerModuleService,
 		controllerLeaseService:      leaseClient,
-		moduleVerbService:           map[string]moduleVerbService{},
+		moduleVerbService:           xsync.NewMapOf[string, moduleVerbService](),
 		timelineClient:              timelineClient,
 	}
 	return proxy
@@ -60,23 +61,21 @@ func (r *Service) GetDeploymentContext(ctx context.Context, c *connect.Request[f
 
 		if rcv {
 			logger.Debugf("Received DeploymentContext from module: %v", moduleContext.Msg())
-			newRouteTable := map[string]moduleVerbService{}
 			for _, route := range moduleContext.Msg().Routes {
 				logger.Debugf("Adding route: %s -> %s", route.Deployment, route.Uri)
 
-				deploment, err := model.ParseDeploymentKey(route.Deployment)
+				deployment, err := model.ParseDeploymentKey(route.Deployment)
 				if err != nil {
 					return fmt.Errorf("failed to parse deployment key: %w", err)
 				}
-				module := deploment.Payload.Module
-				if existing, ok := r.moduleVerbService[module]; !ok || existing.deployment.String() != deploment.String() {
-					newRouteTable[module] = moduleVerbService{
+				module := deployment.Payload.Module
+				if existing, ok := r.moduleVerbService.Load(module); !ok || existing.deployment.String() != deployment.String() {
+					r.moduleVerbService.Store(module, moduleVerbService{
 						client:     rpc.Dial(ftlv1connect.NewVerbServiceClient, route.Uri, log.Error),
-						deployment: deploment,
-					}
+						deployment: deployment,
+					})
 				}
 			}
-			r.moduleVerbService = newRouteTable
 			err := c2.Send(moduleContext.Msg())
 			if err != nil {
 				return fmt.Errorf("failed to send message: %w", err)
@@ -122,10 +121,10 @@ func (r *Service) Ping(ctx context.Context, c *connect.Request[ftlv1.PingRequest
 
 func (r *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
-	verbService, ok := r.moduleVerbService[req.Msg.Verb.Module]
+	verbService, ok := r.moduleVerbService.Load(req.Msg.Verb.Module)
 	if !ok {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("failed to find deployment for module"))
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("deployment not found"))
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("proxy failed to route request, deployment not found"))
 	}
 
 	callers, err := headers.GetCallers(req.Header())
