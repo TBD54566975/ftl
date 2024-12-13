@@ -30,6 +30,13 @@ func protoSlicef[P, T any](values []T, f func(T) P) []P {
 	return out
 }
 
+func protoMust[T any](v T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
 func (x *AWSIAMAuthDatabaseConnector) ToProto() *destpb.AWSIAMAuthDatabaseConnector {
 	if x == nil {
 		return nil

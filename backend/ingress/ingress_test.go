@@ -245,7 +245,7 @@ func TestResponseBodyForVerb(t *testing.T) {
 					&schema.Data{
 						Name: "Test",
 						Fields: []*schema.Field{
-							{Name: "message", Type: &schema.String{}, Metadata: []schema.Metadata{&schema.MetadataAlias{Kind: schema.AliasKindJson, Alias: "msg"}}},
+							{Name: "message", Type: &schema.String{}, Metadata: []schema.Metadata{&schema.MetadataAlias{Kind: schema.AliasKindJSON, Alias: "msg"}}},
 						},
 					},
 					jsonVerb,

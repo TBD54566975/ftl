@@ -7,6 +7,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"iter"
 	"maps"
 	"os"
 	"path/filepath"
@@ -94,6 +95,25 @@ And this is the corresponding protobuf schema:
 	}
 `
 
+var (
+	textMarshaler   = loadInterface("encoding", "TextMarshaler")
+	binaryMarshaler = loadInterface("encoding", "BinaryMarshaler")
+	// stdTypes is a map of Go types to corresponding protobuf types.
+	stdTypes = map[string]stdType{
+		"time.Time":     {"google.protobuf.Timestamp", "google/protobuf/timestamp.proto"},
+		"time.Duration": {"google.protobuf.Duration", "google/protobuf/duration.proto"},
+	}
+	builtinTypes = map[string]struct{}{
+		"bool": {}, "int": {}, "int8": {}, "int16": {}, "int32": {}, "int64": {}, "uint": {}, "uint8": {}, "uint16": {},
+		"uint32": {}, "uint64": {}, "float32": {}, "float64": {}, "string": {},
+	}
+)
+
+type stdType struct {
+	ref  string
+	path string
+}
+
 type File struct {
 	GoPackage string
 	Imports   []string
@@ -118,13 +138,20 @@ func (f File) OrderedDecls() []Decl {
 	return decls
 }
 
-func (f File) TypeOf(name string) string {
+// KindOf looks up the kind of a type in the declarations. Returns KindUnspecified if the type is not found.
+func (f File) KindOf(name string) Kind {
 	for _, decl := range f.Decls {
 		if decl.DeclName() == name {
-			return reflect.Indirect(reflect.ValueOf(decl)).Type().Name()
+			return Kind(reflect.Indirect(reflect.ValueOf(decl)).Type().Name())
 		}
 	}
-	panic("unknown type " + name)
+	if _, ok := builtinTypes[name]; ok {
+		return KindBuiltin
+	}
+	if _, ok := stdTypes[name]; ok {
+		return KindStdlib
+	}
+	return KindUnspecified
 }
 
 //sumtype:decl
@@ -135,11 +162,24 @@ type Decl interface {
 
 type Message struct {
 	Name   string
-	Fields []Field
+	Fields []*Field
 }
 
 func (Message) decl()              {}
 func (m Message) DeclName() string { return m.Name }
+
+type Kind string
+
+const (
+	KindUnspecified     Kind = ""
+	KindBuiltin         Kind = "Builtin"
+	KindStdlib          Kind = "Stdlib"
+	KindMessage         Kind = "Message"
+	KindEnum            Kind = "Enum"
+	KindSumType         Kind = "SumType"
+	KindBinaryMarshaler Kind = "BinaryMarshaler"
+	KindTextMarshaler   Kind = "TextMarshaler"
+)
 
 type Field struct {
 	ID          int
@@ -150,6 +190,8 @@ type Field struct {
 	Optional    bool
 	Repeated    bool
 	Pointer     bool
+
+	Kind Kind
 }
 
 var reservedWords = map[string]string{
@@ -194,6 +236,22 @@ type SumType struct {
 func (SumType) decl()              {}
 func (s SumType) DeclName() string { return s.Name }
 
+// TextMarshaler is a named type that implements encoding.TextMarshaler. Encoding will delegate to the marshaller.
+type TextMarshaler struct {
+	Name string
+}
+
+func (TextMarshaler) decl()              {}
+func (u TextMarshaler) DeclName() string { return u.Name }
+
+// BinaryMarshaler is a named type that implements encoding.BinaryMarshaler. Encoding will delegate to the marshaller.
+type BinaryMarshaler struct {
+	Name string
+}
+
+func (BinaryMarshaler) decl()              {}
+func (u BinaryMarshaler) DeclName() string { return u.Name }
+
 type Config struct {
 	Output  string            `help:"Output file to write generated protobuf schema to." short:"o" xor:"output"`
 	JSON    bool              `help:"Dump intermediate JSON represesentation." short:"j" xor:"output"`
@@ -205,15 +263,20 @@ type Config struct {
 }
 
 func main() {
-	fset := token.NewFileSet()
 	cli := Config{}
 	kctx := kong.Parse(&cli, kong.Description(help), kong.UsageOnError())
+	err := run(cli)
+	kctx.FatalIfErrorf(err)
+}
 
+func run(cli Config) error {
 	out := os.Stdout
 	if cli.Output != "" {
 		var err error
 		out, err = os.Create(cli.Output + "~")
-		kctx.FatalIfErrorf(err)
+		if err != nil {
+			return fmt.Errorf("")
+		}
 		defer out.Close()
 		defer os.Remove(cli.Output + "~")
 	}
@@ -223,18 +286,21 @@ func main() {
 		parts := strings.Split(ref, ".")
 		pkg := strings.Join(parts[:len(parts)-1], ".")
 		if resolved != nil && resolved.Path != pkg {
-			kctx.Fatalf("only a single package is supported")
+			return fmt.Errorf("only a single package is supported")
 		} else if resolved == nil {
 			resolved = &PkgRefs{Ref: ref, Path: pkg}
 		}
 		resolved.Refs = append(resolved.Refs, parts[len(parts)-1])
 	}
+	fset := token.NewFileSet()
 	pkgs, err := packages.Load(&packages.Config{
 		Fset: fset,
 		Mode: packages.NeedTypes | packages.NeedTypesInfo | packages.NeedDeps | packages.NeedImports | packages.NeedSyntax |
 			packages.NeedFiles | packages.NeedName,
 	}, resolved.Path)
-	kctx.FatalIfErrorf(err)
+	if err != nil {
+		return fmt.Errorf("unable to load package %s: %w", resolved.Path, err)
+	}
 	commentMap := ast.CommentMap{}
 	for _, pkg := range pkgs {
 		resolved.Pkg = pkg
@@ -249,41 +315,56 @@ func main() {
 	}
 	resolved.Comments = commentMap
 	if resolved.Pkg.Types == nil {
-		kctx.Fatalf("package %s had fatal errors, cannot continue", resolved.Path)
+		return fmt.Errorf("package %s had fatal errors, cannot continue", resolved.Path)
 	}
 	file, err := extract(cli, resolved)
 	if gerr := new(GenError); errors.As(err, &gerr) {
 		pos := fset.Position(gerr.pos)
-		kctx.Fatalf("%s:%d: %s", pos.Filename, pos.Line, err)
+		return fmt.Errorf("%s:%d: %w", pos.Filename, pos.Line, err)
 	} else {
-		kctx.FatalIfErrorf(err)
+		if err != nil {
+			return err
+		}
 	}
 
 	if cli.JSON {
 		b, err := json.MarshalIndent(file, "", "  ")
-		kctx.FatalIfErrorf(err)
+		if err != nil {
+			return fmt.Errorf("failed to marshal JSON: %w", err)
+		}
 		fmt.Println(string(b))
-		return
+		return nil
 	}
 
 	err = render(out, cli, file)
-	kctx.FatalIfErrorf(err)
+	if err != nil {
+		return fmt.Errorf("failed to render template: %w", err)
+	}
 
 	if cli.Mappers {
 		w, err := os.CreateTemp(resolved.Path, "go2proto.to.go-*")
-		kctx.FatalIfErrorf(err)
+		if err != nil {
+			return fmt.Errorf("create temp: %w", err)
+		}
 		defer os.Remove(w.Name())
 		defer w.Close()
 		err = renderToProto(w, cli, file)
-		kctx.FatalIfErrorf(err)
+		if err != nil {
+			return err
+		}
 		err = os.Rename(w.Name(), filepath.Join(resolved.Path, "go2proto.to.go"))
-		kctx.FatalIfErrorf(err)
+		if err != nil {
+			return fmt.Errorf("rename: %w", err)
+		}
 	}
 
 	if cli.Output != "" {
 		err = os.Rename(cli.Output+"~", cli.Output)
+		if err != nil {
+			return fmt.Errorf("rename: %w", err)
+		}
 	}
-	kctx.FatalIfErrorf(err)
+	return nil
 }
 
 type GenError struct {
@@ -303,8 +384,10 @@ type PkgRefs struct {
 }
 
 type State struct {
-	Dest File
-	Seen map[string]bool
+	Pass     int
+	Messages map[*Message]*types.Named
+	Dest     File
+	Seen     map[string]bool
 	Config
 	*PkgRefs
 }
@@ -319,10 +402,12 @@ func genErrorf(pos token.Pos, format string, args ...any) error {
 
 func extract(config Config, pkg *PkgRefs) (File, error) {
 	state := State{
-		Seen:    map[string]bool{},
-		Config:  config,
-		PkgRefs: pkg,
+		Messages: map[*Message]*types.Named{},
+		Seen:     map[string]bool{},
+		Config:   config,
+		PkgRefs:  pkg,
 	}
+	// First pass, extract all the decls.
 	for _, sym := range pkg.Refs {
 		obj := pkg.Pkg.Types.Scope().Lookup(sym)
 		if obj == nil {
@@ -331,24 +416,35 @@ func extract(config Config, pkg *PkgRefs) (File, error) {
 		if !strings.HasSuffix(pkg.Pkg.Name, "_test") {
 			state.Dest.GoPackage = pkg.Pkg.Name
 		}
-		if err := state.extractDecl(obj, obj.Type()); err != nil {
+		named, ok := obj.Type().(*types.Named)
+		if !ok {
+			return File{}, genErrorf(obj.Pos(), "%s: expected named type, got %T", sym, obj.Type())
+		}
+		if err := state.extractDecl(obj, named); err != nil {
 			return File{}, fmt.Errorf("%s: %w", sym, err)
+		}
+	}
+	state.Pass++
+	// Second pass, populate the fields of messages.
+	for msg, n := range state.Messages {
+		if err := state.populateFields(msg, n); err != nil {
+			return File{}, fmt.Errorf("%s: %w", msg.Name, err)
 		}
 	}
 	return state.Dest, nil
 }
 
-func (s *State) extractDecl(obj types.Object, t types.Type) error {
-	named, ok := t.(*types.Named)
-	if !ok {
-		return genErrorf(obj.Pos(), "expected named type, got %T", t)
-	}
+func (s *State) extractDecl(obj types.Object, named *types.Named) error {
 	if named.TypeParams() != nil {
 		return genErrorf(obj.Pos(), "generic types are not supported")
 	}
-	switch u := t.Underlying().(type) {
+	if imp, ok := stdTypes[named.String()]; ok {
+		s.Dest.AddImport(imp.path)
+		return nil
+	}
+	switch u := named.Underlying().(type) {
 	case *types.Struct:
-		if err := s.extractStruct(named, u); err != nil {
+		if err := s.extractStruct(named); err != nil {
 			return genErrorf(obj.Pos(), "%w", err)
 		}
 		return nil
@@ -364,51 +460,64 @@ func (s *State) extractDecl(obj types.Object, t types.Type) error {
 	}
 }
 
-type stdType struct {
-	ref  string
-	path string
-}
-
-var stdTypes = map[string]stdType{
-	"time.Time":     {"google.protobuf.Timestamp", "google/protobuf/timestamp.proto"},
-	"time.Duration": {"google.protobuf.Duration", "google/protobuf/duration.proto"},
-}
-
-func (s *State) extractStruct(n *types.Named, t *types.Struct) error {
-	if imp, ok := stdTypes[n.String()]; ok {
-		s.Dest.AddImport(imp.path)
-		return nil
-	}
-
+func (s *State) extractStruct(n *types.Named) error {
 	name := n.Obj().Name()
 	if _, ok := s.Seen[name]; ok {
 		return nil
 	}
 	s.Seen[name] = true
+	if implements(n, binaryMarshaler) || implements(n, textMarshaler) {
+		return nil
+	}
 	decl := &Message{
 		Name: name,
 	}
-	for i := range t.NumFields() {
-		rf := t.Field(i)
-		pb := reflect.StructTag(t.Tag(i)).Get("protobuf")
-		if pb == "-" {
-			continue
-		} else if pb == "" {
-			return genErrorf(n.Obj().Pos(), "%s: missing protobuf tag", rf.Name())
+	// First pass over structs we just want to extract type information. The fields themselves will be populated in the
+	// second pass.
+	fields, errf := iterFields(n)
+	for rf := range fields {
+		if err := s.maybeExtractDecl(rf, rf.Type()); err != nil {
+			return err
 		}
-		field := Field{
+	}
+	if err := errf(); err != nil {
+		return err
+	}
+	s.Messages[decl] = n
+	s.Dest.Decls = append(s.Dest.Decls, decl)
+	return nil
+}
+
+func (s *State) maybeExtractDecl(n types.Object, t types.Type) error {
+	switch t := t.(type) {
+	case *types.Named:
+		return s.extractDecl(n, t)
+
+	case *types.Slice:
+		return s.maybeExtractDecl(n, t.Elem())
+
+	case *types.Pointer:
+		return s.maybeExtractDecl(n, t.Elem())
+
+	case *types.Interface:
+		return s.extractSumType(n, t)
+
+	default:
+		return nil
+	}
+}
+
+func (s *State) populateFields(decl *Message, n *types.Named) error {
+	fields, errf := iterFields(n)
+	for rf, tag := range fields {
+		field := &Field{
 			Name: rf.Name(),
 		}
-		if err := s.applyFieldType(rf.Type(), &field); err != nil {
+		if err := s.applyFieldType(rf.Type(), field); err != nil {
 			return fmt.Errorf("%s: %w", rf.Name(), err)
-		}
-		tag, err := parsePBTag(pb)
-		if err != nil {
-			return genErrorf(n.Obj().Pos(), "%s: %w", rf.Name(), err)
 		}
 		field.ID = tag.ID
 		field.Optional = tag.Optional
-		decl.Fields = append(decl.Fields, field)
 		if field.Optional && field.Repeated {
 			return genErrorf(n.Obj().Pos(), "%s: repeated optional fields are not supported", rf.Name())
 		}
@@ -417,9 +526,12 @@ func (s *State) extractStruct(n *types.Named, t *types.Struct) error {
 				return fmt.Errorf("%s: %w", rf.Name(), err)
 			}
 		}
+		if field.Kind == KindUnspecified {
+			field.Kind = s.Dest.KindOf(field.OriginType)
+		}
+		decl.Fields = append(decl.Fields, field)
 	}
-	s.Dest.Decls = append(s.Dest.Decls, decl)
-	return nil
+	return errf()
 }
 
 func (s *State) extractSumType(obj types.Object, i *types.Interface) error {
@@ -435,48 +547,47 @@ func (s *State) extractSumType(obj types.Object, i *types.Interface) error {
 	scope := s.Pkg.Types.Scope()
 	for _, name := range scope.Names() {
 		sym := scope.Lookup(name)
-		if sym == obj {
+		if sym == obj || (!types.Implements(sym.Type(), i) && !types.Implements(types.NewPointer(sym.Type()), i)) {
 			continue
 		}
-		if types.Implements(sym.Type(), i) || types.Implements(types.NewPointer(sym.Type()), i) {
-			var pbDirectives []*pbTag
-			interfaceType := false
-			if _, ok := sym.Type().Underlying().(*types.Interface); ok {
-				interfaceType = true
-			}
 
-			if comments := findCommentsForObject(sym, s.Pkg.Syntax); comments != nil {
-				for _, line := range comments.List {
-					if strings.HasPrefix(line.Text, "//protobuf:") {
-						tag, err := parsePBTag(strings.TrimPrefix(line.Text, "//protobuf:"))
-						if err != nil {
-							return genErrorf(sym.Pos(), "invalid //protobuf: directive %q: %w", line.Text, err)
-						}
-						pbDirectives = append(pbDirectives, &tag)
+		var pbDirectives []*pbTag
+		interfaceType := false
+		if _, ok := sym.Type().Underlying().(*types.Interface); ok {
+			interfaceType = true
+		}
+
+		if comments := findCommentsForObject(sym, s.Pkg.Syntax); comments != nil {
+			for _, line := range comments.List {
+				if strings.HasPrefix(line.Text, "//protobuf:") {
+					tag, err := parsePBTag(strings.TrimPrefix(line.Text, "//protobuf:"))
+					if err != nil {
+						return genErrorf(sym.Pos(), "invalid //protobuf: directive %q: %w", line.Text, err)
 					}
+					pbDirectives = append(pbDirectives, &tag)
 				}
 			}
-			if len(pbDirectives) == 0 {
-				// skip interface types. These would result into nested oneofs. We only include leafs as a flat list.
-				if !interfaceType {
-					return genErrorf(sym.Pos(), "sum type element is missing //protobuf:<id> directive: %s", sym.Name())
-				}
-			}
-			if err := s.extractDecl(sym, sym.Type()); err != nil {
-				return genErrorf(sym.Pos(), "%s: %w", name, err)
-			}
-			id := -1
-			for _, directive := range pbDirectives {
-				if id < 0 && directive.SumType == "" {
-					id = directive.ID
-				} else if directive.SumType == sumTypeName {
-					id = directive.ID
-				}
-			}
+		}
+		if len(pbDirectives) == 0 {
+			// skip interface types. These would result into nested oneofs. We only include leafs as a flat list.
 			if !interfaceType {
-				// we do not want to repeat both sumtypes and their elements
-				decl.Variants[name] = id
+				return genErrorf(sym.Pos(), "sum type element is missing //protobuf:<id> directive: %s", sym.Name())
 			}
+		}
+		if err := s.extractDecl(sym, sym.Type().(*types.Named)); err != nil { //nolint:forcetypeassert
+			return genErrorf(sym.Pos(), "%s: %w", name, err)
+		}
+		id := -1
+		for _, directive := range pbDirectives {
+			if id < 0 && directive.SumType == "" {
+				id = directive.ID
+			} else if directive.SumType == sumTypeName {
+				id = directive.ID
+			}
+		}
+		if !interfaceType {
+			// we do not want to repeat both sumtypes and their elements
+			decl.Variants[name] = id
 		}
 	}
 	s.Dest.Decls = append(s.Dest.Decls, decl)
@@ -511,9 +622,6 @@ func (s *State) extractEnum(t *types.Named) error {
 		if err != nil {
 			return genErrorf(sym.Pos(), "enum value %q must be a constant integer: %w", c.Val(), err)
 		}
-		if strcase.ToUpperCamel(name) != name {
-			return genErrorf(sym.Pos(), "enum value %q must be upper camel case %q", name, strcase.ToUpperCamel(name))
-		}
 		if !strings.HasPrefix(name, enumName) {
 			return genErrorf(sym.Pos(), "enum value %q must start with %q", name, enumName)
 		}
@@ -521,6 +629,157 @@ func (s *State) extractEnum(t *types.Named) error {
 	}
 	s.Dest.Decls = append(s.Dest.Decls, decl)
 	return nil
+}
+
+func (s *State) canMarshal(t types.Type, field *Field, name string) bool {
+	if _, ok := stdTypes[name]; !ok && s.Dest.KindOf(name) == KindUnspecified {
+		if implements(t, textMarshaler) {
+			field.ProtoType = "string"
+			field.ProtoGoType = "string"
+			field.Kind = KindTextMarshaler
+			return true
+		} else if implements(t, binaryMarshaler) {
+			field.ProtoType = "bytes"
+			field.ProtoGoType = "bytes"
+			field.Kind = KindBinaryMarshaler
+			return true
+		}
+	}
+	return false
+}
+
+func (s *State) applyFieldType(t types.Type, field *Field) error {
+	field.OriginType = t.String()
+	switch t := t.(type) {
+	case *types.Alias:
+		if s.canMarshal(t, field, t.Obj().Name()) {
+			return nil
+		}
+
+	case *types.Named:
+		if s.canMarshal(t, field, t.Obj().Name()) {
+			return nil
+		}
+		if err := s.extractDecl(t.Obj(), t); err != nil {
+			return err
+		}
+		ref := t.Obj().Pkg().Path() + "." + t.Obj().Name()
+		if bt, ok := stdTypes[ref]; ok {
+			field.ProtoType = bt.ref
+			field.ProtoGoType = protoName(bt.ref)
+			field.OriginType = t.Obj().Name()
+			field.Kind = KindStdlib
+		} else {
+			field.ProtoType = t.Obj().Name()
+			field.ProtoGoType = protoName(t.Obj().Name())
+			field.OriginType = t.Obj().Name()
+		}
+
+	case *types.Slice:
+		if t.Elem().String() == "byte" {
+			field.ProtoType = "bytes"
+		} else {
+			field.Repeated = true
+			return s.applyFieldType(t.Elem(), field)
+		}
+
+	case *types.Pointer:
+		field.Pointer = true
+		if _, ok := t.Elem().(*types.Slice); ok {
+			return fmt.Errorf("pointer to slice is not supported")
+		}
+		return s.applyFieldType(t.Elem(), field)
+
+	case *types.Basic:
+		field.ProtoType = t.String()
+		field.ProtoGoType = t.String()
+		field.Kind = KindBuiltin
+		switch t.String() {
+		case "int":
+			field.ProtoType = "int64"
+			field.ProtoGoType = "int64"
+
+		case "uint":
+			field.ProtoType = "uint64"
+			field.ProtoGoType = "uint64"
+
+		case "float64":
+			field.ProtoType = "double"
+
+		case "float32":
+			field.ProtoType = "float"
+
+		case "string", "bool", "uint64", "int64", "uint32", "int32":
+
+		default:
+			return fmt.Errorf("unsupported basic type %s", t)
+
+		}
+
+	default:
+		return fmt.Errorf("unsupported type %s (%T)", t, t)
+	}
+	return nil
+}
+
+func findCommentsForObject(obj types.Object, syntax []*ast.File) *ast.CommentGroup {
+	for _, file := range syntax {
+		if file.Pos() <= obj.Pos() && obj.Pos() <= file.End() {
+			// Use ast.Inspect to traverse the AST and locate the node
+			var comments *ast.CommentGroup
+			ast.Inspect(file, func(n ast.Node) bool {
+				if n == nil {
+					return false
+				}
+				// If found, get the documentation comments
+				if node, ok := n.(*ast.GenDecl); ok {
+					for _, spec := range node.Specs {
+						if spec.Pos() == obj.Pos() {
+							comments = node.Doc
+							return false // Stop the traversal once the node is found
+						}
+					}
+				}
+				return true
+			})
+			return comments
+		}
+	}
+	return nil
+}
+
+func implements(t types.Type, i *types.Interface) bool {
+	return types.Implements(t, i) || types.Implements(types.NewPointer(t), i)
+}
+
+// Returns an iterator over the fields of a struct, and a function that reports any error that occurred.
+func iterFields(n *types.Named) (iter.Seq2[*types.Var, pbTag], func() error) {
+	var err error
+	return func(yield func(*types.Var, pbTag) bool) {
+		t, ok := n.Underlying().(*types.Struct)
+		if !ok {
+			err = fmt.Errorf("expected struct, got %T", n.Underlying())
+			return
+		}
+		for i := range t.NumFields() {
+			rf := t.Field(i)
+			pb := reflect.StructTag(t.Tag(i)).Get("protobuf")
+			if pb == "-" {
+				continue
+			} else if pb == "" {
+				err = genErrorf(n.Obj().Pos(), "%s: missing protobuf tag", rf.Name())
+				return
+			}
+			var pbt pbTag
+			pbt, err = parsePBTag(pb)
+			if err != nil {
+				return
+			}
+			if !yield(rf, pbt) {
+				return
+			}
+		}
+	}, func() error { return err }
 }
 
 type pbTag struct {
@@ -558,90 +817,22 @@ func parsePBTag(tag string) (pbTag, error) {
 	return out, nil
 }
 
-func (s *State) applyFieldType(t types.Type, field *Field) error {
-	field.OriginType = t.String()
-	switch t := t.(type) {
-	case *types.Named:
-		if err := s.extractDecl(t.Obj(), t); err != nil {
-			return err
-		}
-		ref := t.Obj().Pkg().Path() + "." + t.Obj().Name()
-		if bt, ok := stdTypes[ref]; ok {
-			field.ProtoType = bt.ref
-			field.ProtoGoType = protoName(bt.ref)
-			field.OriginType = t.Obj().Name()
-		} else {
-			field.ProtoType = t.Obj().Name()
-			field.ProtoGoType = protoName(t.Obj().Name())
-			field.OriginType = t.Obj().Name()
-		}
-
-	case *types.Slice:
-		if t.Elem().String() == "byte" {
-			field.ProtoType = "bytes"
-		} else {
-			field.Repeated = true
-			return s.applyFieldType(t.Elem(), field)
-		}
-
-	case *types.Pointer:
-		field.Pointer = true
-		if _, ok := t.Elem().(*types.Slice); ok {
-			return fmt.Errorf("pointer to slice is not supported")
-		}
-		return s.applyFieldType(t.Elem(), field)
-
-	default:
-		field.OriginType = t.String()
-		field.ProtoType = t.String()
-		field.ProtoGoType = t.String()
-		switch t.String() {
-		case "int":
-			field.ProtoType = "int64"
-			field.ProtoGoType = "int64"
-
-		case "uint":
-			field.ProtoType = "uint64"
-			field.ProtoGoType = "uint64"
-
-		case "float64":
-			field.ProtoType = "double"
-
-		case "float32":
-			field.ProtoType = "float"
-
-		case "string", "bool", "uint64", "int64", "uint32", "int32":
-
-		default:
-			return fmt.Errorf("unsupported type %s", t.String())
-
+func loadInterface(pkg, symbol string) *types.Interface {
+	pkgs, err := packages.Load(&packages.Config{
+		Mode: packages.NeedTypes | packages.NeedTypesInfo | packages.NeedDeps | packages.NeedImports | packages.NeedSyntax |
+			packages.NeedFiles | packages.NeedName,
+	}, pkg)
+	if err != nil {
+		panic(err)
+	}
+	for _, pkg := range pkgs {
+		for _, name := range pkg.TypesInfo.Defs {
+			if t, ok := name.(*types.TypeName); ok {
+				if t.Name() == symbol {
+					return t.Type().Underlying().(*types.Interface) //nolint:forcetypeassert
+				}
+			}
 		}
 	}
-	return nil
-}
-
-func findCommentsForObject(obj types.Object, syntax []*ast.File) *ast.CommentGroup {
-	for _, file := range syntax {
-		if file.Pos() <= obj.Pos() && obj.Pos() <= file.End() {
-			// Use ast.Inspect to traverse the AST and locate the node
-			var comments *ast.CommentGroup
-			ast.Inspect(file, func(n ast.Node) bool {
-				if n == nil {
-					return false
-				}
-				// If found, get the documentation comments
-				if node, ok := n.(*ast.GenDecl); ok {
-					for _, spec := range node.Specs {
-						if spec.Pos() == obj.Pos() {
-							comments = node.Doc
-							return false // Stop the traversal once the node is found
-						}
-					}
-				}
-				return true
-			})
-			return comments
-		}
-	}
-	return nil
+	panic("could not find " + pkg + "." + symbol)
 }
