@@ -13,8 +13,8 @@ import (
 	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
+	leasepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1"
+	leaseconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/leasepbconnect"
 	"github.com/TBD54566975/ftl/common/reflection"
 	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -155,16 +155,16 @@ func newClient(ctx context.Context) deploymentcontext.LeaseClient {
 //
 // This is used in all non-unit tests environements
 type leaseClient struct {
-	stream *connect.BidiStreamForClient[ftlv1.AcquireLeaseRequest, ftlv1.AcquireLeaseResponse]
+	stream *connect.BidiStreamForClient[leasepb.AcquireLeaseRequest, leasepb.AcquireLeaseResponse]
 }
 
 var _ deploymentcontext.LeaseClient = &leaseClient{}
 
 func (c *leaseClient) Acquire(ctx context.Context, module string, key []string, ttl time.Duration) error {
-	c.stream = rpc.ClientFromContext[ftlv1connect.LeaseServiceClient](ctx).AcquireLease(ctx)
+	c.stream = rpc.ClientFromContext[leaseconnect.LeaseServiceClient](ctx).AcquireLease(ctx)
 	realKeys := []string{"module", module}
 	realKeys = append(realKeys, key...)
-	req := &ftlv1.AcquireLeaseRequest{Key: realKeys, Ttl: durationpb.New(ttl)}
+	req := &leasepb.AcquireLeaseRequest{Key: realKeys, Ttl: durationpb.New(ttl)}
 	if err := c.stream.Send(req); err != nil {
 		if connect.CodeOf(err) == connect.CodeResourceExhausted {
 			return ErrLeaseHeld
@@ -185,7 +185,7 @@ func (c *leaseClient) Acquire(ctx context.Context, module string, key []string, 
 func (c *leaseClient) Heartbeat(_ context.Context, module string, key []string, ttl time.Duration) error {
 	realKeys := []string{"module", module}
 	realKeys = append(realKeys, key...)
-	req := &ftlv1.AcquireLeaseRequest{Key: realKeys, Ttl: durationpb.New(ttl)}
+	req := &leasepb.AcquireLeaseRequest{Key: realKeys, Ttl: durationpb.New(ttl)}
 	err := c.stream.Send(req)
 	if err == nil {
 		return nil

@@ -2,7 +2,7 @@
 //
 // Source: xyz/block/ftl/deployment/v1/deployment.proto
 
-package ftlv1connect
+package deploymentpbconnect
 
 import (
 	connect "connectrpc.com/connect"

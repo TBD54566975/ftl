@@ -20,7 +20,7 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/admin"
-	leasev1connext "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/leasepbconnect"
 	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/timeline"
@@ -254,9 +254,9 @@ func makeBindContext(logger *log.Logger, cancel context.CancelFunc) terminal.Kon
 		timelineClient := timeline.NewClient(ctx, cli.TimelineEndpoint)
 		kctx.Bind(timelineClient)
 
-		leaseClient := rpc.Dial(leasev1connext.NewLeaseServiceClient, cli.LeaseEndpoint.String(), log.Error)
+		leaseClient := rpc.Dial(leasepbconnect.NewLeaseServiceClient, cli.LeaseEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, leaseClient)
-		kctx.BindTo(leaseClient, (*leasev1connext.LeaseServiceClient)(nil))
+		kctx.BindTo(leaseClient, (*leasepbconnect.LeaseServiceClient)(nil))
 
 		adminClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, cli.AdminEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, adminClient)

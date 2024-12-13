@@ -2,7 +2,7 @@
 //
 // Source: xyz/block/ftl/timeline/v1/timeline.proto
 
-package timelinev1connect
+package timelinepbconnect
 
 import (
 	connect "connectrpc.com/connect"

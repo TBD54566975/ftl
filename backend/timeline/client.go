@@ -10,7 +10,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinepbconnect"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -21,7 +21,7 @@ const (
 )
 
 type Client struct {
-	timelinev1connect.TimelineServiceClient
+	timelinepbconnect.TimelineServiceClient
 
 	entries          chan *timelinepb.CreateEventsRequest_EventEntry
 	lastDroppedError atomic.Value[time.Time]
@@ -29,7 +29,7 @@ type Client struct {
 }
 
 func NewClient(ctx context.Context, endpoint *url.URL) *Client {
-	c := rpc.Dial(timelinev1connect.NewTimelineServiceClient, endpoint.String(), log.Error)
+	c := rpc.Dial(timelinepbconnect.NewTimelineServiceClient, endpoint.String(), log.Error)
 	client := &Client{
 		TimelineServiceClient: c,
 		entries:               make(chan *timelinepb.CreateEventsRequest_EventEntry, 1000),

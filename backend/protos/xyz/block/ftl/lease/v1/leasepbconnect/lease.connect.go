@@ -2,7 +2,7 @@
 //
 // Source: xyz/block/ftl/lease/v1/lease.proto
 
-package ftlv1connect
+package leasepbconnect
 
 import (
 	connect "connectrpc.com/connect"
