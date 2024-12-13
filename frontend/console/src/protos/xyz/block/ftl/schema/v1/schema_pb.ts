@@ -9,6 +9,8 @@ import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialM
 import { Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
 
 /**
+ * AliasKind is the kind of alias.
+ *
  * @generated from enum xyz.block.ftl.schema.v1.AliasKind
  */
 export enum AliasKind {
@@ -362,6 +364,8 @@ export class DSNDatabaseConnector extends Message<DSNDatabaseConnector> {
 }
 
 /**
+ * A Data structure.
+ *
  * @generated from message xyz.block.ftl.schema.v1.Data
  */
 export class Data extends Message<Data> {
@@ -755,6 +759,8 @@ export class DatabaseRuntimeEventPayload extends Message<DatabaseRuntimeEventPay
 }
 
 /**
+ * Decl represents user-defined data types in the schema grammar.
+ *
  * @generated from message xyz.block.ftl.schema.v1.Decl
  */
 export class Decl extends Message<Decl> {
@@ -1332,6 +1338,8 @@ export class Map extends Message<Map> {
 }
 
 /**
+ * Metadata represents a metadata Node in the schema grammar.
+ *
  * @generated from message xyz.block.ftl.schema.v1.Metadata
  */
 export class Metadata extends Message<Metadata> {
@@ -1570,6 +1578,8 @@ export class MetadataArtefact extends Message<MetadataArtefact> {
 }
 
 /**
+ * MetadataCalls represents a metadata block with a list of calls.
+ *
  * @generated from message xyz.block.ftl.schema.v1.MetadataCalls
  */
 export class MetadataCalls extends Message<MetadataCalls> {
@@ -1613,6 +1623,8 @@ export class MetadataCalls extends Message<MetadataCalls> {
 }
 
 /**
+ * MetadataConfig represents a metadata block with a list of config items that are used.
+ *
  * @generated from message xyz.block.ftl.schema.v1.MetadataConfig
  */
 export class MetadataConfig extends Message<MetadataConfig> {
@@ -1993,6 +2005,8 @@ export class MetadataSQLMigration extends Message<MetadataSQLMigration> {
 }
 
 /**
+ * MetadataSecrets represents a metadata block with a list of config items that are used.
+ *
  * @generated from message xyz.block.ftl.schema.v1.MetadataSecrets
  */
 export class MetadataSecrets extends Message<MetadataSecrets> {
@@ -2213,6 +2227,8 @@ export class Module extends Message<Module> {
 }
 
 /**
+ * ModuleRuntime is runtime configuration for a module that can be dynamically updated.
+ *
  * @generated from message xyz.block.ftl.schema.v1.ModuleRuntime
  */
 export class ModuleRuntime extends Message<ModuleRuntime> {
@@ -2460,6 +2476,8 @@ export class ModuleRuntimeScaling extends Message<ModuleRuntimeScaling> {
 }
 
 /**
+ * Optional represents a Type whose value may be optional.
+ *
  * @generated from message xyz.block.ftl.schema.v1.Optional
  */
 export class Optional extends Message<Optional> {
@@ -2552,6 +2570,8 @@ export class Position extends Message<Position> {
 }
 
 /**
+ * Ref is an untyped reference to a symbol.
+ *
  * @generated from message xyz.block.ftl.schema.v1.Ref
  */
 export class Ref extends Message<Ref> {
@@ -2607,6 +2627,8 @@ export class Ref extends Message<Ref> {
 }
 
 /**
+ * RuntimeEvent is an event modifying a runtime part of the schema.
+ *
  * @generated from message xyz.block.ftl.schema.v1.RuntimeEvent
  */
 export class RuntimeEvent extends Message<RuntimeEvent> {
@@ -3053,6 +3075,8 @@ export class TopicRuntimeEvent extends Message<TopicRuntimeEvent> {
 }
 
 /**
+ * Type represents a Type Node in the schema grammar.
+ *
  * @generated from message xyz.block.ftl.schema.v1.Type
  */
 export class Type extends Message<Type> {
@@ -3363,6 +3387,8 @@ export class Unit extends Message<Unit> {
 }
 
 /**
+ * Value represents a value Node in the schema grammar.
+ *
  * @generated from message xyz.block.ftl.schema.v1.Value
  */
 export class Value extends Message<Value> {

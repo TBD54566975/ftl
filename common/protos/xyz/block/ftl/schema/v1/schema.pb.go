@@ -23,6 +23,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// AliasKind is the kind of alias.
 type AliasKind int32
 
 const (
@@ -497,6 +498,7 @@ func (x *DSNDatabaseConnector) GetDsn() string {
 	return ""
 }
 
+// A Data structure.
 type Data struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1016,6 +1018,7 @@ type DatabaseRuntimeEventPayload_DatabaseRuntimeConnectionsEvent struct {
 func (*DatabaseRuntimeEventPayload_DatabaseRuntimeConnectionsEvent) isDatabaseRuntimeEventPayload_Value() {
 }
 
+// Decl represents user-defined data types in the schema grammar.
 type Decl struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1799,6 +1802,7 @@ func (x *Map) GetValue() *Type {
 	return nil
 }
 
+// Metadata represents a metadata Node in the schema grammar.
 type Metadata struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2176,6 +2180,7 @@ func (x *MetadataArtefact) GetExecutable() bool {
 	return false
 }
 
+// MetadataCalls represents a metadata block with a list of calls.
 type MetadataCalls struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2229,6 +2234,7 @@ func (x *MetadataCalls) GetCalls() []*Ref {
 	return nil
 }
 
+// MetadataConfig represents a metadata block with a list of config items that are used.
 type MetadataConfig struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2701,6 +2707,7 @@ func (x *MetadataSQLMigration) GetDigest() string {
 	return ""
 }
 
+// MetadataSecrets represents a metadata block with a list of config items that are used.
 type MetadataSecrets struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2977,6 +2984,7 @@ func (x *Module) GetRuntime() *ModuleRuntime {
 	return nil
 }
 
+// ModuleRuntime is runtime configuration for a module that can be dynamically updated.
 type ModuleRuntime struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3306,6 +3314,7 @@ func (x *ModuleRuntimeScaling) GetMinReplicas() int32 {
 	return 0
 }
 
+// Optional represents a Type whose value may be optional.
 type Optional struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3420,6 +3429,7 @@ func (x *Position) GetColumn() int64 {
 	return 0
 }
 
+// Ref is an untyped reference to a symbol.
 type Ref struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3489,6 +3499,7 @@ func (x *Ref) GetTypeParameters() []*Type {
 	return nil
 }
 
+// RuntimeEvent is an event modifying a runtime part of the schema.
 type RuntimeEvent struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4080,6 +4091,7 @@ func (x *TopicRuntimeEvent) GetPayload() *TopicRuntime {
 	return nil
 }
 
+// Type represents a Type Node in the schema grammar.
 type Type struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4535,6 +4547,7 @@ func (x *Unit) GetPos() *Position {
 	return nil
 }
 
+// Value represents a value Node in the schema grammar.
 type Value struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
