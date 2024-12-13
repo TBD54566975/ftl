@@ -2,17 +2,15 @@ package dev
 
 import (
 	"context"
+	stdsql "database/sql"
 	_ "embed"
 	"fmt"
-	"strconv"
-
-	"github.com/alecthomas/types/optional"
-
-	stdsql "database/sql"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/alecthomas/types/optional"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"

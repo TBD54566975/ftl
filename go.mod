@@ -40,6 +40,7 @@ require (
 	github.com/hashicorp/cronexpr v1.1.2
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/jackc/pgx/v5 v5.7.1
+	github.com/jellydator/ttlcache/v3 v3.3.0
 	github.com/jotaen/kong-completion v0.0.6
 	github.com/jpillora/backoff v1.0.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
