@@ -172,8 +172,6 @@ pub enum ConfigProvider {
     Inline = 1,
     /// Print configuration as environment variables.
     Envar = 2,
-    /// Use the database as a configuration store.
-    Db = 3,
 }
 impl ConfigProvider {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -185,7 +183,6 @@ impl ConfigProvider {
             Self::Unspecified => "CONFIG_PROVIDER_UNSPECIFIED",
             Self::Inline => "CONFIG_PROVIDER_INLINE",
             Self::Envar => "CONFIG_PROVIDER_ENVAR",
-            Self::Db => "CONFIG_PROVIDER_DB",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -194,7 +191,6 @@ impl ConfigProvider {
             "CONFIG_PROVIDER_UNSPECIFIED" => Some(Self::Unspecified),
             "CONFIG_PROVIDER_INLINE" => Some(Self::Inline),
             "CONFIG_PROVIDER_ENVAR" => Some(Self::Envar),
-            "CONFIG_PROVIDER_DB" => Some(Self::Db),
             _ => None,
         }
     }
