@@ -187,13 +187,12 @@ pnpm-install:
   @for i in {1..3}; do mk frontend/**/node_modules : frontend/**/package.json -- "pnpm install --frozen-lockfile" && break || sleep 5; done
 
 # Regenerate protos
-build-protos:
-  @mk {{SCHEMA_OUT}} : common/schema -- "@just go2proto"
+build-protos: go2proto
   @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "@just build-protos-unconditionally"
 
 # Generate .proto files from .go types.
 go2proto:
-  @mk "{{SCHEMA_OUT}}" : cmd/go2proto common/schema -- go2proto -m -o "{{SCHEMA_OUT}}" \
+  @mk "{{SCHEMA_OUT}}" common/schema/go2proto.to.go : cmd/go2proto common/schema -- go2proto -m -o "{{SCHEMA_OUT}}" \
     -O 'go_package="github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1;schemapb"' \
     -O 'java_multiple_files=true' \
     xyz.block.ftl.schema.v1 {{GO_SCHEMA_ROOTS}} && buf format -w && buf lint && bin/gofmt -w common/schema/go2proto.to.go
@@ -233,14 +232,6 @@ test-backend: test-go2proto
 # Run go2proto tests
 test-go2proto: build-go2proto-testdata
   @gotestsum --hide-summary skipped --format-hide-empty-pkg -- -short -fullpath ./cmd/go2proto/testdata
-
-# Run shell script tests
-test-scripts:
-  GIT_COMMITTER_NAME="CI" \
-    GIT_COMMITTER_EMAIL="no-reply@tbd.email" \
-    GIT_AUTHOR_NAME="CI" \
-    GIT_AUTHOR_EMAIL="no-reply@tbd.email" \
-    scripts/tests/test-ensure-frozen-migrations.sh
 
 # Test the frontend
 test-frontend: build-frontend
