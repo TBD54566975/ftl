@@ -10,7 +10,7 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	leasev1connect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/leasepbconnect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/timeline"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
@@ -55,7 +55,7 @@ func main() {
 	conn, err := cli.ControllerConfig.OpenDBAndInstrument()
 	kctx.FatalIfErrorf(err)
 
-	leaseClient := rpc.Dial(leasev1connect.NewLeaseServiceClient, cli.LeaseEndpoint.String(), log.Error)
+	leaseClient := rpc.Dial(leasepbconnect.NewLeaseServiceClient, cli.LeaseEndpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, leaseClient)
 	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.ControllerConfig.Bind.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, schemaClient)

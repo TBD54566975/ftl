@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
+	deploymentpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
 )
 
 // Database represents a database connection based on a DSN
@@ -36,12 +36,12 @@ func NewTestDatabase(dbType DBType, dsn string) (Database, error) {
 	return db, nil
 }
 
-type DBType ftlv1.GetDeploymentContextResponse_DbType
+type DBType deploymentpb.GetDeploymentContextResponse_DbType
 
 const (
-	DBTypeUnspecified DBType = DBType(ftlv1.GetDeploymentContextResponse_DB_TYPE_UNSPECIFIED)
-	DBTypePostgres    DBType = DBType(ftlv1.GetDeploymentContextResponse_DB_TYPE_POSTGRES)
-	DBTypeMySQL       DBType = DBType(ftlv1.GetDeploymentContextResponse_DB_TYPE_MYSQL)
+	DBTypeUnspecified DBType = DBType(deploymentpb.GetDeploymentContextResponse_DB_TYPE_UNSPECIFIED)
+	DBTypePostgres    DBType = DBType(deploymentpb.GetDeploymentContextResponse_DB_TYPE_POSTGRES)
+	DBTypeMySQL       DBType = DBType(deploymentpb.GetDeploymentContextResponse_DB_TYPE_MYSQL)
 )
 
 func DBTypeFromString(dt string) (DBType, error) {

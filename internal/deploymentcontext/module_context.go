@@ -17,8 +17,8 @@ import (
 	"github.com/jpillora/backoff"
 	"golang.org/x/sync/errgroup"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
+	deploymentpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/deploymentpbconnect"
 	"github.com/TBD54566975/ftl/common/reflect"
 	"github.com/TBD54566975/ftl/common/reflection"
 	"github.com/TBD54566975/ftl/common/schema"
@@ -224,16 +224,16 @@ type DeploymentContextSupplier interface {
 }
 
 type grpcDeploymentContextSupplier struct {
-	client ftlv1connect.DeploymentServiceClient
+	client deploymentpbconnect.DeploymentServiceClient
 }
 
-func NewDeploymentContextSupplier(client ftlv1connect.DeploymentServiceClient) DeploymentContextSupplier {
+func NewDeploymentContextSupplier(client deploymentpbconnect.DeploymentServiceClient) DeploymentContextSupplier {
 	return DeploymentContextSupplier(grpcDeploymentContextSupplier{client})
 }
 
 func (g grpcDeploymentContextSupplier) Subscribe(ctx context.Context, deploymentName string, sink func(ctx context.Context, moduleContext DeploymentContext), errorRetryCallback func(err error) bool) {
-	request := &ftlv1.GetDeploymentContextRequest{Deployment: deploymentName}
-	callback := func(_ context.Context, resp *ftlv1.GetDeploymentContextResponse) error {
+	request := &deploymentpb.GetDeploymentContextRequest{Deployment: deploymentName}
+	callback := func(_ context.Context, resp *deploymentpb.GetDeploymentContextResponse) error {
 		mc, err := FromProto(resp)
 		if err != nil {
 			return err

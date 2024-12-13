@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
+	leasepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/leasepbconnect"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
@@ -16,12 +16,12 @@ var _ Lease = (*clientLease)(nil)
 
 func NewClientLeaser(ctx context.Context) Leaser {
 	return &clientLeaser{
-		client: rpc.ClientFromContext[ftlv1connect.LeaseServiceClient](ctx),
+		client: rpc.ClientFromContext[leasepbconnect.LeaseServiceClient](ctx),
 	}
 }
 
 type clientLeaser struct {
-	client ftlv1connect.LeaseServiceClient
+	client leasepbconnect.LeaseServiceClient
 }
 
 func (c clientLeaser) AcquireLease(ctx context.Context, key Key, ttl time.Duration) (Lease, context.Context, error) {
@@ -30,7 +30,7 @@ func (c clientLeaser) AcquireLease(ctx context.Context, key Key, ttl time.Durati
 	}
 	lease := c.client.AcquireLease(ctx)
 	// Send the initial request to acquire the lease.
-	err := lease.Send(&ftlv1.AcquireLeaseRequest{})
+	err := lease.Send(&leasepb.AcquireLeaseRequest{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to send acquire lease request: %w", err)
 	}
@@ -53,7 +53,7 @@ func (c clientLeaser) AcquireLease(ctx context.Context, key Key, ttl time.Durati
 				done()
 				return
 			case <-time.After(ttl / 2):
-				err := lease.Send(&ftlv1.AcquireLeaseRequest{})
+				err := lease.Send(&leasepb.AcquireLeaseRequest{})
 				if err != nil {
 					done()
 					return

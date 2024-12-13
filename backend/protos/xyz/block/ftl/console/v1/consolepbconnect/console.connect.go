@@ -2,7 +2,7 @@
 //
 // Source: xyz/block/ftl/console/v1/console.proto
 
-package pbconsoleconnect
+package consolepbconnect
 
 import (
 	connect "connectrpc.com/connect"

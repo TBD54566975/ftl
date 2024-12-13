@@ -11,7 +11,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/admin"
 	consolepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/consolepbconnect"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -40,7 +40,7 @@ type service struct {
 	callClient        routing.CallClient
 }
 
-var _ pbconsoleconnect.ConsoleServiceHandler = (*service)(nil)
+var _ consolepbconnect.ConsoleServiceHandler = (*service)(nil)
 
 func Start(ctx context.Context, config Config, eventSource schemaeventsource.EventSource, controllerClient ftlv1connect.ControllerServiceClient, timelineClient *timeline.Client, adminClient admin.Client, client routing.CallClient) error {
 	logger := log.FromContext(ctx).Scope("console")
@@ -62,7 +62,7 @@ func Start(ctx context.Context, config Config, eventSource schemaeventsource.Eve
 
 	logger.Debugf("Console service listening on: %s", config.Bind)
 	err = rpc.Serve(ctx, config.Bind,
-		rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, svc),
+		rpc.GRPC(consolepbconnect.NewConsoleServiceHandler, svc),
 		rpc.HTTP("/", consoleHandler),
 	)
 	if err != nil {

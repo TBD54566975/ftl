@@ -12,8 +12,8 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
 
-	deploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
-	ftlv1connect2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/ftlv1connect"
+	deploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/deploymentpbconnect"
+	leaseconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/leasepbconnect"
 	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -47,7 +47,7 @@ func NewUserVerbServer(projectName string, moduleName string, handlers ...Handle
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 		pubClient := rpc.Dial(pubconnect.NewPublishServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, pubClient)
-		leaseClient := rpc.Dial(ftlv1connect2.NewLeaseServiceClient, uc.FTLEndpoint.String(), log.Error)
+		leaseClient := rpc.Dial(leaseconnect.NewLeaseServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, leaseClient)
 
 		moduleContextSupplier := deploymentcontext.NewDeploymentContextSupplier(moduleServiceClient)

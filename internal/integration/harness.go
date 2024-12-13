@@ -30,9 +30,9 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/consolepbconnect"
 	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinev1connect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinepbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling/k8sscaling"
@@ -322,7 +322,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
 
 			var controller ftlv1connect.ControllerServiceClient
-			var console pbconsoleconnect.ConsoleServiceClient
+			var console consolepbconnect.ConsoleServiceClient
 			var provisioner provisionerconnect.ProvisionerServiceClient
 			var schema ftlv1connect.SchemaServiceClient
 			if opts.startController {
@@ -350,7 +350,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			}
 			if opts.startController || opts.kube {
 				controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
-				console = rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, "http://localhost:8899", log.Debug)
+				console = rpc.Dial(consolepbconnect.NewConsoleServiceClient, "http://localhost:8899", log.Debug)
 				schema = rpc.Dial(ftlv1connect.NewSchemaServiceClient, "http://localhost:8892", log.Debug)
 			}
 			if opts.startProvisioner {
@@ -378,7 +378,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			defer dumpKubePods(ctx, ic.kubeClient, ic.kubeNamespace)
 
 			if opts.startTimeline && !opts.kube {
-				ic.Timeline = rpc.Dial(timelinev1connect.NewTimelineServiceClient, "http://localhost:8894", log.Debug)
+				ic.Timeline = rpc.Dial(timelinepbconnect.NewTimelineServiceClient, "http://localhost:8894", log.Debug)
 
 				Infof("Waiting for timeline to be ready")
 				ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
@@ -526,9 +526,9 @@ type TestContext struct {
 	Controller  ftlv1connect.ControllerServiceClient
 	Provisioner provisionerconnect.ProvisionerServiceClient
 	Schema      ftlv1connect.SchemaServiceClient
-	Console     pbconsoleconnect.ConsoleServiceClient
+	Console     consolepbconnect.ConsoleServiceClient
 	Verbs       ftlv1connect.VerbServiceClient
-	Timeline    timelinev1connect.TimelineServiceClient
+	Timeline    timelinepbconnect.TimelineServiceClient
 
 	realT *testing.T
 }
