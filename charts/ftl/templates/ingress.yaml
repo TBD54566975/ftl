@@ -59,6 +59,13 @@ spec:
               name: ftl-controller
               port:
                 number: 8892
+        - path: /xyz.block.ftl.v1.AdminService/
+          pathType: Prefix
+          backend:
+            service:
+              name: ftl-admin
+              port:
+                number: 8892
   {{- range $host := .Values.ingress.hosts }}
   - host: "{{ $host.host }}"
     http:

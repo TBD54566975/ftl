@@ -61,7 +61,6 @@ type InteractiveCLI struct {
 	Schema   schemaCmd   `cmd:"" help:"FTL schema commands."`
 	Build    buildCmd    `cmd:"" help:"Build all modules found in the specified directories."`
 	Deploy   deployCmd   `cmd:"" help:"Build and deploy all modules found in the specified directories."`
-	Migrate  migrateCmd  `cmd:"" help:"Run a database migration, if required, based on the migration table."`
 	Download downloadCmd `cmd:"" help:"Download a deployment."`
 	Secret   secretCmd   `cmd:"" help:"Manage secrets."`
 	Config   configCmd   `cmd:"" help:"Manage configuration."`

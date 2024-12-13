@@ -56,12 +56,14 @@ func main() {
 	kctx.FatalIfErrorf(err)
 
 	leaseClient := rpc.Dial(leasepbconnect.NewLeaseServiceClient, cli.LeaseEndpoint.String(), log.Error)
+
 	ctx = rpc.ContextWithClient(ctx, leaseClient)
 	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.ControllerConfig.Bind.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, schemaClient)
 
 	adminClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, cli.AdminEndpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, adminClient)
+
 	kctx.FatalIfErrorf(err)
 
 	timelineClient := timeline.NewClient(ctx, cli.TimelineEndpoint)
