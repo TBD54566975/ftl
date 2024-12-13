@@ -35,11 +35,14 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/state"
 	ftldeployment "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
 	deploymentconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1/ftlv1connect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/runner/pubsub"
 	"github.com/TBD54566975/ftl/backend/timeline"
+	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/sha256"
+	"github.com/TBD54566975/ftl/common/slices"
 	"github.com/TBD54566975/ftl/internal/deploymentcontext"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -49,10 +52,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
-	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
-	"github.com/TBD54566975/ftl/internal/sha256"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // CommonConfig between the production controller and development server.

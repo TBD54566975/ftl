@@ -12,15 +12,15 @@ import (
 	"github.com/alecthomas/types/optional"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/backend/timeline"
+	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
+	"github.com/TBD54566975/ftl/common/slices"
 	"github.com/TBD54566975/ftl/internal/cors"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/routing"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type Config struct {

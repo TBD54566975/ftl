@@ -7,7 +7,7 @@ import (
 	ftlother "ftl/other"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/common/plugin"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/common/reflection"
 	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 )

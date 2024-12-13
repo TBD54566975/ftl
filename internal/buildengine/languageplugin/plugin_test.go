@@ -16,10 +16,10 @@ import (
 	"connectrpc.com/connect"
 
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
-	"github.com/TBD54566975/ftl/internal/builderrors"
+	"github.com/TBD54566975/ftl/common/builderrors"
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
-	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type testBuildContext struct {

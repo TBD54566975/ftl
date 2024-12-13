@@ -18,11 +18,11 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
+	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/sha256"
+	"github.com/TBD54566975/ftl/common/slices"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/sha256"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 const tenMB = 1024 * 1024 * 10

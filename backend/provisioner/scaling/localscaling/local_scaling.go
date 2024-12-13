@@ -17,11 +17,11 @@ import (
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
 	"github.com/TBD54566975/ftl/backend/runner"
 	"github.com/TBD54566975/ftl/common/plugin"
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/localdebug"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 var _ scaling.RunnerScaling = &localScaling{}

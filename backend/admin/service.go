@@ -13,7 +13,8 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/go-runtime/encoding"
+	"github.com/TBD54566975/ftl/common/encoding"
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
@@ -21,7 +22,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	internalobservability "github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 

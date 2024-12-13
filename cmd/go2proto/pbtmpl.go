@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/TBD54566975/ftl/internal/schema/strcase"
+	"github.com/TBD54566975/ftl/common/strcase"
 )
 
 var tmpl = template.Must(template.New("proto").

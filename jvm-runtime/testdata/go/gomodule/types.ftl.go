@@ -4,7 +4,7 @@ package gomodule
 import (
 	"context"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/common/reflection"
 	"github.com/tbd54566975/web5-go/dids/did"
 	stdtime "time"
 )

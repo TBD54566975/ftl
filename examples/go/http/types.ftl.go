@@ -4,8 +4,8 @@ package http
 import (
 	"context"
 	ftlbuiltin "ftl/builtin"
+	"github.com/TBD54566975/ftl/common/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 )
 
 type GetClient func(context.Context, ftlbuiltin.HttpRequest[ftl.Unit, GetPathParams, GetQueryParams]) (ftlbuiltin.HttpResponse[GetResponse, ApiError], error)

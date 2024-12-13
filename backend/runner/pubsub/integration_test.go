@@ -9,9 +9,9 @@ import (
 
 	"connectrpc.com/connect"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
+	"github.com/TBD54566975/ftl/common/slices"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 )

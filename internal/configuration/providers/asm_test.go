@@ -30,7 +30,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/configuration/routers"
 	"github.com/TBD54566975/ftl/internal/configuration/routers/routerstest"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/common/slices"
 	"github.com/TBD54566975/ftl/internal/testutils"
 )
 

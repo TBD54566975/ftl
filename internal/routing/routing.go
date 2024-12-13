@@ -8,9 +8,9 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
 )
 

@@ -5,7 +5,7 @@ WATCHEXEC_ARGS := "-d 1s -e proto -e go -e sql -f sqlc.yaml --ignore **/types.ft
 RELEASE := "build/release"
 VERSION := `git describe --tags --always | sed -e 's/^v//'`
 TIMESTAMP := `date +%s`
-SCHEMA_OUT := "backend/protos/xyz/block/ftl/schema/v1/schema.proto"
+SCHEMA_OUT := "common/protos/xyz/block/ftl/schema/v1/schema.proto"
 ZIP_DIRS := "go-runtime/compile/build-template " + \
             "go-runtime/compile/external-module-template " + \
             "go-runtime/compile/main-work-template " + \
@@ -19,19 +19,19 @@ ZIP_DIRS := "go-runtime/compile/build-template " + \
 CONSOLE_ROOT := "frontend/console"
 FRONTEND_OUT := CONSOLE_ROOT + "/dist/index.html"
 EXTENSION_OUT := "frontend/vscode/dist/extension.js"
-PROTOS_IN := "backend/protos"
+PROTOS_IN := "common/protos"
 PROTOS_OUT := "backend/protos/xyz/block/ftl/console/v1/console.pb.go " + \
               "backend/protos/xyz/block/ftl//v1/ftl.pb.go " + \
               "backend/protos/xyz/block/ftl/timeline/v1/timeline.pb.go " + \
               "backend/protos/xyz/block/ftl//v1/schemaservice.pb.go " + \
-              "backend/protos/xyz/block/ftl/schema/v1/schema.pb.go " + \
+              "common/protos/xyz/block/ftl/schema/v1/schema.pb.go " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/console/v1/console_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/timeline/v1/timeline_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schemaservice_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/schema/v1/schema_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/publish/v1/publish_pb.ts"
-GO_SCHEMA_ROOTS := "./internal/schema.{Schema,ModuleRuntimeEvent,DatabaseRuntimeEvent,TopicRuntimeEvent,VerbRuntimeEvent,RuntimeEvent}"
+GO_SCHEMA_ROOTS := "./common/schema.{Schema,ModuleRuntimeEvent,DatabaseRuntimeEvent,TopicRuntimeEvent,VerbRuntimeEvent,RuntimeEvent}"
 # Configuration for building Docker images
 DOCKER_IMAGES := '''
 {
@@ -87,7 +87,7 @@ build-all: build-protos-unconditionally build-backend build-frontend build-backe
 
 # Run "go generate" on all packages
 build-generate:
-  @mk internal/schema/aliaskind_enumer.go : internal/schema/metadataalias.go -- go generate -x ./internal/schema
+  @mk common/schema/aliaskind_enumer.go : common/schema/metadataalias.go -- go generate -x ./common/schema
   @mk internal/log/log_level_string.go : internal/log/api.go -- go generate -x ./internal/log
 
 # Generate testdata for go2proto. This should be run after any changes to go2proto.
@@ -202,18 +202,19 @@ pnpm-install:
 
 # Regenerate protos
 build-protos:
-  @mk {{SCHEMA_OUT}} : internal/schema -- "@just go2proto"
+  @mk {{SCHEMA_OUT}} : common/schema -- "@just go2proto"
   @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "@just build-protos-unconditionally"
 
 # Generate .proto files from .go types.
 go2proto:
-  @mk "{{SCHEMA_OUT}}" : cmd/go2proto internal/schema -- go2proto -m -o "{{SCHEMA_OUT}}" \
-    -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1;schemapb"' \
+  @mk "{{SCHEMA_OUT}}" : cmd/go2proto common/schema -- go2proto -m -o "{{SCHEMA_OUT}}" \
+    -O 'go_package="github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1;schemapb"' \
     -O 'java_multiple_files=true' \
-    xyz.block.ftl.schema.v1 {{GO_SCHEMA_ROOTS}} && buf format -w && buf lint && bin/gofmt -w internal/schema/go2proto.to.go  
+    xyz.block.ftl.schema.v1 {{GO_SCHEMA_ROOTS}} && buf format -w && buf lint && bin/gofmt -w common/schema/go2proto.to.go
 
 # Unconditionally rebuild protos
 build-protos-unconditionally: go2proto lint-protos pnpm-install
+  cd common/protos && buf generate
   cd backend/protos && buf generate
 
 # Run integration test(s)

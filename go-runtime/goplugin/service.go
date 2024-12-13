@@ -18,15 +18,15 @@ import (
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
 	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/common/builderrors"
+	"github.com/TBD54566975/ftl/common/schema"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
-	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/watch"
 )
 

@@ -94,7 +94,7 @@ linters-settings:
           - pkg: os/exec
             desc: "use github.com/TBD54566975/ftl/internal/exec"
           - pkg: golang.design/x/reflect
-            desc: "use github.com/TBD54566975/ftl/internal/reflect"
+            desc: "use github.com/TBD54566975/ftl/common/reflect"
           - pkg: "github.com/reugn/go-quartz/logger"
             desc: "use github.com/TBD54566975/ftl/internal/log"
   # wrapcheck:

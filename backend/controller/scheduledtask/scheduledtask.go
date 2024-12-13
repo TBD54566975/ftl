@@ -12,9 +12,9 @@ import (
 	"github.com/jpillora/backoff"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
+	"github.com/TBD54566975/ftl/common/slices"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type descriptor struct {

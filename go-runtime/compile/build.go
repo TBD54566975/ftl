@@ -24,18 +24,18 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/common/builderrors"
+	"github.com/TBD54566975/ftl/common/reflect"
+	"github.com/TBD54566975/ftl/common/schema"
+	islices "github.com/TBD54566975/ftl/common/slices"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/ftl/go-runtime/schema/finalize"
 	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
-	"github.com/TBD54566975/ftl/internal/reflect"
-	"github.com/TBD54566975/ftl/internal/schema"
-	islices "github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/watch"
 )
 
@@ -72,7 +72,7 @@ func (c *mainDeploymentContext) generateMainImports() []string {
 	imports.Add(`"github.com/TBD54566975/ftl/common/plugin"`)
 	imports.Add(`"github.com/TBD54566975/ftl/go-runtime/server"`)
 	if len(c.MainCtx.SumTypes) > 0 || len(c.MainCtx.ExternalTypes) > 0 {
-		imports.Add(`"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"`)
+		imports.Add(`"github.com/TBD54566975/ftl/common/reflection"`)
 	}
 
 	for _, v := range c.Verbs {
@@ -95,7 +95,7 @@ func (c *mainDeploymentContext) generateMainImports() []string {
 func (c *mainDeploymentContext) generateTypesImports(mainModuleImport string) []string {
 	imports := sets.NewSet[string]()
 	if len(c.TypesCtx.SumTypes) > 0 || len(c.TypesCtx.ExternalTypes) > 0 {
-		imports.Add(`"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"`)
+		imports.Add(`"github.com/TBD54566975/ftl/common/reflection"`)
 	}
 	if len(c.Verbs) > 0 {
 		imports.Add(`"context"`)
@@ -144,7 +144,7 @@ func typeImports(t goSchemaType) []string {
 func verbImports(v goVerb) []string {
 	imports := sets.NewSet[string]()
 	imports.Add(v.importStatement())
-	imports.Add(`"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"`)
+	imports.Add(`"github.com/TBD54566975/ftl/common/reflection"`)
 
 	if nt, ok := v.Request.nativeType.Get(); ok && v.Request.TypeName != "ftl.Unit" {
 		imports.Add(nt.importStatement())

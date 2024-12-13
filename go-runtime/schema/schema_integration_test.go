@@ -15,12 +15,12 @@ import (
 
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 
-	"github.com/TBD54566975/ftl/internal/builderrors"
-	"github.com/TBD54566975/ftl/internal/errors"
+	"github.com/TBD54566975/ftl/common/builderrors"
+	"github.com/TBD54566975/ftl/common/errors"
+	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/TBD54566975/ftl/common/slices"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // this is helpful when a test requires another module to be built before running

@@ -9,8 +9,8 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
 	"github.com/TBD54566975/ftl/common/plugin"
+	"github.com/TBD54566975/ftl/common/schema"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // provisionerPluginConfig is a map of provisioner name to resources it supports

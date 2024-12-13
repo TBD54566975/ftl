@@ -9,13 +9,13 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/common/schema"
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/configuration/routers"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 func getDiskSchema(t testing.TB, ctx context.Context) (*schema.Schema, error) {

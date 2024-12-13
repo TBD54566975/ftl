@@ -21,8 +21,8 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
 
+	"github.com/TBD54566975/ftl/common/sha256"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
 var _ Service = &OCIArtefactService{}
