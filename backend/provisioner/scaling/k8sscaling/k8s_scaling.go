@@ -582,6 +582,7 @@ func (r *k8sScaling) syncIstioPolicy(ctx context.Context, sec istioclient.Client
 			// Allow cron invocations
 			principals = append(principals, "cluster.local/ns/"+r.namespace+"/sa/ftl-cron")
 		}
+		principals = append(principals, "cluster.local/ns/"+r.namespace+"/sa/ftl-console")
 		policy.Spec.Rules = []*istiosecmodel.Rule{
 			{
 				From: []*istiosecmodel.Rule_From{

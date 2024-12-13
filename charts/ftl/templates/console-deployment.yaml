@@ -44,8 +44,14 @@ spec:
             {{- toYaml .Values.console.env | nindent 12 }}
             {{- end }}
             - name: FTL_TIMELINE_ENDPOINT
-              value: "http://{{ .Values.timeline.service.name }}:{{ .Values.timeline.service.port }}"
+              value: "http://ftl-timeline:8892"
             - name: FTL_ENDPOINT
+              value: "http://ftl-controller:8892"
+            - name: FTL_ADMIN_ENDPOINT
+              value: "http://ftl-admin:8892"
+            - name: FTL_VERB_SERVICE_ENDPOINT
+              value: "http://ftl-controller:8892"
+            - name: FTL_SCHEMA_SERVICE_ENDPOINT
               value: "http://ftl-controller:8892"
           ports:
             {{- range .Values.console.ports }}

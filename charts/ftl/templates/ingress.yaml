@@ -14,7 +14,7 @@ spec:
           pathType: Prefix
           backend:
             service:
-              name: ftl-controller
+              name: ftl-console
               port:
                 number: 8892
         - path: /ingress/
@@ -31,6 +31,34 @@ spec:
               name: ftl-provisioner
               port:
                 number: 8893
+        - path: /xyz.block.ftl.v1.SchemaService/
+          pathType: Prefix
+          backend:
+            service:
+              name: ftl-controller
+              port:
+                  number: 8892
+        - path: /xyz.block.ftl.v1.VerbService/
+          pathType: Prefix
+          backend:
+            service:
+              name: ftl-controller
+              port:
+                number: 8892
+        - path: /xyz.block.ftl.v1.ControllerService/
+          pathType: Prefix
+          backend:
+            service:
+              name: ftl-controller
+              port:
+                number: 8892
+        - path: /xyz.block.ftl.deployment.v1.DeploymentService/
+          pathType: Prefix
+          backend:
+            service:
+              name: ftl-controller
+              port:
+                number: 8892
   {{- range $host := .Values.ingress.hosts }}
   - host: "{{ $host.host }}"
     http:
