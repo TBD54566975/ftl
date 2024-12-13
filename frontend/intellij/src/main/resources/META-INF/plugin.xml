@@ -21,28 +21,22 @@
     - settings panel for LSP server command configuration and project working directory
   ]]></description>
 
-  <!-- Product and plugin compatibility requirements.
-       Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
   <depends>com.intellij.modules.platform</depends>
-  <depends>com.intellij.modules.ultimate</depends>
+  <depends>com.redhat.devtools.lsp4ij</depends>
 
-  <!-- Extension points defined by the plugin.
-       Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
-  <extensions defaultExtensionNs="com.intellij">
-    <toolWindow id="FTL" anchor="bottom"
-        factoryClass="xyz.block.ftl.intellij.toolWindow.FTLMessagesToolWindowFactory"/>
+  <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
 
-    <!-- LSP -->
-    <platform.lsp.serverSupportProvider
-        implementation="xyz.block.ftl.intellij.FTLLspServerSupportProvider"/>
-
-    <applicationService
-        serviceImplementation="xyz.block.ftl.intellij.FTLSettingsComponent"/>
-
-    <applicationConfigurable
-        parentId="tools"
-        instance="xyz.block.ftl.intellij.FTLSettingsConfigurable"
-        id="org.intellij.sdk.settings.AppSettingsConfigurable"
-        displayName="FTL"/>
+    <server id="ftl" name="FTL" factoryClass="xyz.block.ftl.intellij.FTLLanguageServerFactory">
+      <description><![CDATA[
+        FTL Support.
+        ]]>
+      </description>
+    </server>
+    <languageMapping language="kotlin"
+                     serverId="ftl"/>
+    <languageMapping language="JAVA"
+                     serverId="ftl"/>
+    <languageMapping language="go"
+                     serverId="ftl"/>
   </extensions>
 </idea-plugin>

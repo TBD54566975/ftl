@@ -25,14 +25,13 @@ import com.intellij.platform.lsp.api.LspServerState
 import com.intellij.ui.content.ContentFactory
 import com.intellij.ui.content.ContentManagerEvent
 import com.intellij.ui.content.ContentManagerListener
-import xyz.block.ftl.intellij.FTLLSPNotifier
 import xyz.block.ftl.intellij.FTLLspServerService
 import xyz.block.ftl.intellij.FTLSettingsConfigurable
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
+import com.redhat.devtools.lsp4ij.LanguageServerManager
 
 class FTLMessagesToolWindowFactory() : ToolWindowFactory, DumbAware {
-  private var currentLspState: LspServerState = LspServerState.Initializing
   val scheduler: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
 
   private lateinit var startAction: AnAction
@@ -52,10 +51,7 @@ class FTLMessagesToolWindowFactory() : ToolWindowFactory, DumbAware {
       startAction = object : DumbAwareAction("Start", "Start the process", AllIcons.Actions.Execute) {
         override fun actionPerformed(e: AnActionEvent) {
           panel.addMessage("Start action triggered")
-
-          val service = FTLLspServerService.getInstance(project)
-          panel.addMessage("Status is: ${service.lspServerSupportProvider.getLspServerStatus(project)}")
-          service.lspServerSupportProvider.startLspServer(project)
+          LanguageServerManager.getInstance(project).start("ftl");
         }
 
         override fun update(e: AnActionEvent) {
@@ -185,14 +181,14 @@ class FTLMessagesToolWindowFactory() : ToolWindowFactory, DumbAware {
     panel.toolbar = actionToolbar.component
     toolWindow.contentManager.addContent(content)
 
-    project.messageBus.connect().subscribe(
-      FTLLSPNotifier.SERVER_STATE_CHANGE_TOPIC,
-      object : FTLLSPNotifier {
-        override fun lspServerStateChange(state: LspServerState) {
-          currentLspState = state
-          panel.addMessage("State changed: ${state}")
-        }
-      })
+//    project.messageBus.connect().subscribe(
+//      FTLLSPNotifier.SERVER_STATE_CHANGE_TOPIC,
+//      object : FTLLSPNotifier {
+//        override fun lspServerStateChange(state: LspServerState) {
+//          currentLspState = state
+//          panel.addMessage("State changed: ${state}")
+//        }
+//      })
   }
 
   override fun init(toolWindow: ToolWindow) {

@@ -5,7 +5,6 @@ import com.intellij.openapi.project.Project
 
 @Service(Service.Level.PROJECT)
 class FTLLspServerService(val project: Project) {
-  val lspServerSupportProvider = FTLLspServerSupportProvider()
 
   companion object {
     fun getInstance(project: Project): FTLLspServerService {
