@@ -15,6 +15,7 @@ message AWSIAMAuthDatabaseConnector {
   string database = 4;
 }
 
+// AliasKind is the kind of alias.
 enum AliasKind {
   ALIAS_KIND_UNSPECIFIED = 0;
   ALIAS_KIND_JSON = 1;
@@ -49,6 +50,7 @@ message DSNDatabaseConnector {
   string dsn = 2;
 }
 
+// A Data structure.
 message Data {
   optional Position pos = 1;
   repeated string comments = 2;
@@ -99,6 +101,7 @@ message DatabaseRuntimeEventPayload {
   }
 }
 
+// Decl represents user-defined data types in the schema grammar.
 message Decl {
   oneof value {
     Config config = 6;
@@ -178,6 +181,7 @@ message Map {
   Type value = 3;
 }
 
+// Metadata represents a metadata Node in the schema grammar.
 message Metadata {
   oneof value {
     MetadataAlias alias = 5;
@@ -210,11 +214,13 @@ message MetadataArtefact {
   bool executable = 4;
 }
 
+// MetadataCalls represents a metadata block with a list of calls.
 message MetadataCalls {
   optional Position pos = 1;
   repeated Ref calls = 2;
 }
 
+// MetadataConfig represents a metadata block with a list of config items that are used.
 message MetadataConfig {
   optional Position pos = 1;
   repeated Ref config = 2;
@@ -261,6 +267,7 @@ message MetadataSQLMigration {
   string digest = 2;
 }
 
+// MetadataSecrets represents a metadata block with a list of config items that are used.
 message MetadataSecrets {
   optional Position pos = 1;
   repeated Ref secrets = 2;
@@ -289,6 +296,7 @@ message Module {
   ModuleRuntime runtime = 31634;
 }
 
+// ModuleRuntime is runtime configuration for a module that can be dynamically updated.
 message ModuleRuntime {
   ModuleRuntimeBase base = 1;
   optional ModuleRuntimeScaling scaling = 2;
@@ -320,6 +328,7 @@ message ModuleRuntimeScaling {
   int32 min_replicas = 1;
 }
 
+// Optional represents a Type whose value may be optional.
 message Optional {
   optional Position pos = 1;
   optional Type type = 2;
@@ -331,6 +340,7 @@ message Position {
   int64 column = 3;
 }
 
+// Ref is an untyped reference to a symbol.
 message Ref {
   optional Position pos = 1;
   string module = 3;
@@ -338,6 +348,7 @@ message Ref {
   repeated Type type_parameters = 4;
 }
 
+// RuntimeEvent is an event modifying a runtime part of the schema.
 message RuntimeEvent {
   oneof value {
     DatabaseRuntimeEvent database_runtime_event = 5;
@@ -393,6 +404,7 @@ message TopicRuntimeEvent {
   TopicRuntime payload = 2;
 }
 
+// Type represents a Type Node in the schema grammar.
 message Type {
   oneof value {
     Any any = 9;
@@ -433,6 +445,7 @@ message Unit {
   optional Position pos = 1;
 }
 
+// Value represents a value Node in the schema grammar.
 message Value {
   oneof value {
     IntValue int_value = 2;

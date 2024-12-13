@@ -12,7 +12,13 @@ import (
 
 var tmpl = template.Must(template.New("proto").
 	Funcs(template.FuncMap{
-		"typeof":       func(t any) Kind { return Kind(reflect.Indirect(reflect.ValueOf(t)).Type().Name()) },
+		"typeof": func(t any) Kind { return Kind(reflect.Indirect(reflect.ValueOf(t)).Type().Name()) },
+		"formatComment": func(comment string) string {
+			if comment == "" {
+				return ""
+			}
+			return "// " + strings.ReplaceAll(strings.TrimSpace(comment), "\n", "\n// ")
+		},
 		"toLowerCamel": strcase.ToLowerCamel,
 		"toUpperCamel": strcase.ToUpperCamel,
 		"toLowerSnake": strcase.ToLowerSnake,
@@ -31,12 +37,14 @@ option {{ $name }} = {{ $value }};
 {{- end }}
 {{ range $decl := .OrderedDecls }}
 {{- if eq (typeof $decl) "Message" }}
+{{- .Comment | formatComment }}
 message {{ .Name }} {
 {{- range $name, $field := .Fields }}
   {{ if .Repeated }}repeated {{else if .Optional}}optional {{ end }}{{ .ProtoType }} {{ .Name | toLowerSnake }} = {{ .ID }};
 {{- end }}
 }
 {{- else if eq (typeof $decl) "Enum" }}
+{{- .Comment | formatComment }}
 enum {{ .Name }} {
 {{- range $value, $name := .ByValue }}
   {{ $name | toUpperSnake }} = {{ $value }};
@@ -44,6 +52,7 @@ enum {{ .Name }} {
 }
 {{- else if eq (typeof $decl) "SumType" }}
 {{ $sumtype := . }}
+{{- .Comment | formatComment }}
 message {{ .Name }} {
   oneof value {
 {{- range $name, $id := .Variants }}

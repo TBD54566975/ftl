@@ -161,8 +161,9 @@ type Decl interface {
 }
 
 type Message struct {
-	Name   string
-	Fields []*Field
+	Comment string
+	Name    string
+	Fields  []*Field
 }
 
 func (Message) decl()              {}
@@ -213,8 +214,9 @@ func (f Field) EscapedName() string {
 }
 
 type Enum struct {
-	Name   string
-	Values map[string]int
+	Comment string
+	Name    string
+	Values  map[string]int
 }
 
 func (e Enum) ByValue() map[int]string {
@@ -229,6 +231,7 @@ func (Enum) decl()              {}
 func (e Enum) DeclName() string { return e.Name }
 
 type SumType struct {
+	Comment  string
 	Name     string
 	Variants map[string]int
 }
@@ -238,7 +241,8 @@ func (s SumType) DeclName() string { return s.Name }
 
 // TextMarshaler is a named type that implements encoding.TextMarshaler. Encoding will delegate to the marshaller.
 type TextMarshaler struct {
-	Name string
+	Comment string
+	Name    string
 }
 
 func (TextMarshaler) decl()              {}
@@ -246,7 +250,8 @@ func (u TextMarshaler) DeclName() string { return u.Name }
 
 // BinaryMarshaler is a named type that implements encoding.BinaryMarshaler. Encoding will delegate to the marshaller.
 type BinaryMarshaler struct {
-	Name string
+	Comment string
+	Name    string
 }
 
 func (BinaryMarshaler) decl()              {}
@@ -472,6 +477,9 @@ func (s *State) extractStruct(n *types.Named) error {
 	decl := &Message{
 		Name: name,
 	}
+	if comment := findCommentsForObject(n.Obj(), s.Pkg.Syntax); comment != nil {
+		decl.Comment = comment.Text()
+	}
 	// First pass over structs we just want to extract type information. The fields themselves will be populated in the
 	// second pass.
 	fields, errf := iterFields(n)
@@ -544,6 +552,9 @@ func (s *State) extractSumType(obj types.Object, i *types.Interface) error {
 		Name:     sumTypeName,
 		Variants: map[string]int{},
 	}
+	if comment := findCommentsForObject(obj, s.Pkg.Syntax); comment != nil {
+		decl.Comment = comment.Text()
+	}
 	scope := s.Pkg.Types.Scope()
 	for _, name := range scope.Names() {
 		sym := scope.Lookup(name)
@@ -607,6 +618,9 @@ func (s *State) extractEnum(t *types.Named) error {
 	decl := Enum{
 		Name:   enumName,
 		Values: map[string]int{},
+	}
+	if comment := findCommentsForObject(t.Obj(), s.Pkg.Syntax); comment != nil {
+		decl.Comment = comment.Text()
 	}
 	scope := s.Pkg.Types.Scope()
 	for _, name := range scope.Names() {
