@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ ! "${HERMIT_ENV:-}" ]; then
+    # shellcheck disable=SC1091
+    . "$(dirname "$(dirname "$0")")/bin/activate-hermit"
+fi
+
+# Ensure the binary exists, install if it doesn't
+mk "${HERMIT_ENV}/.hermit/rust/bin/protoc-gen-prost" : -- cargo install protoc-gen-prost
+
+# Execute the binary with any passed arguments
+exec "${HERMIT_ENV}/.hermit/rust/bin/protoc-gen-prost" "$@"

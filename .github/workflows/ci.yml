@@ -103,6 +103,18 @@ jobs:
         run: just build-frontend
       - name: Console Test
         run: just test-frontend
+  test-wasm:
+    name: Test sqlc-gen-ftl
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1.1.3
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Test WASM
+        run: cd sqlc-gen-ftl && cargo test --features ci --test sqlc_gen_ftl_test -- --nocapture 
   extension:
     name: VSCode Extension
     runs-on: ubuntu-latest
