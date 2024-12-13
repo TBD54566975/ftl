@@ -20,6 +20,10 @@ top = false
 
 Install the FTL CLI via [Hermit](https://cashapp.github.io/hermit), [Homebrew](https://brew.sh/), or manually.
 
+{% code_selector() %}
+
+<!-- hermit -->
+
 #### Hermit (Mac or Linux)
 
 FTL can be installed from the main Hermit package repository by simply:
@@ -34,15 +38,23 @@ Alternatively you can add [hermit-ftl](https://github.com/TBD54566975/hermit-ftl
 sources = ["https://github.com/TBD54566975/hermit-ftl.git", "https://github.com/cashapp/hermit-packages.git"]
 ```
 
+<!-- homebrew -->
+
 #### Homebrew (Mac or Linux)
 
 ```
 brew tap TBD54566975/ftl && brew install ftl
 ```
 
+<!-- manual -->
+
 #### Manually (Mac or Linux)
 
 Download binaries from the [latest release page](https://github.com/TBD54566975/ftl/releases/latest) and place them in your `$PATH`.
+
+{% end %}
+
+---
 
 ### Install the VSCode extension
 
