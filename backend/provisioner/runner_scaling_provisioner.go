@@ -39,7 +39,24 @@ func provisionRunner(scaling scaling.RunnerScaling) InMemResourceProvisionerFn {
 			return nil, fmt.Errorf("failed to find deployment for runner")
 		}
 		logger.Debugf("provisioning runner: %s.%s for deployment %s", module, rc.ResourceID(), deployment)
-		if err := scaling.StartDeployment(ctx, module.Name, deployment, module, false, false); err != nil {
+		cron := false
+		http := false
+		for _, decl := range module.Decls {
+			if verb, ok := decl.(*schema.Verb); ok {
+				for _, meta := range verb.Metadata {
+					switch meta.(type) {
+					case *schema.MetadataCronJob:
+						cron = true
+					case *schema.MetadataIngress:
+						http = true
+					default:
+
+					}
+
+				}
+			}
+		}
+		if err := scaling.StartDeployment(ctx, module.Name, deployment, module, cron, http); err != nil {
 			logger.Infof("failed to start deployment: %v", err)
 			return nil, fmt.Errorf("failed to start deployment: %w", err)
 		}
