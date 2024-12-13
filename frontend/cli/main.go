@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"runtime/trace"
 	"strconv"
 	"syscall"
 
@@ -44,6 +45,7 @@ type InteractiveCLI struct {
 	TimelineEndpoint    *url.URL         `help:"Timeline endpoint." env:"FTL_TIMELINE_ENDPOINT" default:"http://127.0.0.1:8894"`
 	LeaseEndpoint       *url.URL         `help:"Lease endpoint." env:"FTL_LEASE_ENDPOINT" default:"http://127.0.0.1:8895"`
 	AdminEndpoint       *url.URL         `help:"Admin endpoint." env:"FTL_ADMIN_ENDPOINT" default:"http://127.0.0.1:8896"`
+	Trace               string           `help:"File to write golang runtime/trace output to." hidden:""`
 
 	Ping     pingCmd     `cmd:"" help:"Ping the FTL cluster."`
 	Status   statusCmd   `cmd:"" help:"Show FTL status."`
@@ -105,6 +107,19 @@ func main() {
 
 	kctx, err := app.Parse(os.Args[1:])
 	app.FatalIfErrorf(err)
+
+	if cli.Trace != "" {
+		file, err := os.OpenFile(cli.Trace, os.O_CREATE|os.O_WRONLY, 0644) // #nosec
+		if err != nil {
+			kctx.Fatalf("failed to open trace file: %s", err.Error())
+		}
+		err = trace.Start(file)
+		if err != nil {
+			kctx.Fatalf("failed to start tracing: %s", err.Error())
+			return
+		}
+		defer trace.Stop()
+	}
 
 	if plugin, ok := languagePlugin.Get(); ok {
 		// Plugins take time to launch, so we bind the "ftl new" plugin to the kong context.
