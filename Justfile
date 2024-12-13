@@ -1,7 +1,7 @@
 set positional-arguments
 set shell := ["bash", "-c"]
 
-WATCHEXEC_ARGS := "-d 1s -e proto -e go -e sql -f sqlc.yaml --ignore **/types.ftl.go"
+WATCHEXEC_ARGS := "-d 1s -e proto -e go -e sql --ignore **/types.ftl.go"
 RELEASE := "build/release"
 VERSION := `git describe --tags --always | sed -e 's/^v//'`
 TIMESTAMP := `date +%s`
@@ -76,14 +76,14 @@ clean:
 
 # Live rebuild the ftl binary whenever source changes.
 live-rebuild:
-  watchexec {{WATCHEXEC_ARGS}} -- "just build-sqlc && just build ftl"
+  watchexec {{WATCHEXEC_ARGS}} -- "just build ftl"
 
 # Run "ftl dev" with live-reloading whenever source changes.
 dev *args:
-  watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev --plain {{args}}"
+  watchexec -r {{WATCHEXEC_ARGS}} -- "ftl dev --plain {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-backend build-frontend build-backend-tests build-generate build-sqlc build-zips lsp-generate build-jvm build-language-plugins build-go2proto-testdata
+build-all: build-protos-unconditionally build-backend build-frontend build-backend-tests build-generate build-zips lsp-generate build-jvm build-language-plugins build-go2proto-testdata
 
 # Run "go generate" on all packages
 build-generate:
@@ -151,18 +151,6 @@ build-go-binary dir binary="": build-zips build-protos
   fi
 
 export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable"
-
-# Explicitly initialise the database
-init-db:
-  dbmate drop || true
-  dbmate create
-  dbmate --no-dump-schema --migrations-dir backend/controller/sql/schema up
-
-# Regenerate SQLC code (requires init-db to be run first)
-build-sqlc:
-  @mk $(eval echo $(yq '.sql[].gen.go.out + "/{db.go,models.go,querier.go,queries.sql.go}"' sqlc.yaml)) \
-    : sqlc.yaml $(yq '.sql[].queries[]' sqlc.yaml) backend/controller/sql/schema \
-    --  "just init-db && sqlc generate"
 
 # Build the ZIP files that are embedded in the FTL release binaries
 build-zips:

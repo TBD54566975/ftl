@@ -7,7 +7,6 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/internal/dsn"
 	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
@@ -40,24 +39,5 @@ func TestMySQL(t *testing.T) {
 		in.Call[in.Obj, in.Obj]("mysql", "query", map[string]any{}, func(t testing.TB, response in.Obj) {
 			assert.Equal(t, "hello", response["data"])
 		}),
-	)
-}
-
-func TestMigrate(t *testing.T) {
-	dbName := "ftl_test"
-	dbUri := dsn.PostgresDSN(dbName)
-
-	q := func() in.Action {
-		return in.QueryRow(dbName, "SELECT version FROM schema_migrations WHERE version = '20240704103403'", "20240704103403")
-	}
-
-	in.Run(t,
-		in.WithoutController(),
-		in.WithoutProvisioner(),
-		in.WithoutTimeline(),
-		in.DropDBAction(t, dbName),
-		in.Fail(q(), "Should fail because the database does not exist."),
-		in.Exec("ftl", "migrate", "--dsn", dbUri),
-		q(),
 	)
 }

@@ -39,6 +39,10 @@ spec:
             {{- end }}
           {{- end }}
           env:
+            - name: FTL_CONFIG #TODO: make this configurable, and add a PVC to make it persistent
+              value: /config.json
+            - name: FTL_SECRETS
+              value: /secrets.json
             {{- if .Values.admin.env }}
             {{- toYaml .Values.admin.env | nindent 12 }}
             {{- end }}

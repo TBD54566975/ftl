@@ -40,47 +40,6 @@ jobs:
         run: just build-language-plugins
       - name: Test README
         run: just test-readme
-  test-scripts:
-    name: Test Scripts
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Init Hermit
-        uses: cashapp/activate-hermit@v1.1.3
-      - name: Test Scripts
-        run: just test-scripts
-  sql:
-    name: SQL
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Build Cache
-        uses: ./.github/actions/build-cache
-      - name: Init Hermit
-        uses: cashapp/activate-hermit@v1.1.3
-      - name: Docker Compose
-        run: just compose-up
-      - name: Initialise database
-        run: just init-db
-      - name: Vet SQL
-        run: sqlc vet
-  ensure-frozen-migrations:
-    name: Ensure Frozen Migrations
-    # if: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-ensure-frozen-migrations') }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Init Hermit
-        uses: cashapp/activate-hermit@v1.1.3
-      - name: Freeze Migrations
-        run: just ensure-frozen-migrations
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -189,8 +148,6 @@ jobs:
         uses: cashapp/activate-hermit@v1.1.3
       - name: Docker Compose
         run: just compose-up
-      - name: Init DB
-        run: just init-db
       - name: Rebuild All
         run: just build-all
       - name: Check No SCM Changes
@@ -304,8 +261,6 @@ jobs:
         uses: cashapp/activate-hermit@v1.1.3
       - name: Docker Compose
         run: just compose-up
-      - name: Create DB
-        run: just init-db
       - name: Download Go Modules
         run: go mod download
       - name: Build Language Plugins

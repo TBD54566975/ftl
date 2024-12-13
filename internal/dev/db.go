@@ -13,7 +13,6 @@ import (
 	"github.com/alecthomas/types/optional"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/internal/container"
 	"github.com/TBD54566975/ftl/internal/dsn"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -79,32 +78,12 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*stdsql.DB,
 
 	_, _ = conn.ExecContext(ctx, fmt.Sprintf("CREATE DATABASE %q", dbName)) //nolint:errcheck // PG doesn't support "IF NOT EXISTS" so instead we just ignore any error.
 
-	err = sql.Migrate(ctx, dsn, log.Debug)
-	if err != nil {
-		return nil, fmt.Errorf("failed to migrate database: %w", err)
-	}
-
 	realConn, err := observability.OpenDBAndInstrument(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 	realConn.SetMaxIdleConns(20)
 	realConn.SetMaxOpenConns(20)
-	// Reset transient state in the database to a clean state for development purposes.
-	// This includes things like resetting the state of async calls, leases,
-	// controller/runner registration, etc. but not anything more.
-	if !recreate {
-		_, err = realConn.ExecContext(ctx, `
-			WITH deleted AS (
-				DELETE FROM async_calls
-				RETURNING 1
-			)
-			SELECT COUNT(*)
-		`)
-		if err != nil {
-			return nil, fmt.Errorf("failed to reset async_calls: %w", err)
-		}
-	}
 
 	return realConn, nil
 }
