@@ -140,49 +140,6 @@ switch t := t.(type) {
 
 Then when a new case is added to the sum type, `go-check-sumtype` will detect the missing case statically.
 
-### Database and SQL changes
-
-If you make any changes to the `sqlc` inputs, i.e. all the `sql/queries.sql` files, the contents of `backend/controller/sql/schema`, or `sqlc.yaml`, then you will need to update the Go code that `sqlc` generates from those inputs:
-
-```bash
-just build-sqlc
-```
-
-We use [dbmate](https://github.com/amacneil/dbmate) to manage migrations. To create a migration file, run `dbmate new` with the name of your migration. Example:
-
-```
-dbmate new create_users_table
-```
-
-This will automatically create a migration file in `backend/controller/sql/schema/`. You can refer to any of the existing files in there as examples while writing your own migration.
-
-[This section](https://github.com/amacneil/dbmate?tab=readme-ov-file#creating-migrations) of the dbmate docs explains how to create a migration if you'd like to learn more.
-
-## Controller "services"
-
-Currently all backend logic is contained in the `backend/controller` package tree. We've started to split functionality out of `controller.Service` into subpackages, such as `backend/controller/pubsub`, i`backend/controller/cronjobs`, and so on. These packages have the following structure:
-
-```
-controller/
-  pubsub/
-    internal/dal/... # Data access layer
-    internal/sql/... # SQL queries
-    service.go
-```
-
-`sqlc.yaml` is configured to generate code for each of these subpackages using shared types, eg.
-
-```yaml
-- <<: *daldir
-  queries:
-    - backend/controller/pubsub/internal/sql/queries.sql
-    - backend/controller/dal/internal/sql/async_queries.sql
-  gen:
-    go:
-      <<: *gengo
-      out: "backend/controller/pubsub/internal/sql"
-```
-
 ## VSCode extension
 
 The preferred way to develop the FTL VSCode extension is to open a VSCode instance in the `frontend/vscode` directory. This will load the extension in a new VSCode window. From there, the `launch.json` and `tasks.json` files are configured to run the extension in a new window.
