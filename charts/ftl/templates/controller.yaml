@@ -46,13 +46,6 @@ spec:
             {{- if .Values.controller.env }}
             {{- toYaml .Values.controller.env | nindent 12 }}
             {{- end }}
-            {{- if not .Values.postgresql.enabled }}
-            - name: FTL_DSN
-              value: "{{ .Values.controller.dbConnectionString }}"
-            {{- else }}
-            - name: FTL_DSN
-              value: "postgres://{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.global.postgresql.auth.database }}?sslmode=disable&user={{ .Values.postgresql.global.postgresql.auth.username }}&password={{ .Values.postgresql.global.postgresql.auth.password }}"
-            {{- end }}
             - name: FTL_TIMELINE_ENDPOINT
               value: http://ftl-timeline:8892
             - name: FTL_LEASE_ENDPOINT

@@ -208,7 +208,7 @@ cron:
       value: "true"
 
 postgresql:
-  enabled: true
+  enabled: false
   architecture: standalone
   primary:
     resources:
