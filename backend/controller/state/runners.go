@@ -48,11 +48,11 @@ var _ ControllerEvent = (*RunnerDeletedEvent)(nil)
 
 //protobuf:7
 type RunnerRegisteredEvent struct {
-	Key        model.RunnerKey
-	Time       time.Time
-	Endpoint   string
-	Module     string
-	Deployment model.DeploymentKey
+	Key        model.RunnerKey     `protobuf:"1"`
+	Time       time.Time           `protobuf:"2"`
+	Endpoint   string              `protobuf:"3"`
+	Module     string              `protobuf:"4"`
+	Deployment model.DeploymentKey `protobuf:"5"`
 }
 
 func (r *RunnerRegisteredEvent) VerboseMessage() {
@@ -79,7 +79,7 @@ func (r *RunnerRegisteredEvent) Handle(t State) (State, error) {
 
 //protobuf:8
 type RunnerDeletedEvent struct {
-	Key model.RunnerKey
+	Key model.RunnerKey `protobuf:"1"`
 }
 
 func (r *RunnerDeletedEvent) Handle(t State) (State, error) {

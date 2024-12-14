@@ -460,6 +460,9 @@ func (s *State) extractDecl(obj types.Object, named *types.Named) error {
 	case *types.Basic:
 		return s.extractEnum(named)
 
+	case *types.Array:
+		return nil
+
 	default:
 		return genErrorf(obj.Pos(), "unsupported named type %T", u)
 	}

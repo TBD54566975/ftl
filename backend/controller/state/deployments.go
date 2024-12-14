@@ -52,12 +52,12 @@ var _ ControllerEvent = (*DeploymentReplicasUpdatedEvent)(nil)
 
 //protobuf:1
 type DeploymentCreatedEvent struct {
-	Key       model.DeploymentKey
-	CreatedAt time.Time
-	Module    string
-	Schema    *schema.Module
-	Artefacts []*DeploymentArtefact
-	Language  string
+	Key       model.DeploymentKey   `protobuf:"1"`
+	CreatedAt time.Time             `protobuf:"2"`
+	Module    string                `protobuf:"3"`
+	Schema    *schema.Module        `protobuf:"4"`
+	Artefacts []*DeploymentArtefact `protobuf:"5"`
+	Language  string                `protobuf:"6"`
 }
 
 func (r *DeploymentCreatedEvent) Handle(t State) (State, error) {
@@ -84,8 +84,8 @@ func (r *DeploymentCreatedEvent) Handle(t State) (State, error) {
 
 //protobuf:2
 type DeploymentSchemaUpdatedEvent struct {
-	Key    model.DeploymentKey
-	Schema *schema.Module
+	Key    model.DeploymentKey `protobuf:"1"`
+	Schema *schema.Module      `protobuf:"2"`
 }
 
 func (r *DeploymentSchemaUpdatedEvent) Handle(t State) (State, error) {
@@ -99,8 +99,8 @@ func (r *DeploymentSchemaUpdatedEvent) Handle(t State) (State, error) {
 
 //protobuf:3
 type DeploymentReplicasUpdatedEvent struct {
-	Key      model.DeploymentKey
-	Replicas int
+	Key      model.DeploymentKey `protobuf:"1"`
+	Replicas int                 `protobuf:"2"`
 }
 
 func (r *DeploymentReplicasUpdatedEvent) Handle(t State) (State, error) {
@@ -140,8 +140,8 @@ func (r *DeploymentActivatedEvent) Handle(t State) (State, error) {
 
 //protobuf:5
 type DeploymentDeactivatedEvent struct {
-	Key           model.DeploymentKey
-	ModuleRemoved bool
+	Key           model.DeploymentKey `protobuf:"1"`
+	ModuleRemoved bool                `protobuf:"2"`
 }
 
 func (r *DeploymentDeactivatedEvent) Handle(t State) (State, error) {
