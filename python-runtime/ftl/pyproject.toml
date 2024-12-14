@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "protobuf>=5.28.3",
+    "protobuf>=5.29.1",
 ]
 
 [build-system]
