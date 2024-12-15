@@ -24,6 +24,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 	"github.com/kballard/go-shellquote"
 	"github.com/otiai10/copy"
+	"github.com/puzpuzpuz/xsync/v3"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/block/scaffolder"
@@ -304,6 +305,19 @@ func Sleep(duration time.Duration) Action {
 	return func(t testing.TB, ic TestContext) {
 		Infof("Sleeping for %s", duration)
 		time.Sleep(duration)
+	}
+}
+
+func WithoutRetries(action Action) Action {
+	attempted := xsync.NewCounter()
+	return func(t testing.TB, ic TestContext) {
+		attempted.Add(1)
+		if attempted.Value() > 1 {
+			// t.Fatal("action does not support retries")
+			panic("action does not support retries")
+		}
+		// assert.Equal(t, attempted.Value(), 1, "action does not support retries; see original attempt's failure")
+		action(t, ic)
 	}
 }
 

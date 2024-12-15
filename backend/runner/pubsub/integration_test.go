@@ -3,11 +3,13 @@
 package pubsub
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/IBM/sarama"
 	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/TBD54566975/ftl/common/slices"
 	in "github.com/TBD54566975/ftl/internal/integration"
@@ -41,6 +43,7 @@ func TestRetry(t *testing.T) {
 	retriesPerCall := 2
 	in.Run(t,
 		in.WithLanguages("java", "go"),
+		in.WithPubSub(),
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
@@ -69,6 +72,46 @@ func TestExternalPublishRuntimeCheck(t *testing.T) {
 			in.Call("subscriber", "publishToExternalModule", in.Obj{}, func(t testing.TB, resp in.Obj) {}),
 			"can not publish to another module's topic",
 		),
+	)
+}
+
+// TestConsumerGroupMembership tests that when a runner ends, the consumer group is properly exited.
+func TestConsumerGroupMembership(t *testing.T) {
+	in.Run(t,
+		in.WithLanguages("java", "go"),
+		in.WithPubSub(),
+		in.CopyModule("publisher"),
+		in.CopyModule("subscriber"),
+		in.Deploy("publisher"),
+		in.Deploy("subscriber"),
+
+		// consumer group must now have a member
+		checkGroupMembership("subscriber", "consume", true),
+
+		// Stop subscriber deployment
+		func(t testing.TB, ic in.TestContext) {
+			in.ExecWithOutput("ftl", []string{"ps", "--json"}, func(jsonStr string) {
+				// parse newline delimted json
+				decoder := json.NewDecoder(strings.NewReader(jsonStr))
+				for decoder.More() {
+					var deployment map[string]any
+					if err := decoder.Decode(&deployment); err != nil {
+						assert.NoError(t, err)
+					}
+					depName, ok := deployment["deployment"].(string)
+					assert.True(t, ok)
+					if strings.Contains(depName, "subscriber") {
+						in.Exec("ftl", "kill", depName)(t, ic)
+						return
+					}
+				}
+				assert.True(t, false, "subscriber deployment not found")
+			})(t, ic)
+		},
+
+		in.Sleep(time.Second*2),
+
+		in.WithoutRetries(checkGroupMembership("subscriber", "consume", false)),
 	)
 }
 
@@ -127,6 +170,30 @@ func checkConsumed(module, verb string, success bool, count int, needle optional
 			assert.Equal(t, count, len(successfulCalls), "expected %v successful calls (failed calls: %v)", count, len(unsuccessfulCalls))
 		} else {
 			assert.Equal(t, count, len(unsuccessfulCalls), "expected %v unsuccessful calls (successful calls: %v)", count, len(successfulCalls))
+		}
+	}
+}
+
+func checkGroupMembership(module, subscription string, expected bool) in.Action {
+	return func(t testing.TB, ic in.TestContext) {
+		consumerGroup := module + "." + subscription
+		in.Infof("Checking group membership for %v", consumerGroup)
+
+		client, err := sarama.NewClient(in.RedPandaBrokers, sarama.NewConfig())
+		assert.NoError(t, err)
+		defer client.Close()
+
+		clusterAdmin, err := sarama.NewClusterAdminFromClient(client)
+		assert.NoError(t, err)
+		defer clusterAdmin.Close()
+
+		groups, err := clusterAdmin.DescribeConsumerGroups([]string{consumerGroup})
+		assert.NoError(t, err)
+		assert.Equal(t, len(groups), 1)
+		if expected {
+			assert.True(t, len(groups[0].Members) > 0, "expected consumer group %v to have members", consumerGroup)
+		} else {
+			assert.False(t, len(groups[0].Members) > 0, "expected consumer group %v to have no members", consumerGroup)
 		}
 	}
 }
