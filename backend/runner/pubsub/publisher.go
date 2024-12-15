@@ -51,14 +51,6 @@ func newPublisher(module string, t *schema.Topic, deployment model.DeploymentKey
 }
 
 func (p *publisher) publish(ctx context.Context, data []byte, key string, caller schema.Ref) error {
-	partition, offset, err := p.producer.SendMessage(&sarama.ProducerMessage{
-		Topic: p.topic.Runtime.TopicID,
-		Value: sarama.ByteEncoder(data),
-		Key:   sarama.StringEncoder(key),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to get request key: %w", err)
-	}
 	requestKey, err := rpc.RequestKeyFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get request key: %w", err)
@@ -74,14 +66,20 @@ func (p *publisher) publish(ctx context.Context, data []byte, key string, caller
 		Time:          time.Now(),
 		SourceVerb:    caller,
 		Topic:         p.topic.Name,
-		Partition:     int(partition),
-		Offset:        int(offset),
 		Request:       data,
 	}
+
+	partition, offset, err := p.producer.SendMessage(&sarama.ProducerMessage{
+		Topic: p.topic.Runtime.TopicID,
+		Value: sarama.ByteEncoder(data),
+		Key:   sarama.StringEncoder(key),
+	})
 	if err != nil {
 		timelineEvent.Error = optional.Some(err.Error())
 		return fmt.Errorf("failed to publish message: %w", err)
 	}
+	timelineEvent.Partition = int(partition)
+	timelineEvent.Offset = int(offset)
 	p.timelineClient.Publish(ctx, timelineEvent)
 	return nil
 }
