@@ -15,6 +15,7 @@ import (
 
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/kong"
+	"github.com/alecthomas/types/optional"
 	"github.com/tidwall/pretty"
 	"golang.org/x/term"
 
@@ -92,22 +93,23 @@ type StatusLine interface {
 }
 
 type terminalStatusManager struct {
-	old              *os.File
-	oldErr           *os.File
-	read             *os.File
-	write            *os.File
-	closed           atomic.Value[bool]
-	totalStatusLines int
-	statusLock       sync.Mutex
-	lines            []*terminalStatusLine
-	moduleLine       *terminalStatusLine
-	moduleStates     map[string]BuildState
-	height           int
-	width            int
-	exitWait         sync.WaitGroup
-	console          bool
-	consoleRefresh   func()
-	spinnerCount     int
+	old                *os.File
+	oldErr             *os.File
+	read               *os.File
+	write              *os.File
+	closed             atomic.Value[bool]
+	totalStatusLines   int
+	statusLock         sync.Mutex
+	lines              []*terminalStatusLine
+	moduleLine         *terminalStatusLine
+	moduleStates       map[string]BuildState
+	height             int
+	width              int
+	exitWait           sync.WaitGroup
+	console            bool
+	consoleRefresh     func()
+	spinnerCount       int
+	interactiveConsole optional.Option[*interactiveConsole]
 }
 
 type statusKey struct{}
@@ -162,9 +164,15 @@ func NewStatusManager(ctx context.Context) StatusManager {
 					sm.writeLine(current, true)
 				}
 				if !closed {
+					sm.clearStatusMessages()
 					sm.exitWait.Done()
 				}
 				return
+			}
+			if closed {
+				// When we are closed we just write the data to the old stdout
+				_, _ = sm.old.Write(rawData[:n]) //nolint:errcheck
+				continue
 			}
 			buf.Write(rawData[:n])
 			for buf.Len() > 0 {
@@ -175,6 +183,7 @@ func NewStatusManager(ctx context.Context) StatusManager {
 					// that we handle on a best effort basis
 					sm.writeLine(current, true)
 					if !closed {
+						sm.clearStatusMessages()
 						sm.exitWait.Done()
 						closed = true
 					}
@@ -345,6 +354,9 @@ func (r *terminalStatusManager) SetModuleState(module string, state BuildState) 
 
 func (r *terminalStatusManager) Close() {
 	r.statusLock.Lock()
+	if it, ok := r.interactiveConsole.Get(); ok {
+		it.Close()
+	}
 	r.clearStatusMessages()
 	r.totalStatusLines = 0
 	r.lines = []*terminalStatusLine{}
@@ -498,9 +510,15 @@ func (r *terminalStatusLine) SetMessage(message string) {
 
 func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, eventSource schemaeventsource.EventSource) {
 	sm := FromContext(ctx)
-	if _, ok := sm.(*terminalStatusManager); ok {
+	if tsm, ok := sm.(*terminalStatusManager); ok {
+		it, err := newInteractiveConsole(k, binder, eventSource)
+		if err != nil {
+			fmt.Printf("\033[31mError: %s\033[0m\n", err)
+			return
+		}
+		tsm.interactiveConsole = optional.Some(it)
 		go func() {
-			err := RunInteractiveConsole(ctx, k, binder, eventSource)
+			err := it.run(ctx)
 			if err != nil {
 				fmt.Printf("\033[31mError: %s\033[0m\n", err)
 				return
