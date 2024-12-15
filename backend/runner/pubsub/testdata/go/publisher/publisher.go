@@ -8,8 +8,16 @@ import (
 	// Import the FTL SDK.
 )
 
+type PartitionMapper struct{}
+
+var _ ftl.TopicPartitionMap[PubSubEvent] = PartitionMapper{}
+
+func (PartitionMapper) PartitionKey(event PubSubEvent) string {
+	return event.Time.String()
+}
+
 //ftl:export
-type TestTopic = ftl.TopicHandle[PubSubEvent, ftl.SinglePartitionMap[PubSubEvent]]
+type TestTopic = ftl.TopicHandle[PubSubEvent, PartitionMapper]
 
 type PubSubEvent struct {
 	Time     time.Time

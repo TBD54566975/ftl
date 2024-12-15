@@ -12,14 +12,16 @@ import xyz.block.ftl.Subscription;
 
 public class Subscriber {
 
-    private static final AtomicInteger catchCount = new AtomicInteger();
-
     @Subscription(topic = TestTopicTopic.class, from = FromOffset.BEGINNING)
     void consume(PubSubEvent event) throws Exception {
         Log.infof("Subscriber is consuming %s", event.getTime());
     }
 
-    @Subscription(topic = Topic2Topic.class, from = FromOffset.BEGINNING)
+    @Subscription(topic = TestTopicTopic.class, from = FromOffset.LATEST)
+    void consumeFromLatest(PubSubEvent event) throws Exception {
+    }
+
+    ConsumeFromLatest
     @Retry(count = 2, minBackoff = "1s", maxBackoff = "1s")
     public void consumeButFailAndRetry(PubSubEvent event) {
         throw new RuntimeException("always error: event " + event.getTime());

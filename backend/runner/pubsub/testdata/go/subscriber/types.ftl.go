@@ -11,6 +11,8 @@ type ConsumeClient func(context.Context, ftlpublisher.PubSubEvent) error
 
 type ConsumeButFailAndRetryClient func(context.Context, ftlpublisher.PubSubEvent) error
 
+type ConsumeFromLatestClient func(context.Context, ftlpublisher.PubSubEvent) error
+
 type PublishToExternalModuleClient func(context.Context) error
 
 func init() {
@@ -20,6 +22,9 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			ConsumeButFailAndRetry,
+		),
+		reflection.ProvideResourcesForVerb(
+			ConsumeFromLatest,
 		),
 		reflection.ProvideResourcesForVerb(
 			PublishToExternalModule,
