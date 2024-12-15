@@ -35,8 +35,6 @@ full-deploy: build-all-images setup-istio-cluster
 # Wait for core Kubernetes components to be ready
 wait-for-kube:
   #!/bin/bash
-  while [ -z "$(kubectl get pod ftl-postgresql-0)" ]; do sleep 1; done
-  kubectl wait --for=condition=ready pod/ftl-postgresql-0 --timeout=5m
   kubectl wait --for=condition=available deployment/ftl-timeline --timeout=5m
   kubectl wait --for=condition=available deployment/ftl-console --timeout=5m
   kubectl wait --for=condition=available deployment/ftl-controller --timeout=5m

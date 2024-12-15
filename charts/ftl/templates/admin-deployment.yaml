@@ -46,13 +46,6 @@ spec:
             {{- if .Values.admin.env }}
             {{- toYaml .Values.admin.env | nindent 12 }}
             {{- end }}
-            {{- if not .Values.postgresql.enabled }}
-            - name: FTL_DSN
-              value: "{{ .Values.admin.dbConnectionString }}"
-            {{- else }}
-            - name: FTL_DSN
-              value: "postgres://{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.global.postgresql.auth.database }}?sslmode=disable&user={{ .Values.postgresql.global.postgresql.auth.username }}&password={{ .Values.postgresql.global.postgresql.auth.password }}"
-            {{- end }}
 
           ports:
             {{- range .Values.admin.ports }}
