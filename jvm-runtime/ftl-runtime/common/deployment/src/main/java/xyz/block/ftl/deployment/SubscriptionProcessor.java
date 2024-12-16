@@ -85,9 +85,9 @@ public class SubscriptionProcessor {
         }
         topicName = annotation.value().asString();
         AnnotationValue moduleValue = annotation.value("module");
-        AnnotationValue deadLetterValue = annotation.value("deadLetter");
+        AnnotationValue deadLetterValue = subscriptions.value("deadLetter");
         boolean deadLetter = deadLetterValue != null && !deadLetterValue.asString().isEmpty() && deadLetterValue.asBoolean();
-        AnnotationValue from = annotation.value("from");
+        AnnotationValue from = subscriptions.value("from");
         FromOffset fromOffset = from == null ? FromOffset.LATEST : FromOffset.valueOf(from.asEnum());
 
         return new SubscriptionAnnotation(
