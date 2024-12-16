@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/block/golang-tools/go/analysis"
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/types/optional"
+	"github.com/block/ftl-golang-tools/go/analysis"
 
 	"github.com/block/ftl/common/cron"
 	"github.com/block/ftl/common/schema"

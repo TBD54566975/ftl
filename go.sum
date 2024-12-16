@@ -20,8 +20,8 @@ github.com/Masterminds/semver/v3 v3.2.1 h1:RN9w6+7QoMeJVGyfmbcgs28Br8cvmnucEXnY0
 github.com/Masterminds/semver/v3 v3.2.1/go.mod h1:qvl/7zhW3nngYb5+80sSMF+FG2BjYrf8m9wsX0PNOMQ=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5+sAH+4kjUM=
-github.com/block/golang-tools v0.2.1 h1:jzP27dzvJRb43Z9xTbRCPOT/rZD43FZkqV+BX+zSoV8=
-github.com/block/golang-tools v0.2.1/go.mod h1:rEEXIq0/pFgZqi/MTOq4DBmVpLHLgI9WocJWXYhu050=
+github.com/block/ftl-golang-tools v0.2.1 h1:jzP27dzvJRb43Z9xTbRCPOT/rZD43FZkqV+BX+zSoV8=
+github.com/block/ftl-golang-tools v0.2.1/go.mod h1:rEEXIq0/pFgZqi/MTOq4DBmVpLHLgI9WocJWXYhu050=
 github.com/XSAM/otelsql v0.35.0 h1:nMdbU/XLmBIB6qZF61uDqy46E0LVA4ZgF/FCNw8Had4=
 github.com/XSAM/otelsql v0.35.0/go.mod h1:wO028mnLzmBpstK8XPsoeRLl/kgt417yjAwOGDIptTc=
 github.com/akamensky/base58 v0.0.0-20210829145138-ce8bf8802e8f h1:z8MkSJCUyTmW5YQlxsMLBlwA7GmjxC7L4ooicxqnhz8=

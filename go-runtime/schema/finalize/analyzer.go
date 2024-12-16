@@ -6,10 +6,10 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/block/golang-tools/go/analysis"
-	"github.com/block/golang-tools/go/analysis/passes/inspect"
-	"github.com/block/golang-tools/go/ast/inspector"
 	"github.com/alecthomas/types/optional"
+	"github.com/block/ftl-golang-tools/go/analysis"
+	"github.com/block/ftl-golang-tools/go/analysis/passes/inspect"
+	"github.com/block/ftl-golang-tools/go/ast/inspector"
 
 	"github.com/block/ftl/common/schema"
 	"github.com/block/ftl/common/strcase"

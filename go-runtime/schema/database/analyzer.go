@@ -4,8 +4,8 @@ import (
 	"go/ast"
 	"go/types"
 
-	"github.com/block/golang-tools/go/analysis"
 	"github.com/alecthomas/types/optional"
+	"github.com/block/ftl-golang-tools/go/analysis"
 
 	"github.com/block/ftl/common/schema"
 	"github.com/block/ftl/go-runtime/schema/common"
