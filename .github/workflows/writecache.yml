@@ -24,8 +24,6 @@ jobs:
         run: hermit install
       - name: Docker Compose
         run: just compose-up
-      - name: Init DB
-        run: just init-db
       - name: Rebuild All
         run: just build-all
       - name: Download Go Dependencies
@@ -78,4 +76,3 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
-
