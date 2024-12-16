@@ -65,7 +65,7 @@ type serveCommonConfig struct {
 	DatabaseImage       string               `help:"The container image to start for the database" default:"postgres:15.10" env:"FTL_DATABASE_IMAGE" hidden:""`
 	RegistryImage       string               `help:"The container image to start for the image registry" default:"registry:2" env:"FTL_REGISTRY_IMAGE" hidden:""`
 	GrafanaImage        string               `help:"The container image to start for the automatic Grafana instance" default:"grafana/otel-lgtm" env:"FTL_GRAFANA_IMAGE" hidden:""`
-	DisableGrafana      bool                 `help:"Disable the automatic Grafana that is started if no telemetry collector is specified." default:"false"`
+	EnableGrafana       bool                 `help:"Enable Grafana to view telemetry data." default:"false"`
 	NoConsole           bool                 `help:"Disable the console."`
 	Ingress             ingress.Config       `embed:"" prefix:"ingress-"`
 	Timeline            timeline.Config      `embed:"" prefix:"timeline-"`
@@ -160,7 +160,7 @@ func (s *serveCommonConfig) run(
 		logger.Debugf("Starting FTL with %d controller(s)", s.Controllers)
 	}
 
-	if !s.DisableGrafana && !bool(s.ObservabilityConfig.ExportOTEL) {
+	if s.EnableGrafana && !bool(s.ObservabilityConfig.ExportOTEL) {
 		err := dev.SetupGrafana(ctx, s.GrafanaImage)
 		if err != nil {
 			logger.Errorf(err, "Failed to setup grafana image")
