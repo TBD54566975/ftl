@@ -5,8 +5,8 @@ go 1.23.0
 replace github.com/block/ftl => ./../../../../../..
 
 require (
-	github.com/block/ftl v0.0.0-00010101000000-000000000000
 	github.com/alecthomas/assert/v2 v2.11.0
+	github.com/block/ftl v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -19,6 +19,6 @@ require (
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/swaggest/jsonschema-go v0.3.72 // indirect
 	github.com/swaggest/refl v1.3.0 // indirect
-	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d // indirect
+	golang.org/x/exp v0.0.0-20241215155358-4a5509556b9e // indirect
 	google.golang.org/protobuf v1.35.2 // indirect
 )

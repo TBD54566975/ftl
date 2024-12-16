@@ -14,6 +14,6 @@ require (
 	github.com/hashicorp/cronexpr v1.1.2 // indirect
 	github.com/swaggest/jsonschema-go v0.3.72 // indirect
 	github.com/swaggest/refl v1.3.0 // indirect
-	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d // indirect
+	golang.org/x/exp v0.0.0-20241215155358-4a5509556b9e // indirect
 	google.golang.org/protobuf v1.35.2 // indirect
 )

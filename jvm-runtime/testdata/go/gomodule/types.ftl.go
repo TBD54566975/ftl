@@ -5,7 +5,7 @@ import (
 	"context"
 	"github.com/block/ftl/go-runtime/ftl"
 	"github.com/block/ftl/common/reflection"
-	"github.com/block/web5-go/dids/did"
+	"github.com/tbd54566975/web5-go/dids/did"
 	stdtime "time"
 )
 
