@@ -22,7 +22,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/types/optional"
-	mysql "github.com/block/ftl-mysql-auth-proxy"
 	"github.com/jpillora/backoff"
 	"github.com/otiai10/copy"
 	"github.com/puzpuzpuz/xsync/v3"
@@ -30,6 +29,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	mysql "github.com/block/ftl-mysql-auth-proxy"
 	"github.com/block/ftl/backend/controller/artefacts"
 	ftldeploymentconnect "github.com/block/ftl/backend/protos/xyz/block/ftl/deployment/v1/deploymentpbconnect"
 	ftlleaseconnect "github.com/block/ftl/backend/protos/xyz/block/ftl/lease/v1/leasepbconnect"

@@ -7,7 +7,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/block/ftl-golang-tools/go/analysis"
-
 	"github.com/block/ftl/common/builderrors"
 )
 

@@ -6,13 +6,13 @@ import (
 
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/tuple"
+	sets "github.com/deckarep/golang-set/v2"
+	"golang.org/x/exp/maps"
+
 	"github.com/block/ftl-golang-tools/go/analysis"
 	"github.com/block/ftl-golang-tools/go/analysis/passes/inspect"
 	checker "github.com/block/ftl-golang-tools/go/analysis/programmaticchecker"
 	"github.com/block/ftl-golang-tools/go/packages"
-	sets "github.com/deckarep/golang-set/v2"
-	"golang.org/x/exp/maps"
-
 	"github.com/block/ftl/common/builderrors"
 	"github.com/block/ftl/common/schema"
 	"github.com/block/ftl/common/strcase"
