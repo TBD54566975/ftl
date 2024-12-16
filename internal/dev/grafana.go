@@ -5,6 +5,8 @@ import (
 	_ "embed"
 	"fmt"
 
+	"github.com/alecthomas/types/optional"
+
 	"github.com/block/ftl/internal/container"
 )
 
@@ -12,7 +14,7 @@ import (
 var grafanaDockerCompose string
 
 func SetupGrafana(ctx context.Context, image string) error {
-	err := container.ComposeUp(ctx, "grafana", grafanaDockerCompose)
+	err := container.ComposeUp(ctx, "grafana", grafanaDockerCompose, optional.None[string]())
 	if err != nil {
 		return fmt.Errorf("could not start grafana: %w", err)
 	}
