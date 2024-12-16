@@ -1,5 +1,6 @@
 import { useContext, useEffect, useState } from 'react'
 import { Button } from '../../../../components/Button'
+import { Checkbox } from '../../../../components/Checkbox'
 import { CodeEditor } from '../../../../components/CodeEditor'
 import { ResizablePanels } from '../../../../components/ResizablePanels'
 import { useClient } from '../../../../hooks/use-client'
@@ -15,6 +16,7 @@ export const ConfigPanel = ({ value, schema, moduleName, declName }: { value: Co
   const client = useClient(ConsoleService)
   const [configValue, setConfigValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isJsonMode, setIsJsonMode] = useState(false)
   const notification = useContext(NotificationsContext)
 
   useEffect(() => {
@@ -31,11 +33,29 @@ export const ConfigPanel = ({ value, schema, moduleName, declName }: { value: Co
 
   const handleSetConfig = () => {
     setIsLoading(true)
+    let valueToSend = configValue
+
+    if (isJsonMode) {
+      try {
+        JSON.parse(configValue)
+      } catch (e) {
+        notification?.showNotification({
+          title: 'Invalid JSON',
+          message: 'Please enter valid JSON',
+          type: NotificationType.Error,
+        })
+        setIsLoading(false)
+        return
+      }
+    } else {
+      valueToSend = configValue
+    }
+
     client
       .setConfig({
         module: moduleName,
         name: declName,
-        value: new TextEncoder().encode(configValue),
+        value: new TextEncoder().encode(valueToSend),
       })
       .then(() => {
         setIsLoading(false)
@@ -71,13 +91,16 @@ export const ConfigPanel = ({ value, schema, moduleName, declName }: { value: Co
             <div className=''>
               <PanelHeader title='Config' declRef={`${moduleName}.${declName}`} exported={false} comments={decl.comments} />
               <CodeEditor value={configValue} onTextChanged={setConfigValue} />
-              <div className='mt-2 space-x-2 flex flex-nowrap justify-end'>
-                <Button onClick={handleSetConfig} disabled={isLoading}>
-                  Save
-                </Button>
-                <Button onClick={handleGetConfig} disabled={isLoading}>
-                  Refresh
-                </Button>
+              <div className='mt-2 flex items-center justify-between'>
+                <Checkbox checked={isJsonMode} onChange={(e) => setIsJsonMode(e.target.checked)} label='JSON mode' />
+                <div className='space-x-2 flex flex-nowrap'>
+                  <Button onClick={handleSetConfig} disabled={isLoading}>
+                    Save
+                  </Button>
+                  <Button onClick={handleGetConfig} disabled={isLoading}>
+                    Refresh
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

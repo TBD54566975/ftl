@@ -3,6 +3,7 @@ import type React from 'react'
 import { useEffect, useState } from 'react'
 import { useModules } from '../../../api/modules/use-modules'
 import { eventTypesFilter, logLevelFilter, modulesFilter } from '../../../api/timeline'
+import { Checkbox } from '../../../components/Checkbox'
 import { EventType, LogLevel } from '../../../protos/xyz/block/ftl/timeline/v1/event_pb'
 import type { GetTimelineRequest_Filter } from '../../../protos/xyz/block/ftl/timeline/v1/timeline_pb'
 import { textColor } from '../../../utils'
@@ -109,26 +110,23 @@ export const TimelineFilterPanel = ({
       <div className='w-full'>
         <div className='mx-auto w-full max-w-md pt-2 pl-2 pb-2'>
           <FilterPanelSection title='Event types'>
-            {Object.keys(EVENT_TYPES).map((key) => (
-              <div key={key} className='relative flex items-start'>
-                <div className='flex h-6 items-center'>
-                  <input
+            <div className='space-y-1'>
+              {Object.keys(EVENT_TYPES).map((key) => (
+                <div key={key} className='relative flex items-start'>
+                  <Checkbox
                     id={`event-type-${key}`}
-                    name={`event-type-${key}`}
-                    type='checkbox'
                     checked={selectedEventTypes.includes(key)}
                     onChange={(e) => handleTypeChanged(key, e.target.checked)}
-                    className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer'
+                    label={
+                      <div className='flex items-center justify-between w-full'>
+                        <span className={textColor}>{EVENT_TYPES[key].label}</span>
+                        {EVENT_TYPES[key].icon}
+                      </div>
+                    }
                   />
                 </div>
-                <div className='ml-2 text-sm leading-6 w-full'>
-                  <label htmlFor={`event-type-${key}`} className={`flex justify-between items-center ${textColor} cursor-pointer`}>
-                    {EVENT_TYPES[key].label}
-                    <span>{EVENT_TYPES[key].icon}</span>
-                  </label>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </FilterPanelSection>
 
           <FilterPanelSection title='Log level'>
@@ -166,22 +164,13 @@ export const TimelineFilterPanel = ({
                 </button>
               </div>
               {modules.data.modules.map((module) => (
-                <div key={module.deploymentKey} className='relative flex items-start'>
-                  <div className='flex h-6 items-center'>
-                    <input
-                      id={`module-${module.deploymentKey}`}
-                      name={`module-${module.deploymentKey}`}
-                      type='checkbox'
-                      checked={selectedModules.includes(module.deploymentKey)}
-                      onChange={(e) => handleModuleChanged(module.deploymentKey, e.target.checked)}
-                      className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer'
-                    />
-                  </div>
-                  <div className='ml-2 text-sm leading-6 w-full'>
-                    <label htmlFor={`module-${module.deploymentKey}`} className={`${textColor} flex cursor-pointer`}>
-                      {module.name}
-                    </label>
-                  </div>
+                <div key={module.deploymentKey}>
+                  <Checkbox
+                    id={`module-${module.deploymentKey}`}
+                    checked={selectedModules.includes(module.deploymentKey)}
+                    onChange={(e) => handleModuleChanged(module.deploymentKey, e.target.checked)}
+                    label={<span className={textColor}>{module.name}</span>}
+                  />
                 </div>
               ))}
             </FilterPanelSection>

@@ -87,7 +87,7 @@ export const Multiselect = ({
         <ListboxOptions
           anchor='bottom'
           transition
-          className='w-[var(--button-width)] min-w-48 ml-2 pt-1 rounded-md border dark:border-white/5 bg-white dark:bg-gray-800 transition duration-100 ease-in truncate drop-shadow-lg z-20'
+          className='w-[var(--button-width)] min-w-48 mt-1 pt-1 rounded-md border dark:border-white/5 bg-white dark:bg-gray-800 transition duration-100 ease-in truncate drop-shadow-lg z-20'
         >
           {allOpts
             .filter((o) => !o.group)
