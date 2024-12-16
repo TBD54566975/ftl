@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/TBD54566975/golang-tools/go/analysis"
-	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
-	"github.com/TBD54566975/golang-tools/go/ast/inspector"
+	"github.com/block/golang-tools/go/analysis"
+	"github.com/block/golang-tools/go/analysis/passes/inspect"
+	"github.com/block/golang-tools/go/ast/inspector"
 	"github.com/alecthomas/types/optional"
 
 	"github.com/block/ftl/common/schema"

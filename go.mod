@@ -8,7 +8,7 @@ require (
 	connectrpc.com/otelconnect v0.7.1
 	github.com/BurntSushi/toml v1.4.0
 	github.com/IBM/sarama v1.43.3
-	github.com/TBD54566975/golang-tools v0.2.1
+	github.com/block/golang-tools v0.2.1
 	github.com/XSAM/otelsql v0.35.0
 	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/alecthomas/atomic v0.1.0-alpha2

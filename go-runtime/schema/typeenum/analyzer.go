@@ -4,9 +4,9 @@ import (
 	"go/ast"
 	"go/types"
 
-	"github.com/TBD54566975/golang-tools/go/analysis"
-	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
-	"github.com/TBD54566975/golang-tools/go/ast/inspector"
+	"github.com/block/golang-tools/go/analysis"
+	"github.com/block/golang-tools/go/analysis/passes/inspect"
+	"github.com/block/golang-tools/go/ast/inspector"
 
 	"github.com/block/ftl/common/schema"
 	"github.com/block/ftl/common/strcase"

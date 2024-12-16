@@ -4,7 +4,7 @@ import (
 	"go/ast"
 	"go/types"
 
-	"github.com/TBD54566975/golang-tools/go/analysis"
+	"github.com/block/golang-tools/go/analysis"
 	"github.com/alecthomas/types/optional"
 
 	"github.com/block/ftl/common/schema"

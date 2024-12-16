@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/TBD54566975/golang-tools/go/analysis"
+	"github.com/block/golang-tools/go/analysis"
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/types/optional"
 

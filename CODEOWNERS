@@ -1,12 +1,12 @@
 # Members of ftl-reviewers will be round-robined per the code review settings in the team profile:
-#   https://github.com/orgs/TBD54566975/teams/ftl-reviewers/edit/review_assignment
+#   https://github.com/orgs/block/teams/ftl-reviewers/edit/review_assignment
 
 # By default ftl-reviewers will be added to all PRs.
-*                @TBD54566975/ftl-reviewers @alecthomas
+*                @block/ftl-reviewers @alecthomas
 
 # Below are team-specific overrides. These should supercede the default ftl-reviewers team.
-frontend/        @TBD54566975/ftl-frontend-team
-pnpm-*           @TBD54566975/ftl-frontend-team
-go-runtime/      @TBD54566975/ftl-go-team
-jvm-runtime/     @TBD54566975/ftl-jvm-team
-deployment/      @TBD54566975/ftl-infra-team
+frontend/        @block/ftl-frontend-team
+pnpm-*           @block/ftl-frontend-team
+go-runtime/      @block/ftl-go-team
+jvm-runtime/     @block/ftl-jvm-team
+deployment/      @block/ftl-infra-team

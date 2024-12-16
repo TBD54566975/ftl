@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/TBD54566975/golang-tools/go/analysis"
-	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
-	"github.com/TBD54566975/golang-tools/go/ast/inspector"
+	"github.com/block/golang-tools/go/analysis"
+	"github.com/block/golang-tools/go/analysis/passes/inspect"
+	"github.com/block/golang-tools/go/ast/inspector"
 	"github.com/alecthomas/types/optional"
 	"github.com/puzpuzpuz/xsync/v3"
 
@@ -423,7 +423,7 @@ func extractSelectorType(pass *analysis.Pass, node ast.Node, typ *ast.SelectorEx
 
 				if IsExternalType(path) {
 					NoEndColumnErrorf(pass, node.Pos(), "unsupported external type %q; see FTL docs on using external types: %s",
-						path+"."+typ.Sel.Name, "tbd54566975.github.io/ftl/docs/reference/externaltypes/")
+						path+"."+typ.Sel.Name, "block.github.io/ftl/docs/reference/externaltypes/")
 					return optional.None[schema.Type]()
 				}
 
@@ -507,7 +507,7 @@ func extractRef(pass *analysis.Pass, node ast.Node) optional.Option[schema.Type]
 	nodePath := obj.Pkg().Path()
 	if !IsPathInModule(pass.Pkg, nodePath) && IsExternalType(nodePath) {
 		NoEndColumnErrorf(pass, node.Pos(), "unsupported external type %q; see FTL docs on using external types: %s",
-			GetNativeName(obj), "tbd54566975.github.io/ftl/docs/reference/externaltypes/")
+			GetNativeName(obj), "block.github.io/ftl/docs/reference/externaltypes/")
 		return optional.None[schema.Type]()
 	}
 

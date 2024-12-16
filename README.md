@@ -6,14 +6,14 @@
 
 ## Documentation
 
-https://tbd54566975.github.io/ftl/
+https://block.github.io/ftl/
 
 ## Getting started
 
 ### Install ftl, for example on macos:
 
 ```sh
-brew tap TBD54566975/ftl && brew install ftl
+brew tap block/ftl && brew install ftl
 ```
 
 ### Create a sample project (Go)

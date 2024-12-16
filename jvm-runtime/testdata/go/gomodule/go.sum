@@ -202,8 +202,8 @@ github.com/swaggest/jsonschema-go v0.3.72 h1:IHaGlR1bdBUBPfhe4tfacN2TGAPKENEGiNy
 github.com/swaggest/jsonschema-go v0.3.72/go.mod h1:OrGyEoVqpfSFJ4Am4V/FQcQ3mlEC1vVeleA+5ggbVW4=
 github.com/swaggest/refl v1.3.0 h1:PEUWIku+ZznYfsoyheF97ypSduvMApYyGkYF3nabS0I=
 github.com/swaggest/refl v1.3.0/go.mod h1:3Ujvbmh1pfSbDYjC6JGG7nMgPvpG0ehQL4iNonnLNbg=
-github.com/tbd54566975/web5-go v0.24.0 h1:21pLJCeMRt1hEdedzu3FpSJLsnk+MZ2SOxKYQxj3gC8=
-github.com/tbd54566975/web5-go v0.24.0/go.mod h1:7M5TGxGZY4g/eh0aoSD1h6AGr5yJXAc706wSquc8QsE=
+github.com/block/web5-go v0.24.0 h1:21pLJCeMRt1hEdedzu3FpSJLsnk+MZ2SOxKYQxj3gC8=
+github.com/block/web5-go v0.24.0/go.mod h1:7M5TGxGZY4g/eh0aoSD1h6AGr5yJXAc706wSquc8QsE=
 github.com/tv42/zbase32 v0.0.0-20220222190657-f76a9fc892fa h1:2EwhXkNkeMjX9iFYGWLPQLPhw9O58BhnYgtYKeqybcY=
 github.com/tv42/zbase32 v0.0.0-20220222190657-f76a9fc892fa/go.mod h1:is48sjgBanWcA5CQrPBu9Y5yABY/T2awj/zI65bq704=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=

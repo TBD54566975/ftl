@@ -103,7 +103,7 @@ apply:
 
 # Deploy specific version of FTL from Helm repository
 deploy-version version: setup-istio-cluster
-  helm repo add ftl https://tbd54566975.github.io/ftl-charts --force-update
+  helm repo add ftl https://block.github.io/ftl-charts --force-update
   helm upgrade --install ftl ftl/ftl --version={{version}} -f values-release.yaml || sleep 5 # wait for CRDs to be created, the initial apply will usually fail
   helm upgrade --install ftl ftl/ftl --version={{version}} -f values-release.yaml
 
@@ -186,4 +186,3 @@ ftl *args:
   set -euxo pipefail
   export POD=$(kubectl get pods -l app=ftl-controller --no-headers | tail -1 | awk '{print $1}')
   kubectl exec -it ${POD} -- bash -c "FTL_ENDPOINT=http://ftl-controller:8892 /root/ftl {{args}}"
-

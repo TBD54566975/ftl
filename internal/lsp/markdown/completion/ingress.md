@@ -24,7 +24,7 @@ func Get(ctx context.Context, req builtin.HttpRequest[ftl.Unit, GetPathParams, G
 }
 ```
 
-See https://tbd54566975.github.io/ftl/docs/reference/ingress/
+See https://block.github.io/ftl/docs/reference/ingress/
 ---
 
 type ${1:Func}Request struct {

@@ -8,7 +8,7 @@
     <packaging>pom</packaging>
     <name>Ftl Java Runtime - Parent</name>
     <description>Towards a 𝝺-calculus for large-scale systems</description>
-    <url>https://tbd54566975.github.io/ftl/</url>
+    <url>https://block.github.io/ftl/</url>
 
     <scm>
         <connection>scm:git:git://github.com/block/ftl.git</connection>
@@ -20,7 +20,7 @@
 
     <developers>
         <developer>
-            <id>TBD54566975</id>
+            <id>block</id>
             <name>Block, Inc.</name>
             <email>releases@tbd.email</email>
         </developer>

@@ -7,7 +7,7 @@ func SendInvoiceEmail(ctx context.Context, in Invoice) error {
 }
 ```
 
-See https://tbd54566975.github.io/ftl/docs/reference/pubsub/
+See https://block.github.io/ftl/docs/reference/pubsub/
 ---
 
 //ftl:subscribe ${1:subscriptionName}
