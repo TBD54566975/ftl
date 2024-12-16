@@ -98,7 +98,7 @@ func (s *configGetCmd) Run(ctx context.Context, adminClient admin.Client) error 
 }
 
 type configSetCmd struct {
-	JSON  bool              `help:"Assume input value is JSON."`
+	JSON  bool              `help:"Assume input value is JSON. Note: For string configs, the JSON value itself must be a string (e.g., '\"hello\"' or '\"{'key': 'value'}\"')."`
 	Ref   configuration.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
 	Value *string           `arg:"" placeholder:"VALUE" help:"Configuration value (read from stdin if omitted)." optional:""`
 }
