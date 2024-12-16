@@ -1,7 +1,5 @@
 package xyz.block.ftl.java.test.subscriber;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import ftl.publisher.PubSubEvent;
 import ftl.publisher.TestTopicTopic;
 import ftl.publisher.Topic2Topic;
