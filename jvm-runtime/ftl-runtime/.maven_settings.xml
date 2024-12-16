@@ -2,13 +2,13 @@
     <servers>
         <server>
             <id>ossrh-snapshots</id>
-            <username>${env.SONATYPE_USERNAME_XYZ_BLOCK}</username>
-            <password>${env.SONATYPE_PASSWORD_XYZ_BLOCK}</password>
+            <username>${env.SONATYPE_USERNAME}</username>
+            <password>${env.SONATYPE_PASSWORD}</password>
         </server>
         <server>
             <id>ossrh-releases</id>
-            <username>${env.SONATYPE_USERNAME_XYZ_BLOCK}</username>
-            <password>${env.SONATYPE_PASSWORD_XYZ_BLOCK}</password>
+            <username>${env.SONATYPE_USERNAME}</username>
+            <password>${env.SONATYPE_PASSWORD}</password>
         </server>
     </servers>
 </settings>
