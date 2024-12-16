@@ -115,8 +115,8 @@ jobs:
               --batch-mode \
               --settings .maven_settings.xml
         env:
-          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME_XYZ_BLOCK }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD_XYZ_BLOCK }}
           SIGN_KEY_PASS: ${{ secrets.GPG_SECRET_PASSPHRASE }}
           SIGN_KEY: ${{ secrets.GPG_SECRET_KEY }}
 
