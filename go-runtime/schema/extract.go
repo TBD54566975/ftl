@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"go/types"
 
-	"github.com/TBD54566975/golang-tools/go/analysis"
-	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
-	checker "github.com/TBD54566975/golang-tools/go/analysis/programmaticchecker"
-	"github.com/TBD54566975/golang-tools/go/packages"
+	"github.com/block/golang-tools/go/analysis"
+	"github.com/block/golang-tools/go/analysis/passes/inspect"
+	checker "github.com/block/golang-tools/go/analysis/programmaticchecker"
+	"github.com/block/golang-tools/go/packages"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/tuple"
 	sets "github.com/deckarep/golang-set/v2"
@@ -247,7 +247,7 @@ func (cd *combinedData) errorDirectVerbInvocations() {
 		if v, ok := cd.verbs[fnCall.Callee]; ok {
 			cd.error(builderrors.Errorf(pos.ToErrorPos(),
 				"direct verb calls are not allowed; use the provided %sClient instead. "+
-					"See https://tbd54566975.github.io/ftl/docs/reference/verbs/#calling-verbs",
+					"See https://block.github.io/ftl/docs/reference/verbs/#calling-verbs",
 				strcase.ToUpperCamel(v.Name)))
 		}
 	}

@@ -7,7 +7,7 @@ A Verb is a remotely callable function that takes an input and returns an output
 func Name(ctx context.Context, req Request) (Response, error) {}
 ```
 
-See https://tbd54566975.github.io/ftl/docs/reference/verbs/
+See https://block.github.io/ftl/docs/reference/verbs/
 ---
 
 type ${1:Request} struct {}

@@ -74,7 +74,7 @@ else
   date="$(date -v "-5d" +%Y-%m-%d)"
 fi
 
-gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/TBD54566975/teams/ftl-team/members | jq -r '.[].login' | grep -v dhanji | sort | while read -r member; do
+gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/block/teams/ftl-team/members | jq -r '.[].login' | grep -v dhanji | sort | while read -r member; do
   echo "@$member [🔎](https://github.com/block/ftl/issues/assigned/$member)"
   echo
   list_issues_and_prs "$member"

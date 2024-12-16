@@ -17,7 +17,7 @@ list_issues() {
 }
 
 search_issues() {
-  gh search issues --label "$label" --state open --repo TBD54566975/ftl --json number,labels "$@" | jq -r "$(map_to_markdown)" | sort -n
+  gh search issues --label "$label" --state open --repo block/ftl --json number,labels "$@" | jq -r "$(map_to_markdown)" | sort -n
 }
 
 list_prioritized_issues() {
@@ -73,7 +73,7 @@ else
   date="$(date -v "-5d" +%Y-%m-%d)"
 fi
 
-gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/TBD54566975/teams/ftl-team/members | jq -r '.[].login' | grep -v dhanji | sort | while read -r member; do
+gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/block/teams/ftl-team/members | jq -r '.[].login' | grep -v dhanji | sort | while read -r member; do
   issues_and_prs=$(list_issues_and_prs "$member")
   closed_issues_and_prs="$(list_issues_and_prs "$member" -s closed -S "closed:>$date")"
   if [ -n "$issues_and_prs" ] || [ -n "$closed_issues_and_prs" ]; then

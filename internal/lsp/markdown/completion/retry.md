@@ -6,7 +6,7 @@ Any verb called asynchronously (specifically, PubSub subscribers and cron jobs),
 //ftl:retry [<attempts=10>] <min-backoff> [<max-backoff=1hr>] [catch <catchVerb>]
 ```
 
-See https://tbd54566975.github.io/ftl/docs/reference/retries/
+See https://block.github.io/ftl/docs/reference/retries/
 ---
 
 //ftl:retry ${1:attempts} ${2:minBackoff} ${3:maxBackoff}

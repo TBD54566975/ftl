@@ -27,7 +27,7 @@ There are also secondary reasons, such as:
 - External types often perform custom marshalling to/from JSON. This is not representable cross-language.
 - Cleaner separation of abstraction layers - the ability to mix in abitrary external types is convenient, but can easily lead to mixing of concerns between internal and external data representations.
 
-So what to do? See the [external types](https://tbd54566975.github.io/ftl/docs/reference/externaltypes/) documentation
+So what to do? See the [external types](https://block.github.io/ftl/docs/reference/externaltypes/) documentation
 for how to work around this limitation.
 
 ## What is a "module"?

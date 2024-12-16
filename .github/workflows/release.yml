@@ -128,7 +128,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          repository: TBD54566975/hermit-ftl
+          repository: block/hermit-ftl
           ref: "main"
           token: ${{ secrets.FTL_HERMIT_AUTOVERSION }}
       - name: Init Hermit

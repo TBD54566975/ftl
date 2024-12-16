@@ -13,7 +13,7 @@ const (
 )
 ```
 
-See https://tbd54566975.github.io/ftl/docs/reference/types/
+See https://block.github.io/ftl/docs/reference/types/
 ---
 
 //ftl:enum

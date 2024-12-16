@@ -6,7 +6,7 @@ import (
 	"go/token"
 	"unicode/utf8"
 
-	"github.com/TBD54566975/golang-tools/go/analysis"
+	"github.com/block/golang-tools/go/analysis"
 
 	"github.com/block/ftl/common/builderrors"
 )
