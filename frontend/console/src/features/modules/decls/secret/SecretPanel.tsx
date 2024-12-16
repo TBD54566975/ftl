@@ -1,5 +1,6 @@
 import { useContext, useEffect, useState } from 'react'
 import { Button } from '../../../../components/Button'
+import { Checkbox } from '../../../../components/Checkbox'
 import { CodeEditor } from '../../../../components/CodeEditor'
 import { ResizablePanels } from '../../../../components/ResizablePanels'
 import { useClient } from '../../../../hooks/use-client'
@@ -15,6 +16,7 @@ export const SecretPanel = ({ value, schema, moduleName, declName }: { value: Se
   const client = useClient(ConsoleService)
   const [secretValue, setSecretValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isJsonMode, setIsJsonMode] = useState(false)
   const notification = useContext(NotificationsContext)
 
   useEffect(() => {
@@ -41,11 +43,27 @@ export const SecretPanel = ({ value, schema, moduleName, declName }: { value: Se
 
   const handleSetSecret = () => {
     setIsLoading(true)
+    const valueToSend = secretValue
+
+    if (isJsonMode) {
+      try {
+        JSON.parse(secretValue)
+      } catch (e) {
+        notification?.showNotification({
+          title: 'Invalid JSON',
+          message: 'Please enter valid JSON',
+          type: NotificationType.Error,
+        })
+        setIsLoading(false)
+        return
+      }
+    }
+
     client
       .setSecret({
         module: moduleName,
         name: declName,
-        value: new TextEncoder().encode(secretValue),
+        value: new TextEncoder().encode(valueToSend),
       })
       .then(() => {
         setIsLoading(false)
@@ -82,13 +100,16 @@ export const SecretPanel = ({ value, schema, moduleName, declName }: { value: Se
             <div className=''>
               <PanelHeader title='Secret' declRef={`${moduleName}.${declName}`} exported={false} comments={decl.comments} />
               <CodeEditor value={secretValue} onTextChanged={setSecretValue} />
-              <div className='mt-2 space-x-2 flex flex-nowrap justify-end'>
-                <Button onClick={handleSetSecret} disabled={isLoading}>
-                  Save
-                </Button>
-                <Button onClick={handleGetSecret} disabled={isLoading}>
-                  Refresh
-                </Button>
+              <div className='mt-2 flex items-center justify-between'>
+                <Checkbox checked={isJsonMode} onChange={(e) => setIsJsonMode(e.target.checked)} label='JSON mode' />
+                <div className='space-x-2 flex flex-nowrap'>
+                  <Button onClick={handleSetSecret} disabled={isLoading}>
+                    Save
+                  </Button>
+                  <Button onClick={handleGetSecret} disabled={isLoading}>
+                    Refresh
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

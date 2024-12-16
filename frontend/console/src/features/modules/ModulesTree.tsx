@@ -178,22 +178,17 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
     <div className='flex grow flex-col h-full gap-y-5 overflow-y-auto bg-gray-100 dark:bg-gray-900'>
       <nav>
         <div className='sticky top-0 border-b border-gray-300 bg-gray-100 dark:border-gray-800 dark:bg-gray-900 z-10 flex items-center'>
-          <span className='w-full'>
+          <div className='flex-1 min-w-0'>
             <Multiselect allOpts={declTypeMultiselectOpts} selectedOpts={selectedDeclTypes} onChange={msOnChange} />
-          </span>
-          <Button
-            id='hide-exported'
-            variant='secondary'
-            size='sm'
-            onClick={() => setHideUnexportedState(!hideUnexported)}
-            title='Show/hide unexported'
-            className='mr-1'
-          >
-            {hideUnexported ? <ViewOffSlashIcon className='size-5 ' /> : <ViewIcon className='size-5' />}
-          </Button>
-          <Button variant='secondary' size='sm' onClick={collapseAll} title='Collapse all modules' className='mr-1'>
-            <ArrowShrink02Icon className='size-5' />
-          </Button>
+          </div>
+          <div className='flex-none flex gap-1'>
+            <Button id='hide-exported' variant='secondary' size='sm' onClick={() => setHideUnexportedState(!hideUnexported)} title='Show/hide unexported'>
+              {hideUnexported ? <ViewOffSlashIcon className='size-5' /> : <ViewIcon className='size-5' />}
+            </Button>
+            <Button variant='secondary' size='sm' onClick={collapseAll} title='Collapse all modules'>
+              <ArrowShrink02Icon className='size-5' />
+            </Button>
+          </div>
         </div>
         <ul>
           {modules.map((m) => (

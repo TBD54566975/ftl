@@ -1,5 +1,6 @@
-import { CheckmarkSquare01Icon, Delete03Icon, SquareIcon } from 'hugeicons-react'
+import { Delete03Icon } from 'hugeicons-react'
 import { useEffect, useRef } from 'react'
+import { Checkbox } from '../../../components/Checkbox'
 
 interface KeyValuePair {
   id: string
@@ -58,17 +59,7 @@ export const KeyValuePairForm = ({ keyValuePairs, onChange }: KeyValuePairFormPr
       <div className='space-y-2'>
         {keyValuePairs.map((pair, index) => (
           <div key={pair.id} className='flex items-center gap-2'>
-            <button
-              type='button'
-              onClick={() => updatePair(pair.id, { enabled: !pair.enabled })}
-              className='text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 flex-shrink-0'
-            >
-              {pair.enabled ? (
-                <CheckmarkSquare01Icon className='h-5 w-5 text-indigo-500 dark:text-indigo-400' />
-              ) : (
-                <SquareIcon className='h-5 w-5 dark:text-gray-600' />
-              )}
-            </button>
+            <Checkbox checked={pair.enabled} onChange={(e) => updatePair(pair.id, { enabled: e.target.checked })} />
             <input
               ref={(el) => {
                 inputRefs.current[pair.id] = el
