@@ -14,7 +14,14 @@ import (
 //ftl:verb
 //ftl:subscribe publisher.testTopic from=beginning
 func Consume(ctx context.Context, req publisher.PubSubEvent) error {
-	ftl.LoggerFromContext(ctx).Infof("Subscriber is consuming %v", req.Time)
+	ftl.LoggerFromContext(ctx).Infof("Consume: %v", req.Time)
+	return nil
+}
+
+//ftl:verb
+//ftl:subscribe publisher.testTopic from=latest
+func ConsumeFromLatest(ctx context.Context, req publisher.PubSubEvent) error {
+	ftl.LoggerFromContext(ctx).Infof("ConsumeFromLatest: %v", req.Time)
 	return nil
 }
 

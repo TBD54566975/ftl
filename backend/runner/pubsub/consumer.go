@@ -75,16 +75,17 @@ func (c *consumer) Begin(ctx context.Context) error {
 	// set up config
 	config := sarama.NewConfig()
 	config.Consumer.Return.Errors = true
+	config.Consumer.Offsets.AutoCommit.Enable = true
 	switch c.subscriber.FromOffset {
 	case schema.FromOffsetBeginning, schema.FromOffsetUnspecified:
 		config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	case schema.FromOffsetLatest:
 		config.Consumer.Offsets.Initial = sarama.OffsetNewest
 	}
-	config.Consumer.Offsets.Initial = sarama.OffsetOldest
-	config.Consumer.Offsets.AutoCommit.Enable = true
+	groupID := kafkaConsumerGroupID(c.moduleName, c.verb)
+	log.FromContext(ctx).Infof("Subscribing to topic %s for %s with offset %v", c.kafkaTopicID(), groupID, config.Consumer.Offsets.Initial)
 
-	group, err := sarama.NewConsumerGroup(c.verb.Runtime.Subscription.KafkaBrokers, kafkaConsumerGroupID(c.moduleName, c.verb), config)
+	group, err := sarama.NewConsumerGroup(c.verb.Runtime.Subscription.KafkaBrokers, groupID, config)
 	if err != nil {
 		return fmt.Errorf("failed to create consumer group for subscription %s: %w", c.verb.Name, err)
 	}

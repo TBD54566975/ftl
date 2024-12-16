@@ -25,15 +25,20 @@ func TestPubSub(t *testing.T) {
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
+
+		// publish half the events before subscriber is deployed
+		in.Repeat(calls/2, in.Call("publisher", "publishTen", in.Obj{}, func(t testing.TB, resp in.Obj) {})),
+
 		in.Deploy("subscriber"),
 
-		// publish events
-		in.Repeat(calls, in.Call("publisher", "publishTen", in.Obj{}, func(t testing.TB, resp in.Obj) {})),
+		// publish the other half of the events after subscriber is deployed
+		in.Repeat(calls/2, in.Call("publisher", "publishTen", in.Obj{}, func(t testing.TB, resp in.Obj) {})),
 
 		in.Sleep(time.Second*4),
 
-		// check that there are the right amount of successful async calls
+		// check that there are the right amount of consumed events, depending on "from" offset option
 		checkConsumed("subscriber", "consume", true, events, optional.None[string]()),
+		checkConsumed("subscriber", "consumeFromLatest", true, events/2, optional.None[string]()),
 	)
 }
 
@@ -75,9 +80,9 @@ func TestExternalPublishRuntimeCheck(t *testing.T) {
 func checkConsumed(module, verb string, success bool, count int, needle optional.Option[string]) in.Action {
 	return func(t testing.TB, ic in.TestContext) {
 		if needle, ok := needle.Get(); ok {
-			in.Infof("Checking for %v call(s) with needle %v", count, needle)
+			in.Infof("Checking for %v call(s) to %s.%s with needle %v", count, module, verb, needle)
 		} else {
-			in.Infof("Checking for %v call(s)", count)
+			in.Infof("Checking for %v call(s) to %s.%s", count, module, verb)
 		}
 		resp, err := ic.Timeline.GetTimeline(ic.Context, connect.NewRequest(&timelinepb.GetTimelineRequest{
 			Limit: 100000,
