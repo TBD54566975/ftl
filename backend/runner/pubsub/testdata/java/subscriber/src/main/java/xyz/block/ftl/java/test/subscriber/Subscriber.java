@@ -21,7 +21,7 @@ public class Subscriber {
     void consumeFromLatest(PubSubEvent event) throws Exception {
     }
 
-    ConsumeFromLatest
+    @Subscription(topic = Topic2Topic.class, from = FromOffset.BEGINNING)
     @Retry(count = 2, minBackoff = "1s", maxBackoff = "1s")
     public void consumeButFailAndRetry(PubSubEvent event) {
         throw new RuntimeException("always error: event " + event.getTime());
