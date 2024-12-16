@@ -5,42 +5,107 @@ package xyz.block.ftl.v1;
 import "xyz/block/ftl/schema/v1/schema.proto";
 import "xyz/block/ftl/v1/ftl.proto";
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "github.com/block/ftl/backend/protos/xyz/block/ftl/v1;ftlv1";
 option java_multiple_files = true;
 
 message GetSchemaRequest {}
 message GetSchemaResponse {
+  message Changeset {
+    string key = 1;
+    google.protobuf.Timestamp created_time = 2;
+    ChangesetState state = 3;
+    repeated ftl.schema.v1.Module modules = 4;
+    optional string error = 5;
+  }
   ftl.schema.v1.Schema schema = 1;
+  repeated Changeset changesets = 2;
 }
 
-enum DeploymentChangeType {
-  DEPLOYMENT_CHANGE_TYPE_UNSPECIFIED = 0;
-  DEPLOYMENT_CHANGE_TYPE_ADDED = 1;
-  DEPLOYMENT_CHANGE_TYPE_REMOVED = 2;
-  DEPLOYMENT_CHANGE_TYPE_CHANGED = 3;
+enum ChangeType {
+  CHANGE_TYPE_UNSPECIFIED = 0;
+  CHANGE_TYPE_ADDED = 1;
+  CHANGE_TYPE_REMOVED = 2;
+  CHANGE_TYPE_CHANGED = 3;
+}
+
+enum ChangesetState {
+  CHANGESET_STATE_PROVISIONING = 0;
+  CHANGESET_STATE_FAILED = 1;
 }
 
 message PullSchemaRequest {}
 message PullSchemaResponse {
-  // Will not be set for builtin modules.
-  optional string deployment_key = 1;
-  string module_name = 2;
-  // For deletes this will not be present.
-  optional ftl.schema.v1.Module schema = 4;
+  message Changeset {
+    string key = 1;
+    google.protobuf.Timestamp created_time = 2;
+    ChangesetState state = 3;
+  }
+
+  message Deployment {
+    // Will not be set for builtin modules.
+    optional string key = 1;
+    string module_name = 2;
+    
+    // If present, the deployment is not yet canonical as it is currently part of a changeset.
+    // Also not present for deletes.
+    optional string changeset = 3;
+
+    // For deletes this will not be present.
+    optional ftl.schema.v1.Module schema = 4;
+
+    optional string error = 5;
+    
+    // If this is true then the module was removed as well as the deployment. This is only set for DEPLOYMENT_REMOVED.
+    bool module_removed = 6;
+
+    // TODO: possibly separate out module deletion message as a different item type as the information is different enough
+  }
+
+  oneof item {
+    Changeset changeset = 1;
+    Deployment deployment = 2;
+  }
+
+  ChangeType change_type = 3;
+
   // If true there are more schema changes immediately following this one as part of the initial batch.
   // If false this is the last schema change in the initial batch, but others may follow later.
-  bool more = 3;
-  DeploymentChangeType change_type = 5;
-  // If this is true then the module was removed as well as the deployment. This is only set for DEPLOYMENT_REMOVED.
-  bool module_removed = 6;
+  bool more = 4;
 }
 
 message UpdateDeploymentRuntimeRequest {
   string deployment = 1;
-  ftl.schema.v1.ModuleRuntimeEvent event = 2;
+  optional string changeset = 2;
+  ftl.schema.v1.ModuleRuntimeEvent event = 3;
 }
 
 message UpdateDeploymentRuntimeResponse {}
+
+message CreateChangesetRequest {
+  repeated ftl.schema.v1.Module modules = 1;
+}
+
+message CreateChangesetResponse {
+  // The changeset key of the newly created changeset.
+  string changeset = 1;
+}
+
+message CommitChangesetRequest {
+  // The changeset key to commit.
+  string changeset = 1;
+}
+
+message CommitChangesetResponse {}
+
+message FailChangesetRequest {
+  // The changeset key to fail.
+  string changeset = 1;
+  string error = 2;
+}
+
+message FailChangesetResponse {}
 
 service SchemaService {
   // Ping service for readiness.
@@ -63,4 +128,13 @@ service SchemaService {
 
   // UpdateModuleRuntime is used to update the runtime configuration of a module.
   rpc UpdateDeploymentRuntime(UpdateDeploymentRuntimeRequest) returns (UpdateDeploymentRuntimeResponse);
+
+  // CreateChangeset creates a new changeset.
+  rpc CreateChangeset(CreateChangesetRequest) returns (CreateChangesetResponse);
+
+  // CommitChangeset makes all deployments for the changeset part of the canonical schema.
+  rpc CommitChangeset(CommitChangesetRequest) returns (CommitChangesetResponse);
+
+  // FailChangeset fails an active changeset.
+  rpc FailChangeset(FailChangesetRequest) returns (FailChangesetResponse);
 }
