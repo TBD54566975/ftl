@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tbd54566975/web5-go/dids/did"
+	"github.com/decentralized-identity/web5-go/dids/did"
 
 	"github.com/block/ftl/go-runtime/ftl"
 )
