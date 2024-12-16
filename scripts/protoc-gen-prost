@@ -2,12 +2,23 @@
 set -euo pipefail
 
 if [ ! "${HERMIT_ENV:-}" ]; then
-    # shellcheck disable=SC1091
-    . "$(dirname "$(dirname "$0")")/bin/activate-hermit"
+  # shellcheck disable=SC1091
+  . "$(dirname "$(dirname "$0")")/bin/activate-hermit" > /dev/null 2>&1
 fi
 
+
+function flockexec() {
+  file="$1"
+  shift
+  if [ "$(uname)" = "Darwin" ]; then
+    lockf -t 120 "$file" "$@"
+  else
+    flock -w 120 "$file" "$@"
+  fi
+}
+
 # Ensure the binary exists, install if it doesn't
-mk "${HERMIT_ENV}/.hermit/rust/bin/protoc-gen-prost" : -- cargo install protoc-gen-prost
+flockexec /tmp/protoc-gen-prost.lock mk "${HERMIT_ENV}/.hermit/rust/bin/protoc-gen-prost" : -- cargo install protoc-gen-prost 1>&2
 
 # Execute the binary with any passed arguments
 exec "${HERMIT_ENV}/.hermit/rust/bin/protoc-gen-prost" "$@"

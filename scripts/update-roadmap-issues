@@ -1,7 +1,8 @@
 #!/bin/bash
+set -euo pipefail
 
-label="$1"
-issue_number="$2"
+label="${1:-}"
+issue_number="${2:-}"
 if [ -z "$label" ] || [ -z "$issue_number" ]; then
   echo "Error: Both label and issue number must be provided."
   echo "Usage: $0 <label> <issue_number>"
@@ -130,7 +131,7 @@ EOF
 }
 
 update_issue() {
-  if test -z "$NOOP"; then
+  if test -z "${NOOP:-}"; then
     gh issue edit -F - "$issue_number"
   else
     cat
