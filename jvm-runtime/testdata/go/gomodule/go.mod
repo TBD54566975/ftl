@@ -6,7 +6,7 @@ replace github.com/block/ftl => ./../../../..
 
 require (
 	github.com/block/ftl v0.0.0-00010101000000-000000000000
-	github.com/tbd54566975/web5-go v0.24.0
+	github.com/decentralized-identity/web5-go v0.24.0
 )
 
 require (
