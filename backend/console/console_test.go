@@ -162,7 +162,7 @@ data FooResponse {
   Message String
 }
 
-verb Ingress(builtin.HttpRequest<foo.FooRequest, Unit, Unit>) builtin.HttpResponse<foo.FooResponse, String>
+verb Ingress(builtin.HttpRequest<foo.FooRequest, Unit, Unit>) builtin.HttpResponse<foo.FooResponse, String>  
   +ingress http GET /foo`
 
 	schemaString, err := verbSchemaString(sch, verb)
