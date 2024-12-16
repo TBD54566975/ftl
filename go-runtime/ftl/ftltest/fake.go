@@ -9,10 +9,10 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/go-runtime/internal"
-	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/go-runtime/ftl"
+	"github.com/block/ftl/go-runtime/internal"
+	"github.com/block/ftl/internal/configuration"
 )
 
 // pubSubEvent is a sum type for all events that can be published to the pubsub system.

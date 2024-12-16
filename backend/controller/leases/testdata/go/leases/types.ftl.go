@@ -4,7 +4,7 @@ package leases
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/common/reflection"
+	"github.com/block/ftl/common/reflection"
 )
 
 

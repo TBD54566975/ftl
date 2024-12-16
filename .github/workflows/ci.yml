@@ -84,7 +84,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          buf breaking --against 'https://github.com/TBD54566975/ftl.git#branch=main' | to-annotation || true
+          buf breaking --against 'https://github.com/block/ftl.git#branch=main' | to-annotation || true
   console:
     name: Console
     runs-on: ubuntu-latest
@@ -114,7 +114,7 @@ jobs:
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Test WASM
-        run: cd sqlc-gen-ftl && cargo test --features ci --test sqlc_gen_ftl_test -- --nocapture 
+        run: cd sqlc-gen-ftl && cargo test --features ci --test sqlc_gen_ftl_test -- --nocapture
   extension:
     name: VSCode Extension
     runs-on: ubuntu-latest

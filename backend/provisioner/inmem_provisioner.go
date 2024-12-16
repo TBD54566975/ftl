@@ -9,13 +9,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/puzpuzpuz/xsync/v3"
 
-	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
-	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/log"
+	provisioner "github.com/block/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
+	provisionerconnect "github.com/block/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
+	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
+	schemapb "github.com/block/ftl/common/protos/xyz/block/ftl/schema/v1"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/log"
 )
 
 type inMemProvisioningTask struct {

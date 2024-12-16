@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/internal/buildengine"
-	"github.com/TBD54566975/ftl/internal/projectconfig"
-	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/block/ftl/internal/buildengine"
+	"github.com/block/ftl/internal/projectconfig"
+	"github.com/block/ftl/internal/schema/schemaeventsource"
 )
 
 type buildCmd struct {

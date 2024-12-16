@@ -10,9 +10,9 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/moduleconfig"
 )
 
 func setUp(t *testing.T) (ctx context.Context, projectRoot, fakeGoModDir string) {
@@ -30,7 +30,7 @@ func setUp(t *testing.T) (ctx context.Context, projectRoot, fakeGoModDir string)
 	module ftl/fake
 	go 1.23.0
 
-	replace github.com/TBD54566975/ftl => %s
+	replace github.com/block/ftl => %s
 	`, ftlPath)), 0600)
 	// err := copy.Copy(filepath.Join("testdata", "go", "time"), filepath.Join(projectRoot, "time"))
 	assert.NoError(t, err)
@@ -117,7 +117,7 @@ package other
 import (
   "context"
 
-  "github.com/TBD54566975/ftl/common/reflection"
+  "github.com/block/ftl/common/reflection"
 )
 
 var _ = context.Background

@@ -4,8 +4,8 @@ package wrapped
 import (
 	"context"
 	ftltime "ftl/time"
-	"github.com/TBD54566975/ftl/common/reflection"
-	"github.com/TBD54566975/ftl/go-runtime/server"
+	"github.com/block/ftl/common/reflection"
+	"github.com/block/ftl/go-runtime/server"
 )
 
 type InnerClient func(context.Context) (WrappedResponse, error)

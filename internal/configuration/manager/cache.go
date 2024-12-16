@@ -10,8 +10,8 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 
-	"github.com/TBD54566975/ftl/internal/configuration"
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/internal/configuration"
+	"github.com/block/ftl/internal/log"
 )
 
 const (

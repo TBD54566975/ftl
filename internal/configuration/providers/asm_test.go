@@ -22,16 +22,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 
-	"github.com/TBD54566975/ftl/backend/controller/leases"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/internal/configuration"
-	"github.com/TBD54566975/ftl/internal/configuration/manager"
-	"github.com/TBD54566975/ftl/internal/configuration/providers/providerstest"
-	"github.com/TBD54566975/ftl/internal/configuration/routers"
-	"github.com/TBD54566975/ftl/internal/configuration/routers/routerstest"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/testutils"
+	"github.com/block/ftl/backend/controller/leases"
+	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/block/ftl/internal/configuration"
+	"github.com/block/ftl/internal/configuration/manager"
+	"github.com/block/ftl/internal/configuration/providers/providerstest"
+	"github.com/block/ftl/internal/configuration/routers"
+	"github.com/block/ftl/internal/configuration/routers/routerstest"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/testutils"
 )
 
 func setUp(ctx context.Context, t *testing.T, router optional.Option[configuration.Router[configuration.Secrets]]) (*manager.Manager[configuration.Secrets], ASM, *asmManager, *secretsmanager.Client, *providerstest.ManualSyncProvider[configuration.Secrets], *leases.FakeLeaser) {

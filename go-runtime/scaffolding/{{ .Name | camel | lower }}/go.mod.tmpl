@@ -2,7 +2,7 @@ module ftl/{{ .Name }}
 
 go {{ .GoVersion }}
 
-require github.com/TBD54566975/ftl latest
+require github.com/block/ftl latest
 
 {{- range $old, $new := .Replace }}
 replace {{ $old }} => {{ $new }}

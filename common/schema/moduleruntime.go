@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
+	schemapb "github.com/block/ftl/common/protos/xyz/block/ftl/schema/v1"
 )
 
 // ModuleRuntime is runtime configuration for a module that can be dynamically updated.

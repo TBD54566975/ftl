@@ -14,11 +14,11 @@ import (
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/common/builderrors"
-	"github.com/TBD54566975/ftl/common/cron"
-	"github.com/TBD54566975/ftl/common/errors"
-	dc "github.com/TBD54566975/ftl/common/reflect"
-	islices "github.com/TBD54566975/ftl/common/slices"
+	"github.com/block/ftl/common/builderrors"
+	"github.com/block/ftl/common/cron"
+	"github.com/block/ftl/common/errors"
+	dc "github.com/block/ftl/common/reflect"
+	islices "github.com/block/ftl/common/slices"
 )
 
 var (

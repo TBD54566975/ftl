@@ -6,7 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
-	"github.com/TBD54566975/ftl/common/slices"
+	"github.com/block/ftl/common/slices"
 )
 
 // ResourceType is a type of resource used to configure provisioners

@@ -4,9 +4,9 @@ package alpha
 import (
 	"context"
 	ftlother "ftl/other"
-	"github.com/TBD54566975/ftl/common/reflection"
-	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
-	"github.com/TBD54566975/ftl/go-runtime/server"
+	"github.com/block/ftl/common/reflection"
+	lib "github.com/block/ftl/go-runtime/schema/testdata"
+	"github.com/block/ftl/go-runtime/server"
 )
 
 type EchoClient func(context.Context, EchoRequest) (EchoResponse, error)

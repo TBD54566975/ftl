@@ -16,8 +16,8 @@ import (
 	"github.com/jpillora/backoff"
 	"golang.org/x/net/http2"
 
-	"github.com/TBD54566975/ftl/internal/authn"
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/internal/authn"
+	"github.com/block/ftl/internal/log"
 )
 
 // PingResponse is a constraint that is used to enforce that a pointer to the [Pingable] response message has a

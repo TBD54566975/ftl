@@ -6,8 +6,8 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	ftlv2 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/deployment/v1"
-	"github.com/TBD54566975/ftl/internal/log"
+	ftlv2 "github.com/block/ftl/backend/protos/xyz/block/ftl/deployment/v1"
+	"github.com/block/ftl/internal/log"
 )
 
 func TestFromSecrets(t *testing.T) {

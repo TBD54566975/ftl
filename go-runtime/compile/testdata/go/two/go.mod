@@ -2,9 +2,9 @@ module ftl/two
 
 go 1.23.0
 
-replace github.com/TBD54566975/ftl => ../../../../..
+replace github.com/block/ftl => ../../../../..
 
-require github.com/TBD54566975/ftl v0.150.3
+require github.com/block/ftl v0.150.3
 
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect

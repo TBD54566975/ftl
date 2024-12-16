@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/TBD54566975/ftl/common/strcase"
+	"github.com/block/ftl/common/strcase"
 )
 
 var _ fmt.Stringer

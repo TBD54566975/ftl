@@ -11,14 +11,14 @@ import (
 	"github.com/alecthomas/types/result"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/TBD54566975/ftl/common/builderrors"
-	"github.com/TBD54566975/ftl/common/errors"
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
-	"github.com/TBD54566975/ftl/internal/dev"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
-	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/block/ftl/common/builderrors"
+	"github.com/block/ftl/common/errors"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/buildengine/languageplugin"
+	"github.com/block/ftl/internal/dev"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/moduleconfig"
+	"github.com/block/ftl/internal/projectconfig"
 )
 
 var errInvalidateDependencies = errors.New("dependencies need to be updated")

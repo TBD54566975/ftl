@@ -14,15 +14,15 @@ import (
 	"github.com/puzpuzpuz/xsync/v3"
 	"golang.org/x/sync/errgroup"
 
-	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	ftlv1connect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
-	"github.com/TBD54566975/ftl/common/reflect"
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/rpc"
+	provisionerconnect "github.com/block/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
+	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
+	ftlv1connect "github.com/block/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/block/ftl/backend/provisioner/scaling"
+	"github.com/block/ftl/common/reflect"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/rpc"
 )
 
 // CommonProvisionerConfig is shared config between the production controller and development server.

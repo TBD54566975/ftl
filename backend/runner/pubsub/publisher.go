@@ -8,10 +8,10 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/timeline"
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/block/ftl/backend/timeline"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/model"
+	"github.com/block/ftl/internal/rpc"
 )
 
 type publisher struct {

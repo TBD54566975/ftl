@@ -13,8 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/aws/smithy-go"
 
-	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/configuration"
 )
 
 const asmLeaderSyncInterval = time.Minute * 5

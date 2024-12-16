@@ -9,9 +9,9 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/block/ftl/internal/buildengine/languageplugin"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/moduleconfig"
 )
 
 func TestExtractModuleDepsKotlin(t *testing.T) {

@@ -4,9 +4,9 @@ package one
 import (
 	"context"
 	ftlbuiltin "ftl/builtin"
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/common/reflection"
-	"github.com/TBD54566975/ftl/go-runtime/server"
+	"github.com/block/ftl/go-runtime/ftl"
+	"github.com/block/ftl/common/reflection"
+	"github.com/block/ftl/go-runtime/server"
 	stdtime "time"
 )
 

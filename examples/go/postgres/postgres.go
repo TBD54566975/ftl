@@ -3,7 +3,7 @@ package postgres
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
+	"github.com/block/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
 type MyDbConfig struct {

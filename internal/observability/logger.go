@@ -8,7 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/internal/log"
 )
 
 func AddSpanToLogger(ctx context.Context, span trace.Span) (context.Context, trace.Span) {

@@ -10,13 +10,13 @@ import (
 	"connectrpc.com/connect"
 	"github.com/puzpuzpuz/xsync/v3"
 
-	pubpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1"
-	pubconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
-	"github.com/TBD54566975/ftl/common/encoding"
-	"github.com/TBD54566975/ftl/common/reflection"
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/internal/deploymentcontext"
-	"github.com/TBD54566975/ftl/internal/rpc"
+	pubpb "github.com/block/ftl/backend/protos/xyz/block/ftl/publish/v1"
+	pubconnect "github.com/block/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
+	"github.com/block/ftl/common/encoding"
+	"github.com/block/ftl/common/reflection"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/deploymentcontext"
+	"github.com/block/ftl/internal/rpc"
 )
 
 type mapCacheEntry struct {

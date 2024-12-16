@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/TBD54566975/ftl/internal/container"
+	"github.com/block/ftl/internal/container"
 )
 
 //go:embed docker-compose.registry.yml

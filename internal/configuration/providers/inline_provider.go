@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/block/ftl/internal/configuration"
 )
 
 const InlineProviderKey configuration.ProviderKey = "inline"

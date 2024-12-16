@@ -6,9 +6,9 @@ import (
 
 	"github.com/alecthomas/kong"
 
-	"github.com/TBD54566975/ftl/internal/dev"
-	"github.com/TBD54566975/ftl/internal/dsn"
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/internal/dev"
+	"github.com/block/ftl/internal/dsn"
+	"github.com/block/ftl/internal/log"
 )
 
 var cli struct {

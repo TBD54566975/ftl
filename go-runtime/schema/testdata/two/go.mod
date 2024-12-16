@@ -2,10 +2,10 @@ module ftl/two
 
 go 1.23.0
 
-replace github.com/TBD54566975/ftl => ../../../..
+replace github.com/block/ftl => ../../../..
 
 require (
-	github.com/TBD54566975/ftl v0.150.3
+	github.com/block/ftl v0.150.3
 	github.com/jpillora/backoff v1.0.0
 )
 

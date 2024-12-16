@@ -2,7 +2,7 @@ module ftl/parent
 
 go 1.23.0
 
-require github.com/TBD54566975/ftl v0.222.1
+require github.com/block/ftl v0.222.1
 
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect
@@ -49,4 +49,4 @@ require (
 	google.golang.org/protobuf v1.35.2 // indirect
 )
 
-replace github.com/TBD54566975/ftl => ../../../..
+replace github.com/block/ftl => ../../../..

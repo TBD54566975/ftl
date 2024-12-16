@@ -3,8 +3,8 @@ package two
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
+	"github.com/block/ftl/go-runtime/ftl"
+	lib "github.com/block/ftl/go-runtime/schema/testdata"
 	libbackoff "github.com/jpillora/backoff"
 
 	"ftl/builtin"

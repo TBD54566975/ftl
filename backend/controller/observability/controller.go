@@ -7,7 +7,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/TBD54566975/ftl/internal/observability"
+	"github.com/block/ftl/internal/observability"
 )
 
 const (

@@ -10,7 +10,7 @@ import (
 	"github.com/alecthomas/types/must"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/block/ftl/internal/configuration"
 )
 
 func TestFileRouter(t *testing.T) {

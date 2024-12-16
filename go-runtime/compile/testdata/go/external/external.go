@@ -3,7 +3,7 @@ package external
 import (
 	"context"
 
-	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
+	lib "github.com/block/ftl/go-runtime/schema/testdata"
 )
 
 type AliasedExternal lib.NonFTLType

@@ -26,10 +26,10 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/backend/provisioner/scaling"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/log"
 )
 
 const controllerDeploymentName = "ftl-controller"

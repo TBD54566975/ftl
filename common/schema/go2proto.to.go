@@ -3,7 +3,7 @@
 package schema
 
 import "fmt"
-import destpb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
+import destpb "github.com/block/ftl/common/protos/xyz/block/ftl/schema/v1"
 import "google.golang.org/protobuf/proto"
 import "google.golang.org/protobuf/types/known/timestamppb"
 import "google.golang.org/protobuf/types/known/durationpb"

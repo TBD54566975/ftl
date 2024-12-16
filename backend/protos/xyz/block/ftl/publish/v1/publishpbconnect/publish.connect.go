@@ -8,8 +8,8 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	v11 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/publish/v1"
-	v1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	v11 "github.com/block/ftl/backend/protos/xyz/block/ftl/publish/v1"
+	v1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
 	http "net/http"
 	strings "strings"
 )

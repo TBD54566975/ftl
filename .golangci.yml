@@ -92,17 +92,17 @@ linters-settings:
           - pkg: braces.dev/errtrace
             desc: "use fmt.Errorf or errors.New"
           - pkg: os/exec
-            desc: "use github.com/TBD54566975/ftl/internal/exec"
+            desc: "use github.com/block/ftl/internal/exec"
           - pkg: golang.design/x/reflect
-            desc: "use github.com/TBD54566975/ftl/common/reflect"
+            desc: "use github.com/block/ftl/common/reflect"
           - pkg: "github.com/reugn/go-quartz/logger"
-            desc: "use github.com/TBD54566975/ftl/internal/log"
+            desc: "use github.com/block/ftl/internal/log"
   # wrapcheck:
   #   ignorePackageGlobs:
-  #     - github.com/TBD54566975/ftl/*
+  #     - github.com/block/ftl/*
   spancheck:
     extra-start-span-signatures:
-      - "github.com/TBD54566975/ftl/backend/controller/observability.BeginSpan:opentelemetry"
+      - "github.com/block/ftl/backend/controller/observability.BeginSpan:opentelemetry"
 issues:
   max-same-issues: 0
   max-issues-per-linter: 0

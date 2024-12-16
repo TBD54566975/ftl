@@ -14,11 +14,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/ftl/internal/cors"
-	"github.com/TBD54566975/ftl/internal/exec"
-	"github.com/TBD54566975/ftl/internal/flock"
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/internal"
+	"github.com/block/ftl/internal/cors"
+	"github.com/block/ftl/internal/exec"
+	"github.com/block/ftl/internal/flock"
+	"github.com/block/ftl/internal/log"
 )
 
 var proxyURL, _ = url.Parse("http://localhost:5173") //nolint:errcheck

@@ -1,7 +1,7 @@
 package state
 
 import (
-	"github.com/TBD54566975/ftl/internal/eventstream"
+	"github.com/block/ftl/internal/eventstream"
 )
 
 type State struct {

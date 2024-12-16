@@ -7,8 +7,8 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/common/errors"
-	"github.com/TBD54566975/ftl/common/slices"
+	"github.com/block/ftl/common/errors"
+	"github.com/block/ftl/common/slices"
 )
 
 //nolint:maintidx
@@ -359,7 +359,7 @@ func TestValidate(t *testing.T) {
 			schema: `
 			module test {
 				export topic topicA test.eventA
-			
+
 				topic topicB test.eventB
 
 				topic StartsWithUpperCase test.eventA
@@ -402,7 +402,7 @@ func TestValidate(t *testing.T) {
 
 			// catch verbs
 
-			verb catchA(builtin.CatchRequest<test.EventA>) Unit	
+			verb catchA(builtin.CatchRequest<test.EventA>) Unit
 			verb catchB(builtin.CatchRequest<test.EventB>) Unit
 			verb catchAWithResponse(builtin.CatchRequest<test.EventA>) test.EventA
 			verb catchUnit(Unit) Unit

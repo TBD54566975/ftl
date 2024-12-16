@@ -7,8 +7,8 @@ import (
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/go-runtime/schema/common"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/go-runtime/schema/common"
 )
 
 // Extractor extracts databases to the module schema.

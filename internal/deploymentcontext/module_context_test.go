@@ -6,9 +6,9 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	. "github.com/TBD54566975/ftl/internal/deploymentcontext"
-	"github.com/TBD54566975/ftl/internal/log"
-	. "github.com/TBD54566975/ftl/internal/testutils/modulecontext"
+	. "github.com/block/ftl/internal/deploymentcontext"
+	"github.com/block/ftl/internal/log"
+	. "github.com/block/ftl/internal/testutils/modulecontext"
 )
 
 type manualContextSupplier struct {

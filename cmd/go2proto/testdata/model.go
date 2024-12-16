@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/block/ftl/internal/model"
 )
 
 type Root struct {

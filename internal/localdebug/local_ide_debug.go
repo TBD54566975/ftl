@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/internal/log"
 )
 
 const projectToml = "project.toml"

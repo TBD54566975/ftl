@@ -11,10 +11,10 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/ftl/internal/configuration"
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl"
+	"github.com/block/ftl/internal"
+	"github.com/block/ftl/internal/configuration"
+	"github.com/block/ftl/internal/log"
 )
 
 type Commands struct {

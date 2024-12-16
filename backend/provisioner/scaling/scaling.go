@@ -6,7 +6,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/block/ftl/common/schema"
 )
 
 type RunnerScaling interface {

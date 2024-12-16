@@ -6,8 +6,8 @@ import (
 	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
-	"github.com/TBD54566975/ftl/internal/model"
+	timelinepb "github.com/block/ftl/backend/protos/xyz/block/ftl/timeline/v1"
+	"github.com/block/ftl/internal/model"
 )
 
 type Log struct {

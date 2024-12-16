@@ -12,7 +12,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	in "github.com/TBD54566975/ftl/internal/integration"
+	in "github.com/block/ftl/internal/integration"
 )
 
 func TestExemplarIntegration(t *testing.T) {

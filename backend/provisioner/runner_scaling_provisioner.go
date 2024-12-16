@@ -8,13 +8,13 @@ import (
 	"connectrpc.com/connect"
 	_ "github.com/go-sql-driver/mysql"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
-	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/rpc"
+	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/block/ftl/backend/provisioner/scaling"
+	schemapb "github.com/block/ftl/common/protos/xyz/block/ftl/schema/v1"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/rpc"
 )
 
 // NewRunnerScalingProvisioner creates a new provisioner that provisions resources locally when running FTL in dev mode

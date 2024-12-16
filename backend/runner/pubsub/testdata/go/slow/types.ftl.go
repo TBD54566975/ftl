@@ -3,9 +3,9 @@ package slow
 
 import (
 	"context"
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/common/reflection"
-	"github.com/TBD54566975/ftl/go-runtime/server"
+	"github.com/block/ftl/go-runtime/ftl"
+	"github.com/block/ftl/common/reflection"
+	"github.com/block/ftl/go-runtime/server"
 )
 
 type ConsumeClient func(context.Context, Event) error

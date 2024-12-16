@@ -11,7 +11,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 
-	"github.com/TBD54566975/ftl/internal"
+	"github.com/block/ftl/internal"
 )
 
 // ErrSkip can be returned by the WalkDir callback to skip a file or directory.

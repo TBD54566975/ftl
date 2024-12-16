@@ -15,7 +15,7 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/posener/complete"
 
-	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
+	"github.com/block/ftl/internal/schema/schemaeventsource"
 )
 
 const interactivePrompt = "\033[32m>\033[0m "

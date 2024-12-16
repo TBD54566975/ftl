@@ -12,10 +12,10 @@ import (
 	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
 
-	"github.com/TBD54566975/ftl/backend/admin"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	cf "github.com/TBD54566975/ftl/internal/configuration"
-	"github.com/TBD54566975/ftl/internal/terminal"
+	"github.com/block/ftl/backend/admin"
+	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
+	cf "github.com/block/ftl/internal/configuration"
+	"github.com/block/ftl/internal/terminal"
 )
 
 type secretCmd struct {

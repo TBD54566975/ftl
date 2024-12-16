@@ -3,11 +3,11 @@ module ftl/verbtypes
 go 1.23.0
 
 require (
-	github.com/TBD54566975/ftl v0.201.0
+	github.com/block/ftl v0.201.0
 	github.com/alecthomas/assert/v2 v2.11.0
 )
 
-replace github.com/TBD54566975/ftl => ./../../../../../..
+replace github.com/block/ftl => ./../../../../../..
 
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect

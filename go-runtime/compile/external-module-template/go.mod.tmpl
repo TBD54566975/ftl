@@ -3,7 +3,7 @@ module ftl/{{ .Module.Name }}
 go {{ .GoVersion }}
 
 {{ if ne .FTLVersion "" }}
-require github.com/TBD54566975/ftl v{{ .FTLVersion }}
+require github.com/block/ftl v{{ .FTLVersion }}
 {{ end }}
 
 {{- range .Replacements }}

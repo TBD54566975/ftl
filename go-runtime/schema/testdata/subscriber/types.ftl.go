@@ -4,7 +4,7 @@ package subscriber
 import (
 	"context"
 	ftlpubsub "ftl/pubsub"
-	"github.com/TBD54566975/ftl/common/reflection"
+	"github.com/block/ftl/common/reflection"
 )
 
 type ConsumesSubscriptionFromExternalTopicClient func(context.Context, ftlpubsub.PayinEvent) error

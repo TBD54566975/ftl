@@ -1,8 +1,8 @@
 package child
 
 import (
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
+	"github.com/block/ftl/go-runtime/ftl"
+	lib "github.com/block/ftl/go-runtime/schema/testdata"
 )
 
 type BadChildStruct struct {
@@ -19,8 +19,8 @@ type UnaliasedExternalType struct {
 type WrongMappingExternal lib.NonFTLType
 
 //ftl:typealias
-//ftl:typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
-//ftl:typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
+//ftl:typemap go "github.com/block/ftl/go-runtime/schema/testdata.lib.NonFTLType"
+//ftl:typemap go "github.com/block/ftl/go-runtime/schema/testdata.lib.NonFTLType"
 type MultipleMappings lib.NonFTLType
 
 //ftl:data

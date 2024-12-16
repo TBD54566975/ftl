@@ -6,10 +6,10 @@ import (
 
 	"github.com/alecthomas/kong"
 
-	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/observability"
-	"github.com/TBD54566975/ftl/internal/pgproxy"
+	"github.com/block/ftl"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/observability"
+	"github.com/block/ftl/internal/pgproxy"
 )
 
 var cli struct {

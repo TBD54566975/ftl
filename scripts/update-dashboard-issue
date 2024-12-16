@@ -1,7 +1,7 @@
 #!/bin/bash
 
 map_to_markdown() {
-  echo 'map("- #\(.number) \(.labels | map(select(.name != "run-all")) | map("https://github.com/TBD54566975/ftl/labels/\(.name | gsub(" ";"%20"))") | join(" "))")[]'
+  echo 'map("- #\(.number) \(.labels | map(select(.name != "run-all")) | map("https://github.com/block/ftl/labels/\(.name | gsub(" ";"%20"))") | join(" "))")[]'
 }
 
 list_issues() {
@@ -48,7 +48,7 @@ $(
   issues="$(list_issues --label P0)"
   test -z "$issues" && exit 0
 
-  echo "### https://github.com/TBD54566975/ftl/labels/P0"
+  echo "### https://github.com/block/ftl/labels/P0"
   echo
   echo "> [!WARNING]"
   echo "> These issues are P0 and need immediate attention."
@@ -59,7 +59,7 @@ $(
   issues="$(list_issues --label roadmap)"
   test -z "$issues" && exit 0
 
-  echo "### https://github.com/TBD54566975/ftl/labels/roadmap"
+  echo "### https://github.com/block/ftl/labels/roadmap"
   echo
   echo "$issues"
 )
@@ -75,7 +75,7 @@ else
 fi
 
 gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /orgs/TBD54566975/teams/ftl-team/members | jq -r '.[].login' | grep -v dhanji | sort | while read -r member; do
-  echo "@$member [🔎](https://github.com/TBD54566975/ftl/issues/assigned/$member)"
+  echo "@$member [🔎](https://github.com/block/ftl/issues/assigned/$member)"
   echo
   list_issues_and_prs "$member"
   list_issues_and_prs "$member" -s closed -S "closed:>$date"
@@ -87,12 +87,12 @@ $(
   issues="$(list_issues --label triage)"
   test -z "$issues" && exit 0
 
-  echo "### https://github.com/TBD54566975/ftl/labels/triage"
+  echo "### https://github.com/block/ftl/labels/triage"
   echo
   echo "$issues"
 )
 
-### https://github.com/TBD54566975/ftl/labels/next
+### https://github.com/block/ftl/labels/next
 
 $(
   issues="$(list_prioritized_issues --label next)"
@@ -108,7 +108,7 @@ $(
   issues="$(list_issues --label epic)"
   test -z "$issues" && exit 0
 
-  echo "### https://github.com/TBD54566975/ftl/labels/epic"
+  echo "### https://github.com/block/ftl/labels/epic"
   echo "$issues"
 )
 

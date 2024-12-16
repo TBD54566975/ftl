@@ -9,16 +9,16 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/block/scaffolder"
 
-	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
-	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/common/builderrors"
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
-	pythonruntime "github.com/TBD54566975/ftl/python-runtime"
-	"github.com/TBD54566975/ftl/python-runtime/compile"
+	langpb "github.com/block/ftl/backend/protos/xyz/block/ftl/language/v1"
+	langconnect "github.com/block/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
+	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/block/ftl/common/builderrors"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/moduleconfig"
+	pythonruntime "github.com/block/ftl/python-runtime"
+	"github.com/block/ftl/python-runtime/compile"
 )
 
 // buildContext contains contextual information needed to build.

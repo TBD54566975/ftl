@@ -7,8 +7,8 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/model"
 )
 
 // Headers used by the internal RPC system.

@@ -30,17 +30,17 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/consolepbconnect"
-	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinepbconnect"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/backend/provisioner/scaling/k8sscaling"
-	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/ftl/internal/exec"
-	ftlexec "github.com/TBD54566975/ftl/internal/exec"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/console/v1/consolepbconnect"
+	provisionerconnect "github.com/block/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinepbconnect"
+	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/block/ftl/backend/provisioner/scaling/k8sscaling"
+	"github.com/block/ftl/internal"
+	"github.com/block/ftl/internal/exec"
+	ftlexec "github.com/block/ftl/internal/exec"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/rpc"
 )
 
 const dumpPath = "/tmp/ftl-kube-report"

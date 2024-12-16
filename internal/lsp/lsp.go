@@ -16,10 +16,10 @@ import (
 	glspServer "github.com/tliron/glsp/server"
 	"github.com/tliron/kutil/version"
 
-	"github.com/TBD54566975/ftl/common/builderrors"
-	ftlErrors "github.com/TBD54566975/ftl/common/errors"
-	"github.com/TBD54566975/ftl/internal/buildengine"
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/common/builderrors"
+	ftlErrors "github.com/block/ftl/common/errors"
+	"github.com/block/ftl/internal/buildengine"
+	"github.com/block/ftl/internal/log"
 )
 
 const lsName = "ftl-language-server"

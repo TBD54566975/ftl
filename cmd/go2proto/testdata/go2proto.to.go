@@ -3,7 +3,7 @@
 package testdata
 
 import "fmt"
-import destpb "github.com/TBD54566975/ftl/cmd/go2proto/testdata/testdatapb"
+import destpb "github.com/block/ftl/cmd/go2proto/testdata/testdatapb"
 import "google.golang.org/protobuf/proto"
 import "google.golang.org/protobuf/types/known/timestamppb"
 import "google.golang.org/protobuf/types/known/durationpb"

@@ -9,13 +9,13 @@ import (
 
 	"github.com/alecthomas/types/either"
 
-	"github.com/TBD54566975/ftl/common/reflect"
-	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/configuration"
-	"github.com/TBD54566975/ftl/internal/configuration/manager"
-	"github.com/TBD54566975/ftl/internal/configuration/providers"
-	"github.com/TBD54566975/ftl/internal/configuration/routers"
-	"github.com/TBD54566975/ftl/internal/profiles/internal"
+	"github.com/block/ftl/common/reflect"
+	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/configuration"
+	"github.com/block/ftl/internal/configuration/manager"
+	"github.com/block/ftl/internal/configuration/providers"
+	"github.com/block/ftl/internal/configuration/routers"
+	"github.com/block/ftl/internal/profiles/internal"
 )
 
 type ProjectConfig internal.Project

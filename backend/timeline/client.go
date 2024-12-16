@@ -9,10 +9,10 @@ import (
 	"github.com/alecthomas/atomic"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinepbconnect"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/rpc"
+	timelinepb "github.com/block/ftl/backend/protos/xyz/block/ftl/timeline/v1"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinepbconnect"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/rpc"
 )
 
 const (

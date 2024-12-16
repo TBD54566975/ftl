@@ -5,7 +5,7 @@ package xyz.block.ftl.provisioner.v1beta1;
 import "xyz/block/ftl/schema/v1/schema.proto";
 import "xyz/block/ftl/v1/ftl.proto";
 
-option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1;provisionerpb";
+option go_package = "github.com/block/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1;provisionerpb";
 option java_multiple_files = true;
 
 message ProvisionRequest {

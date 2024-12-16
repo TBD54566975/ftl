@@ -9,7 +9,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
+	schemapb "github.com/block/ftl/common/protos/xyz/block/ftl/schema/v1"
 )
 
 var ErrNotFound = errors.New("not found")
@@ -196,7 +196,7 @@ func (s *Schema) Upsert(module *Module) {
 func TypeName(v any) string {
 	t := reflect.Indirect(reflect.ValueOf(v)).Type()
 
-	// handle AbstractRefs like "AbstractRef[github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema.DataRef]"
+	// handle AbstractRefs like "AbstractRef[github.com/block/ftl/common/protos/xyz/block/ftl/schema.DataRef]"
 	if strings.HasPrefix(t.Name(), "AbstractRef[") {
 		return strings.TrimSuffix(strings.Split(t.Name(), ".")[2], "]")
 	}

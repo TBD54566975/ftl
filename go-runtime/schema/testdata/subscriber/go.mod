@@ -2,7 +2,7 @@ module ftl/subscriber
 
 go 1.23.0
 
-require github.com/TBD54566975/ftl v0.231.0
+require github.com/block/ftl v0.231.0
 
 require (
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
@@ -17,4 +17,4 @@ require (
 	google.golang.org/protobuf v1.35.2 // indirect
 )
 
-replace github.com/TBD54566975/ftl => ../../../..
+replace github.com/block/ftl => ../../../..

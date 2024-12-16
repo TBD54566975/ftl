@@ -9,12 +9,12 @@ import (
 	"github.com/XSAM/otelsql"
 	_ "github.com/go-sql-driver/mysql"
 
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/common/strcase"
-	"github.com/TBD54566975/ftl/internal/dev"
-	"github.com/TBD54566975/ftl/internal/dsn"
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/common/strcase"
+	"github.com/block/ftl/internal/dev"
+	"github.com/block/ftl/internal/dsn"
+	"github.com/block/ftl/internal/log"
 )
 
 var redPandaBrokers = []string{"127.0.0.1:19092"}

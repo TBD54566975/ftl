@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
-	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
+	provisioner "github.com/block/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
 )
 
 func (c *CloudformationProvisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {

@@ -4,9 +4,9 @@ import (
 	"context"
 	"os"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
-	"github.com/TBD54566975/ftl/common/plugin"
-	"github.com/TBD54566975/ftl/go-runtime/goplugin"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
+	"github.com/block/ftl/common/plugin"
+	"github.com/block/ftl/go-runtime/goplugin"
 )
 
 func main() {

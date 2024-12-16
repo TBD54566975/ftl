@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/TBD54566975/ftl/common/encoding"
+	"github.com/block/ftl/common/encoding"
 )
 
 // DatabasesFromSecrets finds DSNs in secrets and creates a map of databases.

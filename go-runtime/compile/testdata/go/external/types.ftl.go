@@ -3,8 +3,8 @@ package external
 
 import (
 	"context"
-	"github.com/TBD54566975/ftl/common/reflection"
-	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
+	"github.com/block/ftl/common/reflection"
+	lib "github.com/block/ftl/go-runtime/schema/testdata"
 )
 
 type EchoClient func(context.Context, AliasedExternal) (AliasedExternal, error)

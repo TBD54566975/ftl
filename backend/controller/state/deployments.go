@@ -7,9 +7,9 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/model"
 )
 
 type Deployment struct {

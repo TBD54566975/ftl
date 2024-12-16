@@ -8,7 +8,7 @@ import (
 
 	"github.com/TBD54566975/golang-tools/go/analysis"
 
-	"github.com/TBD54566975/ftl/common/builderrors"
+	"github.com/block/ftl/common/builderrors"
 )
 
 type DiagnosticCategory string

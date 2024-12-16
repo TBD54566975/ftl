@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/common/sha256"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/common/sha256"
 )
 
 type Deployment struct {

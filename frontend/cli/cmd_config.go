@@ -10,9 +10,9 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/admin"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/block/ftl/backend/admin"
+	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/block/ftl/internal/configuration"
 )
 
 type configCmd struct {

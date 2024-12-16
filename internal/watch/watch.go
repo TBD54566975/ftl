@@ -10,10 +10,10 @@ import (
 
 	"github.com/alecthomas/types/pubsub"
 
-	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/maps"
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/maps"
+	"github.com/block/ftl/internal/moduleconfig"
 )
 
 // A WatchEvent is an event that occurs when a module is added, removed, or

@@ -6,7 +6,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/common/reflection"
+	"github.com/block/ftl/common/reflection"
 )
 
 func TestTypeRef(t *testing.T) {

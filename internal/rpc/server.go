@@ -16,7 +16,7 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
-	gaphttp "github.com/TBD54566975/ftl/internal/http"
+	gaphttp "github.com/block/ftl/internal/http"
 )
 
 const ShutdownGracePeriod = time.Second * 5

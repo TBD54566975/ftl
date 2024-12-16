@@ -16,7 +16,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/internal/log"
 )
 
 const schemaURL = semconv.SchemaURL

@@ -3,7 +3,7 @@ module ftl/runtimereflection
 go 1.23.0
 
 require (
-	github.com/TBD54566975/ftl v0.194.0
+	github.com/block/ftl v0.194.0
 	github.com/alecthomas/assert/v2 v2.11.0
 )
 
@@ -54,4 +54,4 @@ require (
 	google.golang.org/protobuf v1.35.2 // indirect
 )
 
-replace github.com/TBD54566975/ftl => ./../../../../../..
+replace github.com/block/ftl => ./../../../../../..

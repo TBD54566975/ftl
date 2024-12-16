@@ -7,7 +7,7 @@ import (
 
 	"github.com/tbd54566975/web5-go/dids/did"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/block/ftl/go-runtime/ftl"
 )
 
 // Comment on topic
@@ -107,7 +107,7 @@ type AnimalWrapper struct {
 	Animal Animal
 }
 
-//TODO this doesn't work yet: https://github.com/TBD54566975/ftl/issues/2857
+//TODO this doesn't work yet: https://github.com/block/ftl/issues/2857
 ////ftl:enum
 //type Mixed interface{ mixed() }
 //type Word string

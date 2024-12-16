@@ -7,10 +7,10 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/backend/controller/state"
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/block/ftl/backend/controller/state"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/model"
 )
 
 func TestRunnerState(t *testing.T) {

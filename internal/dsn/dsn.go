@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/rds/auth"
 
-	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/block/ftl/common/schema"
 )
 
 type dsnOptions struct {

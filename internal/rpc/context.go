@@ -11,11 +11,11 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/mod/semver"
 
-	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/rpc/headers"
+	"github.com/block/ftl"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/model"
+	"github.com/block/ftl/internal/rpc/headers"
 )
 
 type ftlDirectRoutingKey struct{}
@@ -326,7 +326,7 @@ func (v versionInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc 
 func (v versionInterceptor) checkVersion(header http.Header) error {
 	version := header.Get("X-Ftl-Version")
 	if semver.Compare(ftl.Version, version) < 0 {
-		return fmt.Errorf("FTL client (%s) is older than server (%s), consider upgrading: https://github.com/TBD54566975/ftl/releases", ftl.Version, version)
+		return fmt.Errorf("FTL client (%s) is older than server (%s), consider upgrading: https://github.com/block/ftl/releases", ftl.Version, version)
 	}
 	return nil
 }

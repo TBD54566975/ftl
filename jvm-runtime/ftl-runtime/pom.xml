@@ -11,10 +11,10 @@
     <url>https://tbd54566975.github.io/ftl/</url>
 
     <scm>
-        <connection>scm:git:git://github.com/TBD54566975/ftl.git</connection>
+        <connection>scm:git:git://github.com/block/ftl.git</connection>
         <!-- This has to be HTTPS, not git://, for maven-release-plugin to do AUTH correctly -->
-        <developerConnection>scm:git:https://github.com/TBD54566975/ftl.git</developerConnection>
-        <url>https://github.com/TBD54566975/ftl</url>
+        <developerConnection>scm:git:https://github.com/block/ftl.git</developerConnection>
+        <url>https://github.com/block/ftl</url>
         <tag>HEAD</tag>
     </scm>
 
@@ -28,7 +28,7 @@
 
     <issueManagement>
         <system>github</system>
-        <url>https://github.com/TBD54566975/ftl/issues</url>
+        <url>https://github.com/block/ftl/issues</url>
     </issueManagement>
 
     <licenses>

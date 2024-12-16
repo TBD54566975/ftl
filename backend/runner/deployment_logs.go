@@ -3,7 +3,7 @@ package runner
 import (
 	"fmt"
 
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/internal/log"
 )
 
 var _ log.Sink = (*deploymentLogsSink)(nil)

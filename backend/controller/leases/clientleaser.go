@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	leasepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/lease/v1/leasepbconnect"
-	"github.com/TBD54566975/ftl/internal/rpc"
+	leasepb "github.com/block/ftl/backend/protos/xyz/block/ftl/lease/v1"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/lease/v1/leasepbconnect"
+	"github.com/block/ftl/internal/rpc"
 )
 
 var _ Leaser = (*clientLeaser)(nil)

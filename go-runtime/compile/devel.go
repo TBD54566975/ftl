@@ -5,7 +5,7 @@ package compile
 import (
 	"archive/zip"
 
-	"github.com/TBD54566975/ftl/internal"
+	"github.com/block/ftl/internal"
 )
 
 func mainWorkTemplateFiles() *zip.Reader {
