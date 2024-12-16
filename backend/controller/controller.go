@@ -65,15 +65,12 @@ type CommonConfig struct {
 type Config struct {
 	Bind                         *url.URL            `help:"Socket to bind to." default:"http://127.0.0.1:8892" env:"FTL_BIND"`
 	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"KEY"`
-	DSN                          string              `help:"DAL DSN." default:"${dsn}" env:"FTL_DSN"`
 	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_ADVERTISE"`
 	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
 	ControllerTimeout            time.Duration       `help:"Controller heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
 	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
-	MaxOpenDBConnections         int                 `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
-	MaxIdleDBConnections         int                 `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
 	CommonConfig
 }
 
@@ -86,13 +83,13 @@ func (c *Config) SetDefaults() {
 	}
 }
 
-func (c *Config) OpenDBAndInstrument() (*sql.DB, error) {
-	conn, err := internalobservability.OpenDBAndInstrument(c.DSN)
+func (c *Config) OpenDBAndInstrument(dsn string) (*sql.DB, error) {
+	conn, err := internalobservability.OpenDBAndInstrument(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open DB connection: %w", err)
 	}
-	conn.SetMaxIdleConns(c.MaxIdleDBConnections)
-	conn.SetMaxOpenConns(c.MaxOpenDBConnections)
+	conn.SetMaxIdleConns(10)
+	conn.SetMaxOpenConns(10)
 	return conn, nil
 }
 
@@ -103,7 +100,6 @@ func Start(
 	storage *artefacts.OCIArtefactService,
 	adminClient ftlv1connect.AdminServiceClient,
 	timelineClient *timeline.Client,
-	conn *sql.DB,
 	devel bool,
 ) error {
 	config.SetDefaults()
@@ -111,7 +107,7 @@ func Start(
 	logger := log.FromContext(ctx)
 	logger.Debugf("Starting FTL controller")
 
-	svc, err := New(ctx, conn, adminClient, timelineClient, storage, config, devel)
+	svc, err := New(ctx, adminClient, timelineClient, storage, config, devel)
 	if err != nil {
 		return err
 	}
@@ -163,7 +159,6 @@ type Service struct {
 
 func New(
 	ctx context.Context,
-	conn *sql.DB,
 	adminClient ftlv1connect.AdminServiceClient,
 	timelineClient *timeline.Client,
 	storage *artefacts.OCIArtefactService,
