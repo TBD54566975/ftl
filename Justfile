@@ -20,7 +20,7 @@ CONSOLE_ROOT := "frontend/console"
 FRONTEND_OUT := CONSOLE_ROOT + "/dist/index.html"
 EXTENSION_OUT := "frontend/vscode/dist/extension.js"
 SQLC_GEN_FTL_OUT := "sqlc-gen-ftl/target/wasm32-wasip1/release/sqlc-gen-ftl.wasm"
-PROTOS_IN := "common/protos"
+PROTOS_IN := "common/protos backend/protos"
 PROTOS_OUT := "backend/protos/xyz/block/ftl/console/v1/console.pb.go " + \
               "backend/protos/xyz/block/ftl//v1/ftl.pb.go " + \
               "backend/protos/xyz/block/ftl/timeline/v1/timeline.pb.go " + \
@@ -218,6 +218,7 @@ go2proto:
 # Unconditionally rebuild protos
 build-protos-unconditionally: go2proto lint-protos pnpm-install
   cd common/protos && buf generate
+  cd backend/protos && buf generate
 
 # Run integration test(s)
 integration-tests *test:
