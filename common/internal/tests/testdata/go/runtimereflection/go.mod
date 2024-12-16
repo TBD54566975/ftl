@@ -3,8 +3,8 @@ module ftl/runtimereflection
 go 1.23.0
 
 require (
-	github.com/block/ftl v0.194.0
 	github.com/alecthomas/assert/v2 v2.11.0
+	github.com/block/ftl v0.194.0
 )
 
 require (
@@ -45,7 +45,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.33.0 // indirect
 	go.opentelemetry.io/otel/trace v1.33.0 // indirect
 	golang.org/x/crypto v0.30.0 // indirect
-	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d // indirect
+	golang.org/x/exp v0.0.0-20241215155358-4a5509556b9e // indirect
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/net v0.32.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect

@@ -8,7 +8,6 @@ require (
 	connectrpc.com/otelconnect v0.7.1
 	github.com/BurntSushi/toml v1.4.0
 	github.com/IBM/sarama v1.43.3
-	github.com/block/ftl-golang-tools v0.2.1
 	github.com/XSAM/otelsql v0.35.0
 	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/alecthomas/atomic v0.1.0-alpha2
@@ -25,6 +24,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.34.7
 	github.com/aws/smithy-go v1.22.1
 	github.com/beevik/etree v1.4.1
+	github.com/block/ftl-golang-tools v0.3.0
 	github.com/block/ftl-mysql-auth-proxy v0.0.0-20241126024735-7acb0031b469
 	github.com/block/scaffolder v1.3.0
 	github.com/bmatcuk/doublestar/v4 v4.7.1
@@ -70,7 +70,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.33.0
 	go.opentelemetry.io/otel/trace v1.33.0
 	go.uber.org/automaxprocs v1.6.0
-	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d
+	golang.org/x/exp v0.0.0-20241215155358-4a5509556b9e
 	golang.org/x/mod v0.22.0
 	golang.org/x/net v0.32.0
 	golang.org/x/sync v0.10.0
