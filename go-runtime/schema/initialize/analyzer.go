@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/block/golang-tools/go/analysis"
-	"github.com/block/golang-tools/go/packages"
+	"github.com/block/ftl-golang-tools/go/analysis"
+	"github.com/block/ftl-golang-tools/go/packages"
 
 	"github.com/block/ftl/common/slices"
 )

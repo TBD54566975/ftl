@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"go/types"
 
-	"github.com/block/golang-tools/go/analysis"
-	"github.com/block/golang-tools/go/analysis/passes/inspect"
-	checker "github.com/block/golang-tools/go/analysis/programmaticchecker"
-	"github.com/block/golang-tools/go/packages"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/tuple"
+	"github.com/block/ftl-golang-tools/go/analysis"
+	"github.com/block/ftl-golang-tools/go/analysis/passes/inspect"
+	checker "github.com/block/ftl-golang-tools/go/analysis/programmaticchecker"
+	"github.com/block/ftl-golang-tools/go/packages"
 	sets "github.com/deckarep/golang-set/v2"
 	"golang.org/x/exp/maps"
 

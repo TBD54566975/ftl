@@ -4,10 +4,10 @@ import (
 	"go/ast"
 	"go/types"
 
-	"github.com/block/golang-tools/go/analysis"
-	"github.com/block/golang-tools/go/analysis/passes/inspect"
-	"github.com/block/golang-tools/go/ast/inspector"
 	"github.com/alecthomas/types/optional"
+	"github.com/block/ftl-golang-tools/go/analysis"
+	"github.com/block/ftl-golang-tools/go/analysis/passes/inspect"
+	"github.com/block/ftl-golang-tools/go/ast/inspector"
 	sets "github.com/deckarep/golang-set/v2"
 
 	"github.com/block/ftl/common/schema"
