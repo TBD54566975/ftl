@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/alecthomas/types/optional"
 	"github.com/block/ftl/internal/container"
 )
 
@@ -15,7 +16,7 @@ import (
 var registryDockerCompose string
 
 func SetupRegistry(ctx context.Context, image string, port int) error {
-	err := container.ComposeUp(ctx, "registry", registryDockerCompose,
+	err := container.ComposeUp(ctx, "registry", registryDockerCompose, optional.None[string](),
 		"FTL_REGISTRY_IMAGE="+image,
 		"FTL_REGISTRY_PORT="+strconv.Itoa(port))
 	if err != nil {

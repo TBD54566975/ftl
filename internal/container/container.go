@@ -353,7 +353,7 @@ func PollContainerHealth(ctx context.Context, containerName string, timeout time
 //
 // Make sure you obtain the compose yaml from a string literal or an embedded file, rather than
 // reading from disk. The project file will not be included in the release build.
-func ComposeUp(ctx context.Context, name, composeYAML string, envars ...string) error {
+func ComposeUp(ctx context.Context, name, composeYAML string, profile optional.Option[string], envars ...string) error {
 	logger := log.FromContext(ctx).Scope(name)
 	ctx = log.ContextWithLogger(ctx, logger)
 
@@ -378,7 +378,13 @@ func ComposeUp(ctx context.Context, name, composeYAML string, envars ...string) 
 
 	envars = append(envars, "COMPOSE_IGNORE_ORPHANS=True")
 
-	cmd := exec.CommandWithEnv(ctx, log.Debug, ".", envars, "docker", "compose", "-f", "-", "-p", "ftl", "up", "-d", "--wait")
+	args := []string{"compose"}
+	if profile, ok := profile.Get(); ok {
+		args = append(args, "--profile", profile)
+	}
+	args = append(args, "-f", "-", "-p", "ftl", "up", "-d", "--wait")
+
+	cmd := exec.CommandWithEnv(ctx, log.Debug, ".", envars, "docker", args...)
 	cmd.Stdin = bytes.NewReader([]byte(composeYAML))
 	if err := cmd.RunStderrError(ctx); err != nil {
 		return fmt.Errorf("failed to run docker compose up: %w", err)

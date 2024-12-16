@@ -103,7 +103,7 @@ func SetupPostgres(ctx context.Context, image optional.Option[string], port int,
 	if imaneName, ok := image.Get(); ok {
 		envars = append(envars, "FTL_DATABASE_IMAGE="+imaneName)
 	}
-	err := container.ComposeUp(ctx, "postgres", postgresDockerCompose, envars...)
+	err := container.ComposeUp(ctx, "postgres", postgresDockerCompose, optional.None[string](), envars...)
 	if err != nil {
 		return fmt.Errorf("could not start postgres: %w", err)
 	}
@@ -120,7 +120,7 @@ func SetupMySQL(ctx context.Context, port int) (string, error) {
 	if port != 0 {
 		envars = append(envars, "MYSQL_PORT="+strconv.Itoa(port))
 	}
-	err := container.ComposeUp(ctx, "mysql", mysqlDockerCompose, envars...)
+	err := container.ComposeUp(ctx, "mysql", mysqlDockerCompose, optional.None[string](), envars...)
 	if err != nil {
 		return "", fmt.Errorf("could not start mysql: %w", err)
 	}
