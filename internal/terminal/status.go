@@ -141,8 +141,6 @@ func NewStatusManager(ctx context.Context) StatusManager {
 			// Block until a signal is received.
 			<-c
 			sm.statusLock.Lock()
-			sm.clearStatusMessages()
-
 			sm.width, sm.height, _ = term.GetSize(int(sm.old.Fd())) //nolint:errcheck
 			sm.recalculateLines()
 			sm.statusLock.Unlock()
