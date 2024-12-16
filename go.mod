@@ -53,6 +53,7 @@ require (
 	github.com/radovskyb/watcher v1.0.7
 	github.com/rs/cors v1.11.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/swaggest/jsonschema-go v0.3.72
 	github.com/tidwall/pretty v1.2.1
 	github.com/titanous/json5 v1.0.0
