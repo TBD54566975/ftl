@@ -52,10 +52,10 @@
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <quarkus.version>3.17.3</quarkus.version>
+        <quarkus.version>3.17.4</quarkus.version>
         <surefire-plugin.version>3.5.2</surefire-plugin.version>
         <rootDir>${basedir}/../../../..</rootDir>
-        <grpc.version>1.68.2</grpc.version>
+        <grpc.version>1.69.0</grpc.version>
         <javapoet.version>1.13.0</javapoet.version>
         <version.formatter.plugin>2.24.1</version.formatter.plugin>
         <version.impsort.plugin>1.12.0</version.impsort.plugin>
