@@ -1,5 +1,10 @@
 name: Build Cache
 description: Cache builds
+inputs:
+  docker:
+    description: If the test should load docker images
+    required: false
+    default: false
 runs:
   using: "composite"
   # Make sure to keep these cache entries in sync with those in writecache.yml
@@ -22,6 +27,7 @@ runs:
           ${{ runner.os }}-hermit-cache-
     - name: Restore Docker Images
       uses: ScribeMD/docker-cache@0.5.0
+      if: inputs.docker == 'true'
       with:
         key: docker-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}
         read-only: true

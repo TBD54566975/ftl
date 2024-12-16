@@ -267,12 +267,26 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Check if Docker Required
+        id: check-docker
+        run: |
+          result="$(git grep -E '//ftl:subscribe|DefaultPostgresDatabaseConfig|DefaultMySQLDatabaseConfig' -- "$(git grep -l '^//go:build integration' | xargs grep -l '^func ${{ matrix.test }}' | xargs -I {} dirname ./{})/testdata" || true)"
+          if [ -z "$result" ]; then
+            echo "docker not required"
+            echo "docker_req=false" >> "$GITHUB_ENV"
+          else
+            echo "docker required"
+            echo "docker_req=true" >> "$GITHUB_ENV"
+          fi
       - name: Build Cache
         uses: ./.github/actions/build-cache
+        with:
+          docker: ${{ env.docker_req }}
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1.1.3
       - name: Docker Compose
         run: just compose-up
+        if: env.docker_req == 'true'
       - name: Download Go Modules
         run: go mod download
       - name: Build Language Plugins
