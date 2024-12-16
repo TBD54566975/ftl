@@ -7,7 +7,6 @@ import (
 	"github.com/block/ftl-golang-tools/go/analysis"
 	"github.com/block/ftl-golang-tools/go/analysis/passes/inspect"
 	"github.com/block/ftl-golang-tools/go/ast/inspector"
-
 	"github.com/block/ftl/go-runtime/schema/common"
 )
 
