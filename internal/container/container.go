@@ -20,10 +20,10 @@ import (
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/go-connections/nat"
 
-	"github.com/TBD54566975/ftl/internal/exec"
-	"github.com/TBD54566975/ftl/internal/flock"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/block/ftl/internal/exec"
+	"github.com/block/ftl/internal/flock"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/projectconfig"
 )
 
 var dockerClient = once.Once(func(ctx context.Context) (*client.Client, error) {

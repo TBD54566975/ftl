@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/block/ftl/internal/configuration"
 )
 
 const EnvarProviderKey configuration.ProviderKey = "envar"

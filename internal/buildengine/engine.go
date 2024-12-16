@@ -16,16 +16,16 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
-	"github.com/TBD54566975/ftl/internal/dev"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
-	"github.com/TBD54566975/ftl/internal/projectconfig"
-	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
-	"github.com/TBD54566975/ftl/internal/watch"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/buildengine/languageplugin"
+	"github.com/block/ftl/internal/dev"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/moduleconfig"
+	"github.com/block/ftl/internal/projectconfig"
+	"github.com/block/ftl/internal/rpc"
+	"github.com/block/ftl/internal/schema/schemaeventsource"
+	"github.com/block/ftl/internal/watch"
 )
 
 // moduleMeta is a wrapper around a module that includes the last build's start time.

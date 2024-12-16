@@ -10,9 +10,9 @@ import (
 	"github.com/alecthomas/types/must"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/schema/schemaeventsource"
 )
 
 func TestRouting(t *testing.T) {

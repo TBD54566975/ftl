@@ -94,7 +94,7 @@ build-generate:
 
 # Generate testdata for go2proto. This should be run after any changes to go2proto.
 build-go2proto-testdata:
-  @mk cmd/go2proto/testdata/go2proto.to.go cmd/go2proto/testdata/testdatapb/model.proto : cmd/go2proto/*.go cmd/go2proto/testdata/model.go -- go2proto -m -o ./cmd/go2proto/testdata/testdatapb/model.proto -O 'go_package="github.com/TBD54566975/ftl/cmd/go2proto/testdata/testdatapb"' xyz.block.ftl.go2proto.test ./cmd/go2proto/testdata.Root && bin/gofmt -w cmd/go2proto/testdata/go2proto.to.go
+  @mk cmd/go2proto/testdata/go2proto.to.go cmd/go2proto/testdata/testdatapb/model.proto : cmd/go2proto/*.go cmd/go2proto/testdata/model.go -- go2proto -m -o ./cmd/go2proto/testdata/testdatapb/model.proto -O 'go_package="github.com/block/ftl/cmd/go2proto/testdata/testdatapb"' xyz.block.ftl.go2proto.test ./cmd/go2proto/testdata.Root && bin/gofmt -w cmd/go2proto/testdata/go2proto.to.go
   @mk cmd/go2proto/testdata/testdatapb/model.pb.go : cmd/go2proto/testdata/testdatapb/model.proto -- '(cd ./cmd/go2proto/testdata/testdatapb && protoc --go_out=paths=source_relative:. model.proto) && go build ./cmd/go2proto/testdata'
 
 # Build command-line tools
@@ -147,9 +147,9 @@ build-go-binary dir binary="": build-zips build-protos
   binary="${2:-$(basename "$1")}"
 
   if [ "${FTL_DEBUG:-}" = "true" ]; then
-    go build -o "{{RELEASE}}/${binary}" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.timestamp={{TIMESTAMP}}" "$1"
+    go build -o "{{RELEASE}}/${binary}" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/block/ftl.Version={{VERSION}} -X github.com/block/ftl.timestamp={{TIMESTAMP}}" "$1"
   else
-    mk "{{RELEASE}}/${binary}" : !(build|integration|infrastructure|node_modules|Procfile*|Dockerfile*) -- go build -o "{{RELEASE}}/${binary}" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.timestamp={{TIMESTAMP}}" "$1"
+    mk "{{RELEASE}}/${binary}" : !(build|integration|infrastructure|node_modules|Procfile*|Dockerfile*) -- go build -o "{{RELEASE}}/${binary}" -tags release -ldflags "-X github.com/block/ftl.Version={{VERSION}} -X github.com/block/ftl.timestamp={{TIMESTAMP}}" "$1"
   fi
 
 # Build the ZIP files that are embedded in the FTL release binaries
@@ -211,7 +211,7 @@ build-protos: go2proto
 # Generate .proto files from .go types.
 go2proto:
   @mk "{{SCHEMA_OUT}}" common/schema/go2proto.to.go : cmd/go2proto common/schema -- go2proto -m -o "{{SCHEMA_OUT}}" \
-    -O 'go_package="github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1;schemapb"' \
+    -O 'go_package="github.com/block/ftl/common/protos/xyz/block/ftl/schema/v1;schemapb"' \
     -O 'java_multiple_files=true' \
     xyz.block.ftl.schema.v1 {{GO_SCHEMA_ROOTS}} && buf format -w && buf lint && bin/gofmt -w common/schema/go2proto.to.go
 

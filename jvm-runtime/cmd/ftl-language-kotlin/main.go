@@ -4,10 +4,10 @@ import (
 	"context"
 	"os"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
-	"github.com/TBD54566975/ftl/common/plugin"
-	"github.com/TBD54566975/ftl/jvm-runtime/plugin/common"
-	"github.com/TBD54566975/ftl/jvm-runtime/plugin/kotlin"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
+	"github.com/block/ftl/common/plugin"
+	"github.com/block/ftl/jvm-runtime/plugin/common"
+	"github.com/block/ftl/jvm-runtime/plugin/kotlin"
 )
 
 func main() {

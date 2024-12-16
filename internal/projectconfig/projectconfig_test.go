@@ -6,8 +6,8 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl"
+	"github.com/block/ftl/internal/log"
 )
 
 func TestProjectConfig(t *testing.T) {

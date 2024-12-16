@@ -5,7 +5,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/block/ftl/common/schema"
 )
 
 func TestVerbSchemaString(t *testing.T) {
@@ -162,7 +162,7 @@ data FooResponse {
   Message String
 }
 
-verb Ingress(builtin.HttpRequest<foo.FooRequest, Unit, Unit>) builtin.HttpResponse<foo.FooResponse, String>  
+verb Ingress(builtin.HttpRequest<foo.FooRequest, Unit, Unit>) builtin.HttpResponse<foo.FooResponse, String>
   +ingress http GET /foo`
 
 	schemaString, err := verbSchemaString(sch, verb)

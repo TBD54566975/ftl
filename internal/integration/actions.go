@@ -28,12 +28,12 @@ import (
 
 	"github.com/block/scaffolder"
 
-	timelinepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
-	"github.com/TBD54566975/ftl/internal/dsn"
-	ftlexec "github.com/TBD54566975/ftl/internal/exec"
-	"github.com/TBD54566975/ftl/internal/log"
+	timelinepb "github.com/block/ftl/backend/protos/xyz/block/ftl/timeline/v1"
+	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
+	schemapb "github.com/block/ftl/common/protos/xyz/block/ftl/schema/v1"
+	"github.com/block/ftl/internal/dsn"
+	ftlexec "github.com/block/ftl/internal/exec"
+	"github.com/block/ftl/internal/log"
 )
 
 // Scaffold a directory relative to the testdata directory to a directory relative to the working directory.
@@ -82,7 +82,7 @@ func editGoMod(module string) func(t testing.TB, ic TestContext) {
 		root := filepath.Join(ic.workDir, module)
 		// TODO: Load the module configuration from the module itself and use that to determine the language-specific stuff.
 		if _, err := os.Stat(filepath.Join(root, "go.mod")); err == nil {
-			err := ftlexec.Command(ic, log.Debug, root, "go", "mod", "edit", "-replace", "github.com/TBD54566975/ftl="+ic.RootDir).RunBuffered(ic)
+			err := ftlexec.Command(ic, log.Debug, root, "go", "mod", "edit", "-replace", "github.com/block/ftl="+ic.RootDir).RunBuffered(ic)
 			assert.NoError(t, err)
 		}
 	}

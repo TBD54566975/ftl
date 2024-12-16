@@ -11,10 +11,10 @@ import (
 	"github.com/benbjohnson/clock"
 	"github.com/jpillora/backoff"
 
-	"github.com/TBD54566975/ftl/backend/controller/leases"
-	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/block/ftl/backend/controller/leases"
+	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/model"
 )
 
 type descriptor struct {

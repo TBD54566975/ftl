@@ -4,8 +4,8 @@ package echo
 import (
 	"context"
 	ftltime "ftl/time"
-	"github.com/TBD54566975/ftl/common/reflection"
-	"github.com/TBD54566975/ftl/go-runtime/server"
+	"github.com/block/ftl/common/reflection"
+	"github.com/block/ftl/go-runtime/server"
 )
 
 type EchoClient func(context.Context, EchoRequest) (EchoResponse, error)

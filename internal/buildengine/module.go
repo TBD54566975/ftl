@@ -1,8 +1,8 @@
 package buildengine
 
 import (
-	"github.com/TBD54566975/ftl/common/reflect"
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/block/ftl/common/reflect"
+	"github.com/block/ftl/internal/moduleconfig"
 )
 
 // Module represents an FTL module in the build engine

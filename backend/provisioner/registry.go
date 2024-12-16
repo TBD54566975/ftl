@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"strings"
 
-	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
-	"github.com/TBD54566975/ftl/common/plugin"
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/internal/log"
+	provisionerconnect "github.com/block/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/block/ftl/backend/provisioner/scaling"
+	"github.com/block/ftl/common/plugin"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/log"
 )
 
 // provisionerPluginConfig is a map of provisioner name to resources it supports

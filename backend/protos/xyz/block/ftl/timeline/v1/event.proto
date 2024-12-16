@@ -6,7 +6,7 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "xyz/block/ftl/schema/v1/schema.proto";
 
-option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/timeline/v1;timelinepb";
+option go_package = "github.com/block/ftl/backend/protos/xyz/block/ftl/timeline/v1;timelinepb";
 option java_multiple_files = true;
 
 enum EventType {

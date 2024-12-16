@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"ftl/time"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
+	"github.com/block/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
 // Wrapped module provides 2 verbs: Outer and Inner.

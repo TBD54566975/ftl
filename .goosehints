@@ -1,6 +1,6 @@
 # FTL project
 
-This project is the ftl (faster than light) platform. 
+This project is the ftl (faster than light) platform.
 
 # first steps always:
 
@@ -12,8 +12,8 @@ to run tests, for example: `just test-backend` is a good place to start, also lo
 
 # developing workflow
 
-* Developer will ask how to do things, where things are, or to run tests, or fix bugs. 
-* The issue tracker is here: https://github.com/TBD54566975/ftl/issues you can use the `gh` cli to look at issues etc if needed.
+* Developer will ask how to do things, where things are, or to run tests, or fix bugs.
+* The issue tracker is here: https://github.com/block/ftl/issues you can use the `gh` cli to look at issues etc if needed.
 * If you aren't sure how to solve something, you can use `gh` command line to look through recent merged pull requests to see if any descriptions may match, and then note the code changes in there.
 
 # Relevant content
@@ -119,7 +119,7 @@ just publish-extension
   ```bash
   # Find files by name
   rg --files | rg example.py
-  
+
   # Search content
   rg 'class Example'
   ```

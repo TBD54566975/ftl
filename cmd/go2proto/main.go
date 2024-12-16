@@ -19,7 +19,7 @@ import (
 	"github.com/alecthomas/kong"
 	"golang.org/x/tools/go/packages"
 
-	"github.com/TBD54566975/ftl/common/strcase"
+	"github.com/block/ftl/common/strcase"
 )
 
 const help = `Generate a Protobuf schema from Go types.

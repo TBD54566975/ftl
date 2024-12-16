@@ -4,9 +4,9 @@ package two
 import (
 	"context"
 	ftlbuiltin "ftl/builtin"
-	"github.com/TBD54566975/ftl/common/reflection"
-	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
-	"github.com/TBD54566975/ftl/go-runtime/server"
+	"github.com/block/ftl/common/reflection"
+	lib "github.com/block/ftl/go-runtime/schema/testdata"
+	"github.com/block/ftl/go-runtime/server"
 )
 
 type CallsTwoClient func(context.Context, Payload[string]) (Payload[string], error)

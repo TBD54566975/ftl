@@ -7,10 +7,10 @@ import (
 
 	"github.com/alecthomas/types/either"
 
-	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/internal/configuration"
-	"github.com/TBD54566975/ftl/internal/configuration/providers"
-	"github.com/TBD54566975/ftl/internal/profiles"
+	"github.com/block/ftl"
+	"github.com/block/ftl/internal/configuration"
+	"github.com/block/ftl/internal/configuration/providers"
+	"github.com/block/ftl/internal/profiles"
 )
 
 type profileCmd struct {

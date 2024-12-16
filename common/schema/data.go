@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
-	"github.com/TBD54566975/ftl/common/reflect"
+	schemapb "github.com/block/ftl/common/protos/xyz/block/ftl/schema/v1"
+	"github.com/block/ftl/common/reflect"
 )
 
 // A Data structure.

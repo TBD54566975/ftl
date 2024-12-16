@@ -9,7 +9,7 @@ import (
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
 	"github.com/TBD54566975/golang-tools/go/ast/inspector"
 
-	"github.com/TBD54566975/ftl/go-runtime/schema/common"
+	"github.com/block/ftl/go-runtime/schema/common"
 )
 
 // Extractor extracts config values relating to another decl, e.g. database configurations associated with a

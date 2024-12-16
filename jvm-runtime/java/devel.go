@@ -5,7 +5,7 @@ package java
 import (
 	"archive/zip"
 
-	"github.com/TBD54566975/ftl/internal"
+	"github.com/block/ftl/internal"
 )
 
 // Files is the FTL Go runtime scaffolding files.

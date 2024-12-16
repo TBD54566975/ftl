@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
+	"github.com/block/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
 type Topic = ftl.TopicHandle[Event, ftl.SinglePartitionMap[Event]]

@@ -12,8 +12,8 @@ import (
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/common/cron"
-	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/block/ftl/common/cron"
+	"github.com/block/ftl/common/schema"
 )
 
 // This file contains a parser for Go FTL directives.

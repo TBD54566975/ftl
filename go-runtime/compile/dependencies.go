@@ -11,8 +11,8 @@ import (
 
 	"golang.org/x/exp/maps"
 
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
-	"github.com/TBD54566975/ftl/internal/watch"
+	"github.com/block/ftl/internal/moduleconfig"
+	"github.com/block/ftl/internal/watch"
 )
 
 func ExtractDependencies(config moduleconfig.AbsModuleConfig) ([]string, error) {

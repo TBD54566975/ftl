@@ -3,7 +3,7 @@ package compile
 import (
 	"testing"
 
-	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/block/ftl/common/schema"
 	"github.com/alecthomas/assert/v2"
 )
 
@@ -15,7 +15,7 @@ func TestImportAliases(t *testing.T) {
 
 		typealias FooBar2 Any
 		+typemap go "github.com/two2/foo/bar/package.Type"
-		
+
 		typealias Unique Any
 		+typemap go "github.com/two2/foo/bar/unique.Type"
 

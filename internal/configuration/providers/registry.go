@@ -6,8 +6,8 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/TBD54566975/ftl/internal/configuration"
-	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/block/ftl/internal/configuration"
+	"github.com/block/ftl/internal/projectconfig"
 )
 
 type Factory[R configuration.Role] func(ctx context.Context) (configuration.Provider[R], error)

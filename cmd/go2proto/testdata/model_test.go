@@ -11,8 +11,8 @@ import (
 	"github.com/alecthomas/types/must"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/TBD54566975/ftl/cmd/go2proto/testdata/testdatapb"
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/block/ftl/cmd/go2proto/testdata/testdatapb"
+	"github.com/block/ftl/internal/model"
 )
 
 func TestModel(t *testing.T) {

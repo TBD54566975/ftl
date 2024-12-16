@@ -8,7 +8,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/block/ftl/go-runtime/ftl"
 )
 
 var (

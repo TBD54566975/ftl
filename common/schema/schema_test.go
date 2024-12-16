@@ -8,8 +8,8 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/common/errors"
-	"github.com/TBD54566975/ftl/common/slices"
+	"github.com/block/ftl/common/errors"
+	"github.com/block/ftl/common/slices"
 )
 
 func TestIndent(t *testing.T) {

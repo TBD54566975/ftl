@@ -12,7 +12,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	in "github.com/TBD54566975/ftl/internal/integration"
+	in "github.com/block/ftl/internal/integration"
 )
 
 func TestKubeScaling(t *testing.T) {

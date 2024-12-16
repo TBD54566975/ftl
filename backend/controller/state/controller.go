@@ -1,6 +1,6 @@
 package state
 
-import "github.com/TBD54566975/ftl/internal/model"
+import "github.com/block/ftl/internal/model"
 
 type Controller struct {
 	Endpoint string

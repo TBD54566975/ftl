@@ -11,15 +11,15 @@ import (
 
 	"github.com/block/scaffolder"
 
-	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/ftl/internal/configuration"
-	"github.com/TBD54566975/ftl/internal/configuration/providers"
-	"github.com/TBD54566975/ftl/internal/exec"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/profiles"
-	"github.com/TBD54566975/ftl/internal/projectconfig"
-	"github.com/TBD54566975/ftl/internal/projectinit"
+	"github.com/block/ftl"
+	"github.com/block/ftl/internal"
+	"github.com/block/ftl/internal/configuration"
+	"github.com/block/ftl/internal/configuration/providers"
+	"github.com/block/ftl/internal/exec"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/profiles"
+	"github.com/block/ftl/internal/projectconfig"
+	"github.com/block/ftl/internal/projectinit"
 )
 
 type initCmd struct {

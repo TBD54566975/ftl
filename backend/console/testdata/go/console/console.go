@@ -6,8 +6,8 @@ import (
 
 	"ftl/builtin"
 
-	lib "github.com/TBD54566975/ftl/backend/console/testdata/go"
-	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
+	lib "github.com/block/ftl/backend/console/testdata/go"
+	"github.com/block/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
 type External = lib.External

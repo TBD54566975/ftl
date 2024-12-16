@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/TBD54566975/ftl/go-runtime/internal"
+	"github.com/block/ftl/go-runtime/internal"
 )
 
 type MapHandle[T, U any] struct {

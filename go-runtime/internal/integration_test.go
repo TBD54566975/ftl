@@ -7,7 +7,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	. "github.com/TBD54566975/ftl/internal/integration"
+	. "github.com/block/ftl/internal/integration"
 )
 
 func TestRealMap(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/internal/log"
 )
 
 const ShutdownGracePeriod = 5 * time.Second

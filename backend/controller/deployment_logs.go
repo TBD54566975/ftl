@@ -7,9 +7,9 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/timeline"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/block/ftl/backend/timeline"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/model"
 )
 
 var _ log.Sink = (*deploymentLogsSink)(nil)

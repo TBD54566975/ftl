@@ -12,8 +12,8 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/pubsub"
 
-	in "github.com/TBD54566975/ftl/internal/integration"
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	in "github.com/block/ftl/internal/integration"
+	"github.com/block/ftl/internal/moduleconfig"
 )
 
 const pollFrequency = time.Millisecond * 500
@@ -221,6 +221,6 @@ func keyForEvent(event WatchEvent) string {
 
 func updateModFile(module string) in.Action {
 	return in.EditFile(module, func(b []byte) []byte {
-		return []byte(strings.Replace(string(b), "github.com/TBD54566975/ftl", "../..", 1))
+		return []byte(strings.Replace(string(b), "github.com/block/ftl", "../..", 1))
 	}, "go.mod")
 }

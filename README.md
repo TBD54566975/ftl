@@ -2,7 +2,7 @@
 
 <br />
 
-# FTL [![CI](https://github.com/TBD54566975/ftl/actions/workflows/ci.yml/badge.svg)](https://github.com/TBD54566975/ftl/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+# FTL [![CI](https://github.com/block/ftl/actions/workflows/ci.yml/badge.svg)](https://github.com/block/ftl/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ## Documentation
 

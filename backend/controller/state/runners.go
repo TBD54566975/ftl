@@ -5,8 +5,8 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/internal/eventstream"
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/block/ftl/internal/eventstream"
+	"github.com/block/ftl/internal/model"
 )
 
 type Runner struct {

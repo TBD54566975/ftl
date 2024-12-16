@@ -27,7 +27,7 @@ There are also secondary reasons, such as:
 - External types often perform custom marshalling to/from JSON. This is not representable cross-language.
 - Cleaner separation of abstraction layers - the ability to mix in abitrary external types is convenient, but can easily lead to mixing of concerns between internal and external data representations.
 
-So what to do? See the [external types](https://tbd54566975.github.io/ftl/docs/reference/externaltypes/) documentation 
+So what to do? See the [external types](https://tbd54566975.github.io/ftl/docs/reference/externaltypes/) documentation
 for how to work around this limitation.
 
 ## What is a "module"?
@@ -60,7 +60,7 @@ Verbs and types can only be exported from the top level of each module. You are 
 
 FTL supports the following types: `Int` (64-bit), `Float` (64-bit), `String`, `Bytes` (a byte array), `Bool`, `Time`, `Any` (a dynamic type), `Unit` (similar to "void"), arrays, maps, data structures, and constant enumerations. Each FTL type is mapped to a corresponding language-specific type. For example in Go `Float` is represented as `float64`, `Time` is represented by `time.Time`, and so on.
 
-Note that currently (until [type widening](https://github.com/TBD54566975/ftl/issues/1296) is implemented), external types are not supported.
+Note that currently (until [type widening](https://github.com/block/ftl/issues/1296) is implemented), external types are not supported.
 
 ## SQL errors on startup?
 

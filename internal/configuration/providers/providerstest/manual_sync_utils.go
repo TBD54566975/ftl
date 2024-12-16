@@ -10,7 +10,7 @@ import (
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/block/ftl/internal/configuration"
 )
 
 type manualSyncBlock struct {
@@ -19,7 +19,7 @@ type manualSyncBlock struct {
 
 // ManualSyncProvider prevents normal syncs by returning a very high sync interval
 // when syncAndWait() is called, it starts returning a 0 sync interval  and then then blocks until sync completes.
-// See why we didn't use mock clocks to schedule syncs here: https://github.com/TBD54566975/ftl/issues/2092
+// See why we didn't use mock clocks to schedule syncs here: https://github.com/block/ftl/issues/2092
 type ManualSyncProvider[R configuration.Role] struct {
 	syncRequested atomic.Value[optional.Option[manualSyncBlock]]
 

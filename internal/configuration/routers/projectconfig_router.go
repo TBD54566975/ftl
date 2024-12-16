@@ -8,8 +8,8 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 
-	"github.com/TBD54566975/ftl/internal/configuration"
-	pc "github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/block/ftl/internal/configuration"
+	pc "github.com/block/ftl/internal/projectconfig"
 )
 
 // ProjectConfig is parametric Resolver that loads values from either a

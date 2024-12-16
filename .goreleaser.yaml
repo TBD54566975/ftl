@@ -12,7 +12,7 @@ builds:
       - linux
       - darwin
     flags: -trimpath
-    ldflags: -s -w -buildid= -X github.com/TBD54566975/ftl.Version={{.Version}} -X  github.com/TBD54566975/ftl.timestamp={{ .CommitTimestamp }}
+    ldflags: -s -w -buildid= -X github.com/block/ftl.Version={{.Version}} -X  github.com/block/ftl.timestamp={{ .CommitTimestamp }}
     tags: [release]
   - id: ftl-language-go
     main: ./go-runtime/cmd/ftl-language-go
@@ -50,7 +50,7 @@ changelog:
 
 brews:
   - name: ftl
-    homepage: https://github.com/TBD54566975/ftl
+    homepage: https://github.com/block/ftl
     description: "FTL - Towards a 𝝺-calculus for large-scale systems"
     repository:
       owner: TBD54566975

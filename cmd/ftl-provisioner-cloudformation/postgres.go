@@ -11,8 +11,8 @@ import (
 	goformation "github.com/awslabs/goformation/v7/cloudformation"
 	"github.com/awslabs/goformation/v7/cloudformation/rds"
 
-	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
-	"github.com/TBD54566975/ftl/common/schema"
+	provisioner "github.com/block/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
+	"github.com/block/ftl/common/schema"
 )
 
 type PostgresTemplater struct {

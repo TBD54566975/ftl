@@ -5,7 +5,7 @@ import (
 
 	"github.com/alecthomas/types/pubsub"
 
-	"github.com/TBD54566975/ftl/internal/terminal"
+	"github.com/block/ftl/internal/terminal"
 )
 
 func updateTerminalWithEngineEvents(ctx context.Context, topic *pubsub.Topic[EngineEvent]) {

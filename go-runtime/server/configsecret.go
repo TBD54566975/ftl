@@ -3,8 +3,8 @@ package server
 import (
 	"reflect"
 
-	"github.com/TBD54566975/ftl/common/reflection"
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/block/ftl/common/reflection"
+	"github.com/block/ftl/go-runtime/ftl"
 )
 
 func Config[T ftl.ConfigType](module, name string) reflection.VerbResource {

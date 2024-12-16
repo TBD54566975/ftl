@@ -3,7 +3,7 @@ package cron
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
+	"github.com/block/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
 //ftl:cron 30s

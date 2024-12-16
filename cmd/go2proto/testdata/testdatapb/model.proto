@@ -6,7 +6,7 @@ package xyz.block.ftl.go2proto.test;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 
-option go_package = "github.com/TBD54566975/ftl/cmd/go2proto/testdata/testdatapb";
+option go_package = "github.com/block/ftl/cmd/go2proto/testdata/testdatapb";
 
 enum Enum {
   ENUM_A = 0;
@@ -76,4 +76,3 @@ message SumTypeB {
 message SumTypeC {
   double c = 1;
 }
-

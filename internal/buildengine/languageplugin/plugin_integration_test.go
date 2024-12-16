@@ -20,16 +20,16 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 	"golang.org/x/sync/errgroup"
 
-	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
-	schemapb "github.com/TBD54566975/ftl/common/protos/xyz/block/ftl/schema/v1"
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/bind"
-	"github.com/TBD54566975/ftl/internal/flock"
-	in "github.com/TBD54566975/ftl/internal/integration"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
-	"github.com/TBD54566975/ftl/internal/watch"
+	langpb "github.com/block/ftl/backend/protos/xyz/block/ftl/language/v1"
+	schemapb "github.com/block/ftl/common/protos/xyz/block/ftl/schema/v1"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/bind"
+	"github.com/block/ftl/internal/flock"
+	in "github.com/block/ftl/internal/integration"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/moduleconfig"
+	"github.com/block/ftl/internal/watch"
 )
 
 // These integration tests are meant as a test suite for external plugins.

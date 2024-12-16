@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/TBD54566975/ftl/common/sha256"
+	"github.com/block/ftl/common/sha256"
 )
 
 // Metadata container for an artefact's metadata

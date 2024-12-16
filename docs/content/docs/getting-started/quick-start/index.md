@@ -50,7 +50,7 @@ brew tap TBD54566975/ftl && brew install ftl
 
 #### Manually (Mac or Linux)
 
-Download binaries from the [latest release page](https://github.com/TBD54566975/ftl/releases/latest) and place them in your `$PATH`.
+Download binaries from the [latest release page](https://github.com/block/ftl/releases/latest) and place them in your `$PATH`.
 
 {% end %}
 
@@ -93,7 +93,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
+	"github.com/block/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
 type EchoRequest struct {

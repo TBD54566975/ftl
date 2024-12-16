@@ -11,9 +11,9 @@ import (
 	"github.com/TBD54566975/golang-tools/go/ast/inspector"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/common/strcase"
-	"github.com/TBD54566975/ftl/go-runtime/schema/common"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/common/strcase"
+	"github.com/block/ftl/go-runtime/schema/common"
 )
 
 // Extractor extracts possible value enum variants.

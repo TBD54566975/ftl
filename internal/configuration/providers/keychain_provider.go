@@ -9,7 +9,7 @@ import (
 
 	"github.com/zalando/go-keyring"
 
-	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/block/ftl/internal/configuration"
 )
 
 const KeychainProviderKey configuration.ProviderKey = "keychain"

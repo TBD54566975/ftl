@@ -6,7 +6,7 @@ import "google/protobuf/struct.proto";
 import "xyz/block/ftl/schema/v1/schema.proto";
 import "xyz/block/ftl/v1/ftl.proto";
 
-option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1;languagepb";
+option go_package = "github.com/block/ftl/backend/protos/xyz/block/ftl/language/v1;languagepb";
 option java_multiple_files = true;
 
 // ModuleConfig contains the configuration for a module, found in the module's ftl.toml file.

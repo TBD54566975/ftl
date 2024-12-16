@@ -5,7 +5,7 @@ package tests_test
 import (
 	"testing"
 
-	in "github.com/TBD54566975/ftl/internal/integration"
+	in "github.com/block/ftl/internal/integration"
 )
 
 func TestRuntimeReflection(t *testing.T) {

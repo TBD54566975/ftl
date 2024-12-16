@@ -7,7 +7,7 @@ import (
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/common/schema"
+	"github.com/block/ftl/common/schema"
 )
 
 // SchemaFact is a fact that associates a schema node with a Go object.

@@ -2,7 +2,7 @@
 
 [The VS Code FTL extension](https://marketplace.visualstudio.com/items?itemName=FTL.ftl)
 provides support for
-[FTL](https://github.com/TBD54566975/ftl) within VSCode including LSP integration and useful commands for manageing FTL projects.
+[FTL](https://github.com/block/ftl) within VSCode including LSP integration and useful commands for manageing FTL projects.
 
 ## Requirements
 
@@ -10,7 +10,7 @@ provides support for
 
 ## Quick Start
 
-1.  Install [FTL](https://github.com/TBD54566975/ftl) 0.169.0 or newer.
+1.  Install [FTL](https://github.com/block/ftl) 0.169.0 or newer.
 
 2.  Install this extension.
 

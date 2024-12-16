@@ -1,7 +1,7 @@
 package lsp
 
 import (
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/internal/log"
 )
 
 type LogSink struct {

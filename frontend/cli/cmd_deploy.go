@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	provisionerconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
-	"github.com/TBD54566975/ftl/internal/buildengine"
-	"github.com/TBD54566975/ftl/internal/projectconfig"
-	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
+	provisionerconnect "github.com/block/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerpbconnect"
+	"github.com/block/ftl/internal/buildengine"
+	"github.com/block/ftl/internal/projectconfig"
+	"github.com/block/ftl/internal/schema/schemaeventsource"
 )
 
 type deployCmd struct {

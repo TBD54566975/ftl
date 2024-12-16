@@ -4,7 +4,7 @@ import (
 	"context"
 	"ftl/builtin"
 
-	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
+	lib "github.com/block/ftl/go-runtime/schema/testdata"
 )
 
 //ftl:enum export

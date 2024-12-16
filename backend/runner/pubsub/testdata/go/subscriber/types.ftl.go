@@ -4,7 +4,7 @@ package subscriber
 import (
 	"context"
 	ftlpublisher "ftl/publisher"
-	"github.com/TBD54566975/ftl/common/reflection"
+	"github.com/block/ftl/common/reflection"
 )
 
 type ConsumeClient func(context.Context, ftlpublisher.PubSubEvent) error

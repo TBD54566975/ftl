@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/TBD54566975/ftl/common/reflection"
-	"github.com/TBD54566975/ftl/go-runtime/internal"
+	"github.com/block/ftl/common/reflection"
+	"github.com/block/ftl/go-runtime/internal"
 )
 
 // SecretType is a type that can be used as a secret value.

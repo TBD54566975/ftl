@@ -11,7 +11,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/block/ftl/internal/configuration"
 )
 
 var _ configuration.Router[configuration.Secrets] = (*FileRouter[configuration.Secrets])(nil)

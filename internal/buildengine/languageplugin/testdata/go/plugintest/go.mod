@@ -2,7 +2,7 @@ module ftl/plugintest
 
 go 1.23.2
 
-require github.com/TBD54566975/ftl v1.1.5
+require github.com/block/ftl v1.1.5
 
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect
@@ -49,4 +49,4 @@ require (
 	google.golang.org/protobuf v1.35.2 // indirect
 )
 
-replace github.com/TBD54566975/ftl => ../../../../../..
+replace github.com/block/ftl => ../../../../../..

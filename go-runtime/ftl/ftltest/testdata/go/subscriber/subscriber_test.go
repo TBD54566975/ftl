@@ -2,7 +2,7 @@ package subscriber_test
 
 import (
 	"ftl/pubsub"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/ftltest"
+	"github.com/block/ftl/go-runtime/ftl/ftltest"
 	"github.com/alecthomas/assert/v2"
 	"testing"
 )

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/block/ftl/go-runtime/ftl"
 )
 
 // Acquire acquires a lease and waits 5s before releasing it.

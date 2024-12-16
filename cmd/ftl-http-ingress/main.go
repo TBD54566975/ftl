@@ -7,16 +7,16 @@ import (
 
 	"github.com/alecthomas/kong"
 
-	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/backend/ingress"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/backend/timeline"
-	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/observability"
-	"github.com/TBD54566975/ftl/internal/routing"
-	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/schema/schemaeventsource"
+	"github.com/block/ftl"
+	"github.com/block/ftl/backend/ingress"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/block/ftl/backend/timeline"
+	_ "github.com/block/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/observability"
+	"github.com/block/ftl/internal/routing"
+	"github.com/block/ftl/internal/rpc"
+	"github.com/block/ftl/internal/schema/schemaeventsource"
 )
 
 var cli struct {

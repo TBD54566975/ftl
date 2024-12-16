@@ -15,9 +15,9 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/internal/configuration"
-	"github.com/TBD54566975/ftl/internal/exec"
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/internal/configuration"
+	"github.com/block/ftl/internal/exec"
+	"github.com/block/ftl/internal/log"
 )
 
 const vault = "ftl-test"

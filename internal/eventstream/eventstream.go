@@ -7,8 +7,8 @@ import (
 
 	"github.com/alecthomas/types/pubsub"
 
-	"github.com/TBD54566975/ftl/common/reflect"
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/common/reflect"
+	"github.com/block/ftl/internal/log"
 )
 
 // EventStream is a stream of events that can be published and subscribed to, that update a materialized view

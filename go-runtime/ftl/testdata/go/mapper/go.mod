@@ -3,7 +3,7 @@ module ftl/mapper
 go 1.23.0
 
 require (
-	github.com/TBD54566975/ftl v1.1.0
+	github.com/block/ftl v1.1.0
 	github.com/alecthomas/assert/v2 v2.11.0
 )
 
@@ -132,4 +132,4 @@ require (
 	oras.land/oras-go/v2 v2.5.0 // indirect
 )
 
-replace github.com/TBD54566975/ftl => ../../../../..
+replace github.com/block/ftl => ../../../../..

@@ -3,7 +3,7 @@ package time
 
 import (
 	"context"
-	"github.com/TBD54566975/ftl/common/reflection"
+	"github.com/block/ftl/common/reflection"
 )
 
 type TimeClient func(context.Context, TimeRequest) (TimeResponse, error)

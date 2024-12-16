@@ -11,8 +11,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 
-	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/observability"
+	"github.com/block/ftl/internal/model"
+	"github.com/block/ftl/internal/observability"
 )
 
 const (

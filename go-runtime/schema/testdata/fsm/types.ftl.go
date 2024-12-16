@@ -3,7 +3,7 @@ package fsm
 
 import (
 	"context"
-	"github.com/TBD54566975/ftl/common/reflection"
+	"github.com/block/ftl/common/reflection"
 )
 
 type CreatedClient func(context.Context, OnlinePaymentCreated) error

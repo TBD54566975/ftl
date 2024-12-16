@@ -13,15 +13,15 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	"github.com/TBD54566975/ftl/backend/provisioner/scaling"
-	"github.com/TBD54566975/ftl/backend/runner"
-	"github.com/TBD54566975/ftl/common/plugin"
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/internal/dev"
-	"github.com/TBD54566975/ftl/internal/localdebug"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/block/ftl/backend/controller/artefacts"
+	"github.com/block/ftl/backend/provisioner/scaling"
+	"github.com/block/ftl/backend/runner"
+	"github.com/block/ftl/common/plugin"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/dev"
+	"github.com/block/ftl/internal/localdebug"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/model"
 )
 
 var _ scaling.RunnerScaling = &localScaling{}

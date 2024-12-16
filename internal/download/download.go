@@ -11,12 +11,12 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/common/sha256"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/block/ftl/backend/controller/artefacts"
+	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/block/ftl/common/sha256"
+	"github.com/block/ftl/internal/log"
+	"github.com/block/ftl/internal/model"
 )
 
 // Artefacts downloads artefacts for a deployment from the Controller.

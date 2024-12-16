@@ -7,12 +7,12 @@ import (
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/common/errors"
-	"github.com/TBD54566975/ftl/common/schema"
-	cf "github.com/TBD54566975/ftl/internal/configuration"
-	"github.com/TBD54566975/ftl/internal/configuration/manager"
-	"github.com/TBD54566975/ftl/internal/projectconfig"
-	"github.com/TBD54566975/ftl/internal/watch"
+	"github.com/block/ftl/common/errors"
+	"github.com/block/ftl/common/schema"
+	cf "github.com/block/ftl/internal/configuration"
+	"github.com/block/ftl/internal/configuration/manager"
+	"github.com/block/ftl/internal/projectconfig"
+	"github.com/block/ftl/internal/watch"
 )
 
 // localClient reads and writes to local projectconfig files without making any network

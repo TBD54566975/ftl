@@ -16,11 +16,11 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/ftl/internal/exec"
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal"
+	"github.com/block/ftl/internal/exec"
+	"github.com/block/ftl/internal/log"
 )
 
 var symbols = []string{
@@ -115,7 +115,7 @@ import (
 		}
 		return ""
 	}()) + `
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/block/ftl/go-runtime/ftl"
 )
 
 var config = ftl.Config[` + symbol + `]("cfg")
@@ -273,7 +273,7 @@ func FuzzExtract(f *testing.F) {
 			ctx := log.ContextWithNewDefaultLogger(context.Background())
 			rootDir, ok := internal.GitRoot("").Get()
 			assert.True(f, ok)
-			err = exec.Command(ctx, log.Debug, tmpDir, "go", "mod", "edit", "-replace", "github.com/TBD54566975/ftl="+rootDir).RunBuffered(ctx)
+			err = exec.Command(ctx, log.Debug, tmpDir, "go", "mod", "edit", "-replace", "github.com/block/ftl="+rootDir).RunBuffered(ctx)
 			assert.NoError(f, err, "go mod edit failed")
 			err = exec.Command(ctx, log.Debug, tmpDir, "go", "mod", "tidy").RunBuffered(ctx)
 			assert.NoError(t, err, "go mod tidy failed")

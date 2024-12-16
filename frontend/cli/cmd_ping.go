@@ -6,8 +6,8 @@ import (
 
 	"github.com/jpillora/backoff"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/block/ftl/internal/rpc"
 )
 
 type pingCmd struct {

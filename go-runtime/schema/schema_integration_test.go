@@ -13,14 +13,14 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 
-	"github.com/TBD54566975/ftl/go-runtime/schema/common"
+	"github.com/block/ftl/go-runtime/schema/common"
 
-	"github.com/TBD54566975/ftl/common/builderrors"
-	"github.com/TBD54566975/ftl/common/errors"
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/common/slices"
-	"github.com/TBD54566975/ftl/internal/exec"
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/common/builderrors"
+	"github.com/block/ftl/common/errors"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/exec"
+	"github.com/block/ftl/internal/log"
 )
 
 // this is helpful when a test requires another module to be built before running
@@ -67,7 +67,7 @@ func testExtractModuleSchema(t *testing.T) {
 	assert.NoError(t, err)
 	actual := schema.Normalise(r.Module)
 	expected := `module one {
-  config configValue one.Config 
+  config configValue one.Config
   secret secretValue String
 
   database postgres testDb
@@ -176,7 +176,7 @@ func testExtractModuleSchema(t *testing.T) {
   }
 
   verb batchStringToTime([String]) [Time]
-  
+
   export verb http(builtin.HttpRequest<Unit, Unit, one.Req>) builtin.HttpResponse<one.Resp, Unit>
     +ingress http GET /get
 
@@ -215,15 +215,15 @@ func testExtractModuleSchemaTwo(t *testing.T) {
         		+typemap go "github.com/jpillora/backoff.Backoff"
 			typealias ExplicitAliasAlias Any
 				+typemap kotlin "com.foo.bar.NonFTLType"
-				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
+				+typemap go "github.com/block/ftl/go-runtime/schema/testdata.lib.NonFTLType"
 			typealias ExplicitAliasType Any
 				+typemap kotlin "com.foo.bar.NonFTLType"
-				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
+				+typemap go "github.com/block/ftl/go-runtime/schema/testdata.lib.NonFTLType"
 			typealias PaymentState String
 			typealias TransitiveAliasAlias Any
-				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
+				+typemap go "github.com/block/ftl/go-runtime/schema/testdata.lib.NonFTLType"
 			typealias TransitiveAliasType Any
-				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
+				+typemap go "github.com/block/ftl/go-runtime/schema/testdata.lib.NonFTLType"
 
 			enum PayinState: two.PaymentState {
 			  PayinPending = "PAYIN_PENDING"
@@ -571,9 +571,9 @@ func testErrorReporting(t *testing.T) {
 	// failing/child/child.go
 	expectedChild := []string{
 		`9:2-6: unsupported type "uint64" for field "Body"`,
-		`14:2-7: unsupported type "github.com/TBD54566975/ftl/go-runtime/schema/testdata.NonFTLType" for field "Field"`,
-		`14:8: unsupported external type "github.com/TBD54566975/ftl/go-runtime/schema/testdata.NonFTLType"; see FTL docs on using external types: tbd54566975.github.io/ftl/docs/reference/externaltypes/`,
-		`19:6-41: declared type github.com/blah.lib.NonFTLType in typemap does not match native type github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType`,
+		`14:2-7: unsupported type "github.com/block/ftl/go-runtime/schema/testdata.NonFTLType" for field "Field"`,
+		`14:8: unsupported external type "github.com/block/ftl/go-runtime/schema/testdata.NonFTLType"; see FTL docs on using external types: tbd54566975.github.io/ftl/docs/reference/externaltypes/`,
+		`19:6-41: declared type github.com/blah.lib.NonFTLType in typemap does not match native type github.com/block/ftl/go-runtime/schema/testdata.lib.NonFTLType`,
 		`24:6: multiple Go type mappings found for "ftl/failing/child.MultipleMappings"`,
 		`34:2-13: enum variant "SameVariant" conflicts with existing enum variant of "EnumVariantConflictParent" at "190:2"`,
 	}

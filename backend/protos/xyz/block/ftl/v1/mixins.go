@@ -5,7 +5,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/state"
+	"github.com/block/ftl/backend/controller/state"
 )
 
 func ArtefactToProto(artefact *state.DeploymentArtefact) *DeploymentArtefact {

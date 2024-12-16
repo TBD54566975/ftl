@@ -9,7 +9,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/TBD54566975/ftl/internal/observability"
+	"github.com/block/ftl/internal/observability"
 )
 
 const (

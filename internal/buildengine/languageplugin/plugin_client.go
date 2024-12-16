@@ -8,12 +8,12 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/result"
 
-	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1"
-	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/common/plugin"
-	"github.com/TBD54566975/ftl/internal/exec"
-	"github.com/TBD54566975/ftl/internal/log"
+	langpb "github.com/block/ftl/backend/protos/xyz/block/ftl/language/v1"
+	langconnect "github.com/block/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
+	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/block/ftl/common/plugin"
+	"github.com/block/ftl/internal/exec"
+	"github.com/block/ftl/internal/log"
 )
 
 type streamCancelFunc func()

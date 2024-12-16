@@ -15,8 +15,8 @@ import (
 
 	"github.com/zalando/go-keyring"
 
-	"github.com/TBD54566975/ftl/internal/exec"
-	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/block/ftl/internal/exec"
+	"github.com/block/ftl/internal/log"
 )
 
 // GetAuthenticationHeaders returns authentication headers for the given endpoint.

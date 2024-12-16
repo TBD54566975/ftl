@@ -4,9 +4,9 @@ import (
 	"context"
 	"os"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
-	"github.com/TBD54566975/ftl/common/plugin"
-	pythonplugin "github.com/TBD54566975/ftl/python-runtime/python-plugin"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/language/v1/languagepbconnect"
+	"github.com/block/ftl/common/plugin"
+	pythonplugin "github.com/block/ftl/python-runtime/python-plugin"
 )
 
 func main() {

@@ -3,7 +3,7 @@ package mapper
 
 import (
 	"context"
-	"github.com/TBD54566975/ftl/common/reflection"
+	"github.com/block/ftl/common/reflection"
 )
 
 type EchoClient func(context.Context, EchoRequest) (EchoResponse, error)

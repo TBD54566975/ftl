@@ -7,10 +7,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	sh "github.com/TBD54566975/ftl/common/sha256"
-	"github.com/TBD54566975/ftl/common/slices"
-	internalobservability "github.com/TBD54566975/ftl/internal/observability"
+	"github.com/block/ftl/backend/controller/artefacts"
+	sh "github.com/block/ftl/common/sha256"
+	"github.com/block/ftl/common/slices"
+	internalobservability "github.com/block/ftl/internal/observability"
 )
 
 type releaseCmd struct {

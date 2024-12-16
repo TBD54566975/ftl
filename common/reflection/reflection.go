@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/common/strcase"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/common/strcase"
 )
 
 // Module returns the FTL module currently being executed.

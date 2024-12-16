@@ -9,7 +9,7 @@ url = "/docs/getting-started/introduction/"
 url_button = "Get started"
 repo_version = "0.248.0"
 repo_license = "Open-source Apache License."
-repo_url = "https://github.com/TBD54566975/ftl"
+repo_url = "https://github.com/block/ftl"
 
 # Menu items
 [[extra.menu.main]]

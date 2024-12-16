@@ -3,8 +3,8 @@ package ftl
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/common/schema"
-	"github.com/TBD54566975/ftl/go-runtime/internal"
+	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/go-runtime/internal"
 )
 
 // TopicPartitionMap maps an event to a partition key

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/internal/download"
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/block/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/block/ftl/internal/download"
+	"github.com/block/ftl/internal/model"
 )
 
 type downloadCmd struct {

@@ -3,7 +3,7 @@ package cron
 
 import (
     "context"
-    "github.com/TBD54566975/ftl/common/reflection"
+    "github.com/block/ftl/common/reflection"
 )
 
 type JobClient func(context.Context) error

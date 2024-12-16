@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
-	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
+	"github.com/block/ftl/go-runtime/ftl" // Import the FTL SDK.
+	lib "github.com/block/ftl/go-runtime/schema/testdata"
 )
 
 //ftl:enum export

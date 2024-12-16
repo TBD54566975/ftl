@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TBD54566975/ftl/common/reflection"
-	"github.com/TBD54566975/ftl/common/strcase"
+	"github.com/block/ftl/common/reflection"
+	"github.com/block/ftl/common/strcase"
 )
 
 var (
