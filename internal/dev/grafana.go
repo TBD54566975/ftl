@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/alecthomas/types/optional"
+
 	"github.com/block/ftl/internal/container"
 )
 

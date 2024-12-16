@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/types/optional"
+
 	"github.com/block/ftl/internal/container"
 )
 
