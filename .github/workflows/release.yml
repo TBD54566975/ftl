@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1.1.3
       - id: set-matrix
         name: Shard Docker Builds
         uses: ./.github/actions/shard-docker-builds
