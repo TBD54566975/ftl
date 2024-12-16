@@ -16,7 +16,7 @@ plugins:
     out: ../../python-runtime/ftl/src/ftl/protos
     opt:
       - pyi_out=../../python-runtime/ftl/src/ftl/protos
-#  - plugin: prost
-#    out: ../../sqlc-gen-ftl/src/protos
-#    opt:
-#      - bytes=.
+  - plugin: prost
+    out: ../../sqlc-gen-ftl/src/protos
+    opt:
+      - bytes=.
