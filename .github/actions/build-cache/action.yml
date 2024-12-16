@@ -20,11 +20,6 @@ runs:
         restore-keys: |
           ${{ runner.os }}-hermit-cache-${{ steps.bin-hash.outputs.hash }}
           ${{ runner.os }}-hermit-cache-
-    - name: Restore Docker Images
-      uses: ScribeMD/docker-cache@0.5.0
-      with:
-        key: docker-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}
-        read-only: true
     - name: Restore Go Modules Cache
       id: cache-go-modules
       uses: actions/cache/restore@v4
@@ -56,4 +51,3 @@ runs:
         key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
           ${{ runner.os }}-pnpm-
-
