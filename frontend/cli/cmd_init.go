@@ -25,7 +25,7 @@ import (
 type initCmd struct {
 	Name        string   `arg:"" help:"Name of the project."`
 	Hermit      bool     `help:"Include Hermit language-specific toolchain binaries." negatable:""`
-	Dir         string   `arg:"" help:"Directory to initialize the project in." default:"${gitroot}" required:""`
+	Dir         string   `arg:"" help:"Directory to initialize the project in." default:"." required:""`
 	ModuleDirs  []string `help:"Child directories of existing modules."`
 	ModuleRoots []string `help:"Root directories of existing modules."`
 	NoGit       bool     `help:"Don't add files to the git repository."`
