@@ -51,10 +51,6 @@ func main() {
 	storage, err := artefacts.NewOCIRegistryStorage(cli.RegistryConfig)
 	kctx.FatalIfErrorf(err, "failed to create OCI registry storage")
 
-	// The FTL controller currently only supports DB as a cf provider/resolver.
-	conn, err := cli.ControllerConfig.OpenDBAndInstrument()
-	kctx.FatalIfErrorf(err)
-
 	leaseClient := rpc.Dial(leasepbconnect.NewLeaseServiceClient, cli.LeaseEndpoint.String(), log.Error)
 
 	ctx = rpc.ContextWithClient(ctx, leaseClient)
@@ -67,6 +63,6 @@ func main() {
 	kctx.FatalIfErrorf(err)
 
 	timelineClient := timeline.NewClient(ctx, cli.TimelineEndpoint)
-	err = controller.Start(ctx, cli.ControllerConfig, storage, adminClient, timelineClient, conn, false)
+	err = controller.Start(ctx, cli.ControllerConfig, storage, adminClient, timelineClient, false)
 	kctx.FatalIfErrorf(err)
 }

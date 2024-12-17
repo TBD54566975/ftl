@@ -187,12 +187,6 @@ func (s *serveCommonConfig) run(
 	if err != nil {
 		return fmt.Errorf("failed to create OCI registry storage: %w", err)
 	}
-	// Bring up the DB and DAL.
-	dsn := dev.PostgresDSN(ctx, s.DBPort)
-	err = dev.SetupPostgres(ctx, optional.Some(s.DatabaseImage), s.DBPort, recreate)
-	if err != nil {
-		return err
-	}
 
 	wg, ctx := errgroup.WithContext(ctx)
 
@@ -255,7 +249,6 @@ func (s *serveCommonConfig) run(
 			CommonConfig: s.CommonConfig,
 			Bind:         controllerAddresses[i],
 			Key:          model.NewLocalControllerKey(i),
-			DSN:          dsn,
 		}
 		config.SetDefaults()
 		config.ModuleUpdateFrequency = time.Second * 1
@@ -263,14 +256,8 @@ func (s *serveCommonConfig) run(
 		scope := fmt.Sprintf("controller%d", i)
 		controllerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
 
-		// Bring up the DB connection and DAL.
-		conn, err := config.OpenDBAndInstrument()
-		if err != nil {
-			return fmt.Errorf("failed to bring up DB connection: %w", err)
-		}
-
 		wg.Go(func() error {
-			if err := controller.Start(controllerCtx, config, storage, adminClient, timelineClient, conn, true); err != nil {
+			if err := controller.Start(controllerCtx, config, storage, adminClient, timelineClient, true); err != nil {
 				logger.Errorf(err, "controller%d failed: %v", i, err)
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}

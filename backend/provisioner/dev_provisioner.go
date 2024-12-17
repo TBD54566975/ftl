@@ -7,6 +7,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/XSAM/otelsql"
+	"github.com/alecthomas/types/optional"
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/block/ftl/common/schema"
@@ -129,6 +130,10 @@ func provisionPostgres(postgresPort int, recreate bool) InMemResourceProvisioner
 
 		// We assume that the DB has already been started when running in dev mode
 		postgresDSN := dsn.PostgresDSN("ftl", dsn.Port(postgresPort))
+		err := dev.SetupPostgres(ctx, optional.None[string](), postgresPort, recreate)
+		if err != nil {
+			return nil, fmt.Errorf("failed to wait for postgres to be ready: %w", err)
+		}
 
 		conn, err := otelsql.Open("pgx", postgresDSN)
 		if err != nil {

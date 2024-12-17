@@ -10,14 +10,9 @@ import (
 	"github.com/block/ftl/backend/controller/artefacts"
 	sh "github.com/block/ftl/common/sha256"
 	"github.com/block/ftl/common/slices"
-	internalobservability "github.com/block/ftl/internal/observability"
 )
 
 type releaseCmd struct {
-	DSN                  string `help:"DAL DSN." default:"postgres://127.0.0.1:15432/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_DSN"`
-	MaxOpenDBConnections int    `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
-	MaxIdleDBConnections int    `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
-
 	Publish  releasePublishCmd        `cmd:"" help:"Packages the project into a release and publishes it."`
 	Exists   releaseExistsCmd         `cmd:"" help:"Indicates whether modules, with the specified digests, have been published."`
 	Registry artefacts.RegistryConfig `embed:"" prefix:"oci-"`
@@ -75,12 +70,6 @@ func (d *releaseExistsCmd) Run(release *releaseCmd) error {
 }
 
 func createContainerService(release *releaseCmd) (*artefacts.OCIArtefactService, error) {
-	conn, err := internalobservability.OpenDBAndInstrument(release.DSN)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open DB connection: %w", err)
-	}
-	conn.SetMaxIdleConns(release.MaxIdleDBConnections)
-	conn.SetMaxOpenConns(release.MaxOpenDBConnections)
 	storage, err := artefacts.NewOCIRegistryStorage(release.Registry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OCI registry storage: %w", err)
