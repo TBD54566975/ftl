@@ -18,6 +18,7 @@ import (
 	"github.com/block/ftl/internal/log"
 	"github.com/block/ftl/internal/model"
 	"github.com/block/ftl/internal/routing"
+	"github.com/block/ftl/internal/rpc/headers"
 	"github.com/block/ftl/internal/schema/schemaeventsource"
 )
 
@@ -111,11 +112,17 @@ func callCronJob(ctx context.Context, verbClient routing.CallClient, cronJob cro
 	logger := log.FromContext(ctx).Scope("cron")
 	ref := schema.Ref{Module: cronJob.module, Name: cronJob.verb.Name}
 	logger.Debugf("Calling cron job %s", cronJob)
-	resp, err := verbClient.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{
+
+	req := connect.NewRequest(&ftlv1.CallRequest{
 		Verb:     ref.ToProto(),
 		Body:     []byte(`{}`),
 		Metadata: &ftlv1.Metadata{},
-	}))
+	})
+
+	requestKey := model.NewRequestKey(model.OriginCron, schema.RefKey{Module: ref.Module, Name: ref.Name}.String())
+	headers.SetRequestKey(req.Header(), requestKey)
+
+	resp, err := verbClient.Call(ctx, req)
 	if err != nil {
 		return fmt.Errorf("%s: call to cron job failed: %w", ref, err)
 	}
