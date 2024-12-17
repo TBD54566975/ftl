@@ -175,22 +175,24 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
   modules.sort((m1, m2) => Number(m1.isBuiltin) - Number(m2.isBuiltin))
 
   return (
-    <div className='flex grow flex-col h-full gap-y-5 overflow-y-auto bg-gray-100 dark:bg-gray-900'>
-      <nav>
-        <div className='sticky top-0 border-b border-gray-300 bg-gray-100 dark:border-gray-800 dark:bg-gray-900 z-10 flex items-center'>
-          <div className='flex-1 min-w-0'>
-            <Multiselect allOpts={declTypeMultiselectOpts} selectedOpts={selectedDeclTypes} onChange={msOnChange} />
-          </div>
-          <div className='flex-none flex gap-1'>
-            <Button id='hide-exported' variant='secondary' size='sm' onClick={() => setHideUnexportedState(!hideUnexported)} title='Show/hide unexported'>
-              {hideUnexported ? <ViewOffSlashIcon className='size-5' /> : <ViewIcon className='size-5' />}
-            </Button>
-            <Button variant='secondary' size='sm' onClick={collapseAll} title='Collapse all modules'>
-              <ArrowShrink02Icon className='size-5' />
-            </Button>
+    <div className='flex flex-col h-full bg-gray-100 dark:bg-gray-900'>
+      <nav className='h-full overflow-y-auto'>
+        <div className='sticky top-0 border-b border-gray-300 bg-gray-100 dark:border-gray-800 dark:bg-gray-900 z-10'>
+          <div className='flex items-center gap-1 p-2'>
+            <div className='flex-1 min-w-0'>
+              <Multiselect allOpts={declTypeMultiselectOpts} selectedOpts={selectedDeclTypes} onChange={msOnChange} />
+            </div>
+            <div className='flex gap-1'>
+              <Button id='hide-exported' variant='secondary' size='sm' onClick={() => setHideUnexportedState(!hideUnexported)} title='Show/hide unexported'>
+                {hideUnexported ? <ViewOffSlashIcon className='size-5' /> : <ViewIcon className='size-5' />}
+              </Button>
+              <Button variant='secondary' size='sm' onClick={collapseAll} title='Collapse all modules'>
+                <ArrowShrink02Icon className='size-5' />
+              </Button>
+            </div>
           </div>
         </div>
-        <ul>
+        <ul className='p-2'>
           {modules.map((m) => (
             <ModuleSection
               key={m.name}

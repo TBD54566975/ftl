@@ -72,7 +72,7 @@ export const TraceDetailItem: React.FC<TraceDetailItemProps> = ({
           }}
         />
       </div>
-      <span className='text-xs font-medium ml-4 w-20 text-right'>{eventDurationMs} ms</span>
+      <span className='text-xs font-medium ml-4 w-20 text-right'>{eventDurationMs.toFixed(2)} ms</span>
     </li>
   )
 }

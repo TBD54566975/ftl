@@ -59,7 +59,9 @@ export const KeyValuePairForm = ({ keyValuePairs, onChange }: KeyValuePairFormPr
       <div className='space-y-2'>
         {keyValuePairs.map((pair, index) => (
           <div key={pair.id} className='flex items-center gap-2'>
-            <Checkbox checked={pair.enabled} onChange={(e) => updatePair(pair.id, { enabled: e.target.checked })} />
+            <div className='flex-shrink-0'>
+              <Checkbox checked={pair.enabled} onChange={(e) => updatePair(pair.id, { enabled: e.target.checked })} />
+            </div>
             <input
               ref={(el) => {
                 inputRefs.current[pair.id] = el
