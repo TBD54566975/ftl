@@ -54,7 +54,6 @@ func (d *devCmd) Run(
 	verbClient ftlv1connect.VerbServiceClient,
 ) error {
 	startTime := time.Now()
-	logger := log.FromContext(ctx)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	if len(d.Build.Dirs) == 0 {
@@ -145,7 +144,6 @@ func (d *devCmd) Run(
 
 	err = g.Wait()
 	if err != nil {
-		logger.Errorf(err, "error during dev")
 		return fmt.Errorf("error during dev: %w", err)
 	}
 	return nil

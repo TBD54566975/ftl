@@ -128,7 +128,7 @@ func (s *serveCommonConfig) run(
 		_, err := controllerClient.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
 		if err == nil {
 			// The controller is already running, bail out.
-			return fmt.Errorf("controller is already running")
+			return errors.New(ftlRunningErrorMsg)
 		}
 		if err := runInBackground(logger); err != nil {
 			return err
@@ -152,7 +152,7 @@ func (s *serveCommonConfig) run(
 	_, err := controllerClient.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
 	if err == nil {
 		// The controller is already running, bail out.
-		return fmt.Errorf("controller is already running")
+		return errors.New(ftlRunningErrorMsg)
 	}
 	if s.Provisioners > 0 {
 		logger.Debugf("Starting FTL with %d controller(s) and %d provisioner(s)", s.Controllers, s.Provisioners)

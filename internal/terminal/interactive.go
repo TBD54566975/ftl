@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/alecthomas/kong"
@@ -26,10 +27,15 @@ type KongContextBinder func(ctx context.Context, kctx *kong.Context) context.Con
 
 type exitPanic struct{}
 
-func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, eventSource schemaeventsource.EventSource) error {
-	if !readline.DefaultIsTerminal() {
-		return nil
-	}
+type interactiveConsole struct {
+	l         *readline.Instance
+	binder    KongContextBinder
+	k         *kong.Kong
+	closeWait sync.WaitGroup
+	closed    bool
+}
+
+func newInteractiveConsole(k *kong.Kong, binder KongContextBinder, eventSource schemaeventsource.EventSource) (*interactiveConsole, error) {
 	l, err := readline.NewEx(&readline.Config{
 		Prompt:          interactivePrompt,
 		InterruptPrompt: "^C",
@@ -38,6 +44,48 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 			_ = syscall.Kill(-syscall.Getpid(), syscall.SIGINT) //nolint:forcetypeassert,errcheck // best effort
 		}},
 	})
+	if err != nil {
+		return nil, fmt.Errorf("init readline: %w", err)
+	}
+
+	it := &interactiveConsole{k: k, binder: binder, l: l}
+	it.closeWait.Add(1)
+	return it, nil
+}
+
+func (r *interactiveConsole) Close() {
+	if r.closed {
+		return
+	}
+	r.closed = true
+	r.Close()
+	r.closeWait.Wait()
+}
+func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, eventSource schemaeventsource.EventSource) error {
+	if !readline.DefaultIsTerminal() {
+		return nil
+	}
+	ic, err := newInteractiveConsole(k, binder, eventSource)
+	if err != nil {
+		return err
+	}
+	defer ic.Close()
+	err = ic.run(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func (r *interactiveConsole) run(ctx context.Context) error {
+	if !readline.DefaultIsTerminal() {
+		return nil
+	}
+	l := r.l
+	k := r.k
+	defer r.closeWait.Done()
+
 	sm := FromContext(ctx)
 	var tsm *terminalStatusManager
 	ok := false
@@ -45,12 +93,9 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 		tsm.statusLock.Lock()
 		tsm.clearStatusMessages()
 		tsm.console = true
-		tsm.consoleRefresh = l.Refresh
+		tsm.consoleRefresh = r.l.Refresh
 		tsm.recalculateLines()
 		tsm.statusLock.Unlock()
-	}
-	if err != nil {
-		return fmt.Errorf("init readline: %w", err)
 	}
 	context.AfterFunc(ctx, func() {
 		_ = l.Close()
@@ -71,6 +116,7 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 		// we recover from this and continue the loop
 		panic(exitPanic{})
 	}
+
 	for {
 		line, err := l.Readline()
 		if errors.Is(err, readline.ErrInterrupt) {
@@ -80,7 +126,7 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 			}
 			continue
 		} else if errors.Is(err, io.EOF) {
-			os.Exit(0)
+			return nil
 		}
 		if tsm != nil {
 			tsm.consoleNewline(line)
@@ -108,7 +154,7 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 				errorf("%s", err)
 				return
 			}
-			subctx := binder(ctx, kctx)
+			subctx := r.binder(ctx, kctx)
 
 			err = kctx.Run(subctx)
 			if err != nil {
@@ -117,7 +163,8 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 			}
 		}()
 	}
-	_ = l.Close()
+	_ = l.Close() //nolint:errcheck // best effort
+
 	return nil
 }
 
