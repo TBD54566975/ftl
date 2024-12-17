@@ -397,6 +397,11 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 				logger.Errorf(err, "could not create FTL dev Config")
 			}
 		}
+		err = rpc.Wait(ctx, backoff.Backoff{}, time.Second*10, client)
+		if err != nil {
+			observability.Deployment.Failure(ctx, optional.Some(key.String()))
+			return fmt.Errorf("failed to ping dev endpoint: %w", err)
+		}
 	} else {
 		err := download.ArtefactsFromOCI(ctx, s.controllerClient, key, deploymentDir, s.storage)
 		if err != nil {
