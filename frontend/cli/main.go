@@ -29,7 +29,6 @@ import (
 	"github.com/block/ftl/internal/configuration"
 	"github.com/block/ftl/internal/configuration/manager"
 	"github.com/block/ftl/internal/configuration/providers"
-	"github.com/block/ftl/internal/dsn"
 	"github.com/block/ftl/internal/log"
 	"github.com/block/ftl/internal/profiles"
 	"github.com/block/ftl/internal/projectconfig"
@@ -195,7 +194,6 @@ func createKongApplication(cli any, csm *currentStatusManager) *kong.Kong {
 			"arch":    runtime.GOARCH,
 			"numcpu":  strconv.Itoa(runtime.NumCPU()),
 			"gitroot": gitRoot,
-			"dsn":     dsn.PostgresDSN("ftl"),
 		},
 		kong.Exit(func(code int) {
 			if sm, ok := csm.statusManager.Get(); ok {

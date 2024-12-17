@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/result"
 	"github.com/jackc/pgx/v5"
@@ -44,7 +43,6 @@ import (
 	"github.com/block/ftl/common/sha256"
 	"github.com/block/ftl/common/slices"
 	"github.com/block/ftl/internal/deploymentcontext"
-	"github.com/block/ftl/internal/dsn"
 	"github.com/block/ftl/internal/log"
 	ftlmaps "github.com/block/ftl/internal/maps"
 	"github.com/block/ftl/internal/model"
@@ -75,9 +73,6 @@ type Config struct {
 }
 
 func (c *Config) SetDefaults() {
-	if err := kong.ApplyDefaults(c, kong.Vars{"dsn": dsn.PostgresDSN("ftl")}); err != nil {
-		panic(err)
-	}
 	if c.Advertise == nil {
 		c.Advertise = c.Bind
 	}

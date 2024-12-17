@@ -7,7 +7,6 @@ import (
 	"net/url"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/kong"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
@@ -17,7 +16,6 @@ import (
 	"github.com/block/ftl/internal/configuration"
 	"github.com/block/ftl/internal/configuration/manager"
 	"github.com/block/ftl/internal/configuration/providers"
-	"github.com/block/ftl/internal/dsn"
 	"github.com/block/ftl/internal/log"
 	"github.com/block/ftl/internal/rpc"
 	"github.com/block/ftl/internal/schema/schemaeventsource"
@@ -25,12 +23,6 @@ import (
 
 type Config struct {
 	Bind *url.URL `help:"Socket to bind to." default:"http://127.0.0.1:8896" env:"FTL_BIND"`
-}
-
-func (c *Config) SetDefaults() {
-	if err := kong.ApplyDefaults(c, kong.Vars{"dsn": dsn.PostgresDSN("ftl")}); err != nil {
-		panic(err)
-	}
 }
 
 type AdminService struct {
@@ -78,7 +70,6 @@ func Start(
 	sm *manager.Manager[configuration.Secrets],
 	schr SchemaRetriever,
 ) error {
-	config.SetDefaults()
 
 	logger := log.FromContext(ctx).Scope("admin")
 	svc := NewAdminService(cm, sm, schr)

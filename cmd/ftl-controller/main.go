@@ -14,7 +14,6 @@ import (
 	"github.com/block/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/block/ftl/backend/timeline"
 	_ "github.com/block/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
-	"github.com/block/ftl/internal/dsn"
 	"github.com/block/ftl/internal/log"
 	"github.com/block/ftl/internal/observability"
 	"github.com/block/ftl/internal/rpc"
@@ -39,7 +38,6 @@ func main() {
 		kong.UsageOnError(),
 		kong.Vars{
 			"version": ftl.FormattedVersion,
-			"dsn":     dsn.PostgresDSN("ftl"),
 		},
 	)
 	cli.ControllerConfig.SetDefaults()
