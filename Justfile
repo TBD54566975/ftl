@@ -85,7 +85,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "ftl dev --plain {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-backend build-frontend build-backend-tests build-generate build-zips lsp-generate build-jvm build-language-plugins build-go2proto-testdata build-sqlc-gen-ftl
+build-all: build-protos-unconditionally build-backend build-frontend build-backend-tests build-generate build-zips lsp-generate build-jvm build-language-plugins build-go2proto-testdata
 
 # Run "go generate" on all packages
 build-generate:
@@ -165,16 +165,15 @@ build-extension: pnpm-install
   @mk {{EXTENSION_OUT}} : frontend/vscode/src frontend/vscode/package.json -- "cd frontend/vscode && rm -f ftl-*.vsix && pnpm run compile"
 
 # Build the sqlc-ftl-gen plugin, used to generate FTL schema from SQL
-build-sqlc-gen-ftl: build-protos
+build-sqlc-gen-ftl: build-rust-protos
     @mk {{SQLC_GEN_FTL_OUT}} : sqlc-gen-ftl/src -- \
         "cd sqlc-gen-ftl && \
         cargo build --target wasm32-wasip1 --release"
 
-cargo-install:
-    @mk sqlc-gen-ftl/target : sqlc-gen-ftl/Cargo.toml -- \
-        "cd sqlc-gen-ftl && \
-        cargo install protoc-gen-prost && \
-        cargo build"
+# Generate Rust protos
+build-rust-protos:
+    @mk sqlc-gen-ftl/src/protos : backend/protos -- \
+        "cd backend/protos && buf generate --template buf.gen.rust.yaml"
 
 # Install development version of VSCode extension
 install-extension: build-extension

@@ -115,6 +115,14 @@ jobs:
         uses: ./.github/actions/build-cache
       - name: Test WASM
         run: cd sqlc-gen-ftl && cargo test --features ci --test sqlc_gen_ftl_test -- --nocapture
+      - name: Check for uncommitted changes
+        run: |
+          if [[ -n $(git status -s) ]]; then
+            echo "Error: Building sqlc-gen-ftl resulted in uncommitted changes:"
+            git status -s
+            git --no-pager diff
+            exit 1
+          fi
   extension:
     name: VSCode Extension
     runs-on: ubuntu-latest

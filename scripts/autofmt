@@ -24,8 +24,6 @@ find backend/protos \( -name '*.pb.go' -o -name '*.connect.go' \) -print0 | xarg
 
 just pnpm-install
 
-just cargo-install
-
 (cd backend/protos && buf generate)
 
 echo "Formatting TypeScript..."

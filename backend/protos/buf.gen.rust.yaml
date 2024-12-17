@@ -1,0 +1,6 @@
+version: v1
+plugins:
+  - plugin: prost
+    out: src/protos
+    opt:
+      - bytes=.
