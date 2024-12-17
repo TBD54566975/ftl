@@ -289,7 +289,7 @@ jobs:
         run: |
           set -euo pipefail
           # shellcheck disable=SC2046
-          go test -v -race -tags integration -run '^${{ matrix.test }}$' $(git grep -l '^//go:build integration' | xargs grep -l '^func ${{ matrix.test }}' | xargs -I {} dirname ./{})
+          go test -v -race -tags integration -run '^(${{ matrix.test }})$' $(git grep -l '^//go:build integration' | xargs grep -l -E '^func (${{ matrix.test }})' | xargs -I {} dirname ./{})
   infrastructure-shard:
     name: Shard Infrastructure Tests
     # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
