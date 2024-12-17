@@ -12,10 +12,11 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
-	"github.com/block/ftl/internal/raft"
 	"github.com/lni/dragonboat/v4"
 	"golang.org/x/exp/rand"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/block/ftl/internal/raft"
 )
 
 var cli struct {
