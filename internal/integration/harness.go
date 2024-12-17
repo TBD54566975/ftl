@@ -377,26 +377,16 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			}
 			defer dumpKubePods(ctx, ic.kubeClient, ic.kubeNamespace)
 
-			if opts.startTimeline && !opts.kube {
-				ic.Timeline = rpc.Dial(timelinepbconnect.NewTimelineServiceClient, "http://localhost:8894", log.Debug)
-
-				Infof("Waiting for timeline to be ready")
-				ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
-					_, err := ic.Timeline.Ping(ic, connect.NewRequest(&ftlv1.PingRequest{}))
-					assert.NoError(t, err)
-				})
-			}
-
 			if opts.startController || opts.kube {
 				ic.Controller = controller
 				ic.Schema = schema
 				ic.Console = console
 
 				Infof("Waiting for controller to be ready")
-				ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
+				ic.AssertWithSpecificRetry(t, func(t testing.TB, ic TestContext) {
 					_, err := ic.Controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
 					assert.NoError(t, err)
-				})
+				}, time.Minute*2)
 			}
 
 			if opts.startProvisioner {
@@ -405,6 +395,16 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				Infof("Waiting for provisioner to be ready")
 				ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
 					_, err := ic.Provisioner.Ping(ic, connect.NewRequest(&ftlv1.PingRequest{}))
+					assert.NoError(t, err)
+				})
+			}
+
+			if opts.startTimeline && !opts.kube {
+				ic.Timeline = rpc.Dial(timelinepbconnect.NewTimelineServiceClient, "http://localhost:8894", log.Debug)
+
+				Infof("Waiting for timeline to be ready")
+				ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
+					_, err := ic.Timeline.Ping(ic, connect.NewRequest(&ftlv1.PingRequest{}))
 					assert.NoError(t, err)
 				})
 			}
@@ -543,7 +543,13 @@ func (i TestContext) WorkingDir() string { return i.workDir }
 // AssertWithRetry asserts that the given action passes within the timeout.
 func (i TestContext) AssertWithRetry(t testing.TB, assertion Action) {
 	t.Helper()
-	waitCtx, done := context.WithTimeout(i, i.integrationTestTimeout())
+	i.AssertWithSpecificRetry(t, assertion, i.integrationTestTimeout())
+}
+
+// AssertWithSpecificRetry asserts that the given action passes within the timeout.
+func (i TestContext) AssertWithSpecificRetry(t testing.TB, assertion Action, timeout time.Duration) {
+	t.Helper()
+	waitCtx, done := context.WithTimeout(i, timeout)
 	defer done()
 	for {
 		err := i.runAssertionOnce(t, assertion)

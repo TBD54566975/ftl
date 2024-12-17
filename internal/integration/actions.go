@@ -236,7 +236,7 @@ func Deploy(module string) Action {
 
 			Exec("ftl", args...)(t, ic)
 		},
-		Wait(module),
+		WaitWithTimeout(module, time.Minute*2),
 	)
 }
 
@@ -575,8 +575,17 @@ func DropDBAction(t testing.TB, dbName string) Action {
 
 func DropDB(t testing.TB, dbName string) {
 	Infof("Dropping database %s", dbName)
+
 	db, err := sql.Open("pgx", dsn.PostgresDSN("postgres"))
-	assert.NoError(t, err, "failed to open database connection")
+	if err != nil {
+		// We just assume there is no DB running
+		return
+	}
+	_, err = db.Exec("SELECT 1")
+	if err != nil {
+		// We just assume there is no DB running
+		return
+	}
 
 	terminateDanglingConnections(t, db, dbName)
 
