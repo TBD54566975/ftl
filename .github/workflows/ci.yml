@@ -259,8 +259,7 @@ jobs:
           # shellcheck disable=SC2046
           echo "matrix={\"test\":$(jq -c -n '$ARGS.positional' --args $(git grep -l '^//go:build integration' | xargs grep '^func Test' | awk '{print $2}' | cut -d'(' -f1))}" >> "$GITHUB_OUTPUT"
   integration-run:
-    name: Integration Test
-    # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    name: Integration Test Group
     needs: integration-shard
     runs-on: ubuntu-latest
     strategy:
@@ -277,11 +276,24 @@ jobs:
         run: go mod download
       - name: Build Language Plugins
         run: just build-language-plugins
-      - name: Run ${{ matrix.test }}
+      - name: Run Tests
         run: |
           set -euo pipefail
-          # shellcheck disable=SC2046
-          go test -v -race -tags integration -run '^${{ matrix.test }}$' $(git grep -l '^//go:build integration' | xargs grep -l '^func ${{ matrix.test }}' | xargs -I {} dirname ./{})
+          failed_tests=()
+          
+          for test in ${{ join(matrix.test, ' ') }}; do
+            echo "::group::Running test: $test"
+            if ! go test -v -race -tags integration -run "^${test}$" $(git grep -l '^//go:build integration' | xargs grep -l "^func ${test}" | xargs -I {} dirname ./{}); then
+              failed_tests+=("$test")
+              echo "::error::Test $test failed"
+            fi
+            echo "::endgroup::"
+          done
+          
+          if [ ${#failed_tests[@]} -ne 0 ]; then
+            echo "::error::The following tests failed: ${failed_tests[*]}"
+            exit 1
+          fi
   infrastructure-shard:
     name: Shard Infrastructure Tests
     # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
