@@ -75,9 +75,6 @@ type Config struct {
 }
 
 func (c *Config) SetDefaults() {
-	if err := kong.ApplyDefaults(c, kong.Vars{"dsn": dsn.PostgresDSN("ftl")}); err != nil {
-		panic(err)
-	}
 	if c.Advertise == nil {
 		c.Advertise = c.Bind
 	}

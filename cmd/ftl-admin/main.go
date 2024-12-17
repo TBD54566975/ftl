@@ -17,7 +17,6 @@ import (
 	"github.com/block/ftl/internal/configuration/manager"
 	"github.com/block/ftl/internal/configuration/providers"
 	"github.com/block/ftl/internal/configuration/routers"
-	"github.com/block/ftl/internal/dsn"
 	"github.com/block/ftl/internal/log"
 	"github.com/block/ftl/internal/observability"
 	"github.com/block/ftl/internal/rpc"
@@ -40,7 +39,6 @@ func main() {
 		kong.UsageOnError(),
 		kong.Vars{
 			"version": ftl.FormattedVersion,
-			"dsn":     dsn.PostgresDSN("ftl"),
 		},
 	)
 

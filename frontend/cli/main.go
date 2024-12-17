@@ -195,7 +195,6 @@ func createKongApplication(cli any, csm *currentStatusManager) *kong.Kong {
 			"arch":    runtime.GOARCH,
 			"numcpu":  strconv.Itoa(runtime.NumCPU()),
 			"gitroot": gitRoot,
-			"dsn":     dsn.PostgresDSN("ftl"),
 		},
 		kong.Exit(func(code int) {
 			if sm, ok := csm.statusManager.Get(); ok {
