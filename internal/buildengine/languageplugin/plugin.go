@@ -96,8 +96,8 @@ type BuildContext struct {
 
 var ErrPluginNotRunning = errors.New("language plugin no longer running")
 
-// PluginFromConfig creates a new language plugin from the given config.
-func New(ctx context.Context, dir, language, name string, devMode bool) (p *LanguagePlugin, err error) {
+// New creates a new language plugin from the given config.
+func New(ctx context.Context, dir, language, name string) (p *LanguagePlugin, err error) {
 	impl, err := newClientImpl(ctx, dir, language, name)
 	if err != nil {
 		return nil, err

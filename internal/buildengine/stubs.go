@@ -24,7 +24,7 @@ func GenerateStubs(ctx context.Context, projectRoot string, modules []*schema.Mo
 	if err != nil {
 		return err
 	}
-	return writeGenericSchemaFiles(modules, metas)
+	return nil
 }
 
 // CleanStubs removes all generated stubs.
@@ -104,37 +104,6 @@ func generateStubsForEachLanguage(ctx context.Context, projectRoot string, modul
 	err := wg.Wait()
 	if err != nil {
 		return fmt.Errorf("failed to generate language stubs: %w", err)
-	}
-	return nil
-}
-
-func writeGenericSchemaFiles(modules []*schema.Module, metas map[string]moduleMeta) error {
-	sch := &schema.Schema{Modules: modules}
-	for _, meta := range metas {
-		module := meta.module.Config
-		if module.GeneratedSchemaDir == "" {
-			continue
-		}
-
-		modPath := module.Abs().GeneratedSchemaDir
-		err := os.MkdirAll(modPath, 0750)
-		if err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", modPath, err)
-		}
-
-		for _, mod := range sch.Modules {
-			if mod.Name == module.Module {
-				continue
-			}
-			data, err := schema.ModuleToBytes(mod)
-			if err != nil {
-				return fmt.Errorf("failed to export module schema for module %s %w", mod.Name, err)
-			}
-			err = os.WriteFile(filepath.Join(modPath, mod.Name+".pb"), data, 0600)
-			if err != nil {
-				return fmt.Errorf("failed to write schema file for module %s %w", mod.Name, err)
-			}
-		}
 	}
 	return nil
 }

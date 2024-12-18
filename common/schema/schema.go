@@ -215,3 +215,44 @@ func FromProto(s *schemapb.Schema) (*Schema, error) {
 	}
 	return ValidateSchema(schema)
 }
+
+// ModuleDependencies returns the modules that the given module depends on
+// Dependency modules are the ones that are called by the given module, or that publish topics that the given module subscribes to
+func (s *Schema) ModuleDependencies(module string) map[string]*Module {
+	mods := map[string]*Module{}
+	for _, sch := range s.Modules {
+		mods[sch.Name] = sch
+	}
+	deps := make(map[string]*Module)
+	toProcess := []string{module}
+	for len(toProcess) > 0 {
+		dep := toProcess[0]
+		toProcess = toProcess[1:]
+		if deps[dep] != nil {
+			continue
+		}
+		dm := mods[dep]
+		deps[dep] = dm
+		for _, m := range dm.Decls {
+			if ref, ok := m.(*Verb); ok {
+				for _, ref := range ref.Metadata {
+					switch md := ref.(type) {
+					case *MetadataCalls:
+						for _, calls := range md.Calls {
+							if calls.Module != "" {
+								toProcess = append(toProcess, calls.Module)
+							}
+						}
+					case *MetadataSubscriber:
+						if md.Topic.Module != "" {
+							toProcess = append(toProcess, md.Topic.Module)
+						}
+					default:
+					}
+				}
+			}
+		}
+	}
+	delete(deps, module)
+	return deps
+}

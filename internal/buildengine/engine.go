@@ -1051,7 +1051,7 @@ func (e *Engine) gatherSchemas(
 }
 
 func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.UnvalidatedModuleConfig) (moduleMeta, error) {
-	plugin, err := languageplugin.New(ctx, config.Dir, config.Language, config.Module, e.devMode)
+	plugin, err := languageplugin.New(ctx, config.Dir, config.Language, config.Module)
 	if err != nil {
 		return moduleMeta{}, fmt.Errorf("could not create plugin for %s: %w", config.Module, err)
 	}
