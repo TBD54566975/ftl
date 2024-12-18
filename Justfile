@@ -32,6 +32,14 @@ PROTOS_OUT := "backend/protos/xyz/block/ftl/console/v1/console.pb.go " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schemaservice_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/schema/v1/schema_pb.ts " + \
               CONSOLE_ROOT + "/src/protos/xyz/block/ftl/publish/v1/publish_pb.ts"
+JVM_RUNTIME_IN :=  "jvm-runtime/ftl-runtime/pom.xml " + \
+  "jvm-runtime/ftl-runtime/java/runtime/src " + \
+  "jvm-runtime/ftl-runtime/kotlin/runtime/src " + \
+  "jvm-runtime/ftl-runtime/common/deployment/src"
+JVM_RUNTIME_OUT := "jvm-runtime/ftl-runtime//java/runtime/target/ftl-java-runtime-1.0-SNAPSHOT.jar " + \
+  "jvm-runtime/ftl-runtime//kotlin/runtime/target/ftl-kotlin-runtime-1.0-SNAPSHOT.jar " + \
+  "jvm-runtime/ftl-runtime//common/runtime/target/ftl-jvm-runtime-1.0-SNAPSHOT.jar"
+
 GO_SCHEMA_ROOTS := "./common/schema.{Schema,ModuleRuntimeEvent,DatabaseRuntimeEvent,TopicRuntimeEvent,VerbRuntimeEvent,RuntimeEvent}"
 # Configuration for building Docker images
 DOCKER_IMAGES := '''
@@ -127,9 +135,8 @@ build-backend:
 build-backend-tests:
   go test -run ^NONE -tags integration,infrastructure ./... > /dev/null
 
-
 build-jvm *args:
-  mvn -f jvm-runtime/ftl-runtime install {{args}}
+  @mk {{JVM_RUNTIME_OUT}} : {{JVM_RUNTIME_IN}} -- mvn -f jvm-runtime/ftl-runtime install {{args}}
 
 # Builds all language plugins
 build-language-plugins: build-zips build-protos
