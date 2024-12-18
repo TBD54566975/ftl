@@ -94,7 +94,7 @@ func main() {
 		}
 	})
 	wg.Go(func() error {
-		return cluster.Start(ctx, nil)
+		return cluster.Start(ctx)
 	})
 	wg.Go(func() error {
 		ticker := time.NewTicker(10 * time.Second)

@@ -11,7 +11,6 @@ import (
 	"github.com/lni/dragonboat/v4/client"
 	"github.com/lni/dragonboat/v4/config"
 	"github.com/lni/dragonboat/v4/statemachine"
-	"github.com/lni/goutils/syncutil"
 )
 
 type RaftConfig struct {
@@ -110,8 +109,17 @@ func AddShard[Q any, R any, E Event, EPtr Unmasrshallable[E]](
 	}
 }
 
-// Start the cluster.
-func (c *Cluster) Start(ctx context.Context, ready chan struct{}) error {
+// Start the cluster. Blocks until the cluster instance is ready.
+func (c *Cluster) Start(ctx context.Context) error {
+	return c.start(ctx, false)
+}
+
+// Join the cluster as a new member. Blocks until the cluster instance is ready.
+func (c *Cluster) Join(ctx context.Context) error {
+	return c.start(ctx, true)
+}
+
+func (c *Cluster) start(ctx context.Context, join bool) error {
 	// Create node host config
 	nhc := config.NodeHostConfig{
 		WALDir:         c.config.DataDir,
@@ -142,21 +150,17 @@ func (c *Cluster) Start(ctx context.Context, ready chan struct{}) error {
 		}
 
 		peers := make(map[uint64]string)
-		for idx, peer := range c.config.InitialMembers {
-			peers[uint64(idx+1)] = peer
+		if !join {
+			for idx, peer := range c.config.InitialMembers {
+				peers[uint64(idx+1)] = peer
+			}
 		}
 
 		// Start the raft node for this shard
-		if err := nh.StartReplica(peers, false, sm, cfg); err != nil {
+		if err := nh.StartReplica(peers, join, sm, cfg); err != nil {
 			return fmt.Errorf("failed to start replica for shard %d: %w", shardID, err)
 		}
 	}
-
-	raftstopper := syncutil.NewStopper()
-	raftstopper.RunWorker(func() {
-		<-ctx.Done()
-		c.nh.Close()
-	})
 
 	// Wait for all shards to be ready
 	// TODO: WaitReady in the config should do this, but for some reason it doesn't work.
@@ -166,17 +170,19 @@ func (c *Cluster) Start(ctx context.Context, ready chan struct{}) error {
 		}
 	}
 
-	if ready != nil {
-		ready <- struct{}{}
-	}
-	raftstopper.Wait()
+	return nil
+}
 
-	for shardID := range c.shards {
-		if err := c.nh.StopReplica(shardID, c.config.ReplicaID); err != nil {
-			return fmt.Errorf("failed to stop replica for shard %d: %w", shardID, err)
-		}
-	}
+func (c *Cluster) Stop() {
+	c.nh.Close()
+}
 
+// AddMember to the cluster. This needs to be called on an existing running cluster member,
+// before the new member is started.
+func (c *Cluster) AddMember(ctx context.Context, shardID uint64, replicaID uint64, address string) error {
+	if err := c.nh.SyncRequestAddReplica(ctx, shardID, replicaID, address, 0); err != nil {
+		return fmt.Errorf("failed to add member: %w", err)
+	}
 	return nil
 }
 
