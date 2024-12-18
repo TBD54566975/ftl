@@ -28,12 +28,6 @@ class Subscriber {
         throw RuntimeException("always error: event " + event.time)
     }
 
-    @Subscription(topic = Topic2Topic::class, from = FromOffset.BEGINNING)
-    @Retry(count = 1, minBackoff = "1s", maxBackoff = "1s", catchVerb = "catchAny")
-    fun consumeButFailAndCatchAny(event: PubSubEvent) {
-        throw RuntimeException("always error: event " + event.time)
-    }
-
     @Verb
     @VerbName("catch")
     fun catchVerb(req: CatchRequest<PubSubEvent?>) {

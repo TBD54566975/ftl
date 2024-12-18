@@ -12,11 +12,12 @@ public class Subscriber {
 
     @Subscription(topic = TestTopicTopic.class, from = FromOffset.BEGINNING)
     void consume(PubSubEvent event) throws Exception {
-        Log.infof("Subscriber is consuming %s", event.getTime());
+        Log.infof("consume: %s", event.getTime());
     }
 
     @Subscription(topic = TestTopicTopic.class, from = FromOffset.LATEST)
     void consumeFromLatest(PubSubEvent event) throws Exception {
+        Log.infof("consumeFromLatest: %s", event.getTime());
     }
 
     @Subscription(topic = Topic2Topic.class, from = FromOffset.BEGINNING)
