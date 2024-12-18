@@ -13,8 +13,8 @@ type Event interface {
 	encoding.BinaryMarshaler
 }
 
-// Unmasrshallable is a type that can be unmarshalled from a binary representation.
-type Unmasrshallable[T any] interface {
+// Unmarshallable is a type that can be unmarshalled from a binary representation.
+type Unmarshallable[T any] interface {
 	*T
 	encoding.BinaryUnmarshaler
 }
@@ -25,7 +25,7 @@ type Unmasrshallable[T any] interface {
 // Q is the query type.
 // R is the query response type.
 // E is the event type.
-type StateMachine[Q any, R any, E Event, EPtr Unmasrshallable[E]] interface {
+type StateMachine[Q any, R any, E Event, EPtr Unmarshallable[E]] interface {
 	// Query the state of the state machine.
 	Lookup(key Q) (R, error)
 	// Update the state of the state machine.
@@ -38,11 +38,12 @@ type StateMachine[Q any, R any, E Event, EPtr Unmasrshallable[E]] interface {
 	Close() error
 }
 
-type stateMachineShim[Q any, R any, E Event, EPtr Unmasrshallable[E]] struct {
+// stateMachineShim is a shim to convert a typed StateMachine to a dragonboat statemachine.IStateMachine.
+type stateMachineShim[Q any, R any, E Event, EPtr Unmarshallable[E]] struct {
 	sm StateMachine[Q, R, E, EPtr]
 }
 
-func newStateMachineShim[Q any, R any, E Event, EPtr Unmasrshallable[E]](
+func newStateMachineShim[Q any, R any, E Event, EPtr Unmarshallable[E]](
 	sm StateMachine[Q, R, E, EPtr],
 ) statemachine.CreateStateMachineFunc {
 	return func(clusterID uint64, nodeID uint64) statemachine.IStateMachine {

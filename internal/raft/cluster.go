@@ -20,10 +20,11 @@ type RaftConfig struct {
 	RaftAddress    string   `help:"Address to advertise to other nodes" required:""`
 	ListenAddress  string   `help:"Address to listen for incoming traffic. If empty, RaftAddress will be used."`
 	// Raft configuration
-	ElectionRTT        uint64 `help:"Election RTT" default:"10"`
-	HeartbeatRTT       uint64 `help:"Heartbeat RTT" default:"1"`
-	SnapshotEntries    uint64 `help:"Snapshot entries" default:"10"`
-	CompactionOverhead uint64 `help:"Compaction overhead" default:"100"`
+	RTT                time.Duration `help:"Estimated average round trip time between nodes" default:"200ms"`
+	ElectionRTT        uint64        `help:"Election RTT as a multiple of RTT" default:"10"`
+	HeartbeatRTT       uint64        `help:"Heartbeat RTT as a multiple of RTT" default:"1"`
+	SnapshotEntries    uint64        `help:"Snapshot entries" default:"10"`
+	CompactionOverhead uint64        `help:"Compaction overhead" default:"100"`
 }
 
 // Cluster of dragonboat nodes.
@@ -96,12 +97,16 @@ func New(cfg *RaftConfig) *Cluster {
 }
 
 // AddShard adds a shard to the cluster.
-func AddShard[Q any, R any, E Event, EPtr Unmasrshallable[E]](
+// This can be only called before the cluster is started.
+func AddShard[Q any, R any, E Event, EPtr Unmarshallable[E]](
 	ctx context.Context,
 	to *Cluster,
 	shardID uint64,
 	sm StateMachine[Q, R, E, EPtr],
 ) *ShardHandle[E, Q, R] {
+	if to.nh != nil {
+		panic("cluster already started")
+	}
 	to.shards[shardID] = newStateMachineShim[Q, R, E, EPtr](sm)
 	return &ShardHandle[E, Q, R]{
 		shardID: shardID,
@@ -124,7 +129,7 @@ func (c *Cluster) start(ctx context.Context, join bool) error {
 	nhc := config.NodeHostConfig{
 		WALDir:         c.config.DataDir,
 		NodeHostDir:    c.config.DataDir,
-		RTTMillisecond: 200,
+		RTTMillisecond: uint64(c.config.RTT.Milliseconds()),
 		RaftAddress:    c.config.RaftAddress,
 		ListenAddress:  c.config.ListenAddress,
 	}
@@ -158,7 +163,7 @@ func (c *Cluster) start(ctx context.Context, join bool) error {
 
 		// Start the raft node for this shard
 		if err := nh.StartReplica(peers, join, sm, cfg); err != nil {
-			return fmt.Errorf("failed to start replica for shard %d: %w", shardID, err)
+			return fmt.Errorf("failed to start replica %d for shard %d: %w", c.config.ReplicaID, shardID, err)
 		}
 	}
 
@@ -166,7 +171,7 @@ func (c *Cluster) start(ctx context.Context, join bool) error {
 	// TODO: WaitReady in the config should do this, but for some reason it doesn't work.
 	for shardID := range c.shards {
 		if err := c.waitReady(ctx, shardID); err != nil {
-			return fmt.Errorf("failed to wait for shard %d to be ready: %w", shardID, err)
+			return fmt.Errorf("failed to wait for shard %d to be ready on replica %d: %w", shardID, c.config.ReplicaID, err)
 		}
 	}
 
@@ -174,7 +179,11 @@ func (c *Cluster) start(ctx context.Context, join bool) error {
 }
 
 func (c *Cluster) Stop() {
+	if c.nh == nil {
+		return
+	}
 	c.nh.Close()
+	c.nh = nil
 }
 
 // AddMember to the cluster. This needs to be called on an existing running cluster member,

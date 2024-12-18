@@ -45,7 +45,6 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/lni/dragonboat/v4 v4.0.0-20240618143154-6a1623140f27
-	github.com/lni/goutils v1.4.0
 	github.com/mattn/go-isatty v0.0.20
 	github.com/multiformats/go-base36 v0.2.0
 	github.com/opencontainers/go-digest v1.0.0
@@ -159,6 +158,7 @@ require (
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/lni/goutils v1.4.0 // indirect
 	github.com/lni/vfs v0.2.1-0.20220616104132-8852fd867376 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
