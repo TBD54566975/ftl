@@ -24,8 +24,8 @@ import (
 
 type newCmd struct {
 	Language string `arg:"" help:"Language of the module to create."`
-	Dir      string `arg:"" help:"Directory to initialize the module in."`
 	Name     string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
+	Dir      string `arg:"" help:"Directory to initialize the module in." default:"${gitroot}"`
 }
 
 // prepareNewCmd adds language specific flags to kong
