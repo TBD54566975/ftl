@@ -86,6 +86,11 @@ func (i initCmd) Run(
 		if err := maybeGitAdd(ctx, i.Dir, "README.md"); err != nil {
 			return fmt.Errorf("git add README.md: %w", err)
 		}
+		if i.Hermit {
+			if err := maybeGitAdd(ctx, i.Dir, "bin"); err != nil {
+				return fmt.Errorf("git add bin: %w", err)
+			}
+		}
 	}
 	return nil
 }
