@@ -106,22 +106,23 @@ func NewVerbRouter(ctx context.Context, changes schemaeventsource.EventSource, t
 }
 
 func (s *VerbCallRouter) LookupClient(module string) (client ftlv1connect.VerbServiceClient, deployment model.DeploymentKey, ok bool) {
+	current := s.routingTable.Current()
+	deployment, ok = current.GetDeployment(module).Get()
+	if !ok {
+		return nil, model.DeploymentKey{}, false
+	}
+
 	res, _ := s.moduleClients.LoadOrCompute(module, func() optional.Option[ftlv1connect.VerbServiceClient] {
-		current := s.routingTable.Current()
-		var ok bool
-		deployment, ok = current.GetDeployment(module).Get()
-		if !ok {
-			return optional.None[ftlv1connect.VerbServiceClient]()
-		}
 		route, ok := current.Get(deployment).Get()
 		if !ok {
 			return optional.None[ftlv1connect.VerbServiceClient]()
 		}
-		return optional.Some[ftlv1connect.VerbServiceClient](rpc.Dial(ftlv1connect.NewVerbServiceClient, route.String(), log.Error))
+		return optional.Some(rpc.Dial(ftlv1connect.NewVerbServiceClient, route.String(), log.Error))
 	})
-	client, ok = res.Get()
-	if !ok {
-		return nil, deployment, false
+
+	if !res.Ok() {
+		return nil, model.DeploymentKey{}, false
 	}
-	return client, deployment, true
+
+	return res.MustGet(), deployment, true
 }
