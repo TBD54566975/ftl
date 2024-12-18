@@ -82,7 +82,7 @@ func PublishOneToTopic2(ctx context.Context, req PublishOneToTopic2Request, topi
 }
 
 //ftl:verb
-//ftl:subscribe testTopic from=latest
+//ftl:subscribe localTopic from=latest
 func Local(ctx context.Context, event PubSubEvent) error {
 	ftl.LoggerFromContext(ctx).Infof("Consume local: %v", event.Time)
 	return nil
