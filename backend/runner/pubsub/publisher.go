@@ -52,7 +52,7 @@ func newPublisher(module string, t *schema.Topic, deployment model.DeploymentKey
 }
 
 func (p *publisher) publish(ctx context.Context, data []byte, key string, caller schema.Ref) error {
-	logger := log.FromContext(ctx).Scope("topic:" + p.topic.Name)
+	logger := log.FromContext(ctx).AppendScope("topic:" + p.topic.Name)
 	requestKey, err := rpc.RequestKeyFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get request key: %w", err)
