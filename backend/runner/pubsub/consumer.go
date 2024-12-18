@@ -126,6 +126,7 @@ func (c *consumer) subscribe(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			c.group.Close()
 			return
 		default:
 		}

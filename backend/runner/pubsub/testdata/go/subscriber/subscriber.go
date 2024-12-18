@@ -3,6 +3,7 @@ package subscriber
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"ftl/publisher"
@@ -37,4 +38,17 @@ func PublishToExternalModule(ctx context.Context) error {
 	// Get around compile-time checks
 	externalTopic := ftl.TopicHandle[publisher.PubSubEvent, ftl.SinglePartitionMap[publisher.PubSubEvent]]{Ref: reflection.Ref{Module: "publisher", Name: "testTopic"}.ToSchema()}
 	return externalTopic.Publish(ctx, publisher.PubSubEvent{Time: time.Now()})
+}
+
+//ftl:verb
+//ftl:subscribe publisher.slowTopic from=beginning
+func ConsumeSlow(ctx context.Context, req publisher.PubSubEvent) error {
+	versionDescription := "This deployment is TheFirstDeployment"
+	if strings.Contains(versionDescription, "TheFirstDeployment") {
+		ftl.LoggerFromContext(ctx).Infof("ConsumeSlow first deployment (will sleep 5s): %v", req.Time)
+		time.Sleep(5 * time.Second)
+		return nil
+	}
+	ftl.LoggerFromContext(ctx).Infof("ConsumeSlow second deployment (immediate): %v", req.Time)
+	return nil
 }

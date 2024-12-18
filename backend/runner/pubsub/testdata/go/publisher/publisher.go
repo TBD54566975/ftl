@@ -8,6 +8,11 @@ import (
 	// Import the FTL SDK.
 )
 
+type PubSubEvent struct {
+	Time     time.Time
+	Haystack string
+}
+
 type PartitionMapper struct{}
 
 var _ ftl.TopicPartitionMap[PubSubEvent] = PartitionMapper{}
@@ -21,10 +26,8 @@ type TestTopic = ftl.TopicHandle[PubSubEvent, PartitionMapper]
 
 type LocalTopic = ftl.TopicHandle[PubSubEvent, PartitionMapper]
 
-type PubSubEvent struct {
-	Time     time.Time
-	Haystack string
-}
+//ftl:export
+type SlowTopic = ftl.TopicHandle[PubSubEvent, PartitionMapper]
 
 //ftl:verb
 func PublishTen(ctx context.Context, topic TestTopic) error {
@@ -86,4 +89,14 @@ func PublishOneToTopic2(ctx context.Context, req PublishOneToTopic2Request, topi
 func Local(ctx context.Context, event PubSubEvent) error {
 	ftl.LoggerFromContext(ctx).Infof("Consume local: %v", event.Time)
 	return nil
+}
+
+//ftl:verb
+func PublishSlow(ctx context.Context, topic SlowTopic) error {
+	logger := ftl.LoggerFromContext(ctx)
+	t := time.Now()
+	logger.Infof("Publishing to slowTopic: %v", t)
+	return topic.Publish(ctx, PubSubEvent{
+		Time: t,
+	})
 }
