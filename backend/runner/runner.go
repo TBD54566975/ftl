@@ -368,7 +368,7 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 	urls := proxyServer.Bind.Subscribe(nil)
 	go func() {
 		err := proxyServer.Serve(ctx)
-		if err != nil {
+		if err != nil && !errors.Is(err, context.Canceled) {
 			logger.Errorf(err, "failed to serve")
 			return
 		}
