@@ -45,7 +45,7 @@ import (
 
 const dumpPath = "/tmp/ftl-kube-report"
 
-var redPandaBrokers = []string{"127.0.0.1:19092"}
+var RedPandaBrokers = []string{"127.0.0.1:19092"}
 
 func (i TestContext) integrationTestTimeout() time.Duration {
 	timeout := optional.Zero(os.Getenv("FTL_INTEGRATION_TEST_TIMEOUT")).Default("5s")
@@ -415,7 +415,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				err = exec.CommandWithEnv(ctx, log.Debug, rootDir, envars, "docker", "compose", "-f", "internal/dev/docker-compose.redpanda.yml", "-p", "ftl", "up", "-d", "--wait").RunBuffered(ctx)
 				assert.NoError(t, err)
 
-				client, err := sarama.NewClient(redPandaBrokers, sarama.NewConfig())
+				client, err := sarama.NewClient(RedPandaBrokers, sarama.NewConfig())
 				assert.NoError(t, err)
 				defer client.Close()
 

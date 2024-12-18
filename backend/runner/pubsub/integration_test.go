@@ -3,16 +3,20 @@
 package pubsub
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/IBM/sarama"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 	timelinepb "github.com/block/ftl/backend/protos/xyz/block/ftl/timeline/v1"
 	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/exec"
 	in "github.com/block/ftl/internal/integration"
 	"github.com/block/ftl/internal/model"
 )
@@ -81,6 +85,68 @@ func TestExternalPublishRuntimeCheck(t *testing.T) {
 			in.Call("subscriber", "publishToExternalModule", in.Obj{}, func(t testing.TB, resp in.Obj) {}),
 			"can not publish to another module's topic",
 		),
+	)
+}
+
+// TestConsumerGroupMembership tests that when a runner ends, the consumer group is properly exited.
+func TestConsumerGroupMembership(t *testing.T) {
+	var deploymentKilledTime *time.Time
+	in.Run(t,
+		in.WithLanguages("go"),
+		in.WithPubSub(),
+		in.CopyModule("publisher"),
+		in.CopyModule("subscriber"),
+		in.Deploy("publisher"),
+		in.Deploy("subscriber"),
+
+		// consumer group must now have a member for each partition
+		checkGroupMembership("subscriber", "consumeSlow", 1),
+
+		// publish events that will take a long time to process on the first subscriber deployment
+		// to test that rebalancing doesnt cause consumption to fail and skip events
+		in.Repeat(100, in.Call("publisher", "publishSlow", in.Obj{}, func(t testing.TB, resp in.Obj) {})),
+
+		// Upgrade deployment
+		func(t testing.TB, ic in.TestContext) {
+			in.Infof("Modifying code")
+			path := filepath.Join(ic.WorkingDir(), "subscriber", "subscriber.go")
+
+			bytes, err := os.ReadFile(path)
+			assert.NoError(t, err)
+			output := strings.ReplaceAll(string(bytes), "This deployment is TheFirstDeployment", "This deployment is TheSecondDeployment")
+			assert.NoError(t, os.WriteFile(path, []byte(output), 0644))
+		},
+		in.Deploy("subscriber"),
+
+		// Currently old deployment runs for a little bit longer.
+		// During this time we expect the consumer group to have 2 members (old deployment and new deployment).
+		// This will probably change when we have proper draining of the old deployment.
+		checkGroupMembership("subscriber", "consumeSlow", 2),
+		func(t testing.TB, ic in.TestContext) {
+			in.Infof("Waiting for old deployment to be killed")
+			start := time.Now()
+			for {
+				assert.True(t, time.Since(start) < 15*time.Second)
+				ps, err := exec.Capture(ic.Context, ".", "ftl", "ps")
+				assert.NoError(t, err)
+				if strings.Count(string(ps), "dpl-subscriber-") == 1 {
+					// original deployment has ended
+					now := time.Now()
+					deploymentKilledTime = &now
+					return
+				}
+			}
+		},
+		// Once old deployment has ended, the consumer group should only have 1 member per partition (the new deployment)
+		// This should happen fairly quickly. If it takes a while it could be because the previous deployment did not close
+		// the group properly.
+		checkGroupMembership("subscriber", "consumeSlow", 1),
+		func(t testing.TB, ic in.TestContext) {
+			assert.True(t, time.Since(*deploymentKilledTime) < 3*time.Second, "make sure old deployment was removed from consumer group fast enough")
+		},
+
+		// confirm that each message was consumed successfully
+		checkConsumed("subscriber", "consumeSlow", true, 100, optional.None[string]()),
 	)
 }
 
@@ -159,5 +225,24 @@ func checkConsumed(module, verb string, success bool, count int, needle optional
 		} else {
 			assert.Equal(t, count, len(unsuccessfulCalls), "expected %v unsuccessful calls (successful calls: %v)", count, len(successfulCalls))
 		}
+	}
+}
+func checkGroupMembership(module, subscription string, expectedCount int) in.Action {
+	return func(t testing.TB, ic in.TestContext) {
+		consumerGroup := module + "." + subscription
+		in.Infof("Checking group membership for %v", consumerGroup)
+
+		client, err := sarama.NewClient(in.RedPandaBrokers, sarama.NewConfig())
+		assert.NoError(t, err)
+		defer client.Close()
+
+		clusterAdmin, err := sarama.NewClusterAdminFromClient(client)
+		assert.NoError(t, err)
+		defer clusterAdmin.Close()
+
+		groups, err := clusterAdmin.DescribeConsumerGroups([]string{consumerGroup})
+		assert.NoError(t, err)
+		assert.Equal(t, len(groups), 1)
+		assert.Equal(t, len(groups[0].Members), expectedCount, "expected consumer group %v to have %v members", consumerGroup, expectedCount)
 	}
 }
