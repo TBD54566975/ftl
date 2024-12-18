@@ -25,13 +25,19 @@ Configuration values are named, typed values. They are managed by the `ftl confi
 To declare a configuration value use the following syntax:
 
 ```go
-var defaultUser = ftl.Config[Username]("defaultUser")
+type DefaultUser = ftl.Config[Username]
 ```
 
-Then to retrieve a configuration value:
+Note that the name of the configuration value as represented in the FTL schema is the lower camel case version of the type name.
+
+Configuration values can be injected into FTL methods, such as `@Verb`, HTTP ingress, Cron etc. To inject a configuration value, use the following syntax:
 
 ```go
-username = defaultUser.Get(ctx)
+//ftl:verb
+func Hello(ctx context.Context, req Request, defaultUser DefaultUser) error {
+    username := defaultUser.Get(ctx)
+    // ...
+}
 ```
 
 <!-- kotlin -->
@@ -70,13 +76,19 @@ Secrets are encrypted, named, typed values. They are managed by the `ftl secret`
 Declare a secret with the following:
 
 ```go
-var apiKey = ftl.Secret[Credentials]("apiKey")
+type ApiKey = ftl.Secret[Credentials]
 ```
 
-Then to retrieve a secret value:
+Like configuration values, the name of the secret as represented in the FTL schema is the lower camel case version of the type name.
+
+Configuration values can be injected into FTL methods, such as `@Verb`, HTTP ingress, Cron etc. To inject a configuration value, use the following syntax:
 
 ```go
-key = apiKey.Get(ctx)
+//ftl:verb
+func CallApi(ctx context.Context, req Request, apiKey ApiKey) error {
+    credentials := apiKey.Get(ctx)
+    // ...
+}
 ```
 
 <!-- kotlin -->

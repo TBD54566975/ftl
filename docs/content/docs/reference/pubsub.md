@@ -23,8 +23,12 @@ First, declare a new topic:
 ```go
 package payments
 
-var Invoices = ftl.Topic[Invoice]("invoices")
+type Invoices = ftl.TopicHandle[Invoice, ftl.SinglePartitionMap[Invoice]]
 ```
+
+Note that the name of the topic as represented in the FTL schema is the lower camel case version of the type name.
+
+The `Invoices` type is a handle to the topic. It is a generic type that takes two arguments: the event type and the partition map type. The partition map type is used to map events to partitions. In this case, we are using a single partition map, which means that all events are sent to the same partition.
 
 Then define a Sink to consume from the topic:
 
@@ -35,10 +39,13 @@ func SendInvoiceEmail(ctx context.Context, in Invoice) error {
 }
 ```
 
-Events can be published to a topic like so:
+Events can be published to a topic by injecting the topic type into a verb:
 
 ```go
-Invoices.Publish(ctx, Invoice{...})
+func PublishInvoice(ctx context.Context, topic Invoices) error {
+   topic.Publish(ctx, Invoice{...})
+   // ...
+}
 ```
 
 <!-- kotlin -->
