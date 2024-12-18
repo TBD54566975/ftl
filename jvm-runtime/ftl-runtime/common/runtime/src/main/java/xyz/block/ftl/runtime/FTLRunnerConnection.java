@@ -240,7 +240,7 @@ class FTLRunnerConnection implements Closeable {
 
         @Override
         public void onError(Throwable throwable) {
-            log.error("GRPC connection error", throwable);
+            log.debug("GRPC connection error", throwable);
             synchronized (this) {
                 currentError = throwable;
                 if (waiters) {
