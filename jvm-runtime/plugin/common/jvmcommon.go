@@ -445,7 +445,7 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool) (*langpb.Bu
 	}
 	logger.Infof("Using build command '%s'", config.Build)
 	command := exec.Command(ctx, log.Debug, config.Dir, "bash", "-c", config.Build)
-	err = command.Run()
+	err = command.RunBuffered(ctx)
 	if err != nil {
 		return &langpb.BuildResponse{Event: &langpb.BuildResponse_BuildFailure{&langpb.BuildFailure{
 			IsAutomaticRebuild: autoRebuild,
