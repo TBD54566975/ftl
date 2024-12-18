@@ -39,6 +39,11 @@ func TestCron(t *testing.T) {
 	eventSource := schemaeventsource.NewUnattached()
 	module := &schema.Module{
 		Name: "echo",
+		Runtime: &schema.ModuleRuntime{
+			Deployment: &schema.ModuleRuntimeDeployment{
+				DeploymentKey: model.NewDeploymentKey("echo").String(),
+			},
+		},
 		Decls: []schema.Decl{
 			&schema.Verb{
 				Name:     "echo",

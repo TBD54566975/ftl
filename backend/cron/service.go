@@ -23,11 +23,12 @@ import (
 )
 
 type cronJob struct {
-	module  string
-	verb    *schema.Verb
-	cronmd  *schema.MetadataCronJob
-	pattern cron.Pattern
-	next    time.Time
+	module     string
+	deployment model.DeploymentKey
+	verb       *schema.Verb
+	cronmd     *schema.MetadataCronJob
+	pattern    cron.Pattern
+	next       time.Time
 }
 
 type Config struct {
@@ -140,7 +141,7 @@ func scheduleNext(ctx context.Context, cronQueue []cronJob, timelineClient *time
 		return 0, false
 	}
 	timelineClient.Publish(ctx, timeline.CronScheduled{
-		DeploymentKey: model.NewDeploymentKey(cronQueue[0].module),
+		DeploymentKey: cronQueue[0].deployment,
 		Verb:          schema.Ref{Module: cronQueue[0].module, Name: cronQueue[0].verb.Name},
 		ScheduledAt:   cronQueue[0].next,
 		Schedule:      cronQueue[0].pattern.String(),
@@ -189,6 +190,9 @@ func rebuildQueue(cronJobs map[string][]cronJob) []cronJob {
 }
 
 func extractCronJobs(module *schema.Module) ([]cronJob, error) {
+	if module.Runtime == nil || module.Runtime.Deployment == nil {
+		return nil, nil
+	}
 	cronJobs := []cronJob{}
 	for verb := range slices.FilterVariants[*schema.Verb](module.Decls) {
 		cronmd, ok := slices.FindVariant[*schema.MetadataCronJob](verb.Metadata)
@@ -203,12 +207,17 @@ func extractCronJobs(module *schema.Module) ([]cronJob, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", cronmd.Pos, err)
 		}
+		deploymentKey, err := model.ParseDeploymentKey(module.Runtime.Deployment.DeploymentKey)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", cronmd.Pos, err)
+		}
 		cronJobs = append(cronJobs, cronJob{
-			module:  module.Name,
-			verb:    verb,
-			cronmd:  cronmd,
-			pattern: pattern,
-			next:    next,
+			module:     module.Name,
+			deployment: deploymentKey,
+			verb:       verb,
+			cronmd:     cronmd,
+			pattern:    pattern,
+			next:       next,
 		})
 	}
 	return cronJobs, nil
