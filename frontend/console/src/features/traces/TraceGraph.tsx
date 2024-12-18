@@ -74,7 +74,7 @@ const EventBlock = ({
 
 export const TraceGraph = ({ requestKey, selectedEventId }: { requestKey?: string; selectedEventId?: bigint }) => {
   const requestEvents = useRequestTraceEvents(requestKey)
-  const events = requestEvents.data?.reverse() ?? []
+  const events = requestEvents.data ?? []
 
   if (events.length === 0) {
     return
@@ -83,6 +83,7 @@ export const TraceGraph = ({ requestKey, selectedEventId }: { requestKey?: strin
   const startTime = requestStartTime(events)
   const totalEventDuration = totalDurationForRequest(events)
 
+  console.log(events)
   return (
     <div className='flex flex-col'>
       {events.map((c, index) => (

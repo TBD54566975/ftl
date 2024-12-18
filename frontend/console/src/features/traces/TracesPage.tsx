@@ -15,7 +15,7 @@ export const TracesPage = () => {
 
   const { requestKey } = useParams<{ requestKey: string }>()
   const requestEvents = useRequestTraceEvents(requestKey)
-  const events = requestEvents.data?.reverse() ?? []
+  const events = requestEvents.data ?? []
 
   const [searchParams] = useSearchParams()
   const eventIdParam = searchParams.get('event_id')

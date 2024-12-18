@@ -8,7 +8,7 @@ import { totalDurationForRequest } from './traces.utils'
 export const TraceGraphHeader = ({ requestKey, eventId }: { requestKey?: string; eventId: bigint }) => {
   const navigate = useNavigate()
   const requestEvents = useRequestTraceEvents(requestKey)
-  const events = requestEvents.data?.reverse() ?? []
+  const events = requestEvents.data ?? []
 
   const totalEventDuration = useMemo(() => totalDurationForRequest(events), [events])
 
@@ -19,7 +19,7 @@ export const TraceGraphHeader = ({ requestKey, eventId }: { requestKey?: string;
   return (
     <div className='flex items-center justify-between mb-1'>
       <span className='text-xs font-mono'>
-        Total <span>{totalEventDuration}ms</span>
+        Total <span>{totalEventDuration.toFixed(2)}ms</span>
       </span>
 
       <Button variant='secondary' size='sm' onClick={() => navigate(`/traces/${requestKey}?event_id=${eventId}`)} title='View trace'>

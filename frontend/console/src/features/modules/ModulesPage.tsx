@@ -11,8 +11,9 @@ export const ModulesPage = ({ body }: { body: React.ReactNode }) => {
   const [treeWidth, setTreeWidth] = useState(getTreeWidthFromLS())
 
   function setTreeWidthWithLS(newWidth: number) {
-    setTreeWidthInLS(newWidth)
-    setTreeWidth(newWidth)
+    const constrainedWidth = Math.max(200, newWidth)
+    setTreeWidthInLS(constrainedWidth)
+    setTreeWidth(constrainedWidth)
   }
 
   return (

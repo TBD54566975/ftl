@@ -27,7 +27,7 @@ export const TraceDetails: React.FC<TraceDetailsProps> = ({ events, selectedEven
     <div>
       <div className='mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm'>
         <h2 className='font-semibold text-lg text-gray-800 dark:text-gray-100 mb-2'>
-          Total Duration: <span className='font-bold text-indigo-600 dark:text-indigo-400'>{totalEventDuration} ms</span>
+          Total Duration: <span className='font-bold text-indigo-600 dark:text-indigo-400'>{totalEventDuration.toFixed(2)} ms</span>
         </h2>
         <p className='text-sm text-gray-600 dark:text-gray-300'>
           Start Time: <span className='text-gray-800 dark:text-gray-100'>{new Date(startTime).toLocaleString()}</span>
