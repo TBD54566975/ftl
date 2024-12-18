@@ -204,7 +204,7 @@ func New(ctx context.Context, client ftlv1connect.SchemaServiceClient) EventSour
 			out.Publish(event)
 
 		case ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_CHANGED:
-			logger.Debugf("Module %s upserted", sch.Name)
+			logger.Tracef("Module %s upserted", sch.Name)
 			event := EventUpsert{
 				Deployment: someDeploymentKey,
 				Module:     sch,
