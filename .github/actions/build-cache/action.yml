@@ -4,6 +4,9 @@ runs:
   using: "composite"
   # Make sure to keep these cache entries in sync with those in writecache.yml
   steps:
+    - id: reset-timestamps
+      shell: bash
+      run: git ls-files -z | xargs -0 touch -r go.mod
     - id: find-go-build-cache
       shell: bash
       run: echo "cache=$(go env GOCACHE)" >> $GITHUB_OUTPUT

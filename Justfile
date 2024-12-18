@@ -98,7 +98,7 @@ build-go2proto-testdata:
   @mk cmd/go2proto/testdata/testdatapb/model.pb.go : cmd/go2proto/testdata/testdatapb/model.proto -- '(cd ./cmd/go2proto/testdata/testdatapb && protoc --go_out=paths=source_relative:. model.proto) && go build ./cmd/go2proto/testdata'
 
 # Build command-line tools
-build +tools: build-protos build-zips build-frontend
+build +tools: build-frontend
   @just build-without-frontend $@
 
 # Build command-line tools
@@ -116,7 +116,7 @@ build-without-frontend +tools: build-protos build-zips
   for tool in $@; do
     path="cmd/$tool"
     test "$tool" = "ftl" && path="frontend/cli"
-    just build-go-binary "./$path" "$tool"
+    just _build-go-binary-fast "./$path" "$tool"
   done
 
 # Build all backend binaries
@@ -132,14 +132,18 @@ build-jvm *args:
   mvn -f jvm-runtime/ftl-runtime install {{args}}
 
 # Builds all language plugins
-build-language-plugins:
-  @just build-go-binary ./go-runtime/cmd/ftl-language-go
-  @just build-go-binary ./python-runtime/cmd/ftl-language-python
-  @just build-go-binary ./jvm-runtime/cmd/ftl-language-java
-  @just build-go-binary ./jvm-runtime/cmd/ftl-language-kotlin
+build-language-plugins: build-zips build-protos
+  @just _build-go-binary-fast ./go-runtime/cmd/ftl-language-go ftl-language-go
+  @just _build-go-binary-fast ./python-runtime/cmd/ftl-language-python ftl-language-python
+  @just _build-go-binary-fast ./jvm-runtime/cmd/ftl-language-java ftl-language-java
+  @just _build-go-binary-fast ./jvm-runtime/cmd/ftl-language-kotlin ftl-language-kotlin
 
 # Build a Go binary with the correct flags and place it in the release dir
 build-go-binary dir binary="": build-zips build-protos
+  @just _build-go-binary-fast {{dir}} {{binary}}
+
+# Build Go binaries without first building zips/protos
+_build-go-binary-fast dir binary="":
   #!/bin/bash
   set -euo pipefail
   shopt -s extglob
@@ -154,7 +158,11 @@ build-go-binary dir binary="": build-zips build-protos
 
 # Build the ZIP files that are embedded in the FTL release binaries
 build-zips:
-  @for dir in {{ZIP_DIRS}}; do (cd $dir && mk ../$(basename ${dir}).zip : . -- "rm -f $(basename ${dir}.zip) && zip -q --symlinks -r ../$(basename ${dir}).zip ."); done
+  @echo {{ZIP_DIRS}} | xargs -P0 -n1 just _build-zip
+
+# This is separated due to command-length limits with xargs...
+_build-zip dir:
+  @mk -C {{dir}} "../$(basename "{{dir}}").zip" : . -- "rm -f ../$(basename "{{dir}}").zip && zip -q --symlinks -r ../$(basename "{{dir}}").zip ."
 
 # Rebuild frontend
 build-frontend: pnpm-install
@@ -197,7 +205,9 @@ format-frontend:
 
 # Install Node dependencies using pnpm
 pnpm-install:
-  @for i in {1..3}; do mk frontend/**/node_modules : frontend/**/package.json -- "pnpm install --frozen-lockfile" && break || sleep 5; done
+  #!/bin/bash
+  set -euo pipefail
+  for i in {1..3}; do mk frontend/{console,vscode}/node_modules : frontend/{console,vscode}/package.json -- "pnpm install --frozen-lockfile" && break || sleep 5; done
 
 # Copy plugin protos from the SQLC release
 update-sqlc-plugin-codegen-proto:
@@ -209,10 +219,11 @@ build-protos: go2proto
 
 # Generate .proto files from .go types.
 go2proto:
-  @mk "{{SCHEMA_OUT}}" common/schema/go2proto.to.go : cmd/go2proto common/schema -- go2proto -m -o "{{SCHEMA_OUT}}" \
-    -O 'go_package="github.com/block/ftl/common/protos/xyz/block/ftl/schema/v1;schemapb"' \
+  @mk "{{SCHEMA_OUT}}" common/schema/go2proto.to.go : cmd/go2proto common/schema -- \
+    "go2proto -m -o \"{{SCHEMA_OUT}}\" \
+    -O 'go_package=\"github.com/block/ftl/common/protos/xyz/block/ftl/schema/v1;schemapb\"' \
     -O 'java_multiple_files=true' \
-    xyz.block.ftl.schema.v1 {{GO_SCHEMA_ROOTS}} && buf format -w && buf lint && bin/gofmt -w common/schema/go2proto.to.go
+    xyz.block.ftl.schema.v1 {{GO_SCHEMA_ROOTS}} && buf format -w && buf lint && bin/gofmt -w common/schema/go2proto.to.go"
 
 # Unconditionally rebuild protos
 build-protos-unconditionally: go2proto lint-protos pnpm-install
