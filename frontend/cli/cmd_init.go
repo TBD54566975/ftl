@@ -24,7 +24,7 @@ import (
 
 type initCmd struct {
 	Name        string   `arg:"" help:"Name of the project."`
-	Hermit      bool     `help:"Include Hermit language-specific toolchain binaries." negatable:""`
+	Hermit      bool     `help:"Include Hermit language-specific toolchain binaries." negatable:"" default:"true"`
 	Dir         string   `arg:"" help:"Directory to initialize the project in." default:"." required:""`
 	ModuleDirs  []string `help:"Child directories of existing modules."`
 	ModuleRoots []string `help:"Root directories of existing modules."`
@@ -79,6 +79,12 @@ func (i initCmd) Run(
 		}
 		if err := maybeGitAdd(ctx, i.Dir, ".ftl-project"); err != nil {
 			return fmt.Errorf("git add .ftl-project: %w", err)
+		}
+		if err := maybeGitAdd(ctx, i.Dir, "ftl-project.toml"); err != nil {
+			return fmt.Errorf("git add ftl-project.toml: %w", err)
+		}
+		if err := maybeGitAdd(ctx, i.Dir, "README.md"); err != nil {
+			return fmt.Errorf("git add README.md: %w", err)
 		}
 	}
 	return nil

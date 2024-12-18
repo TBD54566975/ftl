@@ -82,7 +82,7 @@ Now that you have an FTL project, create a new module:
 
 <!-- go -->
 ```
-ftl new go . alice
+ftl new go alice
 ```
 This will place the code for the new module `alice` in `myproject/alice/alice.go`:
 
@@ -114,7 +114,7 @@ Each module is its own Go module.
 
 <!-- kotlin -->
 ```
-ftl new kotlin . alice
+ftl new kotlin alice
 ```
 
 This will create a new Maven `pom.xml` based project in the directory `alice` and create new example code in `alice/src/main/kotlin/com/example/EchoVerb.kt`:
@@ -132,7 +132,7 @@ fun echo(req: String): String = "Hello, $req!"
 ```
 <!-- java -->
 ```
-ftl new java . alice
+ftl new java alice
 ```
 This will create a new Maven `pom.xml` based project in the directory `alice` and create new example code in `alice/src/main/java/com/example/EchoVerb.java`:
 

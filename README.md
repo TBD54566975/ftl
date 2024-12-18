@@ -53,7 +53,7 @@ diff -u <(
 mkdir myproject
 cd myproject
 ftl init myproject .
-ftl new go . alice
+ftl new go alice
 ```
 
 ### Build and deploy the module

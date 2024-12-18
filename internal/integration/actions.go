@@ -250,7 +250,7 @@ func Build(modules ...string) Action {
 // FtlNew creates a new FTL module
 func FtlNew(language, name string) Action {
 	return func(t testing.TB, ic TestContext) {
-		err := ftlexec.Command(ic, log.Debug, ic.workDir, "ftl", "new", language, ic.workDir, name).RunBuffered(ic)
+		err := ftlexec.Command(ic, log.Debug, ic.workDir, "ftl", "new", language, name, ic.workDir).RunBuffered(ic)
 		assert.NoError(t, err)
 	}
 }

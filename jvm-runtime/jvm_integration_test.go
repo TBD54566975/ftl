@@ -26,9 +26,9 @@ func TestLifecycleJVM(t *testing.T) {
 		in.WithDevMode(),
 		in.GitInit(),
 		in.Exec("rm", "ftl-project.toml"),
-		in.Exec("ftl", "init", "test", "."),
-		in.IfLanguage("java", in.Exec("ftl", "new", "java", ".", "echo")),
-		in.IfLanguage("kotlin", in.Exec("ftl", "new", "kotlin", ".", "echo")),
+		in.Exec("ftl", "init", "test"),
+		in.IfLanguage("java", in.Exec("ftl", "new", "java", "echo")),
+		in.IfLanguage("kotlin", in.Exec("ftl", "new", "kotlin", "echo")),
 		in.WaitWithTimeout("echo", time.Minute),
 		in.VerifyControllerStatus(func(ctx context.Context, t testing.TB, status *ftlv1.StatusResponse) {
 			assert.Equal(t, 1, len(status.Deployments))
