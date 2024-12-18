@@ -4,6 +4,7 @@ package pubsub
 
 import (
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -17,7 +18,6 @@ import (
 )
 
 func TestPubSub(t *testing.T) {
-	t.Skip("Skipping flaky test")
 	calls := 20
 	events := calls * 10
 	in.Run(t,
@@ -27,17 +27,23 @@ func TestPubSub(t *testing.T) {
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
 
+		// After a deployment is "ready" it can take a second before a consumer group claims partitions.
+		// "publisher.local" has "from=latest" so we need that group to be ready before we start publishing
+		// otherwise it will start from the latest offset after claiming partitions.
+		in.Sleep(time.Second*1),
+
 		// publish half the events before subscriber is deployed
-		in.Repeat(calls/2, in.Call("publisher", "publishTen", in.Obj{}, func(t testing.TB, resp in.Obj) {})),
+		publishToTestAndLocalTopics(calls/2),
 
 		in.Deploy("subscriber"),
 
 		// publish the other half of the events after subscriber is deployed
-		in.Repeat(calls/2, in.Call("publisher", "publishTen", in.Obj{}, func(t testing.TB, resp in.Obj) {})),
+		publishToTestAndLocalTopics(calls/2),
 
 		in.Sleep(time.Second*4),
 
 		// check that there are the right amount of consumed events, depending on "from" offset option
+		checkConsumed("publisher", "local", true, events, optional.None[string]()),
 		checkConsumed("subscriber", "consume", true, events, optional.None[string]()),
 		checkConsumed("subscriber", "consumeFromLatest", true, events/2, optional.None[string]()),
 	)
@@ -76,6 +82,25 @@ func TestExternalPublishRuntimeCheck(t *testing.T) {
 			"can not publish to another module's topic",
 		),
 	)
+}
+
+func publishToTestAndLocalTopics(calls int) in.Action {
+	// do this in parallel because we want to test race conditions
+	return func(t testing.TB, ic in.TestContext) {
+		actions := []in.Action{
+			in.Repeat(calls, in.Call("publisher", "publishTen", in.Obj{}, func(t testing.TB, resp in.Obj) {})),
+			in.Repeat(calls, in.Call("publisher", "publishTenLocal", in.Obj{}, func(t testing.TB, resp in.Obj) {})),
+		}
+		wg := &sync.WaitGroup{}
+		for _, action := range actions {
+			wg.Add(1)
+			go func() {
+				action(t, ic)
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+	}
 }
 
 func checkConsumed(module, verb string, success bool, count int, needle optional.Option[string]) in.Action {

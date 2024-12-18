@@ -19,6 +19,8 @@ func (PartitionMapper) PartitionKey(event PubSubEvent) string {
 //ftl:export
 type TestTopic = ftl.TopicHandle[PubSubEvent, PartitionMapper]
 
+type LocalTopic = ftl.TopicHandle[PubSubEvent, PartitionMapper]
+
 type PubSubEvent struct {
 	Time     time.Time
 	Haystack string
@@ -29,7 +31,7 @@ func PublishTen(ctx context.Context, topic TestTopic) error {
 	logger := ftl.LoggerFromContext(ctx)
 	for i := 0; i < 10; i++ {
 		t := time.Now()
-		logger.Infof("Publishing %v", t)
+		logger.Infof("Publishing to testTopic: %v", t)
 		err := topic.Publish(ctx, PubSubEvent{Time: t})
 		if err != nil {
 			return err
@@ -44,6 +46,20 @@ func PublishOne(ctx context.Context, topic TestTopic) error {
 	t := time.Now()
 	logger.Infof("Publishing %v", t)
 	return topic.Publish(ctx, PubSubEvent{Time: t})
+}
+
+//ftl:verb
+func PublishTenLocal(ctx context.Context, topic LocalTopic) error {
+	logger := ftl.LoggerFromContext(ctx)
+	for i := 0; i < 10; i++ {
+		t := time.Now()
+		logger.Infof("Publishing to localTopic: %v", t)
+		err := topic.Publish(ctx, PubSubEvent{Time: t})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 //ftl:export
@@ -63,4 +79,11 @@ func PublishOneToTopic2(ctx context.Context, req PublishOneToTopic2Request, topi
 		Time:     t,
 		Haystack: req.Haystack,
 	})
+}
+
+//ftl:verb
+//ftl:subscribe testTopic from=latest
+func Local(ctx context.Context, event PubSubEvent) error {
+	ftl.LoggerFromContext(ctx).Infof("Consume local: %v", event.Time)
+	return nil
 }

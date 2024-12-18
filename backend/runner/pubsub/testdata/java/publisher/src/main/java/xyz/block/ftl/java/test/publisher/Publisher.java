@@ -35,11 +35,20 @@ public class Publisher {
     }
 
     @Verb
-    void publishTen(LocalTopic testTopic) throws Exception {
+    void publishTen(TestTopic testTopic) throws Exception {
         for (var i = 0; i < 10; ++i) {
             var t = java.time.ZonedDateTime.now();
-            Log.infof("Publishing %s", t);
+            Log.infof("Publishing to testTopic: %s", t);
             testTopic.publish(new PubSubEvent().setTime(t));
+        }
+    }
+
+    @Verb
+    void publishTenLocal(LocalTopic localTopic) throws Exception {
+        for (var i = 0; i < 10; ++i) {
+            var t = java.time.ZonedDateTime.now();
+            Log.infof("Publishing to localTopic: %s", t);
+            localTopic.publish(new PubSubEvent().setTime(t));
         }
     }
 
@@ -59,6 +68,6 @@ public class Publisher {
 
     @Subscription(topic = LocalTopic.class, from = FromOffset.LATEST)
     public void local(TestTopic testTopic, PubSubEvent event) {
-        testTopic.publish(event);
+        Log.infof("local: %s", event.getTime());
     }
 }

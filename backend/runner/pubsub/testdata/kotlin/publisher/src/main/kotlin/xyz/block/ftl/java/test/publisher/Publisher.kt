@@ -24,11 +24,21 @@ class Publisher {
 
     @Verb
     @Throws(Exception::class)
-    fun publishTen(testTopic: LocalTopic) {
+    fun publishTen(testTopic: TestTopic) {
         for (i in 0..9) {
             val t = ZonedDateTime.now()
-            Log.infof("Publishing %s", t)
+            Log.infof("Publishing to testTopic: %s", t)
             testTopic.publish(PubSubEvent(t))
+        }
+    }
+
+    @Verb
+    @Throws(Exception::class)
+    fun publishTenLocal(localTopic: LocalTopic) {
+        for (i in 0..9) {
+            val t = ZonedDateTime.now()
+            Log.infof("Publishing to localTopic: %s", t)
+            localTopic.publish(PubSubEvent(t))
         }
     }
 
@@ -49,7 +59,7 @@ class Publisher {
     }
 
     @Subscription(topic = LocalTopic::class, from = FromOffset.LATEST)
-    fun local(testTopic: TestTopic, event: PubSubEvent) {
-        testTopic.publish(event)
+    fun local(event: PubSubEvent) {
+        Log.infof("Consuing from local %s", event.time)
     }
 }

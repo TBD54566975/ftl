@@ -73,22 +73,31 @@ func (c *consumer) kafkaTopicID() string {
 
 func (c *consumer) Begin(ctx context.Context) error {
 	// set up config
+	logger := log.FromContext(ctx).Scope("subscription:" + c.verb.Name)
+	ctx = log.ContextWithLogger(ctx, logger)
+
 	config := sarama.NewConfig()
 	config.Consumer.Return.Errors = true
 	config.Consumer.Offsets.AutoCommit.Enable = true
+
+	var fromOffsetStr string
 	switch c.subscriber.FromOffset {
 	case schema.FromOffsetBeginning, schema.FromOffsetUnspecified:
 		config.Consumer.Offsets.Initial = sarama.OffsetOldest
+		fromOffsetStr = "beginning"
 	case schema.FromOffsetLatest:
 		config.Consumer.Offsets.Initial = sarama.OffsetNewest
+		fromOffsetStr = "latest"
 	}
+
 	groupID := kafkaConsumerGroupID(c.moduleName, c.verb)
-	log.FromContext(ctx).Infof("Subscribing to topic %s for %s with offset %v", c.kafkaTopicID(), groupID, config.Consumer.Offsets.Initial)
+	logger.Debugf("Subscribing to %s from %s", c.kafkaTopicID(), fromOffsetStr)
 
 	group, err := sarama.NewConsumerGroup(c.verb.Runtime.Subscription.KafkaBrokers, groupID, config)
 	if err != nil {
 		return fmt.Errorf("failed to create consumer group for subscription %s: %w", c.verb.Name, err)
 	}
+
 	go c.watchErrors(ctx, group)
 	go c.subscribe(ctx, group)
 	return nil
@@ -101,7 +110,7 @@ func (c *consumer) watchErrors(ctx context.Context, group sarama.ConsumerGroup) 
 		case <-ctx.Done():
 			return
 		case err := <-group.Errors():
-			logger.Errorf(err, "error in consumer group %s", c.verb.Name)
+			logger.Errorf(err, "Consumer group error")
 		}
 	}
 }
@@ -122,9 +131,9 @@ func (c *consumer) subscribe(ctx context.Context, group sarama.ConsumerGroup) {
 
 		err := group.Consume(ctx, []string{c.kafkaTopicID()}, c)
 		if err != nil {
-			logger.Errorf(err, "consume session failed for %s", c.verb.Name)
+			logger.Errorf(err, "Session failed for %s", c.verb.Name)
 		} else {
-			logger.Debugf("Ending consume session for subscription %s", c.verb.Name)
+			logger.Debugf("Ending session")
 		}
 	}
 }
@@ -133,8 +142,8 @@ func (c *consumer) subscribe(ctx context.Context, group sarama.ConsumerGroup) {
 func (c *consumer) Setup(session sarama.ConsumerGroupSession) error {
 	logger := log.FromContext(session.Context())
 
-	partitions := session.Claims()[kafkaConsumerGroupID(c.moduleName, c.verb)]
-	logger.Debugf("Starting consume session for subscription %s with partitions: [%v]", c.verb.Name, strings.Join(slices.Map(partitions, func(partition int32) string { return strconv.Itoa(int(partition)) }), ","))
+	partitions := session.Claims()[c.kafkaTopicID()]
+	logger.Debugf("Starting session with partitions [%v]", strings.Join(slices.Map(partitions, func(partition int32) string { return strconv.Itoa(int(partition)) }), ","))
 
 	return nil
 }
@@ -151,19 +160,20 @@ func (c *consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 	ctx := session.Context()
 	logger := log.FromContext(ctx)
 	for msg := range claim.Messages() {
-		logger.Debugf("%s: consuming message %v:%v", c.verb.Name, msg.Partition, msg.Offset)
+		logger.Debugf("Consuming message with partition %v and offset %v)", msg.Partition, msg.Offset)
 		remainingRetries := c.retryParams.Count
 		backoff := c.retryParams.MinBackoff
 		for {
 			err := c.call(ctx, msg.Value, int(msg.Partition), int(msg.Offset))
 			if err == nil {
+				logger.Errorf(err, "Error consuming message with partition %v and offset %v", msg.Partition, msg.Offset)
 				break
 			}
 			if remainingRetries == 0 {
-				logger.Errorf(err, "%s: failed to consume message %v:%v", c.verb.Name, msg.Partition, msg.Offset)
+				logger.Errorf(err, "Failed to consume message with partition %v and offset %v", msg.Partition, msg.Offset)
 				break
 			}
-			logger.Errorf(err, "%s: failed to consume message %v:%v: retrying in %vs", c.verb.Name, msg.Partition, msg.Offset, int(backoff.Seconds()))
+			logger.Errorf(err, "Failed to consume message with partition %v and offset %v and will retry in %vs", msg.Partition, msg.Offset, int(backoff.Seconds()))
 			time.Sleep(backoff)
 			remainingRetries--
 			backoff *= 2

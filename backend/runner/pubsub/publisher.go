@@ -10,6 +10,7 @@ import (
 
 	"github.com/block/ftl/backend/timeline"
 	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/log"
 	"github.com/block/ftl/internal/model"
 	"github.com/block/ftl/internal/rpc"
 )
@@ -51,6 +52,7 @@ func newPublisher(module string, t *schema.Topic, deployment model.DeploymentKey
 }
 
 func (p *publisher) publish(ctx context.Context, data []byte, key string, caller schema.Ref) error {
+	logger := log.FromContext(ctx).Scope("topic:" + p.topic.Name)
 	requestKey, err := rpc.RequestKeyFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get request key: %w", err)
@@ -76,10 +78,12 @@ func (p *publisher) publish(ctx context.Context, data []byte, key string, caller
 	})
 	if err != nil {
 		timelineEvent.Error = optional.Some(err.Error())
+		logger.Errorf(err, "Failed to publish message")
 		return fmt.Errorf("failed to publish message: %w", err)
 	}
 	timelineEvent.Partition = int(partition)
 	timelineEvent.Offset = int(offset)
 	p.timelineClient.Publish(ctx, timelineEvent)
+	logger.Debugf("Published to partition %v with offset %v)", partition, offset)
 	return nil
 }

@@ -441,12 +441,10 @@ func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *s
 	s.deployment.Store(optional.Some(dep))
 	logger.Debugf("Deployed %s", key)
 
-	if s.pubSub != nil {
-		err := s.pubSub.Consume(ctx)
-		if err != nil {
-			observability.Deployment.Failure(ctx, optional.Some(key.String()))
-			return fmt.Errorf("failed to set up pubsub consumption: %w", err)
-		}
+	err = s.pubSub.Consume(ctx)
+	if err != nil {
+		observability.Deployment.Failure(ctx, optional.Some(key.String()))
+		return fmt.Errorf("failed to set up pubsub consumption: %w", err)
 	}
 
 	context.AfterFunc(ctx, func() {
