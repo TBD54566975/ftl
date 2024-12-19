@@ -62,7 +62,7 @@ DOCKER_IMAGES := '''
   "admin": {}
 }
 '''
-USER_HERMIT_PACKAGES := "openjdk|maven"
+USER_HERMIT_PACKAGES := "openjdk maven"
 
 _help:
   @just -l
@@ -94,7 +94,12 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "ftl dev --plain {{args}}"
 
 capture-hermit-versions:
-    @ls bin/.* | grep -E '{{USER_HERMIT_PACKAGES}}' | sed 's/.....\(.*\)....$/\1/' | sort > frontend/cli/dependency-versions.txt
+    #!/bin/bash
+    set -euo pipefail
+    rm frontend/cli/dependency-versions.txt
+    for dep in {{USER_HERMIT_PACKAGES}}; do
+        ls bin/.* | grep $dep | sed 's/.....\(.*\)....$/\1/' >> frontend/cli/dependency-versions.txt
+    done
 
 # Build everything
 build-all: build-protos-unconditionally build-backend build-frontend build-backend-tests build-generate build-zips lsp-generate build-jvm build-language-plugins build-go2proto-testdata
