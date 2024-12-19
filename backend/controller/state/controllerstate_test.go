@@ -14,17 +14,19 @@ import (
 )
 
 func TestRunnerState(t *testing.T) {
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+
 	cs := state.NewInMemoryState()
-	view := cs.View()
+	view, err := cs.View(ctx)
+	assert.NoError(t, err)
 	assert.Equal(t, 0, len(view.Runners()))
 	key := model.NewLocalRunnerKey(1)
 	create := time.Now()
 	endpoint := "http://localhost:8080"
 	module := "test"
 	deploymentKey := model.NewDeploymentKey(module)
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	err := cs.Publish(ctx, &state.RunnerRegisteredEvent{
+	err = cs.Publish(ctx, &state.RunnerRegisteredEvent{
 		Key:        key,
 		Time:       create,
 		Endpoint:   endpoint,
@@ -32,7 +34,8 @@ func TestRunnerState(t *testing.T) {
 		Deployment: deploymentKey,
 	})
 	assert.NoError(t, err)
-	view = cs.View()
+	view, err = cs.View(ctx)
+	assert.NoError(t, err)
 	assert.Equal(t, 1, len(view.Runners()))
 	assert.Equal(t, key, view.Runners()[0].Key)
 	assert.Equal(t, create, view.Runners()[0].Create)
@@ -49,14 +52,16 @@ func TestRunnerState(t *testing.T) {
 		Deployment: deploymentKey,
 	})
 	assert.NoError(t, err)
-	view = cs.View()
+	view, err = cs.View(ctx)
+	assert.NoError(t, err)
 	assert.Equal(t, seen, view.Runners()[0].LastSeen)
 
 	err = cs.Publish(ctx, &state.RunnerDeletedEvent{
 		Key: key,
 	})
 	assert.NoError(t, err)
-	view = cs.View()
+	view, err = cs.View(ctx)
+	assert.NoError(t, err)
 	assert.Equal(t, 0, len(view.Runners()))
 
 }
@@ -64,18 +69,20 @@ func TestRunnerState(t *testing.T) {
 func TestDeploymentState(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	cs := state.NewInMemoryState()
-	view := cs.View()
+	view, err := cs.View(ctx)
+	assert.NoError(t, err)
 	assert.Equal(t, 0, len(view.GetDeployments()))
 
 	deploymentKey := model.NewDeploymentKey("test-deployment")
 	create := time.Now()
-	err := cs.Publish(ctx, &state.DeploymentCreatedEvent{
+	err = cs.Publish(ctx, &state.DeploymentCreatedEvent{
 		Key:       deploymentKey,
 		CreatedAt: create,
 		Schema:    &schema.Module{Name: "test"},
 	})
 	assert.NoError(t, err)
-	view = cs.View()
+	view, err = cs.View(ctx)
+	assert.NoError(t, err)
 	assert.Equal(t, 1, len(view.GetDeployments()))
 	assert.Equal(t, deploymentKey, view.GetDeployments()[deploymentKey.String()].Key)
 	assert.Equal(t, create, view.GetDeployments()[deploymentKey.String()].CreatedAt)
@@ -87,7 +94,8 @@ func TestDeploymentState(t *testing.T) {
 		MinReplicas: 1,
 	})
 	assert.NoError(t, err)
-	view = cs.View()
+	view, err = cs.View(ctx)
+	assert.NoError(t, err)
 	assert.Equal(t, 1, view.GetDeployments()[deploymentKey.String()].MinReplicas)
 	assert.Equal(t, activate, view.GetDeployments()[deploymentKey.String()].ActivatedAt.MustGet())
 
@@ -95,7 +103,7 @@ func TestDeploymentState(t *testing.T) {
 		Key: deploymentKey,
 	})
 	assert.NoError(t, err)
-	view = cs.View()
-
+	view, err = cs.View(ctx)
+	assert.NoError(t, err)
 	assert.Equal(t, 0, view.GetDeployments()[deploymentKey.String()].MinReplicas)
 }
