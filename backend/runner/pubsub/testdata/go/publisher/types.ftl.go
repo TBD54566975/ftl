@@ -2,10 +2,10 @@
 package publisher
 
 import (
-    "context"
-    "github.com/block/ftl/common/reflection"
-    "github.com/block/ftl/go-runtime/ftl"
-    "github.com/block/ftl/go-runtime/server"
+	"context"
+	"github.com/block/ftl/common/reflection"
+	"github.com/block/ftl/go-runtime/ftl"
+	"github.com/block/ftl/go-runtime/server"
 )
 
 type LocalClient func(context.Context, PubSubEvent) error
@@ -23,26 +23,26 @@ type PublishTenLocalClient func(context.Context) error
 func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
-            Local,
+			Local,
 		),
 		reflection.ProvideResourcesForVerb(
-            PublishOne,
+			PublishOne,
 			server.TopicHandle[PubSubEvent, PartitionMapper]("publisher", "testTopic"),
 		),
 		reflection.ProvideResourcesForVerb(
-            PublishOneToTopic2,
+			PublishOneToTopic2,
 			server.TopicHandle[PubSubEvent, ftl.SinglePartitionMap[PubSubEvent]]("publisher", "topic2"),
 		),
 		reflection.ProvideResourcesForVerb(
-            PublishSlow,
+			PublishSlow,
 			server.TopicHandle[PubSubEvent, PartitionMapper]("publisher", "slowTopic"),
 		),
 		reflection.ProvideResourcesForVerb(
-            PublishTen,
+			PublishTen,
 			server.TopicHandle[PubSubEvent, PartitionMapper]("publisher", "testTopic"),
 		),
 		reflection.ProvideResourcesForVerb(
-            PublishTenLocal,
+			PublishTenLocal,
 			server.TopicHandle[PubSubEvent, PartitionMapper]("publisher", "localTopic"),
 		),
 	)

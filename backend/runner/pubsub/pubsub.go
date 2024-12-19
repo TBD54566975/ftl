@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/optional"
 
 	pb "github.com/block/ftl/backend/protos/xyz/block/ftl/publish/v1"
 	pbconnect "github.com/block/ftl/backend/protos/xyz/block/ftl/publish/v1/publishpbconnect"
@@ -43,7 +44,15 @@ func New(module *schema.Module, deployment model.DeploymentKey, verbClient VerbC
 		if !ok {
 			continue
 		}
-		consumer, err := newConsumer(module.Name, v, subscriber, deployment, verbClient, timelineClient)
+		var deadLetterPublisher optional.Option[*publisher]
+		if subscriber.DeadLetter {
+			p, ok := publishers[schema.DeadLetterNameForSubscriber(v.Name)]
+			if !ok {
+				return nil, fmt.Errorf("dead letter publisher not found for subscription %s", v.Name)
+			}
+			deadLetterPublisher = optional.Some(p)
+		}
+		consumer, err := newConsumer(module.Name, v, subscriber, deployment, deadLetterPublisher, verbClient, timelineClient)
 		if err != nil {
 			return nil, err
 		}

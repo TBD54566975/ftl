@@ -40,6 +40,12 @@ builtin module builtin {
     requestType String
     error String
   }
+
+  // FailedEvent is used in dead letter topics.
+  export data FailedEvent<Event> {
+      event Event
+      error String
+  }
 }
 `
 

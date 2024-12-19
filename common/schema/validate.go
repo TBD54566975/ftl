@@ -258,6 +258,9 @@ func ValidateModule(module *Module) error {
 		merr = append(merr, err)
 	}
 	scopes = scopes.Push()
+
+	generateDeadLetterTopics(module)
+
 	// Key is <type>:<name>
 	duplicateDecls := map[string]Decl{}
 
@@ -928,7 +931,88 @@ func validateVerbSubscriptions(module *Module, v *Verb, md *MetadataSubscriber, 
 	if _, ok := v.Response.(*Unit); !ok {
 		merr = append(merr, errorf(md, "verb %s: must be a sink to subscribe but found response type %v", v.Name, v.Response))
 	}
+	if md.DeadLetter {
+		if err := validateDeadLetterTopic(module, v, md); err != nil {
+			merr = append(merr, err)
+		}
+	}
 	return merr
+}
+
+func validateDeadLetterTopic(module *Module, v *Verb, md *MetadataSubscriber) error {
+	ref := &Ref{
+		Module: module.Name,
+		Name:   DeadLetterNameForSubscriber(v.Name),
+	}
+	deadLetterDecl, exists := islices.Find(module.Decls, func(d Decl) bool {
+		return d.GetName() == ref.Name
+	})
+	if !exists {
+		return errorf(md, "could not find dead letter topic %q", DeadLetterNameForSubscriber(v.Name))
+	}
+	deadLetterTopic, ok := deadLetterDecl.(*Topic)
+	if !ok {
+		return errorf(md, "expected %v to be a dead letter topic but was already declared at %v", ref, deadLetterDecl.Position())
+	}
+	eventType := &Ref{
+		Module:         "builtin",
+		Name:           "FailedEvent",
+		TypeParameters: []Type{v.Request},
+	}
+	if deadLetterTopic.Event.String() != eventType.String() {
+		return errorf(md, "dead letter topic %v must have the same event type (%v) as the subscription request type (%v)", ref, deadLetterTopic.Event, eventType)
+	}
+	// declare that this verb publishes to the dead letter topic
+	publishMetadata, ok := islices.FindVariant[*MetadataPublisher](v.Metadata)
+	if !ok {
+		publishMetadata = &MetadataPublisher{}
+		v.Metadata = append(v.Metadata, publishMetadata)
+	}
+	if _, ok := islices.Find(publishMetadata.Topics, func(r *Ref) bool {
+		return r.Name == ref.Name
+	}); !ok {
+		publishMetadata.Topics = append(publishMetadata.Topics, ref)
+	}
+	return nil
+}
+
+func generateDeadLetterTopics(module *Module) {
+	for _, decl := range module.Decls {
+		verb, ok := decl.(*Verb)
+		if !ok {
+			continue
+		}
+		for _, md := range verb.Metadata {
+			sub, ok := md.(*MetadataSubscriber)
+			if !ok {
+				continue
+			}
+			if !sub.DeadLetter {
+				continue
+			}
+			ref := Ref{
+				Module: module.Name,
+				Name:   DeadLetterNameForSubscriber(verb.Name),
+			}
+			_, exists := islices.Find(module.Decls, func(d Decl) bool {
+				return d.GetName() == ref.Name
+			})
+			if exists {
+				// we validate the existing decl later
+				continue
+			}
+			// create a dead letter topic
+			deadLetterTopic := &Topic{
+				Name: ref.Name,
+				Event: &Ref{
+					Module:         "builtin",
+					Name:           "FailedEvent",
+					TypeParameters: []Type{verb.Request},
+				},
+			}
+			module.Decls = append(module.Decls, deadLetterTopic)
+		}
+	}
 }
 
 func validateRetries(module *Module, retry *MetadataRetry, requestType optional.Option[Type], scopes Scopes, schema optional.Option[*Schema]) (merr []error) {
@@ -940,7 +1024,7 @@ func validateRetries(module *Module, retry *MetadataRetry, requestType optional.
 	// Validate parsing of durations
 	retryParams, err := retry.RetryParams()
 	if err != nil {
-		merr = append(merr, errorf(retry, err.Error()))
+		merr = append(merr, errorf(retry, "%s", err.Error()))
 		return
 	}
 	if retryParams.MaxBackoff < retryParams.MinBackoff {

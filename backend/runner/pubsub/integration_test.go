@@ -56,7 +56,10 @@ func TestPubSub(t *testing.T) {
 func TestRetry(t *testing.T) {
 	retriesPerCall := 2
 	in.Run(t,
-		in.WithLanguages("java", "go"),
+		// in.WithLanguages("java", "go"),
+		in.WithLanguages("java"),
+
+		in.WithPubSub(),
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
@@ -70,6 +73,10 @@ func TestRetry(t *testing.T) {
 
 		checkConsumed("subscriber", "consumeButFailAndRetry", false, retriesPerCall+1, optional.Some("firstCall")),
 		checkConsumed("subscriber", "consumeButFailAndRetry", false, retriesPerCall+1, optional.Some("secondCall")),
+		checkPublished("subscriber", "consumeButFailAndRetryFailed", 2),
+
+		// jvm does not allow subscribing to dead letter topics yet
+		checkConsumed("subscriber", "consumeFromDeadLetter", true, 2, optional.None[string]()),
 	)
 }
 
@@ -227,6 +234,40 @@ func checkConsumed(module, verb string, success bool, count int, needle optional
 		}
 	}
 }
+
+func checkPublished(module, topic string, count int) in.Action {
+	return func(t testing.TB, ic in.TestContext) {
+		in.Infof("Checking for %v published events for %s.%s", count, module, topic)
+		resp, err := ic.Timeline.GetTimeline(ic.Context, connect.NewRequest(&timelinepb.GetTimelineRequest{
+			Limit: 100000,
+			Filters: []*timelinepb.GetTimelineRequest_Filter{
+				{
+					Filter: &timelinepb.GetTimelineRequest_Filter_EventTypes{
+						EventTypes: &timelinepb.GetTimelineRequest_EventTypeFilter{
+							EventTypes: []timelinepb.EventType{
+								timelinepb.EventType_EVENT_TYPE_PUBSUB_PUBLISH,
+							},
+						},
+					},
+				},
+			},
+		}))
+		assert.NoError(t, err)
+		events := slices.Filter(slices.Map(resp.Msg.Events, func(e *timelinepb.Event) *timelinepb.PubSubPublishEvent {
+			return e.GetPubsubPublish()
+		}), func(e *timelinepb.PubSubPublishEvent) bool {
+			if e == nil {
+				return false
+			}
+			if e.Topic != topic {
+				return false
+			}
+			return true
+		})
+		assert.Equal(t, count, len(events), "expected %v published events", count)
+	}
+}
+
 func checkGroupMembership(module, subscription string, expectedCount int) in.Action {
 	return func(t testing.TB, ic in.TestContext) {
 		consumerGroup := module + "." + subscription

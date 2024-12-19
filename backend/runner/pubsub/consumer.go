@@ -2,6 +2,7 @@ package pubsub
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -11,10 +12,12 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/result"
+	"github.com/jpillora/backoff"
 
 	"github.com/block/ftl/backend/controller/observability"
 	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/block/ftl/backend/timeline"
+	"github.com/block/ftl/common/encoding"
 	"github.com/block/ftl/common/schema"
 	"github.com/block/ftl/common/slices"
 	"github.com/block/ftl/internal/channels"
@@ -23,19 +26,20 @@ import (
 )
 
 type consumer struct {
-	moduleName  string
-	deployment  model.DeploymentKey
-	verb        *schema.Verb
-	subscriber  *schema.MetadataSubscriber
-	retryParams schema.RetryParams
-	group       sarama.ConsumerGroup
-	cancel      context.CancelFunc
+	moduleName          string
+	deployment          model.DeploymentKey
+	verb                *schema.Verb
+	subscriber          *schema.MetadataSubscriber
+	retryParams         schema.RetryParams
+	group               sarama.ConsumerGroup
+	deadLetterPublisher optional.Option[*publisher]
 
 	verbClient     VerbClient
 	timelineClient *timeline.Client
 }
 
-func newConsumer(moduleName string, verb *schema.Verb, subscriber *schema.MetadataSubscriber, deployment model.DeploymentKey, verbClient VerbClient, timelineClient *timeline.Client) (*consumer, error) {
+func newConsumer(moduleName string, verb *schema.Verb, subscriber *schema.MetadataSubscriber, deployment model.DeploymentKey,
+	deadLetterPublisher optional.Option[*publisher], verbClient VerbClient, timelineClient *timeline.Client) (*consumer, error) {
 	if verb.Runtime == nil {
 		return nil, fmt.Errorf("subscription %s has no runtime", verb.Name)
 	}
@@ -60,11 +64,12 @@ func newConsumer(moduleName string, verb *schema.Verb, subscriber *schema.Metada
 	}
 
 	c := &consumer{
-		moduleName: moduleName,
-		deployment: deployment,
-		verb:       verb,
-		subscriber: subscriber,
-		group:      group,
+		moduleName:          moduleName,
+		deployment:          deployment,
+		verb:                verb,
+		subscriber:          subscriber,
+		group:               group,
+		deadLetterPublisher: deadLetterPublisher,
 
 		verbClient:     verbClient,
 		timelineClient: timelineClient,
@@ -94,12 +99,7 @@ func (c *consumer) kafkaTopicID() string {
 func (c *consumer) Begin(ctx context.Context) error {
 	// set up config
 	logger := log.FromContext(ctx).AppendScope("sub:" + c.verb.Name)
-	ctx = log.ContextWithLogger(ctx, logger)
-
 	logger.Debugf("Subscribing to %s", c.kafkaTopicID())
-
-	ctx, cancel := context.WithCancel(ctx)
-	c.cancel = cancel
 
 	go c.watchErrors(ctx)
 	go c.subscribe(ctx)
@@ -107,14 +107,14 @@ func (c *consumer) Begin(ctx context.Context) error {
 }
 
 func (c *consumer) watchErrors(ctx context.Context) {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx).AppendScope("sub:" + c.verb.Name)
 	for err := range channels.IterContext(ctx, c.group.Errors()) {
 		logger.Errorf(err, "Consumer group error")
 	}
 }
 
 func (c *consumer) subscribe(ctx context.Context) {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx).AppendScope("sub:" + c.verb.Name)
 	// Iterate over consumer sessions.
 	//
 	// `Consume` should be called inside an infinite loop, when a server-side rebalance happens,
@@ -138,7 +138,7 @@ func (c *consumer) subscribe(ctx context.Context) {
 
 // Setup is run at the beginning of a new session, before ConsumeClaim.
 func (c *consumer) Setup(session sarama.ConsumerGroupSession) error {
-	logger := log.FromContext(session.Context())
+	logger := log.FromContext(session.Context()).AppendScope("sub:" + c.verb.Name)
 
 	partitions := session.Claims()[c.kafkaTopicID()]
 	logger.Debugf("Starting session with partitions [%v]", strings.Join(slices.Map(partitions, func(partition int32) string { return strconv.Itoa(int(partition)) }), ","))
@@ -156,7 +156,7 @@ func (c *consumer) Cleanup(session sarama.ConsumerGroupSession) error {
 // is closed, the Handler must finish its processing loop and exit.
 func (c *consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	ctx := session.Context()
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx).AppendScope("sub:" + c.verb.Name)
 
 	for msg := range channels.IterContext(ctx, claim.Messages()) {
 		if msg == nil {
@@ -181,6 +181,9 @@ func (c *consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 			}
 			if remainingRetries == 0 {
 				logger.Errorf(err, "Failed to consume message with partition %v and offset %v", msg.Partition, msg.Offset)
+				if !c.publishToDeadLetterTopic(ctx, msg, err) {
+					return nil
+				}
 				break
 			}
 			logger.Errorf(err, "Failed to consume message with partition %v and offset %v and will retry in %vs", msg.Partition, msg.Offset, int(backoff.Seconds()))
@@ -245,4 +248,44 @@ func (c *consumer) call(ctx context.Context, body []byte, partition, offset int)
 	callEvent.Response = result.Ok(resp.Msg)
 	observability.Calls.Request(ctx, req.Verb, start, optional.None[string]())
 	return nil
+}
+
+// publishToDeadLetterTopic tries to publish the message to the dead letter topic.
+//
+// If it does not succeed it will retry until it succeeds or the context is done.
+// Returns true if the message was published or if there is no dead letter queue.
+// Returns false if the context is done.
+func (c *consumer) publishToDeadLetterTopic(ctx context.Context, msg *sarama.ConsumerMessage, callErr error) bool {
+	p, ok := c.deadLetterPublisher.Get()
+	if !ok {
+		return true
+	}
+
+	deadLetterEvent, err := encoding.Marshal(map[string]any{
+		"event": json.RawMessage(msg.Value),
+		"error": callErr.Error(),
+	})
+	if err != nil {
+		panic(fmt.Errorf("failed to marshal dead letter event for %v on partition %v and offset %v: %w", c.kafkaTopicID(), msg.Partition, msg.Offset, err))
+	}
+
+	bo := &backoff.Backoff{Min: time.Second, Max: 10 * time.Second}
+	first := true
+	for {
+		var waitDuration time.Duration
+		if first {
+			first = false
+		} else {
+			waitDuration = bo.Duration()
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(waitDuration):
+		}
+		err := p.publish(ctx, deadLetterEvent, string(msg.Key), schema.Ref{Module: c.moduleName, Name: c.verb.Name})
+		if err == nil {
+			return true
+		}
+	}
 }
