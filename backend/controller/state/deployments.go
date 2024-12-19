@@ -69,6 +69,7 @@ func (r *DeploymentCreatedEvent) Handle(t State) (State, error) {
 		Schema:    r.Schema,
 		Module:    r.Module,
 		Artefacts: map[string]*DeploymentArtefact{},
+		Language:  r.Language,
 	}
 	for _, a := range r.Artefacts {
 		n.Artefacts[a.Digest.String()] = &DeploymentArtefact{
