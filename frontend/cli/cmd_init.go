@@ -4,9 +4,11 @@ import (
 	"archive/zip"
 	"bufio"
 	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/block/scaffolder"
@@ -21,6 +23,9 @@ import (
 	"github.com/block/ftl/internal/projectconfig"
 	"github.com/block/ftl/internal/projectinit"
 )
+
+//go:embed dependency-versions.txt
+var userHermitPackages string
 
 type initCmd struct {
 	Name        string   `arg:"" help:"Name of the project."`
@@ -67,6 +72,11 @@ func (i initCmd) Run(
 	if err != nil {
 		return fmt.Errorf("initialize project: %w", err)
 	}
+	if i.Hermit {
+		if err := installHermitFTL(ctx, i.Dir); err != nil {
+			return fmt.Errorf("initialize Hermit FTL: %w", err)
+		}
+	}
 
 	if !i.NoGit {
 		err := maybeGitInit(ctx, i.Dir)
@@ -99,6 +109,29 @@ func maybeGitAdd(ctx context.Context, dir string, paths ...string) error {
 	args := append([]string{"add"}, paths...)
 	if err := exec.Command(ctx, log.Debug, dir, "git", args...).RunBuffered(ctx); err != nil {
 		return err
+	}
+	return nil
+}
+
+func installHermitFTL(ctx context.Context, dir string) error {
+	for _, install := range strings.Split(userHermitPackages, "\n") {
+		if install == "" {
+			continue
+		}
+		args := []string{"install", install}
+		if err := exec.Command(ctx, log.Debug, dir, "./bin/hermit", args...).RunBuffered(ctx); err != nil {
+			return fmt.Errorf("unable to install hermit package %s %w", install, err)
+		}
+	}
+	ftlVersion := ftl.Version
+	normalRelease := regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+	normal := normalRelease.MatchString(ftlVersion)
+	if !normal {
+		ftlVersion = "latest"
+	}
+	args := []string{"install", "ftl@" + ftlVersion}
+	if err := exec.Command(ctx, log.Debug, dir, "./bin/hermit", args...).RunBuffered(ctx); err != nil {
+		return fmt.Errorf("unable to install hermit package ftl %w", err)
 	}
 	return nil
 }
