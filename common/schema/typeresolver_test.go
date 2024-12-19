@@ -34,7 +34,7 @@ func TestTypeResolver(t *testing.T) {
 	err = scopes.Add(optional.None[*Module](), otherModule.Name, otherModule)
 	assert.NoError(t, err)
 
-	// Resolving "HTTPRequest" should return builtin.HttpRequest
+	// Resolving "HttpRequest" should return builtin.HttpRequest
 	httpRequest := scopes.Resolve(Ref{Name: "HttpRequest"})
 	assert.Equal(t, httpRequest.Module.MustGet().Name, "builtin")
 
@@ -42,11 +42,11 @@ func TestTypeResolver(t *testing.T) {
 	scopes = scopes.Push()
 	assert.NoError(t, scopes.AddModuleDecls(module))
 
-	// Resolving "HTTPRequest" should return test.HttpRequest now that we've pushed the new scope
+	// Resolving "HttpRequest" should return test.HttpRequest now that we've pushed the new scope
 	httpRequest = scopes.Resolve(Ref{Name: "HttpRequest"})
 	assert.Equal(t, httpRequest.Module.MustGet().Name, "test")
 
-	// Resolving "external" should fail
+	// Resolving "External" should fail
 	external := scopes.Resolve(Ref{Name: "External"})
 	assert.Equal(t, external, nil)
 
