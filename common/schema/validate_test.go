@@ -104,8 +104,8 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"3:20: ingress verb a: request type Empty must be builtin.HttpRequest",
-				"3:27: ingress verb a: response type Empty must be builtin.HttpResponse",
+				"3:20: ingress verb a: request type builtin.Empty must be builtin.HttpRequest",
+				"3:27: ingress verb a: response type builtin.Empty must be builtin.HttpResponse",
 			}},
 		{name: "IngressBodyTypes",
 			schema: `
@@ -136,8 +136,8 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"11:22: ingress verb any: GET request type HttpRequest<Any, Unit, Unit> must have a body of unit not Any",
-				"11:52: ingress verb any: response type HttpResponse<Any, Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
+				"11:22: ingress verb any: GET request type builtin.HttpRequest<Any, Unit, Unit> must have a body of unit not Any",
+				"11:52: ingress verb any: response type builtin.HttpResponse<Any, Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
 				"16:31: ingress verb pathInvalid: cannot use path parameter \"invalid\" with request type String as it has multiple path parameters, expected Data or Map type",
 				"16:41: ingress verb pathInvalid: cannot use path parameter \"extra\" with request type String as it has multiple path parameters, expected Data or Map type",
 				"18:31: ingress verb pathMissing: request pathParameter type one.Path does not contain a field corresponding to the parameter \"missing\"",
@@ -152,7 +152,7 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"3:24: ingress verb bytes: GET request type HttpRequest<Bytes, Unit, Unit> must have a body of unit not Bytes",
+				"3:24: ingress verb bytes: GET request type builtin.HttpRequest<Bytes, Unit, Unit> must have a body of unit not Bytes",
 			}},
 		{name: "Array",
 			schema: `
@@ -222,8 +222,8 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				`4:21: duplicate config "FTL_ENDPOINT", first defined at 3:20`,
-				`5:21: duplicate config "FTL_ENDPOINT", first defined at 3:20`,
+				`4:21: duplicate declaration of "FTL_ENDPOINT" at 3:20`,
+				`5:21: duplicate declaration of "FTL_ENDPOINT" at 3:20`,
 			},
 		},
 		{name: "DuplicateSecrets",
@@ -235,17 +235,9 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				`4:6: duplicate secret "MY_SECRET", first defined at 3:6`,
-				`5:6: duplicate secret "MY_SECRET", first defined at 3:6`,
+				`4:6: duplicate declaration of "MY_SECRET" at 3:6`,
+				`5:6: duplicate declaration of "MY_SECRET" at 3:6`,
 			},
-		},
-		{name: "ConfigAndSecretsWithSameName",
-			schema: `
-				module one {
-					config FTL_ENDPOINT String
-					secret FTL_ENDPOINT String
-				}
-			`,
 		},
 		{name: "DuplicateDatabases",
 			schema: `
@@ -255,7 +247,7 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				`4:6: duplicate database "MY_DB", first defined at 3:6`,
+				`4:6: duplicate declaration of "MY_DB" at 3:6`,
 			},
 		},
 		{name: "ValueEnumMismatchedVariantTypes",

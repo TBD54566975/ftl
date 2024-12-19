@@ -70,7 +70,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 	schema.Modules = slices.DeleteFunc(schema.Modules, func(m *Module) bool { return m.Name == builtins.Name })
 	schema.Modules = append([]*Module{builtins}, schema.Modules...)
 
-	scopes := NewScopes()
+	generalScopes := NewScopes()
 
 	// Validate dependencies
 	if err := validateDependencies(schema); err != nil {
@@ -82,7 +82,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 		if module == builtins {
 			continue
 		}
-		if err := scopes.Add(optional.None[*Module](), module.Name, module); err != nil {
+		if err := generalScopes.Add(optional.None[*Module](), module.Name, module); err != nil {
 			merr = append(merr, err)
 		}
 	}
@@ -106,6 +106,12 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 			merr = append(merr, err)
 		}
 
+		// Push current decls
+		scopes := generalScopes.Push()
+		if err := scopes.AddModuleDecls(module); err != nil {
+			merr = append(merr, err)
+		}
+
 		indent := 0
 		err := Visit(module, func(n Node, next func() error) error {
 			save := scopes
@@ -115,6 +121,11 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 			}
 			indent++
 			defer func() { indent-- }()
+
+			// Validate all children before validating the current node.
+			if err := next(); err != nil {
+				return err
+			}
 			switch n := n.(type) {
 			case *Ref:
 				mdecl := scopes.Resolve(*n)
@@ -222,7 +233,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				*EnumVariant, *Config, *Secret, *Topic, *DatabaseRuntime, *DatabaseRuntimeConnections,
 				*Data, *Field:
 			}
-			return next()
+			return nil
 		})
 		if err != nil {
 			merr = append(merr, err)
@@ -258,8 +269,9 @@ func ValidateModule(module *Module) error {
 		merr = append(merr, err)
 	}
 	scopes = scopes.Push()
-	// Key is <type>:<name>
-	duplicateDecls := map[string]Decl{}
+	if err := scopes.AddModuleDecls(module); err != nil {
+		merr = append(merr, err)
+	}
 
 	_ = Visit(module, func(n Node, next func() error) error { //nolint:errcheck
 		if scoped, ok := n.(Scoped); ok {
@@ -267,14 +279,14 @@ func ValidateModule(module *Module) error {
 			scopes = scopes.PushScope(scoped.Scope())
 			defer func() { scopes = pop }()
 		}
+
+		// Validate all children before validating the current node.
+		if err := next(); err != nil {
+			return err
+		}
+
 		if n, ok := n.(Decl); ok {
 			tname := typeName(n)
-			duplKey := tname + ":" + n.GetName()
-			if dupl, ok := duplicateDecls[duplKey]; ok {
-				merr = append(merr, errorf(n, "duplicate %s %q, first defined at %s", tname, n.GetName(), dupl.Position()))
-			} else {
-				duplicateDecls[duplKey] = n
-			}
 			if !ValidateName(n.GetName()) {
 				merr = append(merr, errorf(n, "%s name %q is invalid", tname, n.GetName()))
 			} else if _, ok := primitivesScope[n.GetName()]; ok {
@@ -351,17 +363,12 @@ func ValidateModule(module *Module) error {
 				}
 			}
 
-		case *MetadataRetry:
-			if n.Catch != nil && n.Catch.Module == "" {
-				n.Catch.Module = module.Name
-			}
-
 		case Type, Metadata, Value, IngressPathComponent, DatabaseConnector,
 			*Module, *Schema, *Optional, *TypeParameter, *EnumVariant,
 			*Config, *Secret, *DatabaseRuntime, *DatabaseRuntimeConnections,
 			*Database, *Enum:
 		}
-		return next()
+		return nil
 	})
 
 	merr = cleanErrors(merr)
@@ -908,9 +915,6 @@ func validateQueryParamsPayloadType(n Node, r Type, v *Verb, reqOrResp string) e
 
 func validateVerbSubscriptions(module *Module, v *Verb, md *MetadataSubscriber, scopes Scopes) (merr []error) {
 	merr = []error{}
-	if md.Topic.Module == "" {
-		md.Topic.Module = module.Name
-	}
 	topicDecl := scopes.Resolve(*md.Topic)
 	if topicDecl == nil {
 		// errors for invalid refs are handled elsewhere
@@ -958,9 +962,6 @@ func validateRetries(module *Module, retry *MetadataRetry, requestType optional.
 	if !ok {
 		merr = append(merr, errorf(retry, "catch can only be defined on verbs"))
 		return
-	}
-	if retry.Catch.Module == "" {
-		retry.Catch.Module = module.Name
 	}
 	catchDecl := scopes.Resolve(*retry.Catch)
 	if catchDecl == nil {

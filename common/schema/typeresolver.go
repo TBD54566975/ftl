@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -77,10 +78,8 @@ func NewScopes() Scopes {
 	if err := scopes.Add(optional.None[*Module](), builtins.Name, builtins); err != nil {
 		panic(err)
 	}
-	for _, decl := range builtins.Decls {
-		if err := scopes.Add(optional.Some(builtins), decl.GetName(), decl); err != nil {
-			panic(err)
-		}
+	if err := scopes.AddModuleDecls(builtins); err != nil {
+		panic(err)
 	}
 	// Push an empty scope for other modules to be added to.
 	scopes = scopes.Push()
@@ -125,6 +124,20 @@ func (s *Scopes) Add(owner optional.Option[*Module], name string, symbol Symbol)
 		return fmt.Errorf("%s: duplicate declaration of %q at %s", symbol.Position(), name, prev.Symbol.Position())
 	}
 	(*s)[end][name] = ModuleDecl{owner, symbol}
+	return nil
+}
+
+// AddModuleDecls adds all decls in a module to the current scope.
+func (s *Scopes) AddModuleDecls(module *Module) error {
+	errs := []error{}
+	for _, decl := range module.Decls {
+		if err := s.Add(optional.Some(module), decl.GetName(), decl); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
 	return nil
 }
 
