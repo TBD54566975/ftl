@@ -128,6 +128,7 @@ func testCluster(t *testing.T, members []string, id uint64, address string) *raf
 		SnapshotEntries:    10,
 		CompactionOverhead: 10,
 		RTT:                10 * time.Millisecond,
+		ShardReadyTimeout:  1 * time.Second,
 	})
 }
 
