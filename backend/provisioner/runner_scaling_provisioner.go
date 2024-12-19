@@ -75,7 +75,7 @@ func provisionRunner(scaling scaling.RunnerScaling) InMemResourceProvisionerFn {
 			if err == nil {
 				break
 			}
-			logger.Debugf("waiting for runner to be ready: %v", err)
+			logger.Tracef("waiting for runner to be ready: %v", err)
 			select {
 			case <-ctx.Done():
 				return nil, fmt.Errorf("context cancelled %w", ctx.Err())

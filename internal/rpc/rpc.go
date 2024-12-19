@@ -283,7 +283,7 @@ func RetryStreamingServerStream[Req, Resp any](
 	handler func(ctx context.Context, resp *Resp) error,
 	errorRetryCallback func(err error) bool,
 ) {
-	logLevel := log.Debug
+	logLevel := log.Trace
 	errored := false
 	logger := log.FromContext(ctx)
 	for {
@@ -298,7 +298,7 @@ func RetryStreamingServerStream[Req, Resp any](
 						break
 					}
 					if errored {
-						logger.Debugf("Server stream recovered")
+						logger.Tracef("Server stream recovered")
 						errored = false
 					}
 					select {
@@ -351,7 +351,7 @@ func RetryStreamingServerStream[Req, Resp any](
 // logLevelForError indicates the log.Level to use for the specified error
 func logLevelForError(err error) log.Level {
 	if err != nil && errors.Is(err, syscall.ECONNREFUSED) {
-		return log.Debug
+		return log.Trace
 	}
 	return log.Warn
 }

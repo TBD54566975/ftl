@@ -89,7 +89,6 @@ func New(scaffoldFiles *zip.Reader) *Service {
 }
 
 func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
-	log.FromContext(ctx).Debugf("Received Ping")
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 

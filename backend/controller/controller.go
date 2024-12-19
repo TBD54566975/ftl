@@ -1144,7 +1144,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 			return err
 		}
 	}
-	logger.Debugf("Seeded %d deployments", initialCount)
+	logger.Tracef("Seeded %d deployments", initialCount)
 
 	for {
 		select {
