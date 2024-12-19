@@ -136,7 +136,7 @@ build-backend-tests:
   go test -run ^NONE -tags integration,infrastructure ./... > /dev/null
 
 build-jvm *args:
-  @mk {{JVM_RUNTIME_OUT}} : {{JVM_RUNTIME_IN}} -- mvn -f jvm-runtime/ftl-runtime install {{args}}
+  @mk {{JVM_RUNTIME_OUT}} : {{JVM_RUNTIME_IN}} -- mvn -f jvm-runtime/ftl-runtime clean install {{args}}
 
 # Builds all language plugins
 build-language-plugins: build-zips build-protos
