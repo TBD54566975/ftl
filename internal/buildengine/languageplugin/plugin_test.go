@@ -87,7 +87,6 @@ func buildContextFromProto(proto *langpb.BuildContext) (BuildContext, error) {
 			Build:                 optional.Ptr(proto.ModuleConfig.Build).Default(""),
 			DevModeBuild:          optional.Ptr(proto.ModuleConfig.DevModeBuild).Default(""),
 			DeployDir:             proto.ModuleConfig.DeployDir,
-			GeneratedSchemaDir:    optional.Ptr(proto.ModuleConfig.GeneratedSchemaDir).Default(""),
 			Watch:                 proto.ModuleConfig.Watch,
 			LanguageConfig:        proto.ModuleConfig.LanguageConfig.AsMap(),
 			SQLMigrationDirectory: proto.ModuleConfig.GetSqlMigrationDir(),

@@ -30,8 +30,6 @@ type ModuleConfig struct {
 	BuildLock string `toml:"build-lock"`
 	// DeployDir is the directory to deploy from, relative to the module directory.
 	DeployDir string `toml:"deploy-dir"`
-	// GeneratedSchemaDir is the directory to generate protobuf schema files into. These can be picked up by language specific build tools
-	GeneratedSchemaDir string `toml:"generated-schema-dir"`
 	// Watch is the list of files to watch for changes.
 	Watch []string `toml:"watch"`
 
@@ -134,12 +132,6 @@ func (c ModuleConfig) Abs() AbsModuleConfig {
 		panic(fmt.Sprintf("deploy-dir %q is not beneath module directory %q", clone.DeployDir, clone.Dir))
 	}
 	clone.BuildLock = filepath.Clean(filepath.Join(clone.Dir, clone.BuildLock))
-	if clone.GeneratedSchemaDir != "" {
-		clone.GeneratedSchemaDir = filepath.Clean(filepath.Join(clone.Dir, clone.GeneratedSchemaDir))
-		if !strings.HasPrefix(clone.GeneratedSchemaDir, clone.Dir) {
-			panic(fmt.Sprintf("generated-schema-dir %q is not beneath module directory %q", clone.GeneratedSchemaDir, clone.Dir))
-		}
-	}
 	// Watch paths are allowed to be outside the deploy directory.
 	clone.Watch = slices.Map(clone.Watch, func(p string) string {
 		return filepath.Clean(filepath.Join(clone.Dir, p))
@@ -175,9 +167,6 @@ func (c UnvalidatedModuleConfig) FillDefaultsAndValidate(customDefaults CustomDe
 	if c.SQLMigrationDirectory == "" {
 		c.SQLMigrationDirectory = customDefaults.SQLMigrationDir
 
-	}
-	if defaultValue, ok := customDefaults.GeneratedSchemaDir.Get(); ok && c.GeneratedSchemaDir == "" {
-		c.GeneratedSchemaDir = defaultValue
 	}
 	if c.Watch == nil {
 		c.Watch = customDefaults.Watch

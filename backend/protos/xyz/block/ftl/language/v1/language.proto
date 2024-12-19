@@ -26,8 +26,6 @@ message ModuleConfig {
   optional string dev_mode_build = 6;
   // Build lock path to prevent concurrent builds
   string build_lock = 7;
-  // The directory to generate protobuf schema files into. These can be picked up by language specific build tools
-  optional string generated_schema_dir = 8;
   // Patterns to watch for file changes
   repeated string watch = 9;
 
