@@ -8,12 +8,12 @@ import (
 
 //ftl:cron 30s
 func ThirtySeconds(ctx context.Context) error {
-	ftl.LoggerFromContext(ctx).Infof("Frequent cron job triggered.")
+	ftl.LoggerFromContext(ctx).Debugf("Frequent cron job triggered.")
 	return nil
 }
 
 //ftl:cron 0 * * * *
 func Hourly(ctx context.Context) error {
-	ftl.LoggerFromContext(ctx).Infof("Hourly cron job triggered.")
+	ftl.LoggerFromContext(ctx).Debugf("Hourly cron job triggered.")
 	return nil
 }
