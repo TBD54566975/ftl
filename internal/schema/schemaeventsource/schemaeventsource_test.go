@@ -17,6 +17,7 @@ import (
 	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/block/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/channels"
 	"github.com/block/ftl/internal/log"
 	"github.com/block/ftl/internal/model"
 	"github.com/block/ftl/internal/rpc"
@@ -189,16 +190,12 @@ func (m *mockSchemaService) Ping(context.Context, *connect.Request[ftlv1.PingReq
 }
 
 func (m *mockSchemaService) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], resp *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case change := <-m.changes:
-			if err := resp.Send(change); err != nil {
-				return fmt.Errorf("send change: %w", err)
-			}
+	for change := range channels.IterContext(ctx, m.changes) {
+		if err := resp.Send(change); err != nil {
+			return fmt.Errorf("send change: %w", err)
 		}
 	}
+	return nil
 }
 
 func assertEqual[T comparable](t testing.TB, expected, actual T) {

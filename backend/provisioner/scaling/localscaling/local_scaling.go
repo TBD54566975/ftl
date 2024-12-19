@@ -18,6 +18,7 @@ import (
 	"github.com/block/ftl/backend/runner"
 	"github.com/block/ftl/common/plugin"
 	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/channels"
 	"github.com/block/ftl/internal/dev"
 	"github.com/block/ftl/internal/localdebug"
 	"github.com/block/ftl/internal/log"
@@ -108,15 +109,10 @@ type devModeRunner struct {
 
 func (l *localScaling) Start(ctx context.Context) error {
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case devEndpoints := <-l.devModeEndpointsUpdates:
-				l.lock.Lock()
-				l.updateDevModeEndpoint(ctx, devEndpoints)
-				l.lock.Unlock()
-			}
+		for devEndpoints := range channels.IterContext(ctx, l.devModeEndpointsUpdates) {
+			l.lock.Lock()
+			l.updateDevModeEndpoint(ctx, devEndpoints)
+			l.lock.Unlock()
 		}
 	}()
 	return nil

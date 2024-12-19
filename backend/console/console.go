@@ -20,6 +20,7 @@ import (
 	"github.com/block/ftl/common/schema"
 	frontend "github.com/block/ftl/frontend/console"
 	"github.com/block/ftl/internal/buildengine"
+	"github.com/block/ftl/internal/channels"
 	"github.com/block/ftl/internal/log"
 	"github.com/block/ftl/internal/routing"
 	"github.com/block/ftl/internal/rpc"
@@ -345,24 +346,18 @@ func getReferencesFromMap(refMap map[schema.RefKey]map[schema.RefKey]bool, modul
 }
 
 func (s *service) StreamModules(ctx context.Context, req *connect.Request[consolepb.StreamModulesRequest], stream *connect.ServerStream[consolepb.StreamModulesResponse]) error {
-
 	err := s.sendStreamModulesResp(ctx, stream)
 	if err != nil {
 		return err
 	}
 
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-
-		case <-s.schemaEventSource.Events():
-			err = s.sendStreamModulesResp(ctx, stream)
-			if err != nil {
-				return err
-			}
+	for range channels.IterContext(ctx, s.schemaEventSource.Events()) {
+		err = s.sendStreamModulesResp(ctx, stream)
+		if err != nil {
+			return err
 		}
 	}
+	return nil
 }
 
 // filterDeployments removes any duplicate modules by selecting the deployment with the

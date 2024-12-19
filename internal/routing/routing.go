@@ -9,6 +9,7 @@ import (
 	"github.com/alecthomas/types/pubsub"
 
 	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/channels"
 	"github.com/block/ftl/internal/log"
 	"github.com/block/ftl/internal/model"
 	"github.com/block/ftl/internal/schema/schemaeventsource"
@@ -36,27 +37,21 @@ func New(ctx context.Context, changes schemaeventsource.EventSource) *RouteTable
 }
 
 func (r *RouteTable) run(ctx context.Context, changes schemaeventsource.EventSource) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-
-		case <-changes.Events():
-			old := r.routes.Load()
-			routes := extractRoutes(ctx, changes.View())
-			for module, rd := range old.moduleToDeployment {
-				if old.byDeployment[rd.String()] != routes.byDeployment[rd.String()] {
-					r.changeNotification.Publish(module)
-				}
+	for range channels.IterContext(ctx, changes.Events()) {
+		old := r.routes.Load()
+		routes := extractRoutes(ctx, changes.View())
+		for module, rd := range old.moduleToDeployment {
+			if old.byDeployment[rd.String()] != routes.byDeployment[rd.String()] {
+				r.changeNotification.Publish(module)
 			}
-			for module, rd := range routes.moduleToDeployment {
-				// Check for new modules
-				if old.byDeployment[rd.String()] == nil {
-					r.changeNotification.Publish(module)
-				}
-			}
-			r.routes.Store(routes)
 		}
+		for module, rd := range routes.moduleToDeployment {
+			// Check for new modules
+			if old.byDeployment[rd.String()] == nil {
+				r.changeNotification.Publish(module)
+			}
+		}
+		r.routes.Store(routes)
 	}
 }
 

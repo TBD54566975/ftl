@@ -18,6 +18,7 @@ import (
 	timelineconnect "github.com/block/ftl/backend/protos/xyz/block/ftl/timeline/v1/timelinepbconnect"
 	ftlv1 "github.com/block/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/channels"
 	"github.com/block/ftl/internal/log"
 	"github.com/block/ftl/internal/rpc"
 )
@@ -288,27 +289,24 @@ func (s *service) reapCallEvents(ctx context.Context) {
 	} else {
 		interval = *s.config.EventLogRetention / 20
 	}
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(interval):
-			if s.config.EventLogRetention == nil {
-				logger.Tracef("Event log retention is disabled, will not prune.")
-				continue
-			}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for range channels.IterContext(ctx, ticker.C) {
+		if s.config.EventLogRetention == nil {
+			logger.Tracef("Event log retention is disabled, will not prune.")
+			continue
+		}
 
-			resp, err := s.DeleteOldEvents(ctx, connect.NewRequest(&timelinepb.DeleteOldEventsRequest{
-				EventType:  timelinepb.EventType_EVENT_TYPE_CALL,
-				AgeSeconds: int64(s.config.EventLogRetention.Seconds()),
-			}))
-			if err != nil {
-				logger.Errorf(err, "Failed to prune call events")
-				continue
-			}
-			if resp.Msg.DeletedCount > 0 {
-				logger.Debugf("Pruned %d call events older than %s", resp.Msg.DeletedCount, s.config.EventLogRetention)
-			}
+		resp, err := s.DeleteOldEvents(ctx, connect.NewRequest(&timelinepb.DeleteOldEventsRequest{
+			EventType:  timelinepb.EventType_EVENT_TYPE_CALL,
+			AgeSeconds: int64(s.config.EventLogRetention.Seconds()),
+		}))
+		if err != nil {
+			logger.Errorf(err, "Failed to prune call events")
+			continue
+		}
+		if resp.Msg.DeletedCount > 0 {
+			logger.Debugf("Pruned %d call events older than %s", resp.Msg.DeletedCount, s.config.EventLogRetention)
 		}
 	}
 }

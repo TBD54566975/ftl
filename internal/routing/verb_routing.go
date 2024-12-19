@@ -15,6 +15,7 @@ import (
 	"github.com/block/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/block/ftl/backend/timeline"
 	"github.com/block/ftl/common/schema"
+	"github.com/block/ftl/internal/channels"
 	"github.com/block/ftl/internal/log"
 	"github.com/block/ftl/internal/model"
 	"github.com/block/ftl/internal/rpc"
@@ -90,13 +91,8 @@ func NewVerbRouterFromTable(ctx context.Context, routeTable *RouteTable, timelin
 	}
 	routeUpdates := svc.routingTable.Subscribe()
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case module := <-routeUpdates:
-				svc.moduleClients.Delete(module)
-			}
+		for module := range channels.IterContext(ctx, routeUpdates) {
+			svc.moduleClients.Delete(module)
 		}
 	}()
 	return svc
