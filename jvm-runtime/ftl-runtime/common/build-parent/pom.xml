@@ -43,6 +43,11 @@
             <artifactId>quarkus-junit5</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>xyz.block.ftl</groupId>
+            <artifactId>ftl-jvm-test-framework</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
