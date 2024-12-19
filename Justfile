@@ -212,9 +212,7 @@ format-frontend:
 
 # Install Node dependencies using pnpm
 pnpm-install:
-  #!/bin/bash
-  set -euo pipefail
-  for i in {1..3}; do mk frontend/{console,vscode}/node_modules : frontend/{console,vscode}/package.json -- "pnpm install --frozen-lockfile" && break || sleep 5; done
+  retry 3 pnpm install --frozen-lockfile
 
 # Copy plugin protos from the SQLC release
 update-sqlc-plugin-codegen-proto:
@@ -240,16 +238,11 @@ build-protos-unconditionally: go2proto lint-protos pnpm-install
 # Run integration test(s)
 integration-tests *test:
   #!/bin/bash
-  set -euo pipefail
-  testName=${1:-}
-  for i in {1..3}; do go test -fullpath -count 1 -v -tags integration -run "$testName" -p 1 $(find . -type f -name '*_test.go' -print0 | xargs -0 grep -r -l "$testName" | xargs grep -l '//go:build integration' | xargs -I {} dirname './{}') && break || true; done
+  retry 3 /bin/bash -c "go test -fullpath -count 1 -v -tags integration -run '^({{test}})$' -p 1 $(find . -type f -name '*_test.go' -print0 | xargs -0 grep -r -l {{test}} | xargs grep -l '//go:build integration' | xargs -I {} dirname './{}' | tr '\n' ' ')"
 
 # Run integration test(s)
 infrastructure-tests *test:
-  #!/bin/bash
-  set -euo pipefail
-  testName=${1:-}
-  for i in {1..3}; do go test -fullpath -count 1 -v -tags infrastructure -run "$testName" -p 1 $(find . -type f -name '*_test.go' -print0 | xargs -0 grep -r -l "$testName" | xargs grep -l '//go:build infrastructure' | xargs -I {} dirname './{}') && break || true; done
+  retry 3 /bin/bash -c "go test -fullpath -count 1 -v -tags infrastructure -run '^({{test}})$' -p 1 $(find . -type f -name '*_test.go' -print0 | xargs -0 grep -r -l {{test}} | xargs grep -l '//go:build infrastructure' | xargs -I {} dirname './{}' | tr '\n' ' ')"
 
 # Run README doc tests
 test-readme *args:

@@ -1,0 +1,21 @@
+#!/bin/bash
+# #
+# Retry a command until it succeeds or the maximum number of retries is reached.
+# Usage: retry <max-retries> <command>
+
+set -euo pipefail
+
+max_retries=${1:-}
+shift
+
+for i in $(seq 1 "$max_retries"); do
+  echo "$@"
+  if "$@"; then
+    exit 0
+  fi
+  if [ "$i" -eq "$max_retries" ]; then
+    exit 1
+  fi
+  echo "Failed, retrying in 5 seconds..."
+  sleep 5
+done
