@@ -62,6 +62,7 @@ DOCKER_IMAGES := '''
   "admin": {}
 }
 '''
+USER_HERMIT_PACKAGES := "openjdk|maven"
 
 _help:
   @just -l
@@ -92,6 +93,9 @@ live-rebuild:
 dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "ftl dev --plain {{args}}"
 
+capture-hermit-versions:
+    @ls bin/.* | grep -E '{{USER_HERMIT_PACKAGES}}' | sed 's/.....\(.*\)....$/\1/' | sort > frontend/cli/dependency-versions.txt
+
 # Build everything
 build-all: build-protos-unconditionally build-backend build-frontend build-backend-tests build-generate build-zips lsp-generate build-jvm build-language-plugins build-go2proto-testdata
 
@@ -112,7 +116,7 @@ build +tools: build-frontend
 # Build command-line tools
 # This does not have a dependency on the frontend
 # But it will be included if it was already built
-build-without-frontend +tools: build-protos build-zips
+build-without-frontend +tools: build-protos build-zips capture-hermit-versions
   #!/bin/bash
   set -euo pipefail
   mkdir -p frontend/console/dist
