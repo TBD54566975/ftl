@@ -294,12 +294,14 @@ func ValidateModule(module *Module) error {
 		}
 		switch n := n.(type) {
 		case *Ref:
-			if n.Module == "" {
-				// All unqualified references are references to the current module.
-				n.Module = module.Name
-			}
-
 			mdecl := scopes.Resolve(*n)
+			if mdecl == nil && n.Module == "" {
+				// Fully qualify refs with module == "" to the current module if it can be resolved.
+				if internalDecl := scopes.Resolve(Ref{Module: module.Name, Name: n.Name, TypeParameters: n.TypeParameters}); internalDecl != nil {
+					n.Module = module.Name
+					mdecl = scopes.Resolve(*n)
+				}
+			}
 			if mdecl != nil {
 				switch decl := mdecl.Symbol.(type) {
 				case *Verb, *Enum, *Database, *Config, *Secret, *Topic:
