@@ -460,6 +460,32 @@ func TestParsing(t *testing.T) {
 					Name: "test",
 					Decls: []Decl{
 						&Topic{
+							Name: "consumesB1Failed",
+							Event: &Ref{
+								Module: "builtin",
+								Name:   "FailedEvent",
+								TypeParameters: []Type{
+									&Ref{
+										Module: "test",
+										Name:   "eventB",
+									},
+								},
+							},
+						},
+						&Topic{
+							Name: "consumesBothASubsFailed",
+							Event: &Ref{
+								Module: "builtin",
+								Name:   "FailedEvent",
+								TypeParameters: []Type{
+									&Ref{
+										Module: "test",
+										Name:   "eventA",
+									},
+								},
+							},
+						},
+						&Topic{
 							Export: true,
 							Name:   "topicA",
 							Event: &Ref{
@@ -580,6 +606,14 @@ func TestParsing(t *testing.T) {
 										Name:   "catchesB",
 									},
 								},
+								&MetadataPublisher{
+									Topics: []*Ref{
+										{
+											Module: "test",
+											Name:   "consumesB1Failed",
+										},
+									},
+								},
 							},
 						},
 						&Verb{
@@ -605,6 +639,14 @@ func TestParsing(t *testing.T) {
 									Catch: &Ref{
 										Module: "test",
 										Name:   "catchesA",
+									},
+								},
+								&MetadataPublisher{
+									Topics: []*Ref{
+										{
+											Module: "test",
+											Name:   "consumesBothASubsFailed",
+										},
 									},
 								},
 							},

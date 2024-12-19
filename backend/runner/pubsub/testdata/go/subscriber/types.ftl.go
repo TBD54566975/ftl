@@ -3,6 +3,7 @@ package subscriber
 
 import (
 	"context"
+	ftlbuiltin "ftl/builtin"
 	ftlpublisher "ftl/publisher"
 	"github.com/block/ftl/common/reflection"
 )
@@ -10,6 +11,8 @@ import (
 type ConsumeClient func(context.Context, ftlpublisher.PubSubEvent) error
 
 type ConsumeButFailAndRetryClient func(context.Context, ftlpublisher.PubSubEvent) error
+
+type ConsumeFromDeadLetterClient func(context.Context, ftlbuiltin.FailedEvent[ftlpublisher.PubSubEvent]) error
 
 type ConsumeFromLatestClient func(context.Context, ftlpublisher.PubSubEvent) error
 
@@ -24,6 +27,9 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			ConsumeButFailAndRetry,
+		),
+		reflection.ProvideResourcesForVerb(
+			ConsumeFromDeadLetter,
 		),
 		reflection.ProvideResourcesForVerb(
 			ConsumeFromLatest,

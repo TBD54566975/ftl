@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"ftl/builtin"
 	"ftl/publisher"
 
 	"github.com/block/ftl/common/reflection"
@@ -27,10 +28,17 @@ func ConsumeFromLatest(ctx context.Context, req publisher.PubSubEvent) error {
 }
 
 //ftl:verb
-//ftl:subscribe publisher.topic2 from=beginning
+//ftl:subscribe publisher.topic2 from=beginning deadletter
 //ftl:retry 2 1s 1s
 func ConsumeButFailAndRetry(ctx context.Context, req publisher.PubSubEvent) error {
 	return fmt.Errorf("always error: event %v", req.Time)
+}
+
+//ftl:verb
+//ftl:subscribe consumeButFailAndRetryFailed from=beginning
+func ConsumeFromDeadLetter(ctx context.Context, req builtin.FailedEvent[publisher.PubSubEvent]) error {
+	ftl.LoggerFromContext(ctx).Infof("ConsumeFromDeadLetter: %v", req.Event.Time)
+	return nil
 }
 
 //ftl:verb

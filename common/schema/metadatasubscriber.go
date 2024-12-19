@@ -66,3 +66,7 @@ func (m *MetadataSubscriber) String() string {
 	}
 	return strings.Join(components, " ")
 }
+
+func DeadLetterNameForSubscriber(verb string) string {
+	return verb + "Failed"
+}

@@ -84,6 +84,6 @@ func (p *publisher) publish(ctx context.Context, data []byte, key string, caller
 	timelineEvent.Partition = int(partition)
 	timelineEvent.Offset = int(offset)
 	p.timelineClient.Publish(ctx, timelineEvent)
-	logger.Debugf("Published to partition %v with offset %v)", partition, offset)
+	logger.Debugf("Published to partition %v with offset %v", partition, offset)
 	return nil
 }

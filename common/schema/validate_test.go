@@ -373,18 +373,31 @@ func TestValidate(t *testing.T) {
 				verb wrongEventType(test.eventA) Unit
 					+subscribe test.topicB from=beginning
 
-				verb SourceCantSubscribe(Unit) test.eventB
+				verb sourceCantSubscribe(Unit) test.eventB
 					+subscribe test.topicB from=latest
 
-				verb EmptyCantSubscribe(Unit) Unit
+				verb emptyCantSubscribe(Unit) Unit
 					+subscribe test.topicB from=beginning
+
+				verb subWithDeadLetter(test.eventA) Unit
+					+subscribe test.topicA from=beginning deadletter
+
+				topic subWithExistingDeadLetterFailed builtin.FailedEvent<test.eventB>
+				verb subWithExistingDeadLetter(test.eventA) Unit
+					+subscribe test.topicA from=beginning deadletter
+				
+				data subWithClashingDeadLetterFailed {}
+				verb subWithClashingDeadLetter(test.eventA) Unit
+					+subscribe topicA from=beginning deadletter
 			}
 			`,
 			errs: []string{
 				"16:6: verb wrongEventType: request type test.eventA differs from subscription's event type test.eventB",
-				"19:6: verb SourceCantSubscribe: must be a sink to subscribe but found response type test.eventB",
-				"19:6: verb SourceCantSubscribe: request type Unit differs from subscription's event type test.eventB",
-				"22:6: verb EmptyCantSubscribe: request type Unit differs from subscription's event type test.eventB",
+				"19:6: verb sourceCantSubscribe: must be a sink to subscribe but found response type test.eventB",
+				"19:6: verb sourceCantSubscribe: request type Unit differs from subscription's event type test.eventB",
+				"22:6: verb emptyCantSubscribe: request type Unit differs from subscription's event type test.eventB",
+				"29:6: dead letter topic test.subWithExistingDeadLetterFailed must have the same event type (builtin.FailedEvent<test.eventB>) as the subscription request type (builtin.FailedEvent<test.eventA>)",
+				"33:6: expected test.subWithClashingDeadLetterFailed to be a dead letter topic but was already declared at 31:5",
 				`7:5: invalid name: must consist of only letters, numbers and underscores, and start with a lowercase letter.`,
 			},
 		},
