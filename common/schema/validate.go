@@ -115,6 +115,11 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 			}
 			indent++
 			defer func() { indent-- }()
+
+			// Validate all children before validating the current node.
+			if err := next(); err != nil {
+				return err
+			}
 			switch n := n.(type) {
 			case *Ref:
 				mdecl := scopes.Resolve(*n)
@@ -222,7 +227,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				*EnumVariant, *Config, *Secret, *Topic, *DatabaseRuntime, *DatabaseRuntimeConnections,
 				*Data, *Field:
 			}
-			return next()
+			return nil
 		})
 		if err != nil {
 			merr = append(merr, err)
@@ -267,6 +272,12 @@ func ValidateModule(module *Module) error {
 			scopes = scopes.PushScope(scoped.Scope())
 			defer func() { scopes = pop }()
 		}
+
+		// Validate all children before validating the current node.
+		if err := next(); err != nil {
+			return err
+		}
+
 		if n, ok := n.(Decl); ok {
 			tname := typeName(n)
 			duplKey := tname + ":" + n.GetName()
@@ -284,35 +295,26 @@ func ValidateModule(module *Module) error {
 		switch n := n.(type) {
 		case *Ref:
 			mdecl := scopes.Resolve(*n)
-			if mdecl != nil {
-				moduleName := ""
-				if m, ok := mdecl.Module.Get(); ok {
-					moduleName = m.Name
+			if mdecl == nil && n.Module == "" {
+				// Fully qualify refs with module == "" to the current module if it can be resolved.
+				if internalDecl := scopes.Resolve(Ref{Module: module.Name, Name: n.Name, TypeParameters: n.TypeParameters}); internalDecl != nil {
+					n.Module = module.Name
+					mdecl = scopes.Resolve(*n)
 				}
+			}
+			if mdecl != nil {
 				switch decl := mdecl.Symbol.(type) {
 				case *Verb, *Enum, *Database, *Config, *Secret, *Topic:
-					if n.Module == "" {
-						n.Module = moduleName
-					}
 					if len(n.TypeParameters) != 0 {
 						merr = append(merr, errorf(n, "reference to %s %q cannot have type parameters", typeName(decl), n.Name))
 					}
 				case *Data:
-					if n.Module == "" {
-						n.Module = moduleName
-					}
 					if len(n.TypeParameters) != len(decl.TypeParameters) {
 						merr = append(merr, errorf(n, "reference to data structure %s has %d type parameters, but %d were expected",
 							n.Name, len(n.TypeParameters), len(decl.TypeParameters)))
 					}
-				case *TypeParameter:
 				default:
-					if n.Module == "" {
-						merr = append(merr, errorf(n, "unqualified reference to invalid %s %q", typeName(decl), n))
-					}
 				}
-			} else if n.Module == "" || n.Module == module.Name { // Don't report errors for external modules.
-				merr = append(merr, errorf(n, "unknown reference %q, is the type annotated and exported?", n))
 			}
 
 		case *Verb:
@@ -351,17 +353,12 @@ func ValidateModule(module *Module) error {
 				}
 			}
 
-		case *MetadataRetry:
-			if n.Catch != nil && n.Catch.Module == "" {
-				n.Catch.Module = module.Name
-			}
-
 		case Type, Metadata, Value, IngressPathComponent, DatabaseConnector,
 			*Module, *Schema, *Optional, *TypeParameter, *EnumVariant,
 			*Config, *Secret, *DatabaseRuntime, *DatabaseRuntimeConnections,
 			*Database, *Enum:
 		}
-		return next()
+		return nil
 	})
 
 	merr = cleanErrors(merr)
@@ -790,6 +787,9 @@ func resolveValidIngressReqResp(scopes Scopes, reqOrResp string, moduleDecl opti
 	switch t := n.(type) {
 	case *Ref:
 		m := scopes.Resolve(*t)
+		if m == nil {
+			return optional.None[*Data](), fmt.Errorf("unknown reference %v", t)
+		}
 		sym := m.Symbol
 		return resolveValidIngressReqResp(scopes, reqOrResp, optional.Some(m), sym, n)
 	case *Data:
@@ -908,9 +908,6 @@ func validateQueryParamsPayloadType(n Node, r Type, v *Verb, reqOrResp string) e
 
 func validateVerbSubscriptions(module *Module, v *Verb, md *MetadataSubscriber, scopes Scopes) (merr []error) {
 	merr = []error{}
-	if md.Topic.Module == "" {
-		md.Topic.Module = module.Name
-	}
 	topicDecl := scopes.Resolve(*md.Topic)
 	if topicDecl == nil {
 		// errors for invalid refs are handled elsewhere
@@ -958,9 +955,6 @@ func validateRetries(module *Module, retry *MetadataRetry, requestType optional.
 	if !ok {
 		merr = append(merr, errorf(retry, "catch can only be defined on verbs"))
 		return
-	}
-	if retry.Catch.Module == "" {
-		retry.Catch.Module = module.Name
 	}
 	catchDecl := scopes.Resolve(*retry.Catch)
 	if catchDecl == nil {

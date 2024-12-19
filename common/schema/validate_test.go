@@ -21,12 +21,12 @@ func TestValidate(t *testing.T) {
 		{name: "TwoModuleCycle",
 			schema: `
 				module one {
-					export verb one(Empty) Empty
+					export verb one(builtin.Empty) builtin.Empty
 						+calls two.two
 				}
 
 				module two {
-					export verb two(Empty) Empty
+					export verb two(builtin.Empty) builtin.Empty
 						+calls one.one
 				}
 				`,
@@ -34,33 +34,33 @@ func TestValidate(t *testing.T) {
 		{name: "ThreeModulesNoCycle",
 			schema: `
 				module one {
-					verb one(Empty) Empty
+					verb one(builtin.Empty) builtin.Empty
 						+calls two.two
 				}
 
 				module two {
-					export verb two(Empty) Empty
+					export verb two(builtin.Empty) builtin.Empty
 						+calls three.three
 				}
 
 				module three {
-					export verb three(Empty) Empty
+					export verb three(builtin.Empty) builtin.Empty
 				}
 				`},
 		{name: "ThreeModulesCycle",
 			schema: `
 				module one {
-					export verb one(Empty) Empty
+					export verb one(builtin.Empty) builtin.Empty
 						+calls two.two
 				}
 
 				module two {
-					export verb two(Empty) Empty
+					export verb two(builtin.Empty) builtin.Empty
 						+calls three.three
 				}
 
 				module three {
-					export verb three(Empty) Empty
+					export verb three(builtin.Empty) builtin.Empty
 						+calls one.one
 				}
 				`,
@@ -68,13 +68,13 @@ func TestValidate(t *testing.T) {
 		{name: "TwoModuleCycleDiffVerbs",
 			schema: `
 				module one {
-					verb a(Empty) Empty
+					verb a(builtin.Empty) builtin.Empty
 						+calls two.a
-					export verb b(Empty) Empty
+					export verb b(builtin.Empty) builtin.Empty
 				}
 
 				module two {
-					export verb a(Empty) Empty
+					export verb a(builtin.Empty) builtin.Empty
 						+calls one.b
 				}
 				`,
@@ -82,51 +82,51 @@ func TestValidate(t *testing.T) {
 		{name: "SelfReference",
 			schema: `
 				module one {
-					verb a(Empty) Empty
+					verb a(builtin.Empty) builtin.Empty
 						+calls one.b
 
-					verb b(Empty) Empty
+					verb b(builtin.Empty) builtin.Empty
 						+calls one.a
 				}
 			`},
 		{name: "ValidIngressRequestType",
 			schema: `
 				module one {
-					export verb a(HttpRequest<Unit, Unit, Unit>) HttpResponse<Empty, Empty>
+					export verb a(builtin.HttpRequest<Unit, Unit, Unit>) builtin.HttpResponse<builtin.Empty, builtin.Empty>
 						+ingress http GET /a
 				}
 			`},
 		{name: "InvalidIngressRequestType",
 			schema: `
 				module one {
-					export verb a(Empty) Empty
+					export verb a(builtin.Empty) builtin.Empty
 						+ingress http GET /a
 				}
 			`,
 			errs: []string{
-				"3:20: ingress verb a: request type Empty must be builtin.HttpRequest",
-				"3:27: ingress verb a: response type Empty must be builtin.HttpResponse",
+				"3:20: ingress verb a: request type builtin.Empty must be builtin.HttpRequest",
+				"3:35: ingress verb a: response type builtin.Empty must be builtin.HttpResponse",
 			}},
 		{name: "IngressBodyTypes",
 			schema: `
 				module one {
-					export verb bytes(HttpRequest<Bytes, Unit, Unit>) HttpResponse<Bytes, Bytes>
+					export verb bytes(builtin.HttpRequest<Bytes, Unit, Unit>) builtin.HttpResponse<Bytes, Bytes>
 						+ingress http POST /bytes
-					export verb string(HttpRequest<String, Unit, Unit>) HttpResponse<String, String>
+					export verb string(builtin.HttpRequest<String, Unit, Unit>) builtin.HttpResponse<String, String>
 						+ingress http POST /string
-					export verb data(HttpRequest<Empty, Unit, Unit>) HttpResponse<Empty, Empty>
+					export verb data(builtin.HttpRequest<builtin.Empty, Unit, Unit>) builtin.HttpResponse<builtin.Empty, builtin.Empty>
 						+ingress http POST /data
 
 					// Invalid types.
-					export verb any(HttpRequest<Any, Unit, Unit>) HttpResponse<Any, Any>
+					export verb any(builtin.HttpRequest<Any, Unit, Unit>) builtin.HttpResponse<Any, Any>
 						+ingress http GET /any
-					export verb path(HttpRequest<Unit, String, Unit>) HttpResponse<String, String>
+					export verb path(builtin.HttpRequest<Unit, String, Unit>) builtin.HttpResponse<String, String>
 						+ingress http GET /path/{invalid}
-					export verb pathInvalid(HttpRequest<Unit, String, Unit>) HttpResponse<String, String>
+					export verb pathInvalid(builtin.HttpRequest<Unit, String, Unit>) builtin.HttpResponse<String, String>
 						+ingress http GET /path/{invalid}/{extra}
-					export verb pathMissing(HttpRequest<Unit, one.Path, Unit>) HttpResponse<String, String>
+					export verb pathMissing(builtin.HttpRequest<Unit, one.Path, Unit>) builtin.HttpResponse<String, String>
 						+ingress http GET /path/{missing}
-					export verb pathFound(HttpRequest<Unit, one.Path, Unit>) HttpResponse<String, String>
+					export verb pathFound(builtin.HttpRequest<Unit, one.Path, Unit>) builtin.HttpResponse<String, String>
 						+ingress http GET /path/{parameter}
 
 					// Data comment
@@ -136,8 +136,8 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"11:22: ingress verb any: GET request type HttpRequest<Any, Unit, Unit> must have a body of unit not Any",
-				"11:52: ingress verb any: response type HttpResponse<Any, Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
+				"11:22: ingress verb any: GET request type builtin.HttpRequest<Any, Unit, Unit> must have a body of unit not Any",
+				"11:60: ingress verb any: response type builtin.HttpResponse<Any, Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
 				"16:31: ingress verb pathInvalid: cannot use path parameter \"invalid\" with request type String as it has multiple path parameters, expected Data or Map type",
 				"16:41: ingress verb pathInvalid: cannot use path parameter \"extra\" with request type String as it has multiple path parameters, expected Data or Map type",
 				"18:31: ingress verb pathMissing: request pathParameter type one.Path does not contain a field corresponding to the parameter \"missing\"",
@@ -147,18 +147,18 @@ func TestValidate(t *testing.T) {
 		{name: "GetRequestWithBody",
 			schema: `
 				module one {
-					export verb bytes(HttpRequest<Bytes, Unit, Unit>) HttpResponse<Bytes, Bytes>
+					export verb bytes(builtin.HttpRequest<Bytes, Unit, Unit>) builtin.HttpResponse<Bytes, Bytes>
 						+ingress http GET /bytes
 				}
 			`,
 			errs: []string{
-				"3:24: ingress verb bytes: GET request type HttpRequest<Bytes, Unit, Unit> must have a body of unit not Bytes",
+				"3:24: ingress verb bytes: GET request type builtin.HttpRequest<Bytes, Unit, Unit> must have a body of unit not Bytes",
 			}},
 		{name: "Array",
 			schema: `
 				module one {
 					data Data {}
-					export verb one(HttpRequest<[one.Data], Unit, Unit>) HttpResponse<[one.Data], Empty>
+					export verb one(builtin.HttpRequest<[one.Data], Unit, Unit>) builtin.HttpResponse<[one.Data], builtin.Empty>
 						+ingress http POST /one
 				}
 			`,
@@ -179,7 +179,7 @@ func TestValidate(t *testing.T) {
 			schema: `
 				module one {
 					data Data {}
-					export verb one(HttpRequest<[one.Data], Unit, Unit>) HttpResponse<[one.Data], Empty>
+					export verb one(builtin.HttpRequest<[one.Data], Unit, Unit>) builtin.HttpResponse<[one.Data], builtin.Empty>
 					    +ingress http POST /one
 					    +ingress http POST /two
 				}
@@ -191,9 +191,9 @@ func TestValidate(t *testing.T) {
 		{name: "CronOnNonEmptyVerb",
 			schema: `
 				module one {
-					verb verbWithWrongInput(Empty) Unit
+					verb verbWithWrongInput(builtin.Empty) Unit
 						+cron * * * * * * *
-					verb verbWithWrongOutput(Unit) Empty
+					verb verbWithWrongOutput(Unit) builtin.Empty
 						+cron * * * * * * *
 				}
 			`,
@@ -208,7 +208,7 @@ func TestValidate(t *testing.T) {
 					export data Data {}
 				}
 				module one {
-					export verb a(HttpRequest<two.Data, Unit, Unit>) HttpResponse<two.Data, Empty>
+					export verb a(builtin.HttpRequest<two.Data, Unit, Unit>) builtin.HttpResponse<two.Data, builtin.Empty>
 						+ingress http GET /a
 				}
 			`,
@@ -272,11 +272,11 @@ func TestValidate(t *testing.T) {
 		{name: "NonSubscriberVerbsWithRetry",
 			schema: `
 				module one {
-					verb A(Empty) Unit
+					verb A(builtin.Empty) Unit
 						+retry 10 5s 20m
-					verb B(Empty) Unit
+					verb B(builtin.Empty) Unit
 						+retry 1m5s 20m30s
-					verb C(Empty) Unit
+					verb C(builtin.Empty) Unit
 				}
 				`,
 			errs: []string{
@@ -347,7 +347,7 @@ func TestValidate(t *testing.T) {
 		{name: "InvalidRetryInvalidSpace",
 			schema: `
 				module one {
-					verb A(Empty) Unit
+					verb A(builtin.Empty) Unit
 						+retry 10 5 s
 				}
 				`,
@@ -491,24 +491,24 @@ func TestValidateModuleWithSchema(t *testing.T) {
 			schema: `
 				module one {
 					export data Test {}
-					export verb one(Empty) Empty
+					export verb one(builtin.Empty) builtin.Empty
 				}
 				`,
 			moduleSchema: `
 				module two {
-					export verb two(Empty) one.Test
+					export verb two(builtin.Empty) one.Test
 						+calls one.one
 				}`,
 		},
 		{name: "NonExportedVerbCall",
 			schema: `
 				module one {
-					verb one(Empty) Empty
+					verb one(builtin.Empty) builtin.Empty
 				}
 				`,
 			moduleSchema: `
 				module two {
-					export verb two(Empty) Empty
+					export verb two(builtin.Empty) builtin.Empty
 						+calls one.one
 				}`,
 			errs: []string{
