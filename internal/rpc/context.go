@@ -96,7 +96,7 @@ func requestKeyFromContextValue(value any) (optional.Option[model.RequestKey], e
 func DefaultClientOptions(level log.Level) []connect.ClientOption {
 	interceptors := []connect.Interceptor{
 		PanicInterceptor(),
-		MetadataInterceptor(log.Debug),
+		MetadataInterceptor(log.Trace),
 		connectOtelInterceptor(),
 		CustomOtelInterceptor(),
 	}
