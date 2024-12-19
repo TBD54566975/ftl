@@ -23,6 +23,14 @@ First, declare a new topic:
 ```go
 package payments
 
+import (
+  "github.com/block/ftl/go-runtime/ftl"
+)
+type Invoice struct {
+  InvoiceNo string
+}
+
+//ftl:export
 type Invoices = ftl.TopicHandle[Invoice, ftl.SinglePartitionMap[Invoice]]
 ```
 
@@ -53,6 +61,11 @@ func PublishInvoice(ctx context.Context, topic Invoices) error {
 First, declare a new topic :
 
 ```kotlin
+
+import com.block.ftl.WriteableTopic
+
+data class Invoice(val invoiceNo: String)
+
 @Export
 @Topic("invoices")
 internal interface InvoiceTopic : WriteableTopic<Invoice>
@@ -89,9 +102,13 @@ internal interface InvoiceTopic : ConsumableTopic<Invoice>
 First, declare a new topic:
 
 ```java
+import com.block.ftl.WriteableTopic;
+
+record Invoice(String invoiceNo) {}
+
 @Export
 @Topic("invoices")
-interface InvoiceTopic extends WriteableTopic<Invoice> {}
+public interface InvoiceTopic extends WriteableTopic<Invoice> {}
 ```
 
 Events can be published to a topic by injecting it into an `@Verb` method:
