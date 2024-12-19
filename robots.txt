@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://block.github.io/ftl//sitemap.xml
