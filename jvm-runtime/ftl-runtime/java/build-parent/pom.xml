@@ -9,7 +9,7 @@
     </parent>
     <artifactId>ftl-build-parent-java</artifactId>
     <packaging>pom</packaging>
-    <name>Ftl Kotlin Build Parent POM</name>
+    <name>Ftl Java Build Parent POM</name>
     <description>This pom.xml can be used as a parent pom to inherit all required configuration to build a FTL Java app.</description>
 
     <dependencies>
