@@ -19,6 +19,7 @@ import (
 	"github.com/block/ftl/common/schema"
 	"github.com/block/ftl/common/slices"
 	"github.com/block/ftl/internal/buildengine/languageplugin"
+	"github.com/block/ftl/internal/channels"
 	"github.com/block/ftl/internal/dev"
 	"github.com/block/ftl/internal/log"
 	"github.com/block/ftl/internal/moduleconfig"
@@ -316,29 +317,17 @@ func (e *Engine) startSchemaSync(ctx context.Context) {
 		logger.Debugf("Schema source is not live, skipping initial sync.")
 	} else {
 	initialSync:
-		for {
-			select {
-			case <-ctx.Done():
-				return
-
-			case event := <-e.schemaSource.Events():
-				e.processEvent(event)
-				if !event.More() {
-					break initialSync
-				}
+		for event := range channels.IterContext(ctx, e.schemaSource.Events()) {
+			e.processEvent(event)
+			if !event.More() {
+				break initialSync
 			}
 		}
 	}
 
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-
-			case event := <-e.schemaSource.Events():
-				e.processEvent(event)
-			}
+		for event := range channels.IterContext(ctx, e.schemaSource.Events()) {
+			e.processEvent(event)
 		}
 	}()
 }

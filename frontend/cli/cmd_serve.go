@@ -34,6 +34,7 @@ import (
 	"github.com/block/ftl/backend/timeline"
 	"github.com/block/ftl/common/schema"
 	"github.com/block/ftl/internal/bind"
+	"github.com/block/ftl/internal/channels"
 	"github.com/block/ftl/internal/configuration"
 	"github.com/block/ftl/internal/configuration/manager"
 	"github.com/block/ftl/internal/dev"
@@ -539,22 +540,21 @@ func waitForControllerOnline(ctx context.Context, startupTimeout time.Duration, 
 	ticker := time.NewTicker(time.Millisecond * 50)
 	defer ticker.Stop()
 
-	for {
-		select {
-		case <-ticker.C:
-			_, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{}))
-			if err != nil {
-				logger.Tracef("Error getting status, retrying...: %v", err)
-				continue // retry
-			}
-
-			return nil
-
-		case <-ctx.Done():
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				logger.Errorf(ctx.Err(), "Timeout reached while polling for controller status")
-			}
-			return ctx.Err()
+	for range channels.IterContext(ctx, ticker.C) {
+		_, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{}))
+		if err != nil {
+			logger.Tracef("Error getting status, retrying...: %v", err)
+			continue // retry
 		}
+
+		return nil
 	}
+	if ctx.Err() == nil {
+		return nil
+	}
+
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		logger.Errorf(ctx.Err(), "Timeout reached while polling for controller status")
+	}
+	return fmt.Errorf("context cancelled: %w", ctx.Err())
 }

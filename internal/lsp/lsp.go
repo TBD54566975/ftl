@@ -19,6 +19,7 @@ import (
 	"github.com/block/ftl/common/builderrors"
 	ftlErrors "github.com/block/ftl/common/errors"
 	"github.com/block/ftl/internal/buildengine"
+	"github.com/block/ftl/internal/channels"
 	"github.com/block/ftl/internal/log"
 )
 
@@ -78,42 +79,36 @@ func (s *Server) Subscribe(ctx context.Context, topic *pubsub.Topic[buildengine.
 	topic.Subscribe(events)
 	go func() {
 		defer topic.Unsubscribe(events)
-		for {
-			select {
-			case <-ctx.Done():
-				return
+		for event := range channels.IterContext(ctx, events) {
+			switch event := event.(type) {
+			case buildengine.EngineStarted:
+				s.publishBuildState(buildStateBuilding, nil)
 
-			case event := <-events:
-				switch event := event.(type) {
-				case buildengine.EngineStarted:
-					s.publishBuildState(buildStateBuilding, nil)
-
-				case buildengine.EngineEnded:
-					if len(event.ModuleErrors) == 0 {
-						s.publishBuildState(buildStateSuccess, nil)
-						continue
-					}
-					errs := []error{}
-					for module, e := range event.ModuleErrors {
-						errs = append(errs, fmt.Errorf("%s: %w", module, e))
-					}
-					s.publishBuildState(buildStateFailure, errors.Join(errs...))
-
-				case buildengine.ModuleBuildStarted:
-					dirURI := "file://" + event.Config.Dir
-
-					s.diagnostics.Range(func(uri protocol.DocumentUri, diagnostics []protocol.Diagnostic) bool {
-						if strings.HasPrefix(uri, dirURI) {
-							s.diagnostics.Delete(uri)
-							s.publishDiagnostics(uri, []protocol.Diagnostic{})
-						}
-						return true
-					})
-
-				case buildengine.ModuleBuildSuccess, buildengine.ModuleBuildFailed, buildengine.ModuleAdded,
-					buildengine.ModuleRemoved, buildengine.ModuleBuildWaiting, buildengine.ModuleDeployStarted,
-					buildengine.ModuleDeploySuccess, buildengine.ModuleDeployFailed:
+			case buildengine.EngineEnded:
+				if len(event.ModuleErrors) == 0 {
+					s.publishBuildState(buildStateSuccess, nil)
+					continue
 				}
+				errs := []error{}
+				for module, e := range event.ModuleErrors {
+					errs = append(errs, fmt.Errorf("%s: %w", module, e))
+				}
+				s.publishBuildState(buildStateFailure, errors.Join(errs...))
+
+			case buildengine.ModuleBuildStarted:
+				dirURI := "file://" + event.Config.Dir
+
+				s.diagnostics.Range(func(uri protocol.DocumentUri, diagnostics []protocol.Diagnostic) bool {
+					if strings.HasPrefix(uri, dirURI) {
+						s.diagnostics.Delete(uri)
+						s.publishDiagnostics(uri, []protocol.Diagnostic{})
+					}
+					return true
+				})
+
+			case buildengine.ModuleBuildSuccess, buildengine.ModuleBuildFailed, buildengine.ModuleAdded,
+				buildengine.ModuleRemoved, buildengine.ModuleBuildWaiting, buildengine.ModuleDeployStarted,
+				buildengine.ModuleDeploySuccess, buildengine.ModuleDeployFailed:
 			}
 		}
 	}()

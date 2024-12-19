@@ -17,6 +17,7 @@ import (
 	schemapb "github.com/block/ftl/common/protos/xyz/block/ftl/schema/v1"
 	"github.com/block/ftl/common/sha256"
 	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/channels"
 	"github.com/block/ftl/internal/log"
 	"github.com/block/ftl/internal/moduleconfig"
 	"github.com/block/ftl/internal/projectconfig"
@@ -261,34 +262,29 @@ func checkReadiness(ctx context.Context, client DeployClient, deploymentKey stri
 			break
 		}
 	}
-	for {
-		select {
-		case <-ticker.C:
-			status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{}))
-			if err != nil {
-				return err
-			}
+	for range channels.IterContext(ctx, ticker.C) {
+		status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{}))
+		if err != nil {
+			return fmt.Errorf("failed to get status: %w", err)
+		}
 
-			for _, deployment := range status.Msg.Deployments {
-				if deployment.Key == deploymentKey {
-					if deployment.Replicas >= replicas {
-						if hasVerbs {
-							// Also verify the routing table is ready
-							for _, route := range status.Msg.Routes {
-								if route.Deployment == deploymentKey {
-									return nil
-								}
+		for _, deployment := range status.Msg.Deployments {
+			if deployment.Key == deploymentKey {
+				if deployment.Replicas >= replicas {
+					if hasVerbs {
+						// Also verify the routing table is ready
+						for _, route := range status.Msg.Routes {
+							if route.Deployment == deploymentKey {
+								return nil
 							}
-
-						} else {
-							return nil
 						}
+
+					} else {
+						return nil
 					}
 				}
 			}
-
-		case <-ctx.Done():
-			return ctx.Err()
 		}
 	}
+	return nil
 }

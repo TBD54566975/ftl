@@ -42,6 +42,7 @@ import (
 	"github.com/block/ftl/common/schema"
 	"github.com/block/ftl/common/sha256"
 	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/channels"
 	"github.com/block/ftl/internal/deploymentcontext"
 	"github.com/block/ftl/internal/log"
 	ftlmaps "github.com/block/ftl/internal/maps"
@@ -1146,68 +1147,60 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	}
 	logger.Tracef("Seeded %d deployments", initialCount)
 
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-
-		case notification := <-updates:
-			switch event := notification.(type) {
-			case *state.DeploymentCreatedEvent:
-				err := sendChange(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
-					ModuleName:    event.Module,
-					DeploymentKey: proto.String(event.Key.String()),
-					Schema:        event.Schema.ToProto(),
-					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
-				})
-				if err != nil {
-					return err
-				}
-			case *state.DeploymentDeactivatedEvent:
-				view, err := s.controllerState.View(ctx)
-				if err != nil {
-					return fmt.Errorf("failed to get controller state: %w", err)
-				}
-				dep, err := view.GetDeployment(event.Key)
-				if err != nil {
-					logger.Errorf(err, "Deployment not found: %s", event.Key)
-					continue
-				}
-				err = sendChange(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
-					ModuleName:    dep.Module,
-					DeploymentKey: proto.String(event.Key.String()),
-					Schema:        dep.Schema.ToProto(),
-					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED,
-					ModuleRemoved: event.ModuleRemoved,
-				})
-				if err != nil {
-					return err
-				}
-			case *state.DeploymentSchemaUpdatedEvent:
-				view, err := s.controllerState.View(ctx)
-				if err != nil {
-					return fmt.Errorf("failed to get controller state: %w", err)
-				}
-				dep, err := view.GetDeployment(event.Key)
-				if err != nil {
-					logger.Errorf(err, "Deployment not found: %s", event.Key)
-					continue
-				}
-				err = sendChange(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
-					ModuleName:    dep.Module,
-					DeploymentKey: proto.String(event.Key.String()),
-					Schema:        event.Schema.ToProto(),
-					ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_CHANGED,
-				})
-				if err != nil {
-					return err
-				}
-			default:
+	for notification := range channels.IterContext(ctx, updates) {
+		switch event := notification.(type) {
+		case *state.DeploymentCreatedEvent:
+			err := sendChange(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
+				ModuleName:    event.Module,
+				DeploymentKey: proto.String(event.Key.String()),
+				Schema:        event.Schema.ToProto(),
+				ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_ADDED,
+			})
+			if err != nil {
+				return err
+			}
+		case *state.DeploymentDeactivatedEvent:
+			view, err := s.controllerState.View(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to get controller state: %w", err)
+			}
+			dep, err := view.GetDeployment(event.Key)
+			if err != nil {
+				logger.Errorf(err, "Deployment not found: %s", event.Key)
 				continue
 			}
-
+			err = sendChange(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
+				ModuleName:    dep.Module,
+				DeploymentKey: proto.String(event.Key.String()),
+				Schema:        dep.Schema.ToProto(),
+				ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_REMOVED,
+				ModuleRemoved: event.ModuleRemoved,
+			})
+			if err != nil {
+				return err
+			}
+		case *state.DeploymentSchemaUpdatedEvent:
+			view, err := s.controllerState.View(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to get controller state: %w", err)
+			}
+			dep, err := view.GetDeployment(event.Key)
+			if err != nil {
+				logger.Errorf(err, "Deployment not found: %s", event.Key)
+				continue
+			}
+			err = sendChange(&ftlv1.PullSchemaResponse{ //nolint:forcetypeassert
+				ModuleName:    dep.Module,
+				DeploymentKey: proto.String(event.Key.String()),
+				Schema:        event.Schema.ToProto(),
+				ChangeType:    ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGE_TYPE_CHANGED,
+			})
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.DeploymentKey) *log.Logger {

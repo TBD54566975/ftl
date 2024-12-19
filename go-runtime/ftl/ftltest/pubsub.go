@@ -14,6 +14,7 @@ import (
 	"github.com/block/ftl/common/schema"
 	"github.com/block/ftl/common/slices"
 	"github.com/block/ftl/go-runtime/ftl"
+	"github.com/block/ftl/internal/channels"
 	"github.com/block/ftl/internal/log"
 )
 
@@ -95,13 +96,8 @@ func (f *fakePubSub) watchPubSub(ctx context.Context) {
 	f.globalTopic.Subscribe(events)
 	go func() {
 		defer f.globalTopic.Unsubscribe(events)
-		for {
-			select {
-			case e := <-events:
-				f.handlePubSubEvent(ctx, e)
-			case <-ctx.Done():
-				return
-			}
+		for e := range channels.IterContext(ctx, events) {
+			f.handlePubSubEvent(ctx, e)
 		}
 	}()
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/block/ftl/backend/timeline"
 	"github.com/block/ftl/common/schema"
 	"github.com/block/ftl/common/slices"
+	"github.com/block/ftl/internal/channels"
 	"github.com/block/ftl/internal/log"
 	"github.com/block/ftl/internal/model"
 )
@@ -107,13 +108,8 @@ func (c *consumer) Begin(ctx context.Context) error {
 
 func (c *consumer) watchErrors(ctx context.Context) {
 	logger := log.FromContext(ctx)
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case err := <-c.group.Errors():
-			logger.Errorf(err, "Consumer group error")
-		}
+	for err := range channels.IterContext(ctx, c.group.Errors()) {
+		logger.Errorf(err, "Consumer group error")
 	}
 }
 
@@ -162,48 +158,43 @@ func (c *consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim saram
 	ctx := session.Context()
 	logger := log.FromContext(ctx)
 
-	for {
-		select {
-		case <-ctx.Done():
-			// Rebalance or shutdown needed
+	for msg := range channels.IterContext(ctx, claim.Messages()) {
+		if msg == nil {
+			// Channel closed, rebalance or shutdown needed
 			return nil
-
-		case msg := <-claim.Messages():
-			if msg == nil {
-				// Channel closed, rebalance or shutdown needed
-				return nil
-			}
-			logger.Debugf("Consuming message with partition %v and offset %v", msg.Partition, msg.Offset)
-			remainingRetries := c.retryParams.Count
-			backoff := c.retryParams.MinBackoff
-			for {
-				err := c.call(ctx, msg.Value, int(msg.Partition), int(msg.Offset))
-				if err == nil {
-					break
-				}
-				select {
-				case <-ctx.Done():
-					// Do not commit the message if we did not succeed and the context is done.
-					// No need to retry message either.
-					logger.Errorf(err, "Failed to consume message with partition %v and offset %v", msg.Partition, msg.Offset)
-					return nil
-				default:
-				}
-				if remainingRetries == 0 {
-					logger.Errorf(err, "Failed to consume message with partition %v and offset %v", msg.Partition, msg.Offset)
-					break
-				}
-				logger.Errorf(err, "Failed to consume message with partition %v and offset %v and will retry in %vs", msg.Partition, msg.Offset, int(backoff.Seconds()))
-				time.Sleep(backoff)
-				remainingRetries--
-				backoff *= 2
-				if backoff > c.retryParams.MaxBackoff {
-					backoff = c.retryParams.MaxBackoff
-				}
-			}
-			session.MarkMessage(msg, "")
 		}
+		logger.Debugf("Consuming message with partition %v and offset %v", msg.Partition, msg.Offset)
+		remainingRetries := c.retryParams.Count
+		backoff := c.retryParams.MinBackoff
+		for {
+			err := c.call(ctx, msg.Value, int(msg.Partition), int(msg.Offset))
+			if err == nil {
+				break
+			}
+			select {
+			case <-ctx.Done():
+				// Do not commit the message if we did not succeed and the context is done.
+				// No need to retry message either.
+				logger.Errorf(err, "Failed to consume message with partition %v and offset %v", msg.Partition, msg.Offset)
+				return nil
+			default:
+			}
+			if remainingRetries == 0 {
+				logger.Errorf(err, "Failed to consume message with partition %v and offset %v", msg.Partition, msg.Offset)
+				break
+			}
+			logger.Errorf(err, "Failed to consume message with partition %v and offset %v and will retry in %vs", msg.Partition, msg.Offset, int(backoff.Seconds()))
+			time.Sleep(backoff)
+			remainingRetries--
+			backoff *= 2
+			if backoff > c.retryParams.MaxBackoff {
+				backoff = c.retryParams.MaxBackoff
+			}
+		}
+		session.MarkMessage(msg, "")
 	}
+	// Rebalance or shutdown needed
+	return nil
 }
 
 func (c *consumer) call(ctx context.Context, body []byte, partition, offset int) error {

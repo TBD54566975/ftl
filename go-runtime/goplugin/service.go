@@ -23,6 +23,7 @@ import (
 	goruntime "github.com/block/ftl/go-runtime"
 	"github.com/block/ftl/go-runtime/compile"
 	"github.com/block/ftl/internal"
+	"github.com/block/ftl/internal/channels"
 	"github.com/block/ftl/internal/exec"
 	"github.com/block/ftl/internal/flock"
 	"github.com/block/ftl/internal/log"
@@ -259,31 +260,29 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 	}
 
 	// Watch for changes and build as needed
-	for {
-		select {
-		case e := <-events:
-			var isAutomaticRebuild bool
-			buildCtx, isAutomaticRebuild = buildContextFromPendingEvents(ctx, buildCtx, events, e, ongoingState)
-			if isAutomaticRebuild {
-				err = stream.Send(&langpb.BuildResponse{
-					Event: &langpb.BuildResponse_AutoRebuildStarted{
-						AutoRebuildStarted: &langpb.AutoRebuildStarted{
-							ContextId: buildCtx.ID,
-						},
+	for e := range channels.IterContext(ctx, events) {
+		var isAutomaticRebuild bool
+		buildCtx, isAutomaticRebuild = buildContextFromPendingEvents(ctx, buildCtx, events, e, ongoingState)
+		if isAutomaticRebuild {
+			err = stream.Send(&langpb.BuildResponse{
+				Event: &langpb.BuildResponse_AutoRebuildStarted{
+					AutoRebuildStarted: &langpb.AutoRebuildStarted{
+						ContextId: buildCtx.ID,
 					},
-				})
-				if err != nil {
-					return fmt.Errorf("could not send auto rebuild started event: %w", err)
-				}
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("could not send auto rebuild started event: %w", err)
 			}
-			if err = buildAndSend(ctx, stream, req.Msg.ProjectRoot, req.Msg.StubsRoot, buildCtx, isAutomaticRebuild, watcher.GetTransaction(buildCtx.Config.Dir), ongoingState); err != nil {
-				return err
-			}
-		case <-ctx.Done():
-			log.FromContext(ctx).Infof("Build call ending - ctx cancelled")
-			return nil
+		}
+		if err = buildAndSend(ctx, stream, req.Msg.ProjectRoot, req.Msg.StubsRoot, buildCtx, isAutomaticRebuild, watcher.GetTransaction(buildCtx.Config.Dir), ongoingState); err != nil {
+			return err
 		}
 	}
+	if ctx.Err() != nil {
+		log.FromContext(ctx).Infof("Build call ending - ctx cancelled")
+	}
+	return nil
 }
 
 // BuildContextUpdated is called whenever the build context is update while a Build call with "rebuild_automatically" is active.
@@ -327,16 +326,10 @@ func watchFiles(ctx context.Context, watcher *watch.Watcher, buildCtx buildConte
 	}
 
 	go func() {
-		for {
-			select {
-			case e := <-watchEvents:
-				if change, ok := e.(watch.WatchEventModuleChanged); ok {
-					log.FromContext(ctx).Infof("Found file changes: %s", change)
-					events <- filesUpdatedEvent{changes: change.Changes}
-				}
-
-			case <-ctx.Done():
-				return
+		for e := range channels.IterContext(ctx, watchEvents) {
+			if change, ok := e.(watch.WatchEventModuleChanged); ok {
+				log.FromContext(ctx).Infof("Found file changes: %s", change)
+				events <- filesUpdatedEvent{changes: change.Changes}
 			}
 		}
 	}()
