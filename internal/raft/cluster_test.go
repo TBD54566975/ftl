@@ -71,8 +71,6 @@ func TestCluster(t *testing.T) {
 }
 
 func TestJoiningExistingCluster(t *testing.T) {
-	t.Skip("seems this is failing in CI. Will fix as a followup")
-
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(60*time.Second))
 	defer cancel()
 
