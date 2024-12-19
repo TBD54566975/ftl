@@ -11,18 +11,23 @@ import (
 	"github.com/block/ftl/internal/log"
 )
 
+// EventView is a materialized view of an event stream.
+type EventView[View any, E Event[View]] interface {
+	View(ctx context.Context) (View, error)
+
+	Publish(ctx context.Context, event E) error
+}
+
 // EventStream is a stream of events that can be published and subscribed to, that update a materialized view
 type EventStream[View any, E Event[View]] interface {
-	Publish(ctx context.Context, event E) error
-
-	View() View
+	EventView[View, E]
 
 	Updates() *pubsub.Topic[E]
 }
 
 // StreamView is a view of an event stream that can be subscribed to, without modifying the stream.
 type StreamView[View any] interface {
-	View() View
+	View(ctx context.Context) (View, error)
 
 	// Subscribe to the event stream. The channel will only receive events that are published after the subscription.
 	Subscribe(ctx context.Context) <-chan Event[View]
@@ -66,8 +71,8 @@ func (i *inMemoryEventStream[T, E]) Publish(ctx context.Context, e E) error {
 	return nil
 }
 
-func (i *inMemoryEventStream[T, E]) View() T {
-	return i.view
+func (i *inMemoryEventStream[T, E]) View(ctx context.Context) (T, error) {
+	return i.view, nil
 }
 
 func (i *inMemoryEventStream[T, E]) Updates() *pubsub.Topic[E] {
