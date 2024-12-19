@@ -103,9 +103,6 @@ func ModuleConfigToProto(config moduleconfig.AbsModuleConfig) (*ModuleConfig, er
 	if config.DevModeBuild != "" {
 		proto.DevModeBuild = &config.DevModeBuild
 	}
-	if config.GeneratedSchemaDir != "" {
-		proto.GeneratedSchemaDir = &config.GeneratedSchemaDir
-	}
 
 	langConfigProto, err := structpb.NewStruct(config.LanguageConfig)
 	if err != nil {
@@ -127,7 +124,6 @@ func ModuleConfigFromProto(proto *ModuleConfig) moduleconfig.AbsModuleConfig {
 		Build:                 proto.GetBuild(),
 		DevModeBuild:          proto.GetDevModeBuild(),
 		BuildLock:             proto.BuildLock,
-		GeneratedSchemaDir:    proto.GetGeneratedSchemaDir(),
 		SQLMigrationDirectory: proto.GetSqlMigrationDir(),
 	}
 	if proto.LanguageConfig != nil {

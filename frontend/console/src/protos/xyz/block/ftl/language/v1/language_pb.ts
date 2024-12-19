@@ -63,13 +63,6 @@ export class ModuleConfig extends Message<ModuleConfig> {
   buildLock = "";
 
   /**
-   * The directory to generate protobuf schema files into. These can be picked up by language specific build tools
-   *
-   * @generated from field: optional string generated_schema_dir = 8;
-   */
-  generatedSchemaDir?: string;
-
-  /**
    * Patterns to watch for file changes
    *
    * @generated from field: repeated string watch = 9;
@@ -106,7 +99,6 @@ export class ModuleConfig extends Message<ModuleConfig> {
     { no: 5, name: "build", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "dev_mode_build", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 7, name: "build_lock", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 8, name: "generated_schema_dir", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 9, name: "watch", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 10, name: "language_config", kind: "message", T: Struct },
     { no: 11, name: "sql_migration_dir", kind: "scalar", T: 9 /* ScalarType.STRING */ },

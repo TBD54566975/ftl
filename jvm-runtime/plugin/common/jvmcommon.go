@@ -166,6 +166,10 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 	if err != nil {
 		return err
 	}
+	err = s.writeGenericSchemaFiles(ctx, buildCtx)
+	if err != nil {
+		return err
+	}
 	if req.Msg.RebuildAutomatically {
 		return s.runDevMode(ctx, req, buildCtx, stream)
 	}
@@ -519,6 +523,10 @@ func (s *Service) BuildContextUpdated(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, err
 	}
+	err = s.writeGenericSchemaFiles(ctx, buildCtx)
+	if err != nil {
+		return nil, err
+	}
 
 	s.updatesTopic.Publish(buildContextUpdatedEvent{
 		buildCtx: buildCtx,
@@ -794,4 +802,32 @@ func loadProtoErrors(config moduleconfig.AbsModuleConfig) (*langpb.ErrorList, er
 
 func ptr(s string) *string {
 	return &s
+}
+
+func (s *Service) writeGenericSchemaFiles(ctx context.Context, buildContext buildContext) error {
+
+	modPath := filepath.Join(buildContext.Config.Dir, "src", "main", "ftl-module-schema")
+	err := os.MkdirAll(modPath, 0750)
+	if err != nil {
+		return fmt.Errorf("failed to create directory %s: %w", modPath, err)
+	}
+	logger := log.FromContext(ctx)
+
+	for _, mod := range buildContext.Schema.Modules {
+		if mod.Name == buildContext.Config.Module {
+			continue
+		}
+		data, err := schema.ModuleToBytes(mod)
+		if err != nil {
+			return fmt.Errorf("failed to export module schema for module %s %w", mod.Name, err)
+		}
+		schemaFile := filepath.Join(modPath, mod.Name+".pb")
+		err = os.WriteFile(schemaFile, data, 0644) // #nosec
+		logger.Debugf("writing schema files for %s to %s", mod.Name, schemaFile)
+		if err != nil {
+			return fmt.Errorf("failed to write schema file for module %s %w", mod.Name, err)
+		}
+	}
+
+	return nil
 }
